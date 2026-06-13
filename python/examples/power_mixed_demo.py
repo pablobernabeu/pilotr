@@ -14,5 +14,6 @@ res = power_mixed(load_spec(SPEC), n_sims=n_sims)
 print(f"elapsed {time.time() - t:.0f}s\n")
 for k, v in res.items():
     print(f"  {k:14s}: {v}")
-print("\nFor comparison, the R/lme4 backend gave power ~0.73 at n=30 (REML, correlated REs).")
-print("Closeness, not identity, is expected: different estimator/optimizer.")
+print("\nNOTE: statsmodels overstates random-slope variance, so this power is a CONSERVATIVE")
+print("lower bound. The R/lme4 reference is ~0.73 at n=30. Fixed-effect recovery is correct")
+print("(mean estimate ~0.048); use the R backend when random slopes / correlations matter.")

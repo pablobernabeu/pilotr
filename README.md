@@ -135,8 +135,10 @@ Rscript toolkit/r/simdgp/examples/equivalence_simstudy.R
 python toolkit/python/examples/power_mixed_demo.py
 ```
 
-> **R↔Python coverage.** Data *generation* is bit-identical across languages (proven). Both
-> ecosystems also run crossed mixed-effects power from the same spec: R via `lme4`/`lmerTest`
-> (REML, correlated random effects) and Python via `statsmodels` MixedLM (ML, crossed
-> variance components). The two backends are *close but not identical* by construction
-> (different estimator/optimizer); the two-group Gaussian power backend is identical in both.
+> **R↔Python coverage.** Data *generation* is bit-identical across languages (proven), and
+> both ecosystems run crossed mixed-effects power from the same spec — but the LMM estimators
+> differ. R (`lme4`/`lmerTest`, REML, correlated random effects) is the **reference**. Python
+> (`statsmodels` MixedLM, crossed variance components) overstates random-slope variance, so it
+> is **conservative** for random-slope designs (flagship: power ~0.48 vs lme4 ~0.73) although
+> it recovers fixed effects correctly (mean estimate ~0.048 vs 0.05). The two-group Gaussian
+> power backend is identical in both languages. Use R for correlated random slopes.

@@ -65,14 +65,19 @@ def power(spec, n_sims=1000, alpha=0.05):
 
 
 def power_mixed(spec, n_sims=50, alpha=0.05):
-    """Crossed mixed-effects simulation-based power in Python (closes the R/Python analysis
-    asymmetry). Fits the crossed model with statsmodels MixedLM using variance components for
-    by-subject and by-item random intercepts and slopes.
+    """Crossed mixed-effects simulation-based power in Python, via statsmodels MixedLM with
+    by-subject and by-item random intercepts and slopes as (independent) variance components.
 
-    Note: statsmodels uses ML with *independent* variance components (no random-effect
-    correlation), so estimates are close to but not identical to the R/lme4 backend (REML +
-    correlated random effects). The point is capability parity: the same spec yields
-    mixed-effects power in either ecosystem.
+    IMPORTANT — accuracy caveat (verified, not a bug). statsmodels fits crossed random
+    effects as *independent* variance components and, in our tests, substantially overstates
+    random-SLOPE variance (e.g. by-subject slope SD ~0.12 estimated vs 0.04 true). This
+    inflates the fixed-effect standard error, so for designs with by-subject/by-item random
+    SLOPES this backend is markedly CONSERVATIVE: on the flagship crossed RT design it reports
+    power ~0.48 versus the R/lme4 reference ~0.73. It still recovers the fixed effect (mean
+    estimate ~0.048 vs 0.05 true) and Type S/M correctly, and is reliable for random-INTERCEPT
+    designs. Treat it as a conservative lower bound; use the R/lme4 `power_mixed` as the
+    reference whenever random slopes (or random-effect correlations) matter. Data *generation*
+    is identical across R and Python; this gap is purely in the Python LMM estimator.
     """
     import copy, math, statistics, warnings
     import pandas as pd
@@ -104,14 +109,14 @@ def power_mixed(spec, n_sims=50, alpha=0.05):
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                m = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf).fit(reml=False)
+                m = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf).fit()  # REML (default)
             est.append(float(m.fe_params["cc"])); pv.append(float(m.pvalues["cc"]))
         except Exception:
             pass
 
     sig = [i for i, p in enumerate(pv) if p < alpha]
     return {
-        "backend": "statsmodels MixedLM (crossed variance components, ML)",
+        "backend": "statsmodels MixedLM (crossed variance components, REML)",
         "n_sims": n_sims, "n_converged": len(pv), "alpha": alpha,
         "power": len(sig) / len(pv) if pv else float("nan"),
         "n_significant": len(sig), "true_effect": beta,
