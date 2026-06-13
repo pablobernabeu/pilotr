@@ -208,12 +208,12 @@ server <- function(input, output, session) {
     ident <- isTRUE(all.equal(res$chk, ref_chk)) && res$n == nrow(ref)
     verify_result(list(ok = ident, n = res$n, ref_n = nrow(ref)))
   })
-  output$verify_out <- renderPrint({
+  output$verify_out <- renderText({
     r <- verify_result()
-    if (is.null(r)) { cat("Click 'Verify' to run the script in a fresh R process and confirm it reproduces this data."); return() }
-    if (!is.null(r$msg)) { cat(r$msg); return() }
-    if (isTRUE(r$ok)) cat(sprintf("OK - reproduces identically in a clean R session.\n  %d rows (app) = %d rows (clean run); response checksum matches.", r$ref_n, r$n))
-    else cat(sprintf("MISMATCH - app %d rows vs clean run %d rows, or checksum differs.", r$ref_n, r$n))
+    if (is.null(r)) return("Click 'Verify' to run the script in a fresh R process and confirm it reproduces this data.")
+    if (!is.null(r$msg)) return(r$msg)
+    if (isTRUE(r$ok)) sprintf("OK - reproduces identically in a clean R session.\n  %d rows (app) = %d rows (clean run); response checksum matches.", r$ref_n, r$n)
+    else sprintf("MISMATCH - app %d rows vs clean run %d rows, or checksum differs.", r$ref_n, r$n)
   })
 
   # ---- power: capped, async when installed (worker process), else synchronous ----
