@@ -1,0 +1,7 @@
+export(make_rng)
+export(as241)
+export(load_spec)
+export(simulate_design)
+export(power_design)
+importFrom(jsonlite, fromJSON)
+importFrom(stats, t.test)

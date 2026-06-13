@@ -1,0 +1,15 @@
+# generated demo output
+build/
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+.venv/
+
+# R
+.Rhistory
+.RData
+*.Rproj.user

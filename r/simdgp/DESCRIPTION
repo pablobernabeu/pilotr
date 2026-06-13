@@ -1,0 +1,15 @@
+Package: simdgp
+Title: Simulate Experimental and Behavioral Data from a Portable Design Specification
+Version: 0.1.0
+Authors@R: person("Pablo", "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com")
+Description: Generative simulation of experimental and behavioral data sets from a portable
+    JSON design specification shared with the Python package of the same name. Supports
+    user-specified fixed effect sizes, crossed by-subject and by-item random intercepts
+    and slopes, realistic response families (Gaussian, shifted lognormal, Bernoulli,
+    Poisson, ordinal), and simulation-based power and design analysis (Type S and Type M
+    errors). Uses a shared cross-language random-number generator so that, given the same
+    specification and seed, the R and Python implementations produce identical data.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: jsonlite, stats
+RoxygenNote: 7.3.1

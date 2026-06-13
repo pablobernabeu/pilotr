@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pablobernabeu/Experimental-data-simulation/toolkit/spec/design.schema.json",
+  "title": "simdgp design specification",
+  "type": "object",
+  "required": ["name", "seed", "units", "factors", "fixed", "response"],
+  "properties": {
+    "name": { "type": "string" },
+    "seed": { "type": "integer" },
+    "units": {
+      "type": "object",
+      "properties": {
+        "subject": { "$ref": "#/$defs/unit" },
+        "item": { "$ref": "#/$defs/unit" }
+      },
+      "required": ["subject"],
+      "additionalProperties": false
+    },
+    "factors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "levels", "contrasts"],
+        "properties": {
+          "name": { "type": "string" },
+          "levels": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+          "contrasts": {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": "number" } }
+          },
+          "vary_within": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["subject", "item"] }
+          },
+          "between": { "type": "string", "enum": ["subject", "item"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "fixed": {
+      "type": "object",
+      "required": ["intercept", "coefficients"],
+      "properties": {
+        "intercept": { "type": "number" },
+        "coefficients": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "random": {
+      "type": "object",
+      "properties": {
+        "subject": { "$ref": "#/$defs/ranef" },
+        "item": { "$ref": "#/$defs/ranef" }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": ["family", "name"],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": ["gaussian", "shifted_lognormal", "bernoulli", "poisson", "ordinal"]
+        },
+        "name": { "type": "string" },
+        "sigma": { "type": "number", "exclusiveMinimum": 0 },
+        "shift": { "type": "number" },
+        "thresholds": { "type": "array", "items": { "type": "number" } },
+        "round": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "unit": {
+      "type": "object",
+      "required": ["n"],
+      "properties": { "n": { "type": "integer", "minimum": 1 } },
+      "additionalProperties": false
+    },
+    "ranef": {
+      "type": "object",
+      "required": ["intercept_sd"],
+      "properties": {
+        "intercept_sd": { "type": "number", "minimum": 0 },
+        "slopes": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+        "correlations": { "type": "object", "additionalProperties": { "type": "number", "minimum": -1, "maximum": 1 } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

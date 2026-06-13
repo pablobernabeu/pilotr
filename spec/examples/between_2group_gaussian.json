@@ -1,0 +1,16 @@
+{
+  "name": "between_2group_gaussian",
+  "seed": 2024,
+  "units": { "subject": { "n": 64 } },
+  "factors": [
+    {
+      "name": "group",
+      "levels": ["control", "treatment"],
+      "contrasts": { "grp": [-0.5, 0.5] },
+      "between": "subject"
+    }
+  ],
+  "fixed": { "intercept": 100.0, "coefficients": { "grp": 5.0 } },
+  "random": {},
+  "response": { "family": "gaussian", "name": "score", "sigma": 10.0, "round": 4 }
+}

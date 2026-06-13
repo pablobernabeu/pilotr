@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simdgp"
+version = "0.1.0"
+description = "Simulate experimental and behavioral data from a portable design specification (cross-language with the R package of the same name)."
+readme = "../README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Pablo Bernabeu" }]
+license = { text = "MIT" }
+keywords = ["simulation", "power analysis", "mixed-effects", "experimental design", "behavioral science"]
+dependencies = []  # the generative core is pure-Python and dependency-free
+
+[project.optional-dependencies]
+power = ["scipy>=1.7"]   # simulation-based power demo (p-values)
+dev = ["scipy>=1.7", "pytest>=7"]
+
+[tool.setuptools]
+packages = ["simdgp"]
