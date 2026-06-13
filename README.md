@@ -77,7 +77,11 @@ locally from the downloaded spec.
 
 ```bash
 # build the serverless static site (downloads webR assets on first run)
-Rscript toolkit/app-lite/build_shinylive.R   # -> toolkit/build/shinylive-demo/ (deploy to gh-pages)
+Rscript toolkit/app-lite/build_shinylive.R   # -> toolkit/build/shinylive-demo/
+
+# deploy that site to GitHub Pages (force-pushes ~66 MB to the gh-pages branch, then set
+# Settings > Pages > Source = gh-pages):
+bash toolkit/app-lite/deploy_ghpages.sh
 ```
 
 ## Running at scale (HPC / SLURM)
