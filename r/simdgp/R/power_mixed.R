@@ -49,3 +49,15 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05) {
     type_m = if (length(sig)) mean(abs(est[sig]) / abs(beta)) else NaN
   )
 }
+
+#' Power curve: sweep the number of subjects and compute mixed-effects power at each.
+#' @export
+power_curve_mixed <- function(spec, subject_ns, n_sims = 60, alpha = 0.05) {
+  if (is.character(spec)) spec <- load_spec(spec)
+  parts <- lapply(subject_ns, function(n) {
+    s <- spec; s$units$subject$n <- n
+    r <- power_mixed(s, n_sims = n_sims, alpha = alpha)
+    data.frame(n_subject = n, power = r$power, type_m = r$type_m)
+  })
+  do.call(rbind, parts)
+}

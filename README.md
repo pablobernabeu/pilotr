@@ -81,6 +81,17 @@ Rscript toolkit/r/simdgp/examples/validate_recovery.R
 
 # Python validation suite
 python -m pytest toolkit/python/tests -q
+
+# Realistic distributions: ordinal (Likert) + Poisson counts
+python toolkit/python/examples/families_demo.py
+
+# Power-vs-N curves + the publication figure
+python toolkit/python/examples/power_curves.py        # Gaussian curve  -> build/*.csv
+Rscript toolkit/r/simdgp/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
+Rscript toolkit/r/simdgp/examples/plot_power_curves.R # -> build/power_curves.png
+
+# faux equivalence (the "why not faux?" rebuttal)
+Rscript toolkit/r/simdgp/examples/equivalence_faux.R
 ```
 
 > **R↔Python asymmetry (by design, for now).** Data *generation* is identical across

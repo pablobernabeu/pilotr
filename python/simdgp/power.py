@@ -62,3 +62,17 @@ def power(spec, n_sims=1000, alpha=0.05):
         "mean_estimate": statistics.mean(estimates),
         "type_s": type_s, "type_m": type_m,
     }
+
+
+def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05):
+    """Sweep the number of subjects and return power (and Type M) at each grid point."""
+    import copy
+    if isinstance(spec, str):
+        spec = load_spec(spec)
+    out = []
+    for n in subject_ns:
+        s = copy.deepcopy(spec)
+        s["units"]["subject"]["n"] = n
+        r = power(s, n_sims=n_sims, alpha=alpha)
+        out.append({"n_subject": n, "power": r["power"], "type_m": r["type_m"]})
+    return out

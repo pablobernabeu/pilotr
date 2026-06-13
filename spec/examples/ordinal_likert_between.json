@@ -1,0 +1,16 @@
+{
+  "name": "ordinal_likert_between",
+  "seed": 808,
+  "units": { "subject": { "n": 400 } },
+  "factors": [
+    {
+      "name": "group",
+      "levels": ["control", "treatment"],
+      "contrasts": { "grp": [-0.5, 0.5] },
+      "between": "subject"
+    }
+  ],
+  "fixed": { "intercept": 0.0, "coefficients": { "grp": 1.0 } },
+  "random": {},
+  "response": { "family": "ordinal", "name": "rating", "thresholds": [-2.0, -0.6, 0.6, 2.0] }
+}
