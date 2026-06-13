@@ -39,8 +39,21 @@ toolkit/
     examples/        worked design specs (between-groups; crossed mixed-effects RT)
   python/        simdgp Python package (runnable; pure-Python generative core)
   r/             simdgp R package (mirrors the Python core exactly)
+  app/           no-code Shiny client over the R package -- the third interface;
+                 builds the spec by point-and-click and emits the same portable JSON
   docs/
     positioning.md   the Behavior Research Methods positioning statement / abstract
+```
+
+## One model, three interfaces
+
+The same design spec drives a **no-code web app**, an **R package**, and a **Python
+package**. The app is a thin client: every control writes into the portable JSON spec,
+which you can download and run unchanged in either package to get identical data.
+
+```r
+# launch the no-code app (the GUI front-end)
+shiny::runApp("toolkit/app")
 ```
 
 ## Cross-language reproducibility (the hard part, solved)
