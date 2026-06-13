@@ -80,6 +80,26 @@ locally from the downloaded spec.
 Rscript toolkit/app-lite/build_shinylive.R   # -> toolkit/build/shinylive-demo/ (deploy to gh-pages)
 ```
 
+## Running at scale (HPC / SLURM)
+
+Simulation-based power and precision analyses are embarrassingly parallel, so they scale well
+on a cluster. `toolkit/hpc/` holds a robust SLURM **array** job (`precision_array.slurm` and
+its runner `precision_array.R`): one task per sample size, replicates parallelised across
+cores via `mclapply`, results written to project storage. Reference deployment (Oxford ARC):
+
+- **Project (code/scripts):** `~/simdgp_toolkit/` in home. **Heavy material (R library +
+  results):** `/data/<project>/simdgp_toolkit/{Rlib,results,logs}` in project storage, since
+  home quota is small.
+- One-time bootstrap installs `lme4`/`lmerTest` into the data-area library (`R_LIBS`); the R
+  module already provides `jsonlite`.
+- Submit the sweep: `sbatch toolkit/hpc/precision_array.slurm`
+  (smoke test: `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`).
+- Each task writes one `precision_N<n>.csv`; combine them into a full precision-vs-N curve at
+  a resolution far beyond a laptop.
+
+The simulation core is **bit-identical across machines and R versions** (verified: ARC
+reproduces local output exactly), so HPC runs are reproducible from the same spec + seed.
+
 ## Cross-language reproducibility (the hard part, solved)
 
 Native RNGs differ across ecosystems (R uses Mersenne-Twister + inversion; NumPy uses
@@ -135,7 +155,7 @@ Rscript toolkit/r/simdgp/examples/equivalence_simstudy.R
 python toolkit/python/examples/power_mixed_demo.py
 
 # continuous predictors + interactions + continuous random slopes, with a precision-based
-# ROPE design analysis, an N-sweep, and a brms bridge -- see docs/advanced_designs.md
+# ROPE design analysis, an N-sweep, and a brms bridge -- see docs/mixed_models_and_design_analysis.md
 Rscript toolkit/r/simdgp/examples/precision_design_analysis.R
 ```
 
