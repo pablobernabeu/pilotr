@@ -12,8 +12,9 @@ Python package. Given the same spec and seed, every implementation must produce 
 | `name` | string | Human label for the design. |
 | `seed` | integer | Master seed (see RNG contract below). |
 | `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. |
-| `factors` | array | Experimental factors (see below). |
-| `fixed` | object | Fixed effects: `intercept` (number) + `coefficients` (map contrast-column → β). |
+| `factors` | array | Experimental factors (categorical; see below). |
+| `predictors` | array | Optional continuous predictors (see below). |
+| `fixed` | object | Fixed effects: `intercept` + `coefficients` (map column → β). A coefficient key may be a single column or an `"a:b"` **interaction** (product of columns a and b). |
 | `random` | object | Random-effect structure by unit (`subject`, `item`). Empty `{}` ⇒ no random effects. |
 | `response` | object | Outcome family + parameters (see below). |
 
@@ -35,6 +36,21 @@ Python package. Given the same spec and seed, every implementation must produce 
 * `between`: `"subject"` or `"item"` — the factor partitions that unit into equal blocks
   in level order (a between-unit factor; does not expand rows).
 
+### Continuous predictors
+
+```json
+"predictors": [
+  { "name": "SyntaxPC", "varies_by": "item", "mean": 0, "sd": 1 },
+  { "name": "age", "varies_by": "subject", "mean": 0, "sd": 1 }
+]
+```
+
+Each continuous predictor draws **one value per unit** (`varies_by` = `"subject"` or
+`"item"`) from `N(mean, sd)` and assigns it to all of that unit's rows. The predictor name is
+a column usable in fixed `coefficients` (as a main effect or in an `"a:b"` interaction) and in
+random-effect `slopes` (e.g. a by-subject random slope on an item-level predictor, as in
+`(1 + SyntaxPC | subject)`). Defaults: `mean` 0, `sd` 1.
+
 ### Random effects (per unit)
 
 ```json
@@ -52,12 +68,30 @@ covariance matrix `Σ = D · R · D` is formed from the SDs `D` and correlation 
 normals. The unit's contribution to a row's linear predictor is
 `b[intercept] + Σ_k b[slope_k] · (contrast value of slope_k for that row)`.
 
+Slopes may be keyed by a contrast column **or a continuous predictor** (e.g. a by-subject
+random slope on an item-level predictor, `(1 + SyntaxPC | subject)`).
+
+### Additional grouping factors
+
+Any `random` entry whose name is **not** `subject` or `item` is an extra grouping factor. It
+adds `over` (the unit it groups — `"subject"` or `"item"`) and `n` (number of groups); the
+units are assigned to groups in equal blocks. For example, subjects nested in clusters:
+
+```json
+"site": { "over": "subject", "n": 12, "intercept_sd": 0.5, "slopes": { ... } }
+```
+
+Each group draws a random-effect vector (intercept + any slopes) applied to all rows of the
+units in that group, and the simulated data gains a column with the group id. Useful for
+hierarchical designs (e.g. participants within sites, schools, or languages).
+
 ### Response families
 
 | `family` | Parameters | Generation |
 |---|---|---|
 | `gaussian` | `sigma` | `y = η + σ·z` |
 | `shifted_lognormal` | `sigma`, `shift` | `y = shift + exp(η + σ·z)` (reaction times) |
+| `lognormal` | `sigma` | `y = exp(η + σ·z)` (positive outcomes, e.g. reading time per word) |
 | `bernoulli` | — | `p = invlogit(η)`, `y = 1[u < p]` (accuracy; logit link) |
 | `poisson` | — | `λ = exp(η)`, `y =` inverse-CDF Poisson (counts; log link) |
 | `ordinal` | `thresholds` (K−1 cut-points) | cumulative-logit: `P(Y≤k) = invlogit(θ_k − η)` (Likert) |
@@ -86,12 +120,16 @@ Python integers alike. Seeding: `s1 ← 1 + (|seed| mod 2147483562)`,
 
 **Draw order (must be identical everywhere):**
 
-1. For each subject `s = 1..S`: draw `q_subject` standard normals (intercept, then each
+1. For each continuous predictor (in listed order): for each of its units `u = 1..N`, draw
+   one `N(mean, sd)` deviate. (Skipped entirely when there is no `predictors` block, so
+   factor-only specs keep the original stream.)
+2. For each subject `s = 1..S`: draw `q_subject` standard normals (intercept, then each
    slope in listed order); set `b_subject[s] = L_subject · z`.
-2. For each item `t = 1..I` (if items exist): draw `q_item` standard normals; set
+3. For each item `t = 1..I` (if items exist): draw `q_item` standard normals; set
    `b_item[t] = L_item · z`.
-3. Iterate observations in **canonical row order** and draw exactly one response deviate
-   (normal for gaussian/lognormal; uniform for bernoulli/poisson/ordinal) per row.
+4. Iterate observations in **canonical row order** and draw exactly one response deviate
+   (normal for gaussian/lognormal/shifted_lognormal; uniform for bernoulli/poisson/ordinal)
+   per row.
 
 **Canonical row order:** nested loops, outermost first —
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in

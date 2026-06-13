@@ -1,0 +1,16 @@
+{
+  "name": "nested_clusters",
+  "seed": 555,
+  "units": { "subject": { "n": 120 }, "item": { "n": 20 } },
+  "factors": [
+    { "name": "condition", "levels": ["a", "b"], "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"] }
+  ],
+  "fixed": { "intercept": 0, "coefficients": { "cond": 0.3 } },
+  "random": {
+    "subject": { "intercept_sd": 0.4 },
+    "item": { "intercept_sd": 0.3 },
+    "site": { "over": "subject", "n": 12, "intercept_sd": 0.5 }
+  },
+  "response": { "family": "gaussian", "name": "y", "sigma": 1.0, "round": 5 }
+}

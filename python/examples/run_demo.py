@@ -36,6 +36,20 @@ def main():
     for r in d2.head(3):
         print("   ", r)
 
+    # ---- continuous predictors + interactions + continuous random slopes ----
+    d3 = simulate(os.path.join(SPEC, "reading_time_continuous.json"))
+    d3.to_csv(os.path.join(BUILD, "py_continuous.csv"))
+    print("\n=== reading_time_continuous (continuous predictors + interactions) ===")
+    print(f"  N = {len(d3)} rows; columns = {d3.columns}")
+    print("  predictors vary by item/subject; 3 interactions; by-subject random slopes on")
+    print("  continuous predictors -> recover with precision_design_analysis.R")
+
+    # ---- additional grouping factor: subjects nested in higher-level clusters ----
+    d4 = simulate(os.path.join(SPEC, "nested_clusters.json"))
+    d4.to_csv(os.path.join(BUILD, "py_nested.csv"))
+    print("\n=== nested_clusters (subjects nested in clusters) ===")
+    print(f"  N = {len(d4)} rows; columns = {d4.columns}")
+
     # ---- 3. Simulation-based power + design analysis (Type S / Type M) ----
     spec = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
     res = power(spec, n_sims=2000)

@@ -82,6 +82,10 @@ ui <- fluidPage(
       conditionalPanel("input.family == 'ordinal'",
         textInput("thresholds", "Thresholds (comma-separated)", "-2, -0.6, 0.6, 2")),
       tags$hr(),
+      tags$details(
+        tags$summary("Advanced: paste a JSON spec (overrides the controls)"),
+        textAreaInput("spec_json_in", NULL, "", rows = 5,
+          placeholder = "Paste a simdgp spec with continuous predictors / interactions (e.g. a reading-time design)")),
       actionButton("simulate", "Simulate", class = "btn-primary"),
       downloadButton("dl_spec", "Download spec (.json)"),
       downloadButton("dl_data", "Download data (.csv)")
@@ -109,7 +113,15 @@ ui <- fluidPage(
 # ------------------------------------------------------------ server ----
 server <- function(input, output, session) {
 
+  .grp_col <- function(spec) if (length(spec$factors)) spec$factors[[1]]$name else NULL
+
   current_spec <- reactive({
+    txt <- input$spec_json_in
+    if (!is.null(txt) && nzchar(trimws(txt))) {                 # advanced override
+      parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = TRUE,
+                          simplifyDataFrame = FALSE, simplifyMatrix = FALSE), error = function(e) NULL)
+      if (!is.null(parsed) && !is.null(parsed$response)) return(parsed)
+    }
     build_spec(list(
       name = input$name, seed = input$seed, n_subject = input$n_subject,
       include_items = input$include_items, n_item = input$n_item,
@@ -129,19 +141,27 @@ server <- function(input, output, session) {
   output$head <- renderTable(head(data(), 10))
 
   output$summary <- renderPrint({
-    d <- data(); yn <- current_spec()$response$name; fn <- input$factor_name
+    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    has_grp <- !is.null(fn) && fn %in% names(d)
     if (is.numeric(d[[yn]])) {
-      agg <- aggregate(d[[yn]], list(d[[fn]]), function(x) c(mean = mean(x), sd = sd(x), n = length(x)))
-      cat("Mean (SD) of", yn, "by", fn, ":\n"); print(do.call(data.frame, agg))
-    } else { cat("Counts of", yn, "by", fn, ":\n"); print(table(d[[fn]], d[[yn]])) }
+      if (has_grp) {
+        agg <- aggregate(d[[yn]], list(d[[fn]]), function(x) c(mean = mean(x), sd = sd(x), n = length(x)))
+        cat("Mean (SD) of", yn, "by", fn, ":\n"); print(do.call(data.frame, agg))
+      } else cat(sprintf("%s: mean %.4f, SD %.4f, n %d\n", yn, mean(d[[yn]]), sd(d[[yn]]), nrow(d)))
+    } else if (has_grp) { cat("Counts of", yn, "by", fn, ":\n"); print(table(d[[fn]], d[[yn]])) }
+    else print(table(d[[yn]]))
   })
 
   output$plot <- renderPlot({
-    d <- data(); yn <- current_spec()$response$name; fn <- input$factor_name
-    if (is.numeric(d[[yn]])) boxplot(d[[yn]] ~ d[[fn]], xlab = fn, ylab = yn,
-                                     col = c("#2C6FB0", "#B0402C"), main = paste("Distribution of", yn))
-    else barplot(table(d[[fn]], d[[yn]]), beside = TRUE, legend = TRUE,
-                 col = c("#2C6FB0", "#B0402C"), main = paste("Counts of", yn))
+    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    has_grp <- !is.null(fn) && fn %in% names(d)
+    if (is.numeric(d[[yn]])) {
+      if (has_grp) boxplot(d[[yn]] ~ d[[fn]], xlab = fn, ylab = yn, col = c("#2C6FB0", "#B0402C"),
+                           main = paste("Distribution of", yn))
+      else hist(d[[yn]], col = "#2C6FB0", xlab = yn, main = paste("Distribution of", yn))
+    } else if (has_grp) barplot(table(d[[fn]], d[[yn]]), beside = TRUE, legend = TRUE,
+                                col = c("#2C6FB0", "#B0402C"), main = paste("Counts of", yn))
+    else barplot(table(d[[yn]]), col = "#2C6FB0", main = paste("Counts of", yn))
   })
 
   output$repro <- renderText(paste0(

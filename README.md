@@ -133,6 +133,10 @@ Rscript toolkit/r/simdgp/examples/equivalence_simstudy.R
 
 # crossed mixed-effects power in Python (statsmodels) -- R/Python capability parity
 python toolkit/python/examples/power_mixed_demo.py
+
+# continuous predictors + interactions + continuous random slopes, with a precision-based
+# ROPE design analysis, an N-sweep, and a brms bridge -- see docs/advanced_designs.md
+Rscript toolkit/r/simdgp/examples/precision_design_analysis.R
 ```
 
 > **R↔Python coverage.** Data *generation* is bit-identical across languages (proven), and

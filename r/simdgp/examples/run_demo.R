@@ -30,6 +30,16 @@ cat(sprintf("  N = %d rows ; mean RT related = %.1f ms, unrelated = %.1f ms\n",
 cat(sprintf("  priming effect = %.1f ms (cond beta = 0.05 on log scale)\n", mean(unr) - mean(rel)))
 cat("  first 3 rows:\n"); print(head(d2, 3))
 
+# ---- continuous predictors + interactions + continuous random slopes ----
+d3 <- simulate_design(file.path(SPEC, "reading_time_continuous.json"))
+write.csv(d3, file.path(BUILD, "r_continuous.csv"), row.names = FALSE)
+cat(sprintf("\n=== reading_time_continuous === N = %d rows; cols: %s\n", nrow(d3), paste(names(d3), collapse = ", ")))
+
+# ---- additional grouping factor: subjects nested in higher-level clusters ----
+d4 <- simulate_design(file.path(SPEC, "nested_clusters.json"))
+write.csv(d4, file.path(BUILD, "r_nested.csv"), row.names = FALSE)
+cat(sprintf("=== nested_clusters === N = %d rows; cols: %s\n", nrow(d4), paste(names(d4), collapse = ", ")))
+
 # ---- 3. Simulation-based power + design analysis ----
 res <- power_design(file.path(SPEC, "between_2group_gaussian.json"), n_sims = 2000)
 cat("\n=== simulation-based power + design analysis ===\n")

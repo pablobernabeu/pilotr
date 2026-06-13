@@ -1,4 +1,6 @@
 # Spec parsing + generative engine -- a bit-identical mirror of simdgp/simulate.py.
+# Supports categorical contrasts and continuous predictors (with interactions) as fixed
+# effects, and crossed by-subject/by-item random intercepts and slopes (on either).
 
 #' Load a JSON design specification.
 #' @export
@@ -40,6 +42,16 @@ load_spec <- function(path) {
   list(cols = cols, L = .cholesky(cov))
 }
 
+# A coefficient/slope key is a column name or an 'a:b' interaction (product of columns).
+.design_value <- function(cvals, key) {
+  if (grepl(":", key, fixed = TRUE)) {
+    v <- 1
+    for (pp in strsplit(key, ":", fixed = TRUE)[[1]]) v <- v * (if (is.null(cvals[[pp]])) 0 else cvals[[pp]])
+    return(v)
+  }
+  if (is.null(cvals[[key]])) 0 else cvals[[key]]
+}
+
 #' Simulate a data set from a design specification (path or parsed list).
 #' @export
 simulate_design <- function(spec) {
@@ -50,6 +62,7 @@ simulate_design <- function(spec) {
   I <- if (has_item) spec$units$item$n else 1L
 
   factors <- spec$factors
+  predictors <- spec$predictors
   within <- Filter(function(f) !is.null(f$vary_within), factors)
   between <- Filter(function(f) !is.null(f$between), factors)
   within_sizes <- vapply(within, function(f) length(f$levels), integer(1))
@@ -77,8 +90,24 @@ simulate_design <- function(spec) {
     }
   }
 
-  # ---- random effects in documented order ----
   rng <- make_rng(spec$seed)
+
+  # ---- continuous predictors: one draw per unit (subject- or item-level) ----
+  pred_values <- list()
+  for (p in predictors) {
+    unit <- p$varies_by; n_unit <- if (unit == "subject") S else I
+    if (unit == "item" && !has_item) stop("predictor '", p$name, "' varies_by item but design has no items")
+    pmean <- if (is.null(p$mean)) 0 else p$mean; psd <- if (is.null(p$sd)) 1 else p$sd
+    vals <- numeric(n_unit)
+    for (u in seq_len(n_unit)) vals[u] <- pmean + psd * rng$normal()
+    pred_values[[p$name]] <- vals
+  }
+  if (length(predictors)) for (r_i in seq_along(rows)) for (p in predictors) {
+    u <- if (p$varies_by == "subject") rows[[r_i]]$subject else rows[[r_i]]$item
+    rows[[r_i]]$cvals[[p$name]] <- pred_values[[p$name]][u]
+  }
+
+  # ---- random effects (subject then item) ----
   rs <- spec$random
   b_subject <- list(); subj_cols <- character(0)
   if (!is.null(rs$subject)) {
@@ -91,6 +120,21 @@ simulate_design <- function(spec) {
     for (t in 1:I) b_item[[t]] <- .matvec(re$L, rng$normals(length(item_cols)))
   }
 
+  # ---- additional grouping factors (e.g. units nested in higher-level clusters) ----
+  # Any random entry other than subject/item declares `over` (the unit it groups) and `n`
+  # (number of groups); units are assigned to groups in equal blocks.
+  extra_names <- setdiff(names(rs), c("subject", "item"))
+  b_group <- list(); group_meta <- list()
+  for (gname in extra_names) {
+    g <- rs[[gname]]; over <- g$over; K <- g$n
+    n_over <- if (over == "subject") S else I
+    re <- .ranef(g)
+    group_meta[[gname]] <- list(over = over, cols = re$cols,
+                                group_of = ((seq_len(n_over) - 1) * K) %/% n_over)
+    bg <- list(); for (gi in 0:(K - 1)) bg[[gi + 1]] <- .matvec(re$L, rng$normals(length(re$cols)))
+    b_group[[gname]] <- bg
+  }
+
   # ---- linear predictor + response (residual draws here) ----
   intercept <- spec$fixed$intercept
   coeffs <- spec$fixed$coefficients
@@ -100,41 +144,55 @@ simulate_design <- function(spec) {
   thresholds <- resp$thresholds; ndp <- resp$round
 
   n <- length(rows)
-  y <- numeric(n)
-  subj_v <- integer(n); item_v <- integer(n)
+  y <- numeric(n); subj_v <- integer(n); item_v <- integer(n)
   label_cols <- vapply(factors, function(f) f$name, character(1))
+  pred_names <- if (length(predictors)) vapply(predictors, function(p) p$name, character(1)) else character(0)
   label_mat <- matrix("", n, length(label_cols), dimnames = list(NULL, label_cols))
+  pred_mat <- matrix(0, n, length(pred_names), dimnames = list(NULL, pred_names))
+  group_mat <- matrix(0L, n, length(extra_names), dimnames = list(NULL, extra_names))
 
   for (r_i in seq_len(n)) {
-    r <- rows[[r_i]]
+    r <- rows[[r_i]]; cv <- r$cvals
     eta <- intercept
-    for (col in names(coeffs)) eta <- eta + coeffs[[col]] * (if (is.null(r$cvals[[col]])) 0 else r$cvals[[col]])
+    for (col in names(coeffs)) eta <- eta + coeffs[[col]] * .design_value(cv, col)
     if (length(subj_cols)) {
       b <- b_subject[[r$subject]]; eta <- eta + b[1]
       if (length(subj_cols) > 1) for (j in 2:length(subj_cols))
-        eta <- eta + b[j] * (if (is.null(r$cvals[[subj_cols[j]]])) 0 else r$cvals[[subj_cols[j]]])
+        eta <- eta + b[j] * (if (is.null(cv[[subj_cols[j]]])) 0 else cv[[subj_cols[j]]])
     }
     if (has_item && length(item_cols)) {
       b <- b_item[[r$item]]; eta <- eta + b[1]
       if (length(item_cols) > 1) for (j in 2:length(item_cols))
-        eta <- eta + b[j] * (if (is.null(r$cvals[[item_cols[j]]])) 0 else r$cvals[[item_cols[j]]])
+        eta <- eta + b[j] * (if (is.null(cv[[item_cols[j]]])) 0 else cv[[item_cols[j]]])
+    }
+    for (gname in extra_names) {
+      gm <- group_meta[[gname]]
+      unit <- if (gm$over == "subject") r$subject else r$item
+      gi <- gm$group_of[unit]; group_mat[r_i, gname] <- gi + 1L
+      b <- b_group[[gname]][[gi + 1]]; eta <- eta + b[1]
+      if (length(gm$cols) > 1) for (j in 2:length(gm$cols))
+        eta <- eta + b[j] * (if (is.null(cv[[gm$cols[j]]])) 0 else cv[[gm$cols[j]]])
     }
     val <- switch(family,
       gaussian          = eta + sigma * rng$normal(),
       shifted_lognormal = shift + exp(eta + sigma * rng$normal()),
+      lognormal         = exp(eta + sigma * rng$normal()),
       bernoulli         = if (rng$uniform() < .inv_logit(eta)) 1 else 0,
       poisson           = .poisson_inv(exp(eta), rng$uniform()),
       ordinal           = .ordinal_inv(eta, thresholds, rng$uniform()),
       stop("unknown family: ", family))
-    if (!is.null(ndp) && family %in% c("gaussian", "shifted_lognormal")) val <- round(val, ndp)
+    if (!is.null(ndp) && family %in% c("gaussian", "shifted_lognormal", "lognormal")) val <- round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item
     for (cn in label_cols) label_mat[r_i, cn] <- r$labels[[cn]]
+    for (pn in pred_names) pred_mat[r_i, pn] <- cv[[pn]]
   }
 
   df <- data.frame(subject = subj_v, stringsAsFactors = FALSE)
   if (has_item) df$item <- item_v
+  for (gname in extra_names) df[[gname]] <- group_mat[, gname]
   for (cn in label_cols) df[[cn]] <- label_mat[, cn]
+  for (pn in pred_names) df[[pn]] <- pred_mat[, pn]
   df[[yname]] <- y
   df
 }

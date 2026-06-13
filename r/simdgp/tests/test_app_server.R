@@ -24,6 +24,14 @@ testServer(app = app_dir, {
   po <- output$power_out
   check(grepl("Power", po), "power analysis output rendered")
   cat("  power output:\n", gsub("\n", "\n    ", po), "\n")
+
+  # advanced: paste a continuous-predictor spec (continuous predictors + interactions) to override
+  spec_txt <- paste(readLines(file.path(here, "..", "..", "..", "spec", "examples",
+                                        "reading_time_continuous.json")), collapse = "\n")
+  session$setInputs(spec_json_in = spec_txt, simulate = 2)
+  di <- data()
+  check("SyntaxPC" %in% names(di) && nrow(di) == 4000,
+        "advanced paste-spec path simulates a continuous-predictor design")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")
