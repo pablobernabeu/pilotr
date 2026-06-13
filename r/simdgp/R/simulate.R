@@ -52,6 +52,17 @@ load_spec <- function(path) {
   if (is.null(cvals[[key]])) 0 else cvals[[key]]
 }
 
+# Sample m distinct items from 1..n_items via partial Fisher-Yates on the shared RNG
+# (partial crossing). Bit-identical with simulate.py's _sample_items.
+.sample_items <- function(rng, n_items, m) {
+  pool <- 1:n_items
+  for (k in 0:(m - 1)) {
+    j <- k + floor(rng$uniform() * (n_items - k))
+    tmp <- pool[k + 1]; pool[k + 1] <- pool[j + 1]; pool[j + 1] <- tmp
+  }
+  sort(pool[1:m])
+}
+
 #' Simulate a data set from a design specification (path or parsed list).
 #' @export
 simulate_design <- function(spec) {
@@ -67,9 +78,14 @@ simulate_design <- function(spec) {
   between <- Filter(function(f) !is.null(f$between), factors)
   within_sizes <- vapply(within, function(f) length(f$levels), integer(1))
 
-  # ---- canonical row order (no randomness) ----
+  rng <- make_rng(spec$seed)
+  per_subject <- if (has_item) spec$units$item$per_subject else NULL
+
+  # ---- canonical row order; per-subject item subsets (if any) are the first RNG draws ----
   rows <- list()
-  for (s in 1:S) for (t in 1:I) {
+  for (s in 1:S) {
+    items_s <- if (!is.null(per_subject)) .sample_items(rng, I, per_subject) else 1:I
+    for (t in items_s) {
     for (combo in .product_indices(within_sizes)) {
       level_idx <- list()
       if (length(within)) for (m in seq_along(within))
@@ -88,9 +104,8 @@ simulate_design <- function(spec) {
       }
       rows[[length(rows) + 1L]] <- list(subject = s, item = t, labels = labels, cvals = cvals)
     }
+    }
   }
-
-  rng <- make_rng(spec$seed)
 
   # ---- continuous predictors: one draw per unit (subject- or item-level) ----
   pred_values <- list()
@@ -180,8 +195,10 @@ simulate_design <- function(spec) {
       bernoulli         = if (rng$uniform() < .inv_logit(eta)) 1 else 0,
       poisson           = .poisson_inv(exp(eta), rng$uniform()),
       ordinal           = .ordinal_inv(eta, thresholds, rng$uniform()),
+      beta              = { mu <- .inv_logit(eta); phi <- if (is.null(resp$phi)) 10 else resp$phi
+                            .beta_draw(rng, mu * phi, (1 - mu) * phi) },
       stop("unknown family: ", family))
-    if (!is.null(ndp) && family %in% c("gaussian", "shifted_lognormal", "lognormal")) val <- round(val, ndp)
+    if (!is.null(ndp) && family %in% c("gaussian", "shifted_lognormal", "lognormal", "beta")) val <- round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item
     for (cn in label_cols) label_mat[r_i, cn] <- r$labels[[cn]]

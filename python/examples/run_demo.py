@@ -50,6 +50,12 @@ def main():
     print("\n=== nested_clusters (subjects nested in clusters) ===")
     print(f"  N = {len(d4)} rows; columns = {d4.columns}")
 
+    # ---- Beta family (proportions) + partial crossing (item subset per subject) ----
+    for nm, fn in (("beta", "beta_proportion.json"), ("partial", "partial_crossing.json")):
+        dd = simulate(os.path.join(SPEC, fn))
+        dd.to_csv(os.path.join(BUILD, f"py_{nm}.csv"))
+        print(f"=== {fn} === N = {len(dd)} rows; columns = {dd.columns}")
+
     # ---- 3. Simulation-based power + design analysis (Type S / Type M) ----
     spec = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
     res = power(spec, n_sims=2000)

@@ -51,7 +51,7 @@ def compare(name):
 
 def main():
     print("=== R vs Python parity check (same spec + seed) ===")
-    results = [compare(n) for n in ("between", "crossed", "continuous", "nested")]
+    results = [compare(n) for n in ("between", "crossed", "continuous", "nested", "beta", "partial")]
     print("\nRESULT:", "ALL IDENTICAL [PASS]" if all(results) else "PARITY FAILURE [FAIL]")
     sys.exit(0 if all(results) else 1)
 

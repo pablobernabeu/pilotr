@@ -11,11 +11,15 @@
 #' @param focal named numeric vector (coefficient name -> true value) or character vector.
 #' @param rope half-width of the ROPE (|beta| < rope is "practically equivalent to zero").
 #' @param n_sims number of Monte Carlo replicates.
-#' @param prep function mapping the simulated data frame to the modelling data frame
-#'   (e.g. log-transform the outcome, build numeric contrasts / interaction columns).
+#' @param formula optional `lmer` formula; if NULL it is auto-derived via [model_formula()].
+#' @param prep optional function mapping simulated data to modelling data; if NULL it is
+#'   auto-derived via [model_data()] (log-transform the outcome, build contrast / interaction
+#'   columns). Focal names then follow the auto-formula (interactions as `a_b`).
 #' @export
-precision_design <- function(spec, formula, focal, rope = 0.05, n_sims = 100, prep = identity) {
+precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.05, n_sims = 100) {
   if (is.character(spec)) spec <- load_spec(spec)
+  if (is.null(formula)) formula <- model_formula(spec)
+  if (is.null(prep)) prep <- function(d) model_data(spec, d)
   fnames <- if (!is.null(names(focal))) names(focal) else as.character(focal)
   W <- setNames(lapply(fnames, function(.) numeric(0)), fnames)
   OUT <- setNames(integer(length(fnames)), fnames); INS <- OUT; NC <- 0L
@@ -48,11 +52,13 @@ precision_design <- function(spec, formula, focal, rope = 0.05, n_sims = 100, pr
 #' Use it to find the minimum analysable N at which a focal effect reaches a determinate
 #' decision with at least some target probability (e.g. 0.90).
 #' @export
-precision_curve <- function(spec, formula, focal, subject_ns, rope = 0.05, n_sims = 60, prep = identity) {
+precision_curve <- function(spec, focal, subject_ns, formula = NULL, prep = NULL, rope = 0.05, n_sims = 60) {
   if (is.character(spec)) spec <- load_spec(spec)
+  if (is.null(formula)) formula <- model_formula(spec)
+  if (is.null(prep)) prep <- function(d) model_data(spec, d)
   parts <- lapply(subject_ns, function(n) {
     s <- spec; s$units$subject$n <- n
-    cbind(n_subject = n, precision_design(s, formula, focal, rope = rope, n_sims = n_sims, prep = prep))
+    cbind(n_subject = n, precision_design(s, focal, formula = formula, prep = prep, rope = rope, n_sims = n_sims))
   })
   do.call(rbind, parts)
 }

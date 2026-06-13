@@ -40,6 +40,13 @@ d4 <- simulate_design(file.path(SPEC, "nested_clusters.json"))
 write.csv(d4, file.path(BUILD, "r_nested.csv"), row.names = FALSE)
 cat(sprintf("=== nested_clusters === N = %d rows; cols: %s\n", nrow(d4), paste(names(d4), collapse = ", ")))
 
+# ---- Beta family (proportions) + partial crossing (item subset per subject) ----
+for (nm in list(c("beta", "beta_proportion.json"), c("partial", "partial_crossing.json"))) {
+  dd <- simulate_design(file.path(SPEC, nm[2]))
+  write.csv(dd, file.path(BUILD, paste0("r_", nm[1], ".csv")), row.names = FALSE)
+  cat(sprintf("=== %s === N = %d rows; cols: %s\n", nm[2], nrow(dd), paste(names(dd), collapse = ", ")))
+}
+
 # ---- 3. Simulation-based power + design analysis ----
 res <- power_design(file.path(SPEC, "between_2group_gaussian.json"), n_sims = 2000)
 cat("\n=== simulation-based power + design analysis ===\n")

@@ -50,3 +50,28 @@ def test_simulation_is_reproducible():
     d1 = simulate(os.path.join(SPEC, "crossed_mixed_rt.json"))
     d2 = simulate(os.path.join(SPEC, "crossed_mixed_rt.json"))
     assert [r["RT"] for r in d1.rows] == [r["RT"] for r in d2.rows]
+
+
+def test_beta_family_in_unit_interval_and_ordered():
+    d = simulate(os.path.join(SPEC, "beta_proportion.json"))
+    vals = [r["prop"] for r in d.rows]
+    assert all(0.0 < v < 1.0 for v in vals)
+    ctrl = [r["prop"] for r in d.rows if r["group"] == "control"]
+    trt = [r["prop"] for r in d.rows if r["group"] == "treatment"]
+    assert statistics.mean(trt) > statistics.mean(ctrl)  # grp +0.8 on the logit scale
+
+
+def test_partial_crossing_subset_size():
+    d = simulate(os.path.join(SPEC, "partial_crossing.json"))
+    items_by_subject = {}
+    for r in d.rows:
+        items_by_subject.setdefault(r["subject"], set()).add(r["item"])
+    assert len(items_by_subject) == 60
+    assert all(len(v) == 12 for v in items_by_subject.values())  # per_subject = 12
+
+
+def test_additional_grouping_column_present():
+    d = simulate(os.path.join(SPEC, "nested_clusters.json"))
+    assert "site" in d.columns
+    sites = set(r["site"] for r in d.rows)
+    assert sites == set(range(1, 13))  # 12 clusters

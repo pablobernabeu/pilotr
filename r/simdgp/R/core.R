@@ -95,3 +95,15 @@ as241 <- function(p) {
   for (k in seq_along(thresholds)) if (u <= .inv_logit(thresholds[k] - eta)) return(k)
   length(thresholds) + 1
 }
+
+# Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG; bit-identical with core.py.
+.gamma_mt <- function(rng, shape) {
+  if (shape < 1) return(.gamma_mt(rng, shape + 1) * rng$uniform()^(1 / shape))
+  d <- shape - 1 / 3; cc <- 1 / sqrt(9 * d)
+  repeat {
+    x <- rng$normal(); v <- (1 + cc * x)^3
+    if (v <= 0) next
+    if (log(rng$uniform()) < 0.5 * x * x + d - d * v + d * log(v)) return(d * v)
+  }
+}
+.beta_draw <- function(rng, a, b) { x <- .gamma_mt(rng, a); x / (x + .gamma_mt(rng, b)) }

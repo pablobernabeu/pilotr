@@ -10,7 +10,7 @@ effects -> per-row residuals. Specs without a `predictors` block keep the origin
 
 from __future__ import annotations
 import json, math, itertools
-from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv
+from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw
 
 
 class Dataset:
@@ -67,6 +67,16 @@ def _design_value(cvals, key):
     return cvals.get(key, 0.0)
 
 
+def _sample_items(rng, n_items, m):
+    """Sample m distinct items from 1..n_items via partial Fisher-Yates on the shared RNG
+    (for partial crossing: each subject sees a self-selected subset of items)."""
+    pool = list(range(1, n_items + 1))
+    for k in range(m):
+        j = k + int(rng.uniform() * (n_items - k))
+        pool[k], pool[j] = pool[j], pool[k]
+    return sorted(pool[:m])
+
+
 def simulate(spec) -> Dataset:
     if isinstance(spec, str):
         spec = load_spec(spec)
@@ -80,11 +90,17 @@ def simulate(spec) -> Dataset:
     within = [f for f in factors if f.get("vary_within")]
     between = [f for f in factors if f.get("between")]
 
-    # ---- build design rows in canonical order (consumes no randomness) ----
+    rng = RNG(spec["seed"])
+    per_subject = spec["units"]["item"].get("per_subject") if has_item else None
+
+    # ---- build design rows in canonical order ----
+    # When per_subject is set, each subject's item subset is sampled here -- the FIRST RNG
+    # consumption (see spec/SPEC.md). Full-crossing specs draw nothing here, keeping the stream.
     within_level_ranges = [range(len(f["levels"])) for f in within]
     rows = []
     for s in range(1, S + 1):
-        for t in range(1, I + 1):
+        items_s = _sample_items(rng, I, per_subject) if per_subject else range(1, I + 1)
+        for t in items_s:
             for combo in (itertools.product(*within_level_ranges) if within else [()]):
                 level_idx = {}
                 for f, li in zip(within, combo):
@@ -102,8 +118,6 @@ def simulate(spec) -> Dataset:
                         cvals[col] = vals[li]
                 rows.append({"subject": s, "item": t if has_item else None,
                              "labels": labels, "cvals": cvals})
-
-    rng = RNG(spec["seed"])
 
     # ---- continuous predictors: one draw per unit (subject- or item-level) ----
     pred_values = {}
@@ -179,6 +193,9 @@ def simulate(spec) -> Dataset:
             y = poisson_inv(math.exp(eta), rng.uniform())
         elif family == "ordinal":
             y = ordinal_inv(eta, thresholds, rng.uniform())
+        elif family == "beta":
+            mu, phi = inv_logit(eta), resp.get("phi", 10.0)
+            y = beta_draw(rng, mu * phi, (1.0 - mu) * phi)
         else:
             raise ValueError(f"unknown family: {family}")
         if ndp is not None and isinstance(y, float):

@@ -134,3 +134,26 @@ def ordinal_inv(eta: float, thresholds: list[float], u: float) -> int:
         if u <= inv_logit(th - eta):
             return k + 1
     return len(thresholds) + 1
+
+
+def gamma_mt(rng, shape: float) -> float:
+    """Marsaglia-Tsang Gamma(shape, scale=1) draw from the shared RNG (normals + uniforms in a
+    rejection loop). Identical float ops in R and Python => identical accept/reject => parity."""
+    if shape < 1.0:
+        g = gamma_mt(rng, shape + 1.0)
+        return g * rng.uniform() ** (1.0 / shape)
+    d = shape - 1.0 / 3.0
+    c = 1.0 / math.sqrt(9.0 * d)
+    while True:
+        x = rng.normal()
+        v = (1.0 + c * x) ** 3
+        if v <= 0.0:
+            continue
+        if math.log(rng.uniform()) < 0.5 * x * x + d - d * v + d * math.log(v):
+            return d * v
+
+
+def beta_draw(rng, a: float, b: float) -> float:
+    """Beta(a, b) via two Gamma draws: X/(X+Y), X~Gamma(a), Y~Gamma(b)."""
+    x = gamma_mt(rng, a)
+    return x / (x + gamma_mt(rng, b))
