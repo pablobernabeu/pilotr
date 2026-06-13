@@ -13,3 +13,10 @@ dist/
 .Rhistory
 .RData
 *.Rproj.user
+
+# manuscript (Word build)
+paper/node_modules/
+paper/package-lock.json
+paper/chk/
+paper/*.pdf
+paper/pg*.jpg
