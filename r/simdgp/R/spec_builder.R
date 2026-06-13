@@ -1,14 +1,16 @@
-# Pure spec-construction logic for the no-code app (no Shiny here, so it can be unit-tested
-# headlessly). Turns a flat list of UI inputs into the portable simdgp design spec, which
-# the R and Python packages consume identically.
+# GUI-input -> portable-spec logic, as package functions (so the app stays a thin client
+# and this logic is unit-testable). Pure R; no Shiny.
 
+#' Default response-column name for a family.
+#' @export
 default_response_name <- function(family) {
   switch(family,
          gaussian = "score", shifted_lognormal = "RT",
          bernoulli = "accuracy", poisson = "count", ordinal = "rating", "outcome")
 }
 
-# p: a named list of UI inputs (see app.R). Returns the spec as a plain R list.
+#' Build a simdgp design spec (a plain list) from a flat list of UI inputs.
+#' @export
 build_spec <- function(p) {
   resp_name <- if (is.null(p$resp_name) || !nzchar(p$resp_name)) default_response_name(p$family) else p$resp_name
 
@@ -32,7 +34,6 @@ build_spec <- function(p) {
     fixed = list(intercept = p$intercept, coefficients = list(effect = p$effect))
   )
 
-  # Random effects only for within (crossed) designs.
   if (identical(p$design_kind, "within")) {
     subj <- list(intercept_sd = p$subj_int_sd)
     if (isTRUE(p$subj_slope_sd > 0)) {
@@ -53,13 +54,11 @@ build_spec <- function(p) {
   resp <- list(family = p$family, name = resp_name)
   if (p$family %in% c("gaussian", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
-  if (p$family == "ordinal") {
-    resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
-  }
+  if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   spec$response <- resp
   spec
 }
 
-spec_json <- function(spec) {
-  jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, digits = NA)
-}
+#' Serialise a spec to pretty JSON (the portable artifact).
+#' @export
+spec_json <- function(spec) jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, digits = NA)

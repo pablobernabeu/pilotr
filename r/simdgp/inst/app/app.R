@@ -1,25 +1,30 @@
 # simdgp no-code app -- the third interface over the shared design spec.
 #
-# This is a THIN client: it builds the portable JSON spec from point-and-click inputs and
-# calls the simdgp R package to simulate and to run power analysis. The same downloaded
-# spec runs identically in the R and Python packages -- "one model, three interfaces".
-#
-# Run with:  shiny::runApp("toolkit/app")
+# Thin client: every control writes into the portable JSON spec, which downloads and runs
+# unchanged in the R and Python packages. Launch with simdgp::run_app() (installed) or
+# shiny::runApp("toolkit/r/simdgp/inst/app") (from source).
 
 library(shiny)
-library(jsonlite)
 
-# ---- locate and source the simdgp package sources + the spec builder ----
-.find <- function(rel) {
-  for (base in c(".", "..", "../..", "toolkit", normalizePath(".", mustWork = FALSE))) {
-    p <- file.path(base, rel)
-    if (file.exists(p)) return(normalizePath(p))
+# When the package is loaded (run_app), its functions are available; from source, locate
+# and source the engine + spec-builder. (Installed packages have no R/ source files, so we
+# only source when the functions are not already present.)
+if (!exists("simulate_design", mode = "function")) {
+  .src <- function(rel, required = TRUE) {
+    for (b in c("../../R", "../R", "R", ".")) {
+      p <- file.path(b, rel); if (file.exists(p)) { source(p); return(invisible(TRUE)) }
+    }
+    if (required) stop("cannot find ", rel); invisible(FALSE)
   }
-  stop("could not locate ", rel)
+  for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) .src(f)
+  .src("power_mixed.R", required = FALSE)  # mixed-effects power if available
 }
-source(.find("app/spec_builder.R"))
-for (f in c("core.R", "simulate.R", "power.R", "power_mixed.R"))
-  source(.find(file.path("r", "simdgp", "R", f)))
+
+MAX_SIMS <- as.integer(Sys.getenv("SIMDGP_MAX_SIMS", "5000"))
+# Async only when running as the installed package with future+promises (workers reload the
+# package). From source / serverless this is FALSE and power runs synchronously.
+.async_ok <- isNamespaceLoaded("simdgp") &&
+  nzchar(system.file(package = "future")) && nzchar(system.file(package = "promises"))
 
 # ---------------------------------------------------------------- UI ----
 ui <- fluidPage(
@@ -45,8 +50,8 @@ ui <- fluidPage(
         column(3, textInput("lev2", "Level 2", "treatment"))
       ),
       fluidRow(
-        column(6, numericInput("intercept", "Intercept (grand mean / log-rate / logit)", 100)),
-        column(6, numericInput("effect", "Effect size (coef. on -0.5/+0.5 contrast)", 5))
+        column(6, numericInput("intercept", "Intercept (mean / log-rate / logit)", 100)),
+        column(6, numericInput("effect", "Effect (coef. on -0.5/+0.5 contrast)", 5))
       ),
       conditionalPanel("input.design_kind == 'within'",
         tags$b("By-subject random effects"),
@@ -88,13 +93,11 @@ ui <- fluidPage(
           p("This portable spec is the single source of truth. Download it and run it ",
             "unchanged in R or Python — you get the identical data set."),
           verbatimTextOutput("json")),
-        tabPanel("Data",
-          verbatimTextOutput("dims"), tableOutput("head")),
-        tabPanel("Summary & plot",
-          verbatimTextOutput("summary"), plotOutput("plot", height = "320px")),
+        tabPanel("Data", verbatimTextOutput("dims"), tableOutput("head")),
+        tabPanel("Summary & plot", verbatimTextOutput("summary"), plotOutput("plot", height = "320px")),
         tabPanel("Power & design analysis",
           p("Simulation-based power with Type S / Type M (Gelman & Carlin, 2014)."),
-          numericInput("n_sims", "Simulations", 1000, min = 100, step = 100),
+          numericInput("n_sims", "Simulations (capped in-app)", 1000, min = 100, max = MAX_SIMS, step = 100),
           actionButton("run_power", "Run power analysis"),
           verbatimTextOutput("power_out")),
         tabPanel("Reproduce in R / Python", verbatimTextOutput("repro"))
@@ -119,13 +122,10 @@ server <- function(input, output, session) {
     ))
   })
 
-  data <- eventReactive(input$simulate, { simulate_design(current_spec()) }, ignoreNULL = FALSE)
+  data <- eventReactive(input$simulate, simulate_design(current_spec()), ignoreNULL = FALSE)
 
   output$json <- renderText(spec_json(current_spec()))
-
-  output$dims <- renderText({
-    d <- data(); sprintf("Simulated %d rows x %d columns (seed %d).", nrow(d), ncol(d), input$seed)
-  })
+  output$dims <- renderText({ d <- data(); sprintf("Simulated %d rows x %d columns (seed %d).", nrow(d), ncol(d), input$seed) })
   output$head <- renderTable(head(data(), 10))
 
   output$summary <- renderPrint({
@@ -133,51 +133,49 @@ server <- function(input, output, session) {
     if (is.numeric(d[[yn]])) {
       agg <- aggregate(d[[yn]], list(d[[fn]]), function(x) c(mean = mean(x), sd = sd(x), n = length(x)))
       cat("Mean (SD) of", yn, "by", fn, ":\n"); print(do.call(data.frame, agg))
-    } else {
-      cat("Counts of", yn, "by", fn, ":\n"); print(table(d[[fn]], d[[yn]]))
-    }
+    } else { cat("Counts of", yn, "by", fn, ":\n"); print(table(d[[fn]], d[[yn]])) }
   })
 
   output$plot <- renderPlot({
     d <- data(); yn <- current_spec()$response$name; fn <- input$factor_name
-    if (is.numeric(d[[yn]])) {
-      boxplot(d[[yn]] ~ d[[fn]], xlab = fn, ylab = yn, col = c("#2C6FB0", "#B0402C"),
-              main = paste("Distribution of", yn))
-    } else {
-      barplot(table(d[[fn]], d[[yn]]), beside = TRUE, legend = TRUE,
-              col = c("#2C6FB0", "#B0402C"), main = paste("Counts of", yn))
-    }
+    if (is.numeric(d[[yn]])) boxplot(d[[yn]] ~ d[[fn]], xlab = fn, ylab = yn,
+                                     col = c("#2C6FB0", "#B0402C"), main = paste("Distribution of", yn))
+    else barplot(table(d[[fn]], d[[yn]]), beside = TRUE, legend = TRUE,
+                 col = c("#2C6FB0", "#B0402C"), main = paste("Counts of", yn))
   })
 
-  output$repro <- renderText({
-    sprintf(paste0(
-      "# 1. Download the spec from the first tab as design.json\n\n",
-      "# --- R ---\n",
-      "library(simdgp)\n",
-      "d <- simulate_design(\"design.json\")\n\n",
-      "# --- Python ---\n",
-      "from simdgp import simulate\n",
-      "d = simulate(\"design.json\")\n",
-      "d.to_csv(\"data.csv\")\n\n",
-      "# Same spec + seed => identical data in all three interfaces."))
-  })
+  output$repro <- renderText(paste0(
+    "# Download the spec (first tab) as design.json, then:\n\n",
+    "# --- R ---\nlibrary(simdgp)\nd <- simulate_design(\"design.json\")\n\n",
+    "# --- Python ---\nfrom simdgp import simulate\nd = simulate(\"design.json\")\nd.to_csv(\"data.csv\")\n\n",
+    "# Same spec + seed => identical data in all three interfaces."))
 
+  # ---- power: capped, async when installed (worker process), else synchronous ----
+  power_result <- reactiveVal(NULL)
   observeEvent(input$run_power, {
     spec <- current_spec()
-    output$power_out <- renderPrint({
-      if (spec$response$family != "gaussian" || identical(input$design_kind, "within")) {
-        cat("The in-app power backend covers the two-group Gaussian design.\n")
-        cat("For crossed mixed-effects designs use power_mixed() in the R package\n",
-            "(fits lme4; can take minutes) or power_curve_mixed() for a curve.\n")
-        return(invisible())
-      }
-      res <- power_design(spec, n_sims = input$n_sims)
-      cat(sprintf("Simulations : %d\n", res$n_sims))
-      cat(sprintf("Power       : %.3f\n", res$power))
-      cat(sprintf("Type S error: %.4f\n", res$type_s))
-      cat(sprintf("Type M (exag): %.3f\n", res$type_m))
-      cat(sprintf("True effect  : %.3f  | mean estimate: %.3f\n", res$true_effect, res$mean_estimate))
-    })
+    if (spec$response$family != "gaussian" || identical(input$design_kind, "within")) {
+      power_result(list(msg = paste0("The in-app power backend covers the two-group Gaussian design.\n",
+        "For crossed mixed-effects designs use power_mixed() in the package (fits lme4; minutes).")))
+      return()
+    }
+    n <- min(max(as.integer(input$n_sims), 100L), MAX_SIMS)
+    if (.async_ok) {
+      power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
+      p <- promises::future_promise({ simdgp::power_design(spec, n_sims = n) }, seed = TRUE)
+      promises::then(p, onFulfilled = function(res) power_result(res),
+                        onRejected = function(e) power_result(list(msg = paste("error:", conditionMessage(e)))))
+    } else {
+      withProgress(message = sprintf("Simulating %d datasets...", n), value = 0.5,
+                   power_result(power_design(spec, n_sims = n)))
+    }
+  })
+  output$power_out <- renderPrint({
+    r <- power_result()
+    if (is.null(r)) { cat(sprintf("Set simulations (capped at %d here; unlimited when you install the package) and click Run.", MAX_SIMS)); return() }
+    if (!is.null(r$msg)) { cat(r$msg); return() }
+    cat(sprintf("Simulations  : %d\nPower        : %.3f\nType S error : %.4f\nType M (exag): %.3f\nTrue effect  : %.3f | mean estimate: %.3f\n",
+                r$n_sims, r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate))
   })
 
   output$dl_spec <- downloadHandler(

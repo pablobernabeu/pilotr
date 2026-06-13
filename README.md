@@ -39,8 +39,8 @@ toolkit/
     examples/        worked design specs (between-groups; crossed mixed-effects RT)
   python/        simdgp Python package (runnable; pure-Python generative core)
   r/             simdgp R package (mirrors the Python core exactly)
-  app/           no-code Shiny client over the R package -- the third interface;
-                 builds the spec by point-and-click and emits the same portable JSON
+    inst/app/      the no-code Shiny app, bundled in the package (simdgp::run_app())
+  app-lite/      serverless (shinylive/webR) build of the light path -> static site
   docs/
     positioning.md   the Behavior Research Methods positioning statement / abstract
 ```
@@ -52,8 +52,32 @@ package**. The app is a thin client: every control writes into the portable JSON
 which you can download and run unchanged in either package to get identical data.
 
 ```r
-# launch the no-code app (the GUI front-end)
-shiny::runApp("toolkit/app")
+# launch the no-code app locally (installed package)
+simdgp::run_app()
+# ...or from source:
+shiny::runApp("toolkit/r/simdgp/inst/app")
+```
+
+## Deployment & concurrency
+
+R is single-threaded: one R process runs one computation at a time, and a heavy
+simulation-based **power** run (hundreds–thousands of model fits) blocks every other user
+sharing that process. So the architecture is deliberately split by how the tool is used:
+
+| Path | How | Concurrency | Use for |
+|---|---|---|---|
+| **Installable** (primary) | `simdgp::run_app()` / `python -m simdgp`; CRAN/PyPI | **unbounded** — each user, own machine & cores | real work, esp. heavy power (parallelise across cores) |
+| **Serverless demo** | `app-lite/` exported with shinylive → static site on GitHub Pages | **unbounded** — each browser computes (WebAssembly) | zero-cost "try it now" link: design + simulate + Gaussian power |
+| Shared hosted instance | shinyapps.io / ShinyProxy | low / costly | avoid as the main channel (blocking; the prototype's 25 hr-month free tier) |
+
+The installable app runs power **asynchronously** (via `future`/`promises`) so it never
+blocks; the serverless build is single-user-per-browser, so it runs synchronously. Both are
+driven by the *same* spec, so a user can design in the browser demo and run heavy power
+locally from the downloaded spec.
+
+```bash
+# build the serverless static site (downloads webR assets on first run)
+Rscript toolkit/app-lite/build_shinylive.R   # -> toolkit/build/shinylive-demo/ (deploy to gh-pages)
 ```
 
 ## Cross-language reproducibility (the hard part, solved)
