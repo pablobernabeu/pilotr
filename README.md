@@ -127,12 +127,16 @@ python toolkit/python/examples/power_curves.py        # Gaussian curve  -> build
 Rscript toolkit/r/simdgp/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
 Rscript toolkit/r/simdgp/examples/plot_power_curves.R # -> build/power_curves.png
 
-# faux equivalence (the "why not faux?" rebuttal)
+# competitor equivalence (the "why not faux / simstudy?" rebuttals)
 Rscript toolkit/r/simdgp/examples/equivalence_faux.R
+Rscript toolkit/r/simdgp/examples/equivalence_simstudy.R
+
+# crossed mixed-effects power in Python (statsmodels) -- R/Python capability parity
+python toolkit/python/examples/power_mixed_demo.py
 ```
 
-> **R↔Python asymmetry (by design, for now).** Data *generation* is identical across
-> languages (proven). For *analysis*, crossed mixed-effects power uses R's mature
-> `lme4`/`lmerTest`; the Python analysis backends (`statsmodels` MixedLM is single-grouping
-> only — `pymer4`/`formulaic` are the route to crossed models) are on the roadmap. The
-> two-group Gaussian power backend runs identically in both languages.
+> **R↔Python coverage.** Data *generation* is bit-identical across languages (proven). Both
+> ecosystems also run crossed mixed-effects power from the same spec: R via `lme4`/`lmerTest`
+> (REML, correlated random effects) and Python via `statsmodels` MixedLM (ML, crossed
+> variance components). The two backends are *close but not identical* by construction
+> (different estimator/optimizer); the two-group Gaussian power backend is identical in both.

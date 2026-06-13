@@ -64,6 +64,63 @@ def power(spec, n_sims=1000, alpha=0.05):
     }
 
 
+def power_mixed(spec, n_sims=50, alpha=0.05):
+    """Crossed mixed-effects simulation-based power in Python (closes the R/Python analysis
+    asymmetry). Fits the crossed model with statsmodels MixedLM using variance components for
+    by-subject and by-item random intercepts and slopes.
+
+    Note: statsmodels uses ML with *independent* variance components (no random-effect
+    correlation), so estimates are close to but not identical to the R/lme4 backend (REML +
+    correlated random effects). The point is capability parity: the same spec yields
+    mixed-effects power in either ecosystem.
+    """
+    import copy, math, statistics, warnings
+    import pandas as pd
+    import statsmodels.formula.api as smf
+
+    if isinstance(spec, str):
+        spec = load_spec(spec)
+    within = [f for f in spec["factors"] if f.get("vary_within")]
+    if len(within) != 1:
+        raise NotImplementedError("v0.1 Python power_mixed expects exactly one within factor.")
+    f = within[0]
+    fname = f["name"]
+    col, vals = next(iter(f["contrasts"].items()))
+    l2c = {f["levels"][i]: vals[i] for i in range(len(f["levels"]))}
+    beta = spec["fixed"]["coefficients"][col]
+    yname, fam = spec["response"]["name"], spec["response"]["family"]
+    shift = spec["response"].get("shift", 0.0)
+    base = spec["seed"]
+    vcf = {"subj_i": "0 + C(subject)", "subj_s": "0 + C(subject):cc",
+           "item_i": "0 + C(item)", "item_s": "0 + C(item):cc"}
+
+    est, pv = [], []
+    for i in range(n_sims):
+        s = copy.deepcopy(spec); s["seed"] = base + i
+        df = pd.DataFrame(simulate(s).rows)
+        df["cc"] = df[fname].map(l2c)
+        df["yv"] = [math.log(v - shift) for v in df[yname]] if fam == "shifted_lognormal" else list(df[yname])
+        df["grp"] = 1
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                m = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf).fit(reml=False)
+            est.append(float(m.fe_params["cc"])); pv.append(float(m.pvalues["cc"]))
+        except Exception:
+            pass
+
+    sig = [i for i, p in enumerate(pv) if p < alpha]
+    return {
+        "backend": "statsmodels MixedLM (crossed variance components, ML)",
+        "n_sims": n_sims, "n_converged": len(pv), "alpha": alpha,
+        "power": len(sig) / len(pv) if pv else float("nan"),
+        "n_significant": len(sig), "true_effect": beta,
+        "mean_estimate": statistics.mean(est) if est else float("nan"),
+        "type_s": (sum(1 for i in sig if (est[i] > 0) != (beta > 0)) / len(sig)) if sig else float("nan"),
+        "type_m": statistics.mean(abs(est[i]) / abs(beta) for i in sig) if sig else float("nan"),
+    }
+
+
 def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05):
     """Sweep the number of subjects and return power (and Type M) at each grid point."""
     import copy
