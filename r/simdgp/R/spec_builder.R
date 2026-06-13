@@ -62,3 +62,22 @@ build_spec <- function(p) {
 #' Serialise a spec to pretty JSON (the portable artifact).
 #' @export
 spec_json <- function(spec) jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, digits = NA)
+
+#' Generate a self-contained, reproducible R script from a spec.
+#'
+#' The spec is embedded as an R list literal (via `deparse`, which round-trips exactly), so the
+#' script reproduces the design without any external file. This is the "take your no-code
+#' creation to a reproducible script" export; the app's Verify button runs it in a clean R
+#' session and confirms it reproduces the data bit-for-bit.
+#' @export
+generate_r_script <- function(spec) {
+  paste0(
+    "# Reproducible simulation exported by simdgp (provisional package name).\n",
+    "# install.packages(\"simdgp\")   # once available; then run this script as-is.\n",
+    "library(simdgp)\n\n",
+    "spec <- ", paste(deparse(spec), collapse = "\n"), "\n\n",
+    "data <- simulate_design(spec)              # analysis-ready data frame\n",
+    "# write.csv(data, \"data.csv\", row.names = FALSE)\n",
+    "# pow  <- power_mixed(spec, n_sims = 200)   # simulation-based power + Type S/M\n"
+  )
+}

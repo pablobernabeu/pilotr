@@ -32,6 +32,12 @@ testServer(app = app_dir, {
   di <- data()
   check("SyntaxPC" %in% names(di) && nrow(di) == 4000,
         "advanced paste-spec path simulates a continuous-predictor design")
+
+  # verified R-script export: run the design in a clean R subprocess and compare
+  session$setInputs(spec_json_in = "", verify_code = 1)
+  vo <- output$verify_out
+  check(grepl("reproduces identically", vo), "verify: clean R session reproduces the data bit-for-bit")
+  cat("  verify:", gsub("\n", " ", vo), "\n")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")

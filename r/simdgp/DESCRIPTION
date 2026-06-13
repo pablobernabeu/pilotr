@@ -12,5 +12,5 @@ Description: Generative simulation of experimental and behavioral data sets from
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports: jsonlite, stats
-Suggests: shiny, future, promises, shinylive, lme4, lmerTest, faux
+Suggests: shiny, future, promises, shinylive, lme4, lmerTest, faux, callr
 RoxygenNote: 7.3.1

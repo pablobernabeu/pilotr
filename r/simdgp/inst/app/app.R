@@ -9,15 +9,18 @@ library(shiny)
 # When the package is loaded (run_app), its functions are available; from source, locate
 # and source the engine + spec-builder. (Installed packages have no R/ source files, so we
 # only source when the functions are not already present.)
+ENGINE_FILES <- NULL   # resolved source paths (dev) so the verifier can rebuild in a clean R session
 if (!exists("simulate_design", mode = "function")) {
+  .resolved <- character(0)
   .src <- function(rel, required = TRUE) {
     for (b in c("../../R", "../R", "R", ".")) {
-      p <- file.path(b, rel); if (file.exists(p)) { source(p); return(invisible(TRUE)) }
+      p <- file.path(b, rel); if (file.exists(p)) { source(p); .resolved <<- c(.resolved, normalizePath(p)); return(invisible(TRUE)) }
     }
     if (required) stop("cannot find ", rel); invisible(FALSE)
   }
   for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) .src(f)
   .src("power_mixed.R", required = FALSE)  # mixed-effects power if available
+  ENGINE_FILES <- .resolved
 }
 
 MAX_SIMS <- as.integer(Sys.getenv("SIMDGP_MAX_SIMS", "5000"))
@@ -104,7 +107,16 @@ ui <- fluidPage(
           numericInput("n_sims", "Simulations (capped in-app)", 1000, min = 100, max = MAX_SIMS, step = 100),
           actionButton("run_power", "Run power analysis"),
           verbatimTextOutput("power_out")),
-        tabPanel("Reproduce in R / Python", verbatimTextOutput("repro"))
+        tabPanel("Reproducible R script",
+          p("Your no-code design as a self-contained R script. Download it, or ",
+            tags$b("verify"), " it reproduces this exact data by running it in a clean R session."),
+          downloadButton("dl_rscript", "Download .R"),
+          actionButton("verify_code", "Verify (clean R session)"),
+          verbatimTextOutput("verify_out"),
+          tags$hr(),
+          verbatimTextOutput("rscript"),
+          tags$hr(),
+          verbatimTextOutput("repro_py"))
       )
     )
   )
@@ -164,11 +176,45 @@ server <- function(input, output, session) {
     else barplot(table(d[[yn]]), col = "#2C6FB0", main = paste("Counts of", yn))
   })
 
-  output$repro <- renderText(paste0(
-    "# Download the spec (first tab) as design.json, then:\n\n",
-    "# --- R ---\nlibrary(simdgp)\nd <- simulate_design(\"design.json\")\n\n",
-    "# --- Python ---\nfrom simdgp import simulate\nd = simulate(\"design.json\")\nd.to_csv(\"data.csv\")\n\n",
-    "# Same spec + seed => identical data in all three interfaces."))
+  output$rscript <- renderText(generate_r_script(current_spec()))
+  output$repro_py <- renderText(paste0(
+    "# The same design also runs in Python (bit-identical given the same seed):\n",
+    "from simdgp import simulate\n",
+    "d = simulate(\"design.json\")   # download the spec from the first tab\n",
+    "d.to_csv(\"data.csv\")"))
+
+  output$dl_rscript <- downloadHandler(
+    filename = function() paste0(input$name, ".R"),
+    content = function(file) writeLines(generate_r_script(current_spec()), file))
+
+  # ---- Verify: run the exported design in a clean R subprocess and compare ----
+  verify_result <- reactiveVal(NULL)
+  observeEvent(input$verify_code, {
+    spec <- current_spec()
+    ref <- simulate_design(spec); yn <- spec$response$name
+    ref_chk <- if (is.numeric(ref[[yn]])) sum(ref[[yn]]) else paste(ref[[yn]], collapse = "")
+    if (!requireNamespace("callr", quietly = TRUE)) {
+      verify_result(list(msg = "Install the 'callr' package to verify in a clean R session.")); return()
+    }
+    withProgress(message = "Running the design in a clean R session...", value = 0.5, {
+      res <- tryCatch(callr::r(function(json, files) {
+        if (is.null(files)) library(simdgp) else for (f in files) source(f)
+        s <- jsonlite::fromJSON(json, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
+        d <- simulate_design(s); yn <- s$response$name
+        list(n = nrow(d), chk = if (is.numeric(d[[yn]])) sum(d[[yn]]) else paste(d[[yn]], collapse = ""))
+      }, args = list(json = spec_json(spec), files = ENGINE_FILES)), error = function(e) e)
+    })
+    if (inherits(res, "error")) { verify_result(list(msg = paste("error:", conditionMessage(res)))); return() }
+    ident <- isTRUE(all.equal(res$chk, ref_chk)) && res$n == nrow(ref)
+    verify_result(list(ok = ident, n = res$n, ref_n = nrow(ref)))
+  })
+  output$verify_out <- renderPrint({
+    r <- verify_result()
+    if (is.null(r)) { cat("Click 'Verify' to run the script in a fresh R process and confirm it reproduces this data."); return() }
+    if (!is.null(r$msg)) { cat(r$msg); return() }
+    if (isTRUE(r$ok)) cat(sprintf("OK - reproduces identically in a clean R session.\n  %d rows (app) = %d rows (clean run); response checksum matches.", r$ref_n, r$n))
+    else cat(sprintf("MISMATCH - app %d rows vs clean run %d rows, or checksum differs.", r$ref_n, r$n))
+  })
 
   # ---- power: capped, async when installed (worker process), else synchronous ----
   power_result <- reactiveVal(NULL)
