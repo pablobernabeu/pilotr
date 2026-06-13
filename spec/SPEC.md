@@ -11,7 +11,7 @@ Python package. Given the same spec and seed, every implementation must produce 
 |---|---|---|
 | `name` | string | Human label for the design. |
 | `seed` | integer | Master seed (see RNG contract below). |
-| `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. |
+| `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. Add `per_subject` to `item` (e.g. `{"n": 40, "per_subject": 12}`) for **partial crossing** — each subject sees a random subset of items. |
 | `factors` | array | Experimental factors (categorical; see below). |
 | `predictors` | array | Optional continuous predictors (see below). |
 | `fixed` | object | Fixed effects: `intercept` + `coefficients` (map column → β). A coefficient key may be a single column or an `"a:b"` **interaction** (product of columns a and b). |
@@ -95,6 +95,7 @@ hierarchical designs (e.g. participants within sites, schools, or languages).
 | `bernoulli` | — | `p = invlogit(η)`, `y = 1[u < p]` (accuracy; logit link) |
 | `poisson` | — | `λ = exp(η)`, `y =` inverse-CDF Poisson (counts; log link) |
 | `ordinal` | `thresholds` (K−1 cut-points) | cumulative-logit: `P(Y≤k) = invlogit(θ_k − η)` (Likert) |
+| `beta` | `phi` (precision) | `μ = invlogit(η)`, `y ~ Beta(μ·φ, (1−μ)·φ)` (proportions in (0,1)) |
 
 `η` (the linear predictor for a row) = `intercept + Σ β_col · contrast_col +`
 subject random part `+` item random part. `name` sets the output column name; optional
