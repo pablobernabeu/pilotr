@@ -8,7 +8,7 @@
 # After running, set the repo's Pages source to the gh-pages branch:
 #   GitHub > Settings > Pages > Build and deployment > Source: "Deploy from a branch" > gh-pages / (root)
 # The demo will then be live at:
-#   https://pablobernabeu.github.io/Experimental-data-simulation/
+#   https://pablobernabeu.github.io/pilotr/
 #
 # Run from the repository root:  bash app-lite/deploy_ghpages.sh
 set -euo pipefail
@@ -35,4 +35,4 @@ rm -rf "$WORK"
 
 echo "Pushed gh-pages to $REMOTE"
 echo "Now set Settings > Pages > Source = gh-pages branch, then visit:"
-echo "  https://pablobernabeu.github.io/Experimental-data-simulation/"
+echo "  https://pablobernabeu.github.io/pilotr/"
