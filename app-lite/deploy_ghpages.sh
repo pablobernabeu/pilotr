@@ -3,22 +3,22 @@
 #
 # WARNING: this force-pushes ~66 MB of WebAssembly assets to the gh-pages branch of the
 # PUBLIC repository, where they remain in history. The site is regenerable
-# (toolkit/app-lite/build_shinylive.R), so it need not live in the main branch.
+# (app-lite/build_shinylive.R), so it need not live in the main branch.
 #
 # After running, set the repo's Pages source to the gh-pages branch:
 #   GitHub > Settings > Pages > Build and deployment > Source: "Deploy from a branch" > gh-pages / (root)
 # The demo will then be live at:
 #   https://pablobernabeu.github.io/Experimental-data-simulation/
 #
-# Run from the repository root:  bash toolkit/app-lite/deploy_ghpages.sh
+# Run from the repository root:  bash app-lite/deploy_ghpages.sh
 set -euo pipefail
 
-SITE="toolkit/build/shinylive-demo"
+SITE="build/shinylive-demo"
 REMOTE="$(git remote get-url origin)"
 
 if [ ! -f "$SITE/index.html" ]; then
   echo "Building the shinylive site first..."
-  Rscript toolkit/app-lite/build_shinylive.R
+  Rscript app-lite/build_shinylive.R
 fi
 touch "$SITE/.nojekyll"   # serve static files as-is (don't run Jekyll)
 

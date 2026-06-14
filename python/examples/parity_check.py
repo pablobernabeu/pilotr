@@ -1,6 +1,6 @@
 """Verify that the R and Python implementations produce identical data from one spec.
 
-Reads the CSVs written by both run_demo scripts (toolkit/build/) and compares them
+Reads the CSVs written by both run_demo scripts (build/) and compares them
 cell-by-cell: numeric columns within tolerance, string columns exactly. Run order:
   python run_demo.py  ->  Rscript run_demo.R  ->  python parity_check.py
 """

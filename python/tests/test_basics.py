@@ -1,4 +1,4 @@
-"""Minimal validation suite (run with: pytest toolkit/python/tests).
+"""Minimal validation suite (run with: pytest python/tests).
 
 Covers the three things a methods-package reviewer checks first: the RNG is
 deterministic, the inverse-normal is numerically correct, and the engine recovers the

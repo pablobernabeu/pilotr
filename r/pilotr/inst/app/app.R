@@ -2,7 +2,7 @@
 #
 # Thin client: every control writes into the portable JSON spec, which downloads and runs
 # unchanged in the R and Python packages. Launch with pilotr::run_app() (installed) or
-# shiny::runApp("toolkit/r/pilotr/inst/app") (from source).
+# shiny::runApp("r/pilotr/inst/app") (from source).
 
 library(shiny)
 

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/pablobernabeu/Experimental-data-simulation/toolkit/spec/design.schema.json",
+  "$id": "https://github.com/pablobernabeu/Experimental-data-simulation/spec/design.schema.json",
   "title": "pilotr design specification",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],

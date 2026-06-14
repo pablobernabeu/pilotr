@@ -32,7 +32,7 @@ placeholders, and statsmodels' power module is analytic classical-test only.
 ## Repository layout
 
 ```
-toolkit/
+pilotr/  (repo root)
   spec/          The portable design-specification format (the conceptual core)
     SPEC.md          human-readable format documentation + the RNG contract
     design.schema.json   JSON Schema for validation
@@ -55,7 +55,7 @@ which you can download and run unchanged in either package to get identical data
 # launch the no-code app locally (installed package)
 pilotr::run_app()
 # ...or from source:
-shiny::runApp("toolkit/r/pilotr/inst/app")
+shiny::runApp("r/pilotr/inst/app")
 ```
 
 ## Deployment & concurrency
@@ -77,17 +77,17 @@ locally from the downloaded spec.
 
 ```bash
 # build the serverless static site (downloads webR assets on first run)
-Rscript toolkit/app-lite/build_shinylive.R   # -> toolkit/build/shinylive-demo/
+Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
 # deploy that site to GitHub Pages (force-pushes ~66 MB to the gh-pages branch, then set
 # Settings > Pages > Source = gh-pages):
-bash toolkit/app-lite/deploy_ghpages.sh
+bash app-lite/deploy_ghpages.sh
 ```
 
 ## Running at scale (HPC / SLURM)
 
 Simulation-based power and precision analyses are embarrassingly parallel, so they scale well
-on a cluster. `toolkit/hpc/` holds a robust SLURM **array** job (`precision_array.slurm` and
+on a cluster. `hpc/` holds a robust SLURM **array** job (`precision_array.slurm` and
 its runner `precision_array.R`): one task per sample size, replicates parallelised across
 cores via `mclapply`, results written to project storage. Reference deployment (Oxford ARC):
 
@@ -96,7 +96,7 @@ cores via `mclapply`, results written to project storage. Reference deployment (
   home quota is small.
 - One-time bootstrap installs `lme4`/`lmerTest` into the data-area library (`R_LIBS`); the R
   module already provides `jsonlite`.
-- Submit the sweep: `sbatch toolkit/hpc/precision_array.slurm`
+- Submit the sweep: `sbatch hpc/precision_array.slurm`
   (smoke test: `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`).
 - Each task writes one `precision_N<n>.csv`; combine them into a full precision-vs-N curve at
   a resolution far beyond a laptop.
@@ -126,41 +126,41 @@ backend for speed and parallel streams, preserving the same cross-language contr
 
 ```bash
 # Python: simulate both designs + classical simulation-based power (Type S/M)
-python toolkit/python/examples/run_demo.py
+python python/examples/run_demo.py
 
 # R: the same, bit-for-bit
-Rscript toolkit/r/pilotr/examples/run_demo.R
+Rscript r/pilotr/examples/run_demo.R
 
 # Prove R and Python produce identical data (max abs diff = 0):
-python toolkit/python/examples/parity_check.py
+python python/examples/parity_check.py
 
 # R: crossed mixed-effects simulation-based power via lme4/lmerTest
-Rscript toolkit/r/pilotr/examples/run_power_mixed.R
+Rscript r/pilotr/examples/run_power_mixed.R
 
 # R: validate the generative model -- maximal lmer recovers the specified parameters
-Rscript toolkit/r/pilotr/examples/validate_recovery.R
+Rscript r/pilotr/examples/validate_recovery.R
 
 # Python validation suite
-python -m pytest toolkit/python/tests -q
+python -m pytest python/tests -q
 
 # Realistic distributions: ordinal (Likert) + Poisson counts
-python toolkit/python/examples/families_demo.py
+python python/examples/families_demo.py
 
 # Power-vs-N curves + the publication figure
-python toolkit/python/examples/power_curves.py        # Gaussian curve  -> build/*.csv
-Rscript toolkit/r/pilotr/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
-Rscript toolkit/r/pilotr/examples/plot_power_curves.R # -> build/power_curves.png
+python python/examples/power_curves.py        # Gaussian curve  -> build/*.csv
+Rscript r/pilotr/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
+Rscript r/pilotr/examples/plot_power_curves.R # -> build/power_curves.png
 
 # competitor equivalence (the "why not faux / simstudy?" rebuttals)
-Rscript toolkit/r/pilotr/examples/equivalence_faux.R
-Rscript toolkit/r/pilotr/examples/equivalence_simstudy.R
+Rscript r/pilotr/examples/equivalence_faux.R
+Rscript r/pilotr/examples/equivalence_simstudy.R
 
 # crossed mixed-effects power in Python (statsmodels) -- R/Python capability parity
-python toolkit/python/examples/power_mixed_demo.py
+python python/examples/power_mixed_demo.py
 
 # continuous predictors + interactions + continuous random slopes, with a precision-based
 # ROPE design analysis, an N-sweep, and a brms bridge -- see docs/mixed_models_and_design_analysis.md
-Rscript toolkit/r/pilotr/examples/precision_design_analysis.R
+Rscript r/pilotr/examples/precision_design_analysis.R
 ```
 
 > **R↔Python coverage.** Data *generation* is bit-identical across languages (proven), and
