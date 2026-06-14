@@ -1,0 +1,20 @@
+# Keep CI actions and Python dependencies current. Dependabot opens PRs, which the
+# dependency-health workflow then tests. (CRAN/R is not supported by Dependabot; the
+# scheduled R job in dependency-health.yml is the safety net for R dependencies.)
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: "pip"
+    directory: "/python"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "deps"
