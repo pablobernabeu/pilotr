@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(HERE, ".."))
 SPEC = os.path.join(HERE, "..", "..", "spec", "examples")
 BUILD = os.path.join(HERE, "..", "..", "build")
 os.makedirs(BUILD, exist_ok=True)
-from simdgp import load_spec, power_curve
+from pilotr import load_spec, power_curve
 
 
 def main():

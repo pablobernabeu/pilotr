@@ -1,4 +1,4 @@
-# simdgp LITE app -- the serverless (shinylive / webR) build of the light path.
+# pilotr LITE app -- the serverless (shinylive / webR) build of the light path.
 #
 # Runs entirely in the browser via WebAssembly: zero server, infinite concurrent users.
 # Covers design building, simulation, summaries, the Gaussian power backend, and spec/data
@@ -9,9 +9,9 @@ library(shiny)
 for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) source(f)
 
 ui <- fluidPage(
-  titlePanel("simdgp (lite) — design & simulate in your browser"),
+  titlePanel("pilotr (lite) — design & simulate in your browser"),
   tags$p(tags$em("Runs fully in your browser (no server). For crossed mixed-effects power, ",
-                 "install the simdgp R or Python package.")),
+                 "install the pilotr R or Python package.")),
   sidebarLayout(
     sidebarPanel(
       width = 4,

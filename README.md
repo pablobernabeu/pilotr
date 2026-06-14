@@ -1,11 +1,11 @@
-# simdgp — a cross-language toolkit for simulating experimental & behavioral data
+# pilotr — a cross-language toolkit for simulating experimental & behavioral data
 
-> **Working name `simdgp` (SIMulate Data-Generating Processes) is provisional.**
-> Verify availability on CRAN and PyPI before release.
+> **`pilotr`** — *pilot your study before you run it.* The name is verified available on
+> CRAN, PyPI, and GitHub.
 
 This is the next-generation successor to the *Experimental-data-simulation* Shiny app
 (Bernabeu & Lynott, 2020). Where the prototype draws **marginal** distributions only
-(`rnorm`/`rbinom`, no effects, no correlations, no random structure), `simdgp` is a
+(`rnorm`/`rbinom`, no effects, no correlations, no random structure), `pilotr` is a
 **generative** toolkit built around one idea:
 
 > **One portable design specification → three interchangeable front-ends
@@ -15,7 +15,7 @@ This is the next-generation successor to the *Experimental-data-simulation* Shin
 
 ## Why this is novel (the gap, verified against the literature)
 
-| Capability | faux | simstudy | simr / Superpower | **simdgp** |
+| Capability | faux | simstudy | simr / Superpower | **pilotr** |
 |---|:--:|:--:|:--:|:--:|
 | Generative IV→DV effect sizes | ✗ | ✓ | (from fitted model) | ✓ |
 | Crossed by-subject **and** by-item random slopes | ✓ | partial | ✓ | ✓ |
@@ -37,9 +37,9 @@ toolkit/
     SPEC.md          human-readable format documentation + the RNG contract
     design.schema.json   JSON Schema for validation
     examples/        worked design specs (between-groups; crossed mixed-effects RT)
-  python/        simdgp Python package (runnable; pure-Python generative core)
-  r/             simdgp R package (mirrors the Python core exactly)
-    inst/app/      the no-code Shiny app, bundled in the package (simdgp::run_app())
+  python/        pilotr Python package (runnable; pure-Python generative core)
+  r/             pilotr R package (mirrors the Python core exactly)
+    inst/app/      the no-code Shiny app, bundled in the package (pilotr::run_app())
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
   docs/
     positioning.md   the Behavior Research Methods positioning statement / abstract
@@ -53,9 +53,9 @@ which you can download and run unchanged in either package to get identical data
 
 ```r
 # launch the no-code app locally (installed package)
-simdgp::run_app()
+pilotr::run_app()
 # ...or from source:
-shiny::runApp("toolkit/r/simdgp/inst/app")
+shiny::runApp("toolkit/r/pilotr/inst/app")
 ```
 
 ## Deployment & concurrency
@@ -66,7 +66,7 @@ sharing that process. So the architecture is deliberately split by how the tool 
 
 | Path | How | Concurrency | Use for |
 |---|---|---|---|
-| **Installable** (primary) | `simdgp::run_app()` / `python -m simdgp`; CRAN/PyPI | **unbounded** — each user, own machine & cores | real work, esp. heavy power (parallelise across cores) |
+| **Installable** (primary) | `pilotr::run_app()` / `python -m pilotr`; CRAN/PyPI | **unbounded** — each user, own machine & cores | real work, esp. heavy power (parallelise across cores) |
 | **Serverless demo** | `app-lite/` exported with shinylive → static site on GitHub Pages | **unbounded** — each browser computes (WebAssembly) | zero-cost "try it now" link: design + simulate + Gaussian power |
 | Shared hosted instance | shinyapps.io / ShinyProxy | low / costly | avoid as the main channel (blocking; the prototype's 25 hr-month free tier) |
 
@@ -91,8 +91,8 @@ on a cluster. `toolkit/hpc/` holds a robust SLURM **array** job (`precision_arra
 its runner `precision_array.R`): one task per sample size, replicates parallelised across
 cores via `mclapply`, results written to project storage. Reference deployment (Oxford ARC):
 
-- **Project (code/scripts):** `~/simdgp_toolkit/` in home. **Heavy material (R library +
-  results):** `/data/<project>/simdgp_toolkit/{Rlib,results,logs}` in project storage, since
+- **Project (code/scripts):** `~/pilotr_toolkit/` in home. **Heavy material (R library +
+  results):** `/data/<project>/pilotr_toolkit/{Rlib,results,logs}` in project storage, since
   home quota is small.
 - One-time bootstrap installs `lme4`/`lmerTest` into the data-area library (`R_LIBS`); the R
   module already provides `jsonlite`.
@@ -107,7 +107,7 @@ reproduces local output exactly), so HPC runs are reproducible from the same spe
 ## Cross-language reproducibility (the hard part, solved)
 
 Native RNGs differ across ecosystems (R uses Mersenne-Twister + inversion; NumPy uses
-PCG64), so naive ports never match. `simdgp` instead ships a **shared generator**
+PCG64), so naive ports never match. `pilotr` instead ships a **shared generator**
 implemented identically in both languages:
 
 * **Uniforms:** L'Ecuyer (1988) combined linear congruential generator. All integer
@@ -129,16 +129,16 @@ backend for speed and parallel streams, preserving the same cross-language contr
 python toolkit/python/examples/run_demo.py
 
 # R: the same, bit-for-bit
-Rscript toolkit/r/simdgp/examples/run_demo.R
+Rscript toolkit/r/pilotr/examples/run_demo.R
 
 # Prove R and Python produce identical data (max abs diff = 0):
 python toolkit/python/examples/parity_check.py
 
 # R: crossed mixed-effects simulation-based power via lme4/lmerTest
-Rscript toolkit/r/simdgp/examples/run_power_mixed.R
+Rscript toolkit/r/pilotr/examples/run_power_mixed.R
 
 # R: validate the generative model -- maximal lmer recovers the specified parameters
-Rscript toolkit/r/simdgp/examples/validate_recovery.R
+Rscript toolkit/r/pilotr/examples/validate_recovery.R
 
 # Python validation suite
 python -m pytest toolkit/python/tests -q
@@ -148,19 +148,19 @@ python toolkit/python/examples/families_demo.py
 
 # Power-vs-N curves + the publication figure
 python toolkit/python/examples/power_curves.py        # Gaussian curve  -> build/*.csv
-Rscript toolkit/r/simdgp/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
-Rscript toolkit/r/simdgp/examples/plot_power_curves.R # -> build/power_curves.png
+Rscript toolkit/r/pilotr/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
+Rscript toolkit/r/pilotr/examples/plot_power_curves.R # -> build/power_curves.png
 
 # competitor equivalence (the "why not faux / simstudy?" rebuttals)
-Rscript toolkit/r/simdgp/examples/equivalence_faux.R
-Rscript toolkit/r/simdgp/examples/equivalence_simstudy.R
+Rscript toolkit/r/pilotr/examples/equivalence_faux.R
+Rscript toolkit/r/pilotr/examples/equivalence_simstudy.R
 
 # crossed mixed-effects power in Python (statsmodels) -- R/Python capability parity
 python toolkit/python/examples/power_mixed_demo.py
 
 # continuous predictors + interactions + continuous random slopes, with a precision-based
 # ROPE design analysis, an N-sweep, and a brms bridge -- see docs/mixed_models_and_design_analysis.md
-Rscript toolkit/r/simdgp/examples/precision_design_analysis.R
+Rscript toolkit/r/pilotr/examples/precision_design_analysis.R
 ```
 
 > **R↔Python coverage.** Data *generation* is bit-identical across languages (proven), and

@@ -1,4 +1,4 @@
-"""Portable numerical core for simdgp.
+"""Portable numerical core for pilotr.
 
 Everything here is implemented to be *bit-identical* with the R port: a shared
 L'Ecuyer (1988) combined LCG for uniforms, Wichura's AS 241 inverse-normal, a hand-rolled

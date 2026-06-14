@@ -6,7 +6,7 @@ ground-truth parameters it was given.
 """
 import os, sys, statistics, math
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from simdgp import RNG, as241, simulate, load_spec
+from pilotr import RNG, as241, simulate, load_spec
 
 SPEC = os.path.join(os.path.dirname(__file__), "..", "..", "spec", "examples")
 

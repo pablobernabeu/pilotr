@@ -1,4 +1,4 @@
-# Portable numerical core for simdgp -- a bit-identical mirror of simdgp/core.py.
+# Portable numerical core for pilotr -- a bit-identical mirror of pilotr/core.py.
 # Shared L'Ecuyer (1988) combined LCG, Wichura AS 241 inverse-normal, hand-rolled
 # Cholesky, and inverse-CDF response transforms. All LCG products stay below 2^53, so
 # the arithmetic is exact in IEEE-754 doubles and matches the Python integer port.

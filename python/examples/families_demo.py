@@ -5,7 +5,7 @@ from collections import Counter
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 SPEC = os.path.join(HERE, "..", "..", "spec", "examples")
-from simdgp import simulate
+from pilotr import simulate
 
 
 def main():

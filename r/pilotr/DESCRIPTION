@@ -1,4 +1,4 @@
-Package: simdgp
+Package: pilotr
 Title: Simulate Experimental and Behavioral Data from a Portable Design Specification
 Version: 0.1.0
 Authors@R: person("Pablo", "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com")

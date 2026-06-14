@@ -4,7 +4,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-pkg_R <- file.path(here, "..", "r", "simdgp", "R")
+pkg_R <- file.path(here, "..", "r", "pilotr", "R")
 stage <- file.path(here, "..", "build", "shinylive-app")
 out   <- file.path(here, "..", "build", "shinylive-demo")
 

@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simdgp"
+name = "pilotr"
 version = "0.1.0"
 description = "Simulate experimental and behavioral data from a portable design specification (cross-language with the R package of the same name)."
 readme = "../README.md"
@@ -18,4 +18,4 @@ power = ["scipy>=1.7"]   # simulation-based power demo (p-values)
 dev = ["scipy>=1.7", "pytest>=7"]
 
 [tool.setuptools]
-packages = ["simdgp"]
+packages = ["pilotr"]

@@ -1,7 +1,7 @@
 # Installable launcher for the no-code app. Each user runs it locally on their own machine,
 # so concurrency is unbounded across users and heavy power runs use the user's own cores.
 
-#' Launch the simdgp no-code app.
+#' Launch the pilotr no-code app.
 #'
 #' Runs the bundled Shiny app locally. When the package is installed, the app calls the
 #' package's functions directly; running locally means each user has a private R process
@@ -20,9 +20,9 @@ run_app <- function(..., async = NULL) {
     future::plan(future::multisession)
     on.exit(future::plan(future::sequential), add = TRUE)
   }
-  app_dir <- system.file("app", package = "simdgp")
+  app_dir <- system.file("app", package = "pilotr")
   if (!nzchar(app_dir)) {                      # dev fallback when running from source
-    cand <- c("inst/app", file.path("toolkit", "r", "simdgp", "inst", "app"))
+    cand <- c("inst/app", file.path("toolkit", "r", "pilotr", "inst", "app"))
     app_dir <- cand[file.exists(file.path(cand, "app.R"))][1]
     if (is.na(app_dir)) stop("Could not locate the app directory.")
   }

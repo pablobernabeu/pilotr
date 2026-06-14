@@ -1,4 +1,4 @@
-# The `simdgp` design specification (v0.1)
+# The `pilotr` design specification (v0.1)
 
 A design specification is a single JSON object describing a **data-generating process**
 (DGP) for an experiment. It is the contract shared by the web app, the R package, and the

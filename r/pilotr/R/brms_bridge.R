@@ -1,6 +1,6 @@
-# Bridge to a Bayesian workflow: translate a simdgp design spec into a ready-to-fit brms
+# Bridge to a Bayesian workflow: translate a pilotr design spec into a ready-to-fit brms
 # model -- the response family, the fixed + random-effects formula, and a weakly-informative
-# prior set. simdgp simulates the data; brms (Stan) fits the confirmatory Bayesian model. This
+# prior set. pilotr simulates the data; brms (Stan) fits the confirmatory Bayesian model. This
 # emits copy-pasteable code and needs neither brms nor Stan installed.
 
 #' Emit a brms formula, family, and priors from a design spec.

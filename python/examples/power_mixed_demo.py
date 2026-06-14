@@ -5,7 +5,7 @@ import os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 SPEC = os.path.join(HERE, "..", "..", "spec", "examples", "crossed_mixed_rt.json")
-from simdgp import power_mixed, load_spec
+from pilotr import power_mixed, load_spec
 
 n_sims = int(os.environ.get("N_SIMS", "40"))
 print(f"Fitting {n_sims} crossed MixedLM models in Python (statsmodels)...")

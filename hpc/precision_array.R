@@ -8,8 +8,8 @@
 # Env: TOOLKIT (toolkit dir), TASK_ID (grid index), N_SIMS, ROPE, OUTDIR, SLURM_CPUS_PER_TASK.
 
 suppressWarnings(suppressMessages({
-  TK <- path.expand(Sys.getenv("TOOLKIT", "~/simdgp_toolkit/toolkit"))
-  for (f in c("core.R", "simulate.R", "autoformula.R")) source(file.path(TK, "r/simdgp/R", f))
+  TK <- path.expand(Sys.getenv("TOOLKIT", "~/pilotr_toolkit/toolkit"))
+  for (f in c("core.R", "simulate.R", "autoformula.R")) source(file.path(TK, "r/pilotr/R", f))
   library(lme4); library(parallel)
 }))
 

@@ -9,7 +9,7 @@ default_response_name <- function(family) {
          bernoulli = "accuracy", poisson = "count", ordinal = "rating", "outcome")
 }
 
-#' Build a simdgp design spec (a plain list) from a flat list of UI inputs.
+#' Build a pilotr design spec (a plain list) from a flat list of UI inputs.
 #' @export
 build_spec <- function(p) {
   resp_name <- if (is.null(p$resp_name) || !nzchar(p$resp_name)) default_response_name(p$family) else p$resp_name
@@ -72,9 +72,9 @@ spec_json <- function(spec) jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = T
 #' @export
 generate_r_script <- function(spec) {
   paste0(
-    "# Reproducible simulation exported by simdgp (provisional package name).\n",
-    "# install.packages(\"simdgp\")   # once available; then run this script as-is.\n",
-    "library(simdgp)\n\n",
+    "# Reproducible simulation exported by pilotr.\n",
+    "# install.packages(\"pilotr\")   # once available; then run this script as-is.\n",
+    "library(pilotr)\n\n",
     "spec <- ", paste(deparse(spec), collapse = "\n"), "\n\n",
     "data <- simulate_design(spec)              # analysis-ready data frame\n",
     "# write.csv(data, \"data.csv\", row.names = FALSE)\n",

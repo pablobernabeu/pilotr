@@ -2,12 +2,12 @@
 import os, sys, statistics
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, ".."))          # import simdgp without installing
+sys.path.insert(0, os.path.join(HERE, ".."))          # import pilotr without installing
 SPEC = os.path.join(HERE, "..", "..", "spec", "examples")
 BUILD = os.path.join(HERE, "..", "..", "build")
 os.makedirs(BUILD, exist_ok=True)
 
-from simdgp import simulate, load_spec, power
+from pilotr import simulate, load_spec, power
 
 
 def main():

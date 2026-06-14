@@ -29,8 +29,7 @@ cp -r "$SITE"/. "$WORK"/
   git init -q
   git checkout -q -b gh-pages
   git add -A
-  git -c user.name="$(git -C - config user.name 2>/dev/null || echo deploy)" \
-      -c user.email="deploy@local" commit -q -m "Deploy simdgp shinylive demo"
+  git -c user.name="pilotr deploy" -c user.email="deploy@local" commit -q -m "Deploy pilotr shinylive demo"
   git push -f "$REMOTE" gh-pages )
 rm -rf "$WORK"
 

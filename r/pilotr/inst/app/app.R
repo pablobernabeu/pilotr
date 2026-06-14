@@ -1,8 +1,8 @@
-# simdgp no-code app -- the third interface over the shared design spec.
+# pilotr no-code app -- the third interface over the shared design spec.
 #
 # Thin client: every control writes into the portable JSON spec, which downloads and runs
-# unchanged in the R and Python packages. Launch with simdgp::run_app() (installed) or
-# shiny::runApp("toolkit/r/simdgp/inst/app") (from source).
+# unchanged in the R and Python packages. Launch with pilotr::run_app() (installed) or
+# shiny::runApp("toolkit/r/pilotr/inst/app") (from source).
 
 library(shiny)
 
@@ -23,15 +23,15 @@ if (!exists("simulate_design", mode = "function")) {
   ENGINE_FILES <- .resolved
 }
 
-MAX_SIMS <- as.integer(Sys.getenv("SIMDGP_MAX_SIMS", "5000"))
+MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))
 # Async only when running as the installed package with future+promises (workers reload the
 # package). From source / serverless this is FALSE and power runs synchronously.
-.async_ok <- isNamespaceLoaded("simdgp") &&
+.async_ok <- isNamespaceLoaded("pilotr") &&
   nzchar(system.file(package = "future")) && nzchar(system.file(package = "promises"))
 
 # ---------------------------------------------------------------- UI ----
 ui <- fluidPage(
-  titlePanel("simdgp — design · simulate · power (one spec, three interfaces)"),
+  titlePanel("pilotr — design · simulate · power (one spec, three interfaces)"),
   sidebarLayout(
     sidebarPanel(
       width = 4,
@@ -88,7 +88,7 @@ ui <- fluidPage(
       tags$details(
         tags$summary("Advanced: paste a JSON spec (overrides the controls)"),
         textAreaInput("spec_json_in", NULL, "", rows = 5,
-          placeholder = "Paste a simdgp spec with continuous predictors / interactions (e.g. a reading-time design)")),
+          placeholder = "Paste a pilotr spec with continuous predictors / interactions (e.g. a reading-time design)")),
       actionButton("simulate", "Simulate", class = "btn-primary"),
       downloadButton("dl_spec", "Download spec (.json)"),
       downloadButton("dl_data", "Download data (.csv)")
@@ -179,7 +179,7 @@ server <- function(input, output, session) {
   output$rscript <- renderText(generate_r_script(current_spec()))
   output$repro_py <- renderText(paste0(
     "# The same design also runs in Python (bit-identical given the same seed):\n",
-    "from simdgp import simulate\n",
+    "from pilotr import simulate\n",
     "d = simulate(\"design.json\")   # download the spec from the first tab\n",
     "d.to_csv(\"data.csv\")"))
 
@@ -198,7 +198,7 @@ server <- function(input, output, session) {
     }
     withProgress(message = "Running the design in a clean R session...", value = 0.5, {
       res <- tryCatch(callr::r(function(json, files) {
-        if (is.null(files)) library(simdgp) else for (f in files) source(f)
+        if (is.null(files)) library(pilotr) else for (f in files) source(f)
         s <- jsonlite::fromJSON(json, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
         d <- simulate_design(s); yn <- s$response$name
         list(n = nrow(d), chk = if (is.numeric(d[[yn]])) sum(d[[yn]]) else paste(d[[yn]], collapse = ""))
@@ -228,7 +228,7 @@ server <- function(input, output, session) {
     n <- min(max(as.integer(input$n_sims), 100L), MAX_SIMS)
     if (.async_ok) {
       power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
-      p <- promises::future_promise({ simdgp::power_design(spec, n_sims = n) }, seed = TRUE)
+      p <- promises::future_promise({ pilotr::power_design(spec, n_sims = n) }, seed = TRUE)
       promises::then(p, onFulfilled = function(res) power_result(res),
                         onRejected = function(e) power_result(list(msg = paste("error:", conditionMessage(e)))))
     } else {

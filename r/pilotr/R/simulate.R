@@ -1,4 +1,4 @@
-# Spec parsing + generative engine -- a bit-identical mirror of simdgp/simulate.py.
+# Spec parsing + generative engine -- a bit-identical mirror of pilotr/simulate.py.
 # Supports categorical contrasts and continuous predictors (with interactions) as fixed
 # effects, and crossed by-subject/by-item random intercepts and slopes (on either).
 

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/pablobernabeu/Experimental-data-simulation/toolkit/spec/design.schema.json",
-  "title": "simdgp design specification",
+  "title": "pilotr design specification",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "properties": {

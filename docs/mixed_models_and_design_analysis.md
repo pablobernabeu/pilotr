@@ -1,6 +1,6 @@
 # Advanced designs — continuous predictors, interactions, multilevel structure, and the Bayesian bridge
 
-Beyond simple factorial experiments, simdgp expresses observational and regression-style
+Beyond simple factorial experiments, pilotr expresses observational and regression-style
 mixed-effects designs. This note summarises the advanced capabilities, what is validated, what
 is deferred, and the recommended workflow for design and analysis planning.
 
@@ -43,7 +43,7 @@ is deferred, and the recommended workflow for design and analysis planning.
    formula + weakly-informative priors). Simulate one dataset, fit it in `brms`, and check
    recovery, prior-predictive behaviour, and the HDI-vs-ROPE decision before collecting data.
 
-This makes simdgp a **design-and-planning engine** with `brms` (Stan) as the **confirmatory
+This makes pilotr a **design-and-planning engine** with `brms` (Stan) as the **confirmatory
 Bayesian layer** — an honest division of labour rather than re-implementing Stan.
 
 ## Deferred (roadmap)
