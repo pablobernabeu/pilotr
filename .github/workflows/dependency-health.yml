@@ -1,22 +1,18 @@
-# Dependency health: detect breakage from upstream dependency updates, try to resolve it
-# automatically, and flag the maintainer if it can't be resolved.
+# Dependency health: detect breakage from upstream dependency updates, triage it with a free
+# AI model, and flag the maintainer. Runs entirely on free, native GitHub features --
+# GitHub Actions is free for public repositories, and the triage uses GitHub Models (free,
+# rate-limited) authenticated by the built-in GITHUB_TOKEN. No paid API key or external service.
 #
 # Stages:
-#   1. detect   - run the R and Python test/example suites against the LATEST released
-#                 versions of every dependency (no version pinning), on a schedule. This
-#                 surfaces breaking changes shipped by CRAN/PyPI before they reach a user.
-#   2. resolve  - on failure, attempt an automatic fix:
-#                   * agentic (opt-in): if an ANTHROPIC_API_KEY secret is set, Claude Code
-#                     investigates the failure, edits the code, and re-runs until green;
-#                   * deterministic fallback (no key): regenerate roxygen docs/NAMESPACE.
-#                 Any resulting change is proposed as a pull request (CI on the PR confirms
-#                 whether it actually fixes the break).
-#   3. flag     - always open/update a tracking issue assigned to the maintainer, linking
-#                 the failed run and any auto-fix PR.
+#   1. detect - run the R and Python suites against the LATEST released CRAN/PyPI versions
+#               (no pinning), so an upstream breaking change surfaces here, not for a user.
+#   2. triage - on failure, ask a free GitHub Models model to diagnose the failure and suggest
+#               the smallest fix, from the failed run's own logs.
+#   3. flag   - open/update a tracking issue (assigned to the maintainer) with the run link and
+#               the AI diagnosis; auto-close it when the checks pass again.
 #
-# To enable the agentic auto-fix, add an ANTHROPIC_API_KEY repository secret
-# (Settings > Secrets and variables > Actions). Without it, stages 1 and 3 still run and
-# the deterministic fallback is used in stage 2.
+# Optional upgrade to a fully autonomous fix-and-open-PR loop (NOT free) is described in the
+# commented block at the end of this file.
 
 name: Dependency health
 
@@ -37,10 +33,10 @@ jobs:
     name: R suite (latest CRAN deps)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: r-lib/actions/setup-r@v2
         with:
-          use-public-rspm: true   # fast binaries, tracking the latest released versions
+          use-public-rspm: true   # fast binaries tracking the latest released versions
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: r/pilotr
@@ -62,8 +58,8 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install latest deps and run the suite
@@ -76,119 +72,116 @@ jobs:
           python examples/run_demo.py
           python examples/families_demo.py
 
-  resolve-and-flag:
-    name: Try to auto-resolve, then flag the maintainer
+  triage-and-flag:
+    name: Triage with GitHub Models, then flag the maintainer
     needs: [r-deps, python-deps]
     if: ${{ always() && (needs.r-deps.result == 'failure' || needs.python-deps.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       issues: write
+      models: read   # free GitHub Models access via GITHUB_TOKEN
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Is the agentic auto-fix configured?
-        id: cfg
-        run: echo "have_key=${{ secrets.ANTHROPIC_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
+      - name: Collect the failing logs and config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run view "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > failure.log 2>&1 || true
+          {
+            echo "Failed dependency-health run for the pilotr package (R + Python)."
+            echo
+            echo "=== Last 200 lines of the failing logs ==="
+            tail -n 200 failure.log
+            echo
+            echo "=== python/pyproject.toml ==="
+            cat python/pyproject.toml
+            echo
+            echo "=== r/pilotr/DESCRIPTION ==="
+            cat r/pilotr/DESCRIPTION
+          } > triage-input.md
 
-      # --- toolchains, so a fixer can actually run the failing suites (agentic path) ---
-      - uses: r-lib/actions/setup-r@v2
-        if: steps.cfg.outputs.have_key == 'true'
-        with:
-          use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        if: steps.cfg.outputs.have_key == 'true'
-        with:
-          working-directory: r/pilotr
-          dependencies: '"all"'
-          extra-packages: any::roxygen2
-      - uses: actions/setup-python@v5
-        if: steps.cfg.outputs.have_key == 'true'
-        with:
-          python-version: "3.12"
-
-      - name: Agentic auto-fix (Claude Code)
-        if: steps.cfg.outputs.have_key == 'true'
+      - name: Diagnose with a free GitHub Models model
+        id: ai
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
+        uses: actions/ai-inference@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            The scheduled dependency-health check is failing: pilotr's tests fail against the
-            latest released versions of its dependencies. Diagnose and fix it.
+          model: openai/gpt-4o-mini
+          system-prompt: >
+            You maintain an R + Python package (pilotr). A scheduled CI job that runs the test
+            suites against the latest released dependency versions has failed. From the logs and
+            config provided, identify the single most likely root cause and propose the smallest
+            concrete fix, naming the file and the change. Be concise: reply in GitHub-flavored
+            Markdown under 250 words, with a "Likely cause" line and a "Suggested fix" section.
+            Do not invent log lines.
+          prompt-file: triage-input.md
+          max-completion-tokens: "700"
 
-            Reproduce the failures:
-              R:   Rscript r/pilotr/tests/test_app_logic.R
-                   Rscript r/pilotr/tests/test_app_server.R
-                   Rscript r/pilotr/examples/run_demo.R
-                   Rscript r/pilotr/examples/run_power_mixed.R
-                   Rscript r/pilotr/examples/equivalence_faux.R
-              Py:  cd python && pip install ".[dev]" && pytest tests -q
-
-            Make the SMALLEST change that restores compatibility with the updated dependency
-            (e.g. adapt to a renamed/changed function; only as a last resort, pin the offending
-            dependency in r/pilotr/DESCRIPTION or python/pyproject.toml). Do NOT weaken, skip,
-            or delete tests, and keep R<->Python bit-identical output intact. Re-run the
-            commands until they pass. If you cannot fix it, leave the working tree unchanged.
-          claude_args: |
-            --max-turns 30
-            --allowedTools Bash,Edit,Read,Write,Glob,Grep
-
-      # --- deterministic fallback when no API key: safe regeneration of generated files ---
-      - uses: r-lib/actions/setup-r@v2
-        if: steps.cfg.outputs.have_key != 'true'
-        with:
-          use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        if: steps.cfg.outputs.have_key != 'true'
-        with:
-          working-directory: r/pilotr
-          extra-packages: any::roxygen2
-      - name: Regenerate R docs/NAMESPACE (safe best-effort)
-        if: steps.cfg.outputs.have_key != 'true'
-        continue-on-error: true
-        shell: Rscript {0}
-        run: roxygen2::roxygenise("r/pilotr")
-
-      - name: Propose any auto-fix as a pull request
-        id: pr
-        if: always()
-        continue-on-error: true
-        uses: peter-evans/create-pull-request@v7
-        with:
-          branch: auto/dependency-remediation
-          title: "Automated dependency remediation"
-          commit-message: "fix: automated dependency remediation"
-          body: |
-            Automated attempt to resolve the failing scheduled **Dependency health** check.
-            The checks on this PR show whether the change actually fixes the break — review
-            before merging.
-          labels: dependencies
-          delete-branch: true
-
-      - name: Flag the maintainer (open or update tracking issue)
-        if: always()
-        uses: actions/github-script@v7
+      - name: Open or update the tracking issue
+        uses: actions/github-script@v9
+        env:
+          AI_RESPONSE: ${{ steps.ai.outputs.response }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           script: |
             const marker = "<!-- dependency-health-tracker -->";
             const { owner, repo } = context.repo;
-            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const pr = `${{ steps.pr.outputs.pull-request-number || '' }}`;
-            const prLine = pr
-              ? `\n\nAn automated fix was attempted in #${pr} — review whether its checks pass.`
-              : `\n\nNo automated fix could be applied; this needs manual attention.`;
-            const body = `${marker}\n\nThe scheduled **Dependency health** check is failing — a dependency update has likely broken the package.\n\n- Failed run: ${run}${prLine}\n\n_This issue updates automatically on each failing run._`;
+            const diagnosis = (process.env.AI_RESPONSE || "").trim();
+            const aiBlock = diagnosis
+              ? `\n\n---\n### Automated triage (GitHub Models)\n\n${diagnosis}`
+              : `\n\n_(Automated triage was unavailable for this run.)_`;
+            const body = `${marker}\n\nThe scheduled **Dependency health** check is failing — an upstream dependency update has likely broken the package.\n\n- Failed run: ${process.env.RUN_URL}${aiBlock}\n\n_This issue updates on each failing run and closes automatically when the checks pass again._`;
             const open = await github.rest.issues.listForRepo({ owner, repo, state: "open", per_page: 100 });
             const existing = open.data.find(i => i.body && i.body.includes(marker));
             if (existing) {
               await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
             } else {
-              await github.rest.issues.create({
-                owner, repo,
-                title: "Dependency health check failing",
-                body,
-                assignees: ["pablobernabeu"],
-              });
+              await github.rest.issues.create({ owner, repo, title: "Dependency health check failing", body, assignees: ["pablobernabeu"] });
             }
+
+  close-on-success:
+    name: Close the tracking issue when healthy
+    needs: [r-deps, python-deps]
+    if: ${{ needs.r-deps.result == 'success' && needs.python-deps.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = "<!-- dependency-health-tracker -->";
+            const { owner, repo } = context.repo;
+            const open = await github.rest.issues.listForRepo({ owner, repo, state: "open", per_page: 100 });
+            for (const i of open.data) {
+              if (i.body && i.body.includes(marker)) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: i.number, body: "Dependency-health checks are passing again — closing automatically." });
+                await github.rest.issues.update({ owner, repo, issue_number: i.number, state: "closed" });
+              }
+            }
+
+# -----------------------------------------------------------------------------------------
+# OPTIONAL: fully autonomous fix-and-open-PR (NOT free). It needs:
+#   * an ANTHROPIC_API_KEY repository secret, and
+#   * Settings > Actions > General > Workflow permissions >
+#       "Allow GitHub Actions to create and approve pull requests" (enabled).
+# Then add a job (needs: [r-deps, python-deps]; if failure;
+# permissions: { contents: write, pull-requests: write }):
+#
+#   - uses: actions/checkout@v6
+#   - uses: r-lib/actions/setup-r@v2
+#   - uses: r-lib/actions/setup-r-dependencies@v2
+#       with: { working-directory: r/pilotr, dependencies: '"all"' }
+#   - uses: actions/setup-python@v6
+#       with: { python-version: "3.12" }
+#   - uses: anthropics/claude-code-action@v1
+#       with:
+#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+#         prompt: |
+#           Diagnose and fix the failing dependency tests run by dependency-health.yml.
+#           Make the smallest change; do not weaken or delete tests.
+#         claude_args: "--max-turns 30 --allowedTools Bash,Edit,Read,Write,Glob,Grep"
+#   - uses: peter-evans/create-pull-request@v7
+#       with: { branch: auto/dependency-remediation, title: "Automated dependency remediation", labels: dependencies }
+# -----------------------------------------------------------------------------------------

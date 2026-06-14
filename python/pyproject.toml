@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pilotr"
 version = "0.1.0"
 description = "Simulate experimental and behavioral data from a portable design specification (cross-language with the R package of the same name)."
-readme = "../README.md"
+readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Pablo Bernabeu" }]
 license = { text = "MIT" }
