@@ -18,6 +18,7 @@ dist/
 paper/.quarto/
 paper/manuscript_files/
 paper/node_modules/
+paper/package-lock.json
 paper/chk/
 paper/*.pdf
 paper/pg*.jpg
