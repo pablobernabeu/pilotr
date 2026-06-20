@@ -74,6 +74,13 @@ computing_js <- tags$script(HTML(
   "           if (el) el.innerText = 'Computing… (runs in your browser; this can take a few seconds)'; }",
   "}, true);"))
 
+# Content-width, left-packed, striped data tables (avoid the big gap when a table has few
+# columns); tighter sidebar rules.
+app_css <- tags$style(HTML(
+  "table.shiny-table { width: auto !important; margin-bottom: 0; }",
+  ".shiny-table th, .shiny-table td { padding: 0.25rem 0.9rem; }",
+  ".sidebar hr { margin: 0.5rem 0; }"))
+
 # ---------------------------------------------------------------------------------------------
 guide <- card(
   card_header("How to use pilotr (lite)"),
@@ -98,7 +105,7 @@ guide <- card(
     ),
     tags$h6("Field guide"),
     tags$ul(
-      tags$li(tags$b("Effect (on -0.5/+0.5)"), " — the difference between the two levels on ",
+      tags$li(tags$b("Effect (±0.5)"), " — the difference between the two levels on ",
               "the response scale: identity for Gaussian, log for RT/Poisson, logit for ",
               "accuracy / ordinal / Beta."),
       tags$li(tags$b("Residual SD / Precision"), " — Gaussian and shifted-lognormal noise (SD); ",
@@ -170,7 +177,7 @@ ui <- page_sidebar(
     ),
     fluidRow(
       column(6, numericInput("intercept", "Intercept", 100)),
-      column(6, numericInput("effect", "Effect (on -0.5/+0.5)", 5))
+      column(6, numericInput("effect", "Effect (±0.5)", 5))
     ),
     selectInput("family", "Response family",
                 c("Gaussian" = "gaussian", "Shifted lognormal (RT)" = "shifted_lognormal",
@@ -202,6 +209,7 @@ ui <- page_sidebar(
         downloadButton("dl_data", "Data (.csv)", class = "btn-sm btn-outline-secondary"))
   ),
   computing_js,
+  app_css,
   navset_card_tab(
     id = "tabs",
     nav_panel("Guide", guide),
@@ -313,7 +321,7 @@ server <- function(input, output, session) {
   output$dims <- renderText({
     d <- data_req(); sprintf("Simulated %d rows x %d columns.", nrow(d), ncol(d))
   })
-  output$head <- renderTable(head(data_req(), 12))
+  output$head <- renderTable(head(data_req(), 12), striped = TRUE, hover = TRUE, spacing = "xs")
 
   output$summary <- renderPrint({
     d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
@@ -322,8 +330,9 @@ server <- function(input, output, session) {
       if (is.numeric(y)) print(round(c(mean = mean(y), sd = sd(y), min = min(y), max = max(y)), 3))
       else print(table(y))
     } else if (is.numeric(y)) {
-      print(do.call(data.frame, aggregate(y, list(d[[gn]]),
-            function(x) round(c(mean = mean(x), sd = sd(x), n = length(x)), 3))))
+      agg <- aggregate(y, setNames(list(d[[gn]]), gn),
+                       function(x) round(c(mean = mean(x), sd = sd(x), n = length(x)), 3))
+      print(data.frame(agg[gn], agg$x, check.names = FALSE), row.names = FALSE)
     } else {
       print(table(d[[gn]], y))
     }
