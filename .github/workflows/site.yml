@@ -2,7 +2,7 @@
 # Pages URL (https://pablobernabeu.github.io/pilotr/) and the serverless shinylive demo at
 # the /demo/ sub-path. Both are deployed together to the gh-pages branch on every relevant
 # push to main (and on demand). Free, native GitHub Actions; the gh-pages push uses the
-# built-in GITHUB_TOKEN. Replaces the manual app-lite/deploy_ghpages.sh.
+# built-in GITHUB_TOKEN. Replaces the former manual deploy script.
 
 name: Website
 
