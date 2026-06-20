@@ -218,7 +218,7 @@ ui <- page_sidebar(
     nav_panel("Power",
       card(card_body(
         fluidRow(
-          column(4, numericInput("n_sims", "Simulations", 500, min = 100, max = 3000, step = 100)),
+          column(4, numericInput("n_sims", "Simulations", 300, min = 100, max = 3000, step = 100)),
           column(8, div(class = "mt-4 d-flex gap-2 flex-wrap",
                         actionButton("run_power", "Estimate power", class = "btn-primary"),
                         actionButton("run_curve", "Power curve over N", class = "btn-outline-primary")))

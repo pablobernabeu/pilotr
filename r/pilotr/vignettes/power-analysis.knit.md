@@ -1,0 +1,127 @@
+---
+title: "Power and design analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Power and design analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+
+``` r
+library(pilotr)
+```
+
+Simulation-based power asks a simple question: if the world is exactly as my specification
+says, how often would my analysis detect the effect? pilotr answers it by repeatedly
+simulating from the ground-truth spec, fitting the analysis model, and recording the
+proportion of significant results — and, beyond power, it reports the **design-analysis**
+quantities of Gelman and Carlin (2014): the **Type S** (sign) error and the **Type M**
+(magnitude / exaggeration) ratio.
+
+> The mixed-effects examples below use very small `n_sims` so the vignette builds quickly. For
+> real planning use `n_sims >= 200` (and more replicates for stable Type S/M).
+
+## Two-group Gaussian
+
+The classic case has a closed-form analytic power, which the simulation matches:
+
+
+``` r
+spec <- build_spec(list(
+  name = "two_group", seed = 1, design_kind = "between", n_subject = 64,
+  factor_name = "group", lev1 = "control", lev2 = "treatment",
+  intercept = 100, effect = 5, family = "gaussian", resp_name = "score", sigma = 10))
+
+pw <- power_design(spec, n_sims = 500)
+unlist(pw[c("power", "type_s", "type_m", "true_effect", "mean_estimate")])
+#>         power        type_s        type_m   true_effect mean_estimate 
+#>      0.504000      0.000000      1.372571      5.000000      4.947259
+```
+
+At roughly 50% power, notice the **Type M** ratio well above 1: conditional on significance,
+the estimated effect is *exaggerated*, even though the average estimate over all replicates is
+unbiased. This is the statistical-significance filter at work, and it is exactly what
+design analysis is meant to expose.
+
+## Crossed mixed-effects designs
+
+The capability that distinguishes pilotr from a marginal simulator is power for **crossed**
+by-subject and by-item designs. The R interface fits the maximal model
+`y ~ cond + (1 + cond | subject) + (1 + cond | item)` with `lme4`/`lmerTest` and tests the
+fixed effect with Satterthwaite degrees of freedom.
+
+
+``` r
+spec_c <- build_spec(list(
+  name = "priming", seed = 1, design_kind = "within", include_items = TRUE,
+  n_subject = 24, n_item = 18,
+  factor_name = "condition", lev1 = "related", lev2 = "unrelated",
+  intercept = 6, effect = 0.05,
+  subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+  item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+  family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
+
+pm <- power_mixed(spec_c, n_sims = 20)   # tiny for the vignette; use >= 200 in practice
+unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+#>       power      type_s      type_m n_converged 
+#>    0.450000    0.000000    1.494293   20.000000
+```
+
+`n_converged` reports how many replicates the maximal model actually fit — a useful diagnostic
+in its own right, since convergence problems are common in small crossed designs.
+
+## A power curve
+
+Sweep the number of subjects to see where power crosses a target:
+
+
+``` r
+curve <- power_curve_mixed(spec_c, subject_ns = c(15, 30), n_sims = 12)
+curve
+#>   n_subject     power   type_m
+#> 1        15 0.2500000 1.843531
+#> 2        30 0.5833333 1.239214
+
+plot(curve$n_subject, curve$power, type = "b", pch = 19, ylim = c(0, 1),
+     xlab = "N subjects", ylab = "Power", col = "#2C6FB0", lwd = 2)
+abline(h = 0.8, lty = 2, col = "grey")
+```
+
+![](C:/Users/pablob/AppData/Local/Temp/RtmpmW4XlM/power-analysis_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
+For a high-resolution sweep, these analyses are embarrassingly parallel and scale well on a
+cluster (the repository ships a SLURM array job that runs 1,600 maximal fits across 64 cores
+in under a minute).
+
+## A bridge to the Bayesian workflow
+
+For a confirmatory Bayesian fit, `brms_bridge()` emits a ready-to-run `brms` model — the
+family, the fixed + random-effects formula, and a weakly-informative prior set — derived from
+the same specification, so the planning model and the confirmatory model never diverge:
+
+
+``` r
+brms_bridge(spec_c)
+#> library(brms)
+#> fit <- brm(
+#>   RT ~ effect + (1 + effect | subject) + (1 + effect | item),
+#>   data   = your_data,
+#>   family = shifted_lognormal(),
+#>   prior  = c(
+#>     prior(normal(0, 2.5), class = "Intercept"),
+#>     prior(normal(0, 0.5), class = "b", coef = "effect"),
+#>     prior(normal(0, 1), class = "sd"),
+#>     prior(lkj(2), class = "cor")
+#>   ),
+#>   chains = 4, iter = 4000, warmup = 2000, cores = 4,
+#>   control = list(adapt_delta = 0.95)
+#> )
+```
+
+## See also
+
+The [precision / ROPE vignette](precision-rope.html) covers design analysis when the question
+is *practical* rather than statistical significance.

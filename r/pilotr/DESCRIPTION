@@ -14,5 +14,7 @@ URL: https://pablobernabeu.github.io/pilotr, https://github.com/pablobernabeu/pi
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
 Imports: jsonlite, stats
-Suggests: shiny, future, promises, shinylive, lme4, lmerTest, faux, callr
+Suggests: shiny, future, promises, shinylive, lme4, lmerTest, faux, callr, knitr,
+    rmarkdown
+VignetteBuilder: knitr
 RoxygenNote: 7.3.1
