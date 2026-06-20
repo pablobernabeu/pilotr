@@ -77,7 +77,7 @@ computing_js <- tags$script(HTML(
 # Content-width, left-packed, striped data tables (avoid the big gap when a table has few
 # columns); tighter sidebar rules.
 app_css <- tags$style(HTML(
-  "table.shiny-table { width: auto !important; margin-bottom: 0; }",
+  "table.shiny-table { width: auto !important; align-self: flex-start; margin-bottom: 0; }",
   ".shiny-table th, .shiny-table td { padding: 0.25rem 0.9rem; }",
   ".sidebar hr { margin: 0.5rem 0; }"))
 
