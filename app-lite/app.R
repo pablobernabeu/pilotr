@@ -16,6 +16,18 @@ for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) source(f)
 DOCS <- "https://pablobernabeu.github.io/pilotr/"
 GH   <- "https://github.com/pablobernabeu/pilotr"
 
+# Sensible intercept/effect (and noise) defaults per family, on each family's own scale.
+# Switching family in the controls resets these so the point-and-click design stays valid
+# (e.g. a Gaussian-scale intercept of 100 would saturate a logit/log family).
+FAMILY_DEFAULTS <- list(
+  gaussian          = list(intercept = 100, effect = 5,   sigma = 10),
+  shifted_lognormal = list(intercept = 6,   effect = 0.1, sigma = 0.3),
+  bernoulli         = list(intercept = 0,   effect = 0.5),
+  poisson           = list(intercept = 1.5, effect = 0.3),
+  ordinal           = list(intercept = 0,   effect = 0.8),
+  beta              = list(intercept = 0,   effect = 0.8, phi = 8)
+)
+
 # ---- worked examples for the "paste a spec" advanced mode (the full engine) ----------------
 EX_BETA <- '{
   "name": "beta_proportion_demo",
@@ -53,6 +65,15 @@ copy_btn <- function(target, label = "Copy")
   tags$button(label, class = "btn btn-sm btn-outline-secondary",
               onclick = sprintf("navigator.clipboard.writeText(document.getElementById('%s').innerText)", target))
 
+# Instant client-side feedback: webR runs the server in a worker, so the main thread can
+# repaint immediately on click while the computation is in flight.
+computing_js <- tags$script(HTML(
+  "document.addEventListener('click', function(e){",
+  "  var b = e.target.closest ? e.target.closest('#run_power, #run_curve') : null;",
+  "  if (b) { var el = document.getElementById('power_out');",
+  "           if (el) el.innerText = 'Computing… (runs in your browser; this can take a few seconds)'; }",
+  "}, true);"))
+
 # ---------------------------------------------------------------------------------------------
 guide <- card(
   card_header("How to use pilotr (lite)"),
@@ -65,7 +86,8 @@ guide <- card(
     tags$ol(
       tags$li(tags$b("Describe the design"), " in the left panel — sample sizes, the factor ",
               "and its two levels, the fixed intercept and effect, and a response family. ",
-              "For within/crossed designs you can add by-subject and by-item random effects."),
+              "Changing the family resets the intercept/effect to sensible values for that ",
+              "family's scale. For within/crossed designs you can add random effects."),
       tags$li(tags$b("Click Simulate"), ", then read the tabs: the exact JSON ",
               tags$b("Design spec"), ", the simulated ", tags$b("Data"), ", a ",
               tags$b("Summary & plot"), ", simulation-based ", tags$b("Power"), ", and a ",
@@ -89,9 +111,9 @@ guide <- card(
     tags$h6("Advanced: paste a spec"),
     tags$p("The point-and-click controls cover common two-level designs across six response ",
            "families. The ", tags$b("Advanced: paste a full JSON spec"), " box in the sidebar ",
-           "unlocks the rest of the engine — continuous predictors and interactions, ",
-           "additional grouping factors (nesting), and partial crossing. Use the example ",
-           "buttons there to see the format."),
+           "(which overrides the controls) unlocks the rest of the engine — continuous ",
+           "predictors and interactions, additional grouping factors (nesting), and partial ",
+           "crossing. Use the example buttons there to see the format."),
     tags$div(
       class = "alert alert-info", role = "alert",
       tags$b("This is the lite build. "),
@@ -142,9 +164,9 @@ ui <- page_sidebar(
     ),
     tags$hr(),
     fluidRow(
-      column(6, textInput("factor_name", "Factor", "group")),
-      column(3, textInput("lev1", "Level 1", "control")),
-      column(3, textInput("lev2", "Level 2", "treatment"))
+      column(4, textInput("factor_name", "Factor", "group")),
+      column(4, textInput("lev1", "Level 1", "control")),
+      column(4, textInput("lev2", "Level 2", "treatment"))
     ),
     fluidRow(
       column(6, numericInput("intercept", "Intercept", 100)),
@@ -165,6 +187,7 @@ ui <- page_sidebar(
     checkboxInput("use_pasted", tags$b("Advanced: paste a full JSON spec"), FALSE),
     conditionalPanel(
       "input.use_pasted == true",
+      tags$small(class = "text-muted", "Overrides the controls above; unlocks the full engine."),
       textAreaInput("pasted", "Design spec (JSON)", "", height = "150px",
                     placeholder = "Paste a pilotr design spec (JSON)..."),
       div(class = "d-flex gap-2 align-items-center",
@@ -178,6 +201,7 @@ ui <- page_sidebar(
         downloadButton("dl_spec", "Spec (.json)", class = "btn-sm btn-outline-secondary"),
         downloadButton("dl_data", "Data (.csv)", class = "btn-sm btn-outline-secondary"))
   ),
+  computing_js,
   navset_card_tab(
     id = "tabs",
     nav_panel("Guide", guide),
@@ -199,7 +223,7 @@ ui <- page_sidebar(
                         actionButton("run_power", "Estimate power", class = "btn-primary"),
                         actionButton("run_curve", "Power curve over N", class = "btn-outline-primary")))
         ),
-        tags$small(class = "text-muted", "Two-group Gaussian, in-browser. The curve uses up to 1500 sims/point."),
+        tags$small(class = "text-muted", "Two-group Gaussian, in-browser. The curve uses up to 200 sims/point to stay responsive."),
         verbatimTextOutput("power_out"),
         plotOutput("power_plot", height = "320px")))),
     nav_panel("R script",
@@ -215,6 +239,16 @@ ui <- page_sidebar(
 
 # ---------------------------------------------------------------------------------------------
 server <- function(input, output, session) {
+
+  # Reset intercept/effect (and noise) to family-appropriate values when the family changes.
+  observeEvent(input$family, {
+    d <- FAMILY_DEFAULTS[[input$family]]
+    if (is.null(d)) return()
+    updateNumericInput(session, "intercept", value = d$intercept)
+    updateNumericInput(session, "effect",    value = d$effect)
+    if (!is.null(d$sigma)) updateNumericInput(session, "sigma", value = d$sigma)
+    if (!is.null(d$phi))   updateNumericInput(session, "phi",   value = d$phi)
+  }, ignoreInit = TRUE)
 
   observeEvent(input$ex_beta, {
     updateCheckboxInput(session, "use_pasted", value = TRUE)
@@ -249,7 +283,6 @@ server <- function(input, output, session) {
     }
   })
 
-  # For render outputs: show a friendly message instead of a silent error.
   spec_req <- function() {
     s <- current_spec()
     validate(need(!is.null(s), parse_error() %||% "Enter a valid design spec."))
@@ -348,7 +381,7 @@ server <- function(input, output, session) {
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
     grid <- grid[grid >= 4]
-    ns   <- min(nsims(), 1500L)
+    ns   <- min(nsims(), 200L)   # keep the in-browser sweep responsive
     pw   <- vapply(grid, function(n) {
       s <- spec; s$units$subject$n <- as.integer(n); power_design(s, n_sims = ns)$power
     }, numeric(1))
@@ -389,6 +422,11 @@ server <- function(input, output, session) {
       s <- current_spec()
       if (is.null(s)) writeLines("", file) else write.csv(simulate_design(s), file, row.names = FALSE)
     })
+
+  # Keep the download links live even while their tab is hidden, so a click always works
+  # (Shiny suspends hidden outputs by default, which left the R-script download href empty).
+  for (id in c("dl_script", "dl_spec", "dl_data"))
+    outputOptions(output, id, suspendWhenHidden = FALSE)
 }
 
 shinyApp(ui, server)
