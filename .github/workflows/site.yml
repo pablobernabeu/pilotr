@@ -1,0 +1,78 @@
+# Build and publish the project website: the pkgdown documentation site at the repo-root
+# Pages URL (https://pablobernabeu.github.io/pilotr/) and the serverless shinylive demo at
+# the /demo/ sub-path. Both are deployed together to the gh-pages branch on every relevant
+# push to main (and on demand). Free, native GitHub Actions; the gh-pages push uses the
+# built-in GITHUB_TOKEN. Replaces the manual app-lite/deploy_ghpages.sh.
+
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'r/pilotr/**'
+      - 'app-lite/**'
+      - 'spec/**'
+      - 'README.md'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # push to gh-pages via GITHUB_TOKEN
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: r/pilotr
+          dependencies: '"all"'
+          extra-packages: |
+            any::pkgdown
+            any::roxygen2
+            any::shinylive
+            local::.
+
+      - name: Generate Rd help files from roxygen comments
+        shell: Rscript {0}
+        run: roxygen2::roxygenise("r/pilotr")
+
+      - name: Build pkgdown site
+        shell: Rscript {0}
+        run: pkgdown::build_site(pkg = "r/pilotr", install = FALSE, new_process = FALSE)
+
+      - name: Build shinylive demo into the site (/demo)
+        shell: Rscript {0}
+        run: |
+          stage <- "demo-stage"
+          dir.create(stage, showWarnings = FALSE)
+          file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "power.R", "spec_builder.R")),
+                    stage, overwrite = TRUE)
+          file.copy("app-lite/app.R", stage, overwrite = TRUE)
+          shinylive::export(stage, "r/pilotr/docs/demo")
+
+      - name: Deploy to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          touch r/pilotr/docs/.nojekyll
+          PUB="$(mktemp -d)"
+          cp -r r/pilotr/docs/. "$PUB"/
+          cd "$PUB"
+          git init -q
+          git checkout -q -b gh-pages
+          git add -A
+          git -c user.name="pilotr-site[bot]" -c user.email="deploy@users.noreply.github.com" \
+              commit -q -m "Deploy site (pkgdown + demo)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

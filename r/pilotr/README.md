@@ -1,0 +1,36 @@
+# pilotr
+
+Simulate experimental and behavioral data from a portable design specification, with
+integrated simulation-based power and design analysis (Type S / Type M errors, and
+precision against a region of practical equivalence). One specification drives three
+interchangeable interfaces — a no-code web app, this **R** package, and a **Python**
+package — producing **bit-identical** data given the same spec and seed.
+
+## Installation
+
+```r
+# install.packages("remotes")
+remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
+```
+
+## Quick start
+
+```r
+library(pilotr)
+
+spec <- load_spec("design.json")          # a pilotr JSON design spec
+data <- simulate_design(spec)             # analysis-ready data frame
+pow  <- power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4)
+cat(generate_r_script(spec))              # a self-contained, reproducible script
+```
+
+## Try it without installing
+
+A serverless build runs entirely in your browser (zero install, nothing uploaded):
+**[Live demo](https://pablobernabeu.github.io/pilotr/demo/)**.
+
+## Learn more
+
+The full toolkit — the specification format, the Python package, the no-code app, the
+validation suite, and the manuscript — lives at
+<https://github.com/pablobernabeu/pilotr>.

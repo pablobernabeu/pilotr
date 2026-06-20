@@ -1,0 +1,19 @@
+url: https://pablobernabeu.github.io/pilotr
+
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#2C6FB0"
+
+navbar:
+  structure:
+    left:  [reference]
+    right: [demo, github]
+  components:
+    demo:
+      text: "Live demo"
+      href: https://pablobernabeu.github.io/pilotr/demo/
+    github:
+      icon: fa-github
+      href: https://github.com/pablobernabeu/pilotr
+      aria-label: GitHub

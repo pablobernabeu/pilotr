@@ -79,9 +79,8 @@ locally from the downloaded spec.
 # build the serverless static site (downloads webR assets on first run)
 Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
-# deploy that site to GitHub Pages (force-pushes ~66 MB to the gh-pages branch, then set
-# Settings > Pages > Source = gh-pages):
-bash app-lite/deploy_ghpages.sh
+# The published website is built by CI (.github/workflows/site.yml): the pkgdown docs at
+# https://pablobernabeu.github.io/pilotr/ and this demo at https://pablobernabeu.github.io/pilotr/demo/
 ```
 
 ## Running at scale (HPC / SLURM)
