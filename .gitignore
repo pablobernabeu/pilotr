@@ -14,6 +14,14 @@ dist/
 .RData
 *.Rproj.user
 
+# R package build artifacts
+r/pilotr/vignettes/*.knit.md
+r/pilotr/vignettes/*.html
+r/pilotr/vignettes/*_files/
+r/pilotr/doc/
+r/pilotr/Meta/
+r/pilotr/docs/
+
 # manuscript (Quarto render)
 paper/.quarto/
 paper/manuscript_files/
