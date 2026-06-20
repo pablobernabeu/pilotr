@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: site
-  cancel-in-progress: true
+  cancel-in-progress: false   # never interrupt an in-flight gh-pages push
 
 jobs:
   build-deploy:
@@ -45,7 +45,7 @@ jobs:
 
       - name: Generate Rd help files from roxygen comments
         shell: Rscript {0}
-        run: roxygen2::roxygenise("r/pilotr")
+        run: roxygen2::roxygenise("r/pilotr", roclets = "rd")   # Rd only; keep committed NAMESPACE
 
       - name: Build pkgdown site
         shell: Rscript {0}

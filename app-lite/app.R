@@ -13,8 +13,8 @@ for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) source(f)
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
 
-DOCS   <- "https://pablobernabeu.github.io/pilotr/"
-GH     <- "https://github.com/pablobernabeu/pilotr"
+DOCS <- "https://pablobernabeu.github.io/pilotr/"
+GH   <- "https://github.com/pablobernabeu/pilotr"
 
 # ---- worked examples for the "paste a spec" advanced mode (the full engine) ----------------
 EX_BETA <- '{
@@ -44,9 +44,14 @@ EX_CONTINUOUS <- '{
   "response": { "family": "shifted_lognormal", "name": "RT", "sigma": 0.3, "shift": 200, "round": 4 }
 }'
 
-PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0")
+PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0", "#C8922A", "#5A5A5A")
+pal <- function(k) if (k <= length(PALETTE)) PALETTE[seq_len(k)] else grDevices::hcl.colors(k, "Dynamic")
 
 theme <- bs_theme(version = 5, primary = "#2C6FB0", "border-radius" = "0.5rem")
+
+copy_btn <- function(target, label = "Copy")
+  tags$button(label, class = "btn btn-sm btn-outline-secondary",
+              onclick = sprintf("navigator.clipboard.writeText(document.getElementById('%s').innerText)", target))
 
 # ---------------------------------------------------------------------------------------------
 guide <- card(
@@ -65,26 +70,28 @@ guide <- card(
               tags$b("Design spec"), ", the simulated ", tags$b("Data"), ", a ",
               tags$b("Summary & plot"), ", simulation-based ", tags$b("Power"), ", and a ",
               tags$b("Reproducible R script"), "."),
-      tags$li(tags$b("Take it further."), " Download the spec (", tags$code(".json"),
+      tags$li(tags$b("Take it further."), " Download (or copy) the spec (", tags$code(".json"),
               ") or data (", tags$code(".csv"), "), or copy the R script and run it in the ",
               "installed package to reproduce the same data bit-for-bit.")
     ),
     tags$h6("Field guide"),
     tags$ul(
       tags$li(tags$b("Effect (on -0.5/+0.5)"), " — the difference between the two levels on ",
-              "the response scale (log scale for RT/Poisson, logit for accuracy/ordinal)."),
-      tags$li(tags$b("Residual SD"), " — the within-cell noise (Gaussian / shifted-lognormal)."),
+              "the response scale: identity for Gaussian, log for RT/Poisson, logit for ",
+              "accuracy / ordinal / Beta."),
+      tags$li(tags$b("Residual SD / Precision"), " — Gaussian and shifted-lognormal noise (SD); ",
+              "Beta uses a precision (phi)."),
       tags$li(tags$b("Random-effect SDs"), " — by-subject / by-item intercept and slope ",
               "standard deviations, and their correlation, for crossed designs."),
       tags$li(tags$b("Seed"), " — fixes the pseudo-random draw, so the same spec + seed gives ",
               "identical data here, in R, and in Python.")
     ),
     tags$h6("Advanced: paste a spec"),
-    tags$p("The point-and-click controls cover common two-level designs. The ",
-           tags$b("Advanced: paste a full JSON spec"), " box in the sidebar unlocks the full ",
-           "engine — Beta proportions, continuous predictors and interactions, additional ",
-           "grouping factors (nesting), and partial crossing. Use the example buttons there ",
-           "to see the format."),
+    tags$p("The point-and-click controls cover common two-level designs across six response ",
+           "families. The ", tags$b("Advanced: paste a full JSON spec"), " box in the sidebar ",
+           "unlocks the rest of the engine — continuous predictors and interactions, ",
+           "additional grouping factors (nesting), and partial crossing. Use the example ",
+           "buttons there to see the format."),
     tags$div(
       class = "alert alert-info", role = "alert",
       tags$b("This is the lite build. "),
@@ -146,23 +153,24 @@ ui <- page_sidebar(
     selectInput("family", "Response family",
                 c("Gaussian" = "gaussian", "Shifted lognormal (RT)" = "shifted_lognormal",
                   "Bernoulli (logit)" = "bernoulli", "Poisson (log)" = "poisson",
-                  "Ordinal (Likert)" = "ordinal")),
+                  "Ordinal (Likert)" = "ordinal", "Beta (proportion)" = "beta")),
     textInput("resp_name", "Response name (blank = auto)", ""),
     conditionalPanel("input.family == 'gaussian' || input.family == 'shifted_lognormal'",
                      numericInput("sigma", "Residual SD", 10, min = 0)),
     conditionalPanel("input.family == 'shifted_lognormal'", numericInput("shift", "Shift", 200)),
     conditionalPanel("input.family == 'ordinal'",
                      textInput("thresholds", "Thresholds", "-2, -0.6, 0.6, 2")),
+    conditionalPanel("input.family == 'beta'", numericInput("phi", "Precision (phi)", 8, min = 0.1)),
     tags$hr(),
     checkboxInput("use_pasted", tags$b("Advanced: paste a full JSON spec"), FALSE),
     conditionalPanel(
       "input.use_pasted == true",
-      tags$small("Overrides the controls above. Unlocks the full engine."),
-      textAreaInput("pasted", NULL, "", height = "160px",
+      textAreaInput("pasted", "Design spec (JSON)", "", height = "150px",
                     placeholder = "Paste a pilotr design spec (JSON)..."),
-      tags$small("Load example: "),
-      actionLink("ex_beta", "Beta"), " · ",
-      actionLink("ex_cont", "continuous predictor")
+      div(class = "d-flex gap-2 align-items-center",
+          tags$small("Load example:"),
+          actionButton("ex_beta", "Beta", class = "btn btn-sm btn-outline-secondary"),
+          actionButton("ex_cont", "Continuous predictor", class = "btn btn-sm btn-outline-secondary"))
     ),
     tags$hr(),
     actionButton("simulate", "Simulate", class = "btn-primary w-100"),
@@ -175,8 +183,9 @@ ui <- page_sidebar(
     nav_panel("Guide", guide),
     nav_panel("Design spec",
       card(card_body(
-        tags$p("This portable spec is the source of truth. Download it and run it unchanged ",
-               "in the R or Python package for identical data."),
+        div(class = "d-flex justify-content-between align-items-center mb-2",
+            tags$small("The portable source of truth — run it unchanged in R or Python for identical data."),
+            copy_btn("json", "Copy JSON")),
         verbatimTextOutput("json")))),
     nav_panel("Data",
       card(card_body(textOutput("dims"), tableOutput("head")))),
@@ -186,17 +195,20 @@ ui <- page_sidebar(
       card(card_body(
         fluidRow(
           column(4, numericInput("n_sims", "Simulations", 500, min = 100, max = 3000, step = 100)),
-          column(8, div(class = "mt-4",
+          column(8, div(class = "mt-4 d-flex gap-2 flex-wrap",
                         actionButton("run_power", "Estimate power", class = "btn-primary"),
                         actionButton("run_curve", "Power curve over N", class = "btn-outline-primary")))
         ),
+        tags$small(class = "text-muted", "Two-group Gaussian, in-browser. The curve uses up to 1500 sims/point."),
         verbatimTextOutput("power_out"),
         plotOutput("power_plot", height = "320px")))),
     nav_panel("R script",
       card(card_body(
-        tags$p("A self-contained script that reproduces this design with the installed ",
-               tags$b("pilotr"), " R package."),
-        downloadButton("dl_script", "Download .R", class = "btn-sm btn-outline-secondary mb-2"),
+        div(class = "d-flex justify-content-between align-items-center mb-2",
+            tags$small("A self-contained script that reproduces this design with the installed pilotr R package."),
+            div(class = "d-flex gap-2",
+                copy_btn("rscript", "Copy"),
+                downloadButton("dl_script", "Download .R", class = "btn-sm btn-outline-secondary"))),
         verbatimTextOutput("rscript"))))
   )
 )
@@ -213,15 +225,18 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "pasted", value = EX_CONTINUOUS)
   })
 
+  parse_error <- reactiveVal(NULL)
+
+  # Returns the spec, or NULL if a pasted spec is invalid (with the message in parse_error()).
   current_spec <- reactive({
     if (isTRUE(input$use_pasted) && nzchar(trimws(input$pasted %||% ""))) {
       spec <- tryCatch({
         tf <- tempfile(fileext = ".json"); writeLines(input$pasted, tf); load_spec(tf)
       }, error = function(e) e)
-      validate(need(!inherits(spec, "error"),
-                    paste("Could not parse the spec:", conditionMessage(spec))))
-      spec
+      if (inherits(spec, "error")) { parse_error(conditionMessage(spec)); return(NULL) }
+      parse_error(NULL); spec
     } else {
+      parse_error(NULL)
       build_spec(list(
         name = input$name, seed = input$seed, n_subject = input$n_subject,
         include_items = input$include_items, n_item = input$n_item, design_kind = input$design_kind,
@@ -230,27 +245,45 @@ server <- function(input, output, session) {
         subj_int_sd = input$subj_int_sd, subj_slope_sd = input$subj_slope_sd, subj_corr = input$subj_corr,
         item_int_sd = input$item_int_sd, item_slope_sd = input$item_slope_sd, item_corr = input$item_corr,
         family = input$family, resp_name = input$resp_name, sigma = input$sigma,
-        shift = input$shift, thresholds = input$thresholds))
+        shift = input$shift, thresholds = input$thresholds, phi = input$phi))
     }
   })
 
+  # For render outputs: show a friendly message instead of a silent error.
+  spec_req <- function() {
+    s <- current_spec()
+    validate(need(!is.null(s), parse_error() %||% "Enter a valid design spec."))
+    s
+  }
+  nsims <- function() {
+    v <- suppressWarnings(as.integer(input$n_sims))
+    if (length(v) == 0 || is.na(v)) 500L else max(100L, min(v, 3000L))
+  }
   resp_name  <- function(spec) spec$response$name %||% "y"
   group_name <- function(spec) {
     f <- spec$factors
     if (length(f) >= 1 && !is.null(f[[1]]$name)) f[[1]]$name else NA_character_
   }
 
-  sim_data <- eventReactive(input$simulate, simulate_design(current_spec()), ignoreNULL = FALSE)
+  sim_data <- eventReactive(input$simulate, {
+    s <- current_spec(); if (is.null(s)) return(NULL); simulate_design(s)
+  }, ignoreNULL = FALSE)
 
-  output$json <- renderText(spec_json(current_spec()))
+  data_req <- function() {
+    d <- sim_data()
+    validate(need(!is.null(d), parse_error() %||% "Fix the spec, then click Simulate."))
+    d
+  }
+
+  output$json <- renderText(spec_json(spec_req()))
 
   output$dims <- renderText({
-    d <- sim_data(); sprintf("Simulated %d rows x %d columns.", nrow(d), ncol(d))
+    d <- data_req(); sprintf("Simulated %d rows x %d columns.", nrow(d), ncol(d))
   })
-  output$head <- renderTable(head(sim_data(), 12))
+  output$head <- renderTable(head(data_req(), 12))
 
   output$summary <- renderPrint({
-    d <- sim_data(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
     y <- d[[yn]]
     if (is.na(gn) || is.null(d[[gn]])) {
       if (is.numeric(y)) print(round(c(mean = mean(y), sd = sd(y), min = min(y), max = max(y)), 3))
@@ -264,16 +297,22 @@ server <- function(input, output, session) {
   })
 
   output$plot <- renderPlot({
-    d <- sim_data(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
-    y <- d[[yn]]; op <- par(mar = c(4, 4, 1, 1)); on.exit(par(op))
+    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    y <- d[[yn]]; op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
     if (!is.na(gn) && !is.null(d[[gn]]) && is.numeric(y)) {
-      boxplot(y ~ d[[gn]], xlab = gn, ylab = yn, col = PALETTE[1:2], border = "#333333")
+      boxplot(y ~ d[[gn]], xlab = gn, ylab = yn, col = pal(2), border = "#333333",
+              main = paste(yn, "by", gn))
     } else if (!is.na(gn) && !is.null(d[[gn]])) {
-      barplot(table(d[[gn]], y), beside = TRUE, legend = TRUE, xlab = yn, col = PALETTE[1:2])
+      tab <- table(d[[gn]], y)
+      barplot(tab, beside = TRUE, legend = TRUE, xlab = yn, col = pal(nrow(tab)),
+              main = paste(yn, "by", gn))
     } else if (is.numeric(y)) {
-      hist(y, breaks = 30, col = PALETTE[1], border = "white", main = NULL, xlab = yn)
+      hist(y, breaks = 30, col = PALETTE[1], border = "white", xlab = yn,
+           main = paste("Distribution of", yn))
     } else {
-      barplot(table(y), col = PALETTE[1], ylab = "count", xlab = yn)
+      tab <- table(y)
+      barplot(tab, col = pal(length(tab)), ylab = "count", xlab = yn,
+              main = paste("Distribution of", yn))
     }
   })
 
@@ -294,24 +333,26 @@ server <- function(input, output, session) {
 
   observeEvent(input$run_power, {
     spec <- current_spec()
-    if (!gaussian_two_group(spec)) { power_out(not_supported_msg); return() }
-    r <- power_design(spec, n_sims = min(as.integer(input$n_sims), 3000L))
+    if (is.null(spec)) { power_out(parse_error() %||% "Fix the spec first."); return() }
+    if (!gaussian_two_group(spec)) { power_out(not_supported_msg); power_plot(NULL); return() }
+    ns <- nsims(); r <- power_design(spec, n_sims = ns)
     power_out(sprintf(
       "Power: %.3f   |   Type S: %.4f   |   Type M: %.3f\nTrue effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
-      r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate, min(as.integer(input$n_sims), 3000L)))
+      r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate, ns))
   })
 
   observeEvent(input$run_curve, {
     spec <- current_spec()
+    if (is.null(spec)) { power_out(parse_error() %||% "Fix the spec first."); power_plot(NULL); return() }
     if (!gaussian_two_group(spec)) { power_out(not_supported_msg); power_plot(NULL); return() }
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
     grid <- grid[grid >= 4]
-    ns   <- min(as.integer(input$n_sims), 1500L)
+    ns   <- min(nsims(), 1500L)
     pw   <- vapply(grid, function(n) {
       s <- spec; s$units$subject$n <- as.integer(n); power_design(s, n_sims = ns)$power
     }, numeric(1))
-    power_out(sprintf("Power curve at n_sims = %d per point. Total N = %s.",
+    power_out(sprintf("Power curve at n_sims = %d per point. N subjects = %s.",
                       ns, paste(grid, collapse = ", ")))
     power_plot(list(grid = grid, pw = pw))
   })
@@ -319,25 +360,35 @@ server <- function(input, output, session) {
   output$power_out <- renderText(power_out())
   output$power_plot <- renderPlot({
     pc <- power_plot(); if (is.null(pc)) return(NULL)
-    op <- par(mar = c(4, 4, 1, 1)); on.exit(par(op))
+    op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
     plot(pc$grid, pc$pw, type = "b", pch = 19, col = PALETTE[1], lwd = 2,
-         ylim = c(0, 1), xlab = "Total N", ylab = "Power")
+         ylim = c(0, 1), xlab = "N subjects", ylab = "Power", main = "Power vs N subjects")
     abline(h = 0.8, lty = 2, col = "#888888")
+    text(min(pc$grid), 0.8, "0.80 target", pos = 3, col = "#888888", cex = 0.8)
   })
 
   # ---- reproducible R script ----
-  output$rscript <- renderText(generate_r_script(current_spec()))
+  output$rscript <- renderText(generate_r_script(spec_req()))
   output$dl_script <- downloadHandler(
     function() paste0(current_spec()$name %||% "design", ".R"),
-    content = function(file) writeLines(generate_r_script(current_spec()), file))
+    content = function(file) {
+      s <- current_spec()
+      writeLines(if (is.null(s)) "# Invalid spec -- fix the pasted JSON." else generate_r_script(s), file)
+    })
 
-  # ---- downloads ----
+  # ---- downloads (degrade gracefully on an invalid pasted spec) ----
   output$dl_spec <- downloadHandler(
     function() paste0(current_spec()$name %||% "design", ".json"),
-    content = function(file) writeLines(spec_json(current_spec()), file))
+    content = function(file) {
+      s <- current_spec()
+      writeLines(if (is.null(s)) "{}" else spec_json(s), file)
+    })
   output$dl_data <- downloadHandler(
     function() paste0(current_spec()$name %||% "design", ".csv"),
-    content = function(file) write.csv(simulate_design(current_spec()), file, row.names = FALSE))
+    content = function(file) {
+      s <- current_spec()
+      if (is.null(s)) writeLines("", file) else write.csv(simulate_design(s), file, row.names = FALSE)
+    })
 }
 
 shinyApp(ui, server)

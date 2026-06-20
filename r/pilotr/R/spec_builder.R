@@ -6,7 +6,8 @@
 default_response_name <- function(family) {
   switch(family,
          gaussian = "score", shifted_lognormal = "RT",
-         bernoulli = "accuracy", poisson = "count", ordinal = "rating", "outcome")
+         bernoulli = "accuracy", poisson = "count", ordinal = "rating",
+         beta = "proportion", "outcome")
 }
 
 #' Build a pilotr design spec (a plain list) from a flat list of UI inputs.
@@ -55,6 +56,7 @@ build_spec <- function(p) {
   if (p$family %in% c("gaussian", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
+  if (p$family == "beta") resp$phi <- p$phi
   spec$response <- resp
   spec
 }
