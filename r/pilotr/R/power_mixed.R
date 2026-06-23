@@ -1,5 +1,5 @@
 # Simulation-based power for crossed mixed-effects designs, fit with lme4 / lmerTest.
-# This capability distinguishes pilotr from the prototype (Bernabeu & Lynott, 2020,
+# This capability distinguishes pilotr from the prototype (Bernabeu & Lynott, 2024,
 # doi:10.5281/zenodo.10615953). It covers the territory of simr (Green & MacLeod, 2016)
 # and mixedpower (Kumle et al., 2021), driven here by the portable design spec. v0.1
 # handles one within-subject/within-item factor (single contrast column) with a gaussian

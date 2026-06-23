@@ -3,7 +3,7 @@
 `pilotr` lets researchers pilot a study before they run it.
 
 The package is a successor to the *Experimental-data-simulation* Shiny app
-(Bernabeu & Lynott, 2020), archived on Zenodo (doi:10.5281/zenodo.10615953). The
+(Bernabeu & Lynott, 2024), archived on Zenodo (doi:10.5281/zenodo.10615953). The
 prototype draws marginal distributions only (`rnorm`/`rbinom`, with no effects, no
 correlations, and no random structure). `pilotr` is a generative toolkit organised
 around a single idea. One portable design specification drives three interchangeable
