@@ -1,9 +1,10 @@
 """Portable numerical core for pilotr.
 
-Everything here is implemented to be *bit-identical* with the R port: a shared
-L'Ecuyer (1988) combined LCG for uniforms, Wichura's AS 241 inverse-normal, a hand-rolled
-Cholesky factorisation, and inverse-CDF transforms for the response families. No NumPy
-randomness is used, so the stream cannot drift between languages.
+Everything here is implemented to be bit-identical with the R port. The
+components are a shared L'Ecuyer (1988) combined LCG for uniforms, Wichura's
+AS 241 inverse-normal, a hand-rolled Cholesky factorisation, and inverse-CDF
+transforms for the response families. The routines avoid NumPy randomness, so
+the random stream remains aligned across the two languages.
 """
 
 from __future__ import annotations
@@ -137,8 +138,9 @@ def ordinal_inv(eta: float, thresholds: list[float], u: float) -> int:
 
 
 def gamma_mt(rng, shape: float) -> float:
-    """Marsaglia-Tsang Gamma(shape, scale=1) draw from the shared RNG (normals + uniforms in a
-    rejection loop). Identical float ops in R and Python => identical accept/reject => parity."""
+    """Marsaglia-Tsang Gamma(shape, scale=1) draw from the shared RNG (normals and uniforms in a
+    rejection loop). The floating-point operations are identical in R and Python, so the
+    accept/reject decisions also agree, which preserves parity across the two languages."""
     if shape < 1.0:
         g = gamma_mt(rng, shape + 1.0)
         return g * rng.uniform() ** (1.0 / shape)

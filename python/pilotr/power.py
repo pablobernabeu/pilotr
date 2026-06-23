@@ -1,16 +1,17 @@
 """Simulation-based power and design analysis (Type S / Type M).
 
-For each of `n_sims` Monte Carlo replicates we simulate a fresh data set from the *known*
-ground-truth spec, fit the analysis model, and record the estimate and p-value. Beyond
-classical power (proportion significant) we report Gelman & Carlin's (2014) design-analysis
-quantities, computed over the *significant* replicates:
+For each of the `n_sims` Monte Carlo replicates, we simulate a fresh data set from the
+known ground-truth spec, fit the analysis model, and record the estimate and p-value. In
+addition to classical power (the proportion of significant replicates), we report the
+design-analysis quantities of Gelman and Carlin (2014), computed over the significant
+replicates.
 
 * Type S (sign) error  -- P(estimate has the wrong sign | significant)
 * Type M (magnitude)   -- E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
-v0.1 ships the analytic backend for a two-group Gaussian design (two-sample t-test). The R
-package routes crossed mixed-effects designs to lme4/glmmTMB; the Python analysis backends
-(statsmodels / pymer4) are on the roadmap.
+Version 0.1 provides the analytic backend for a two-group Gaussian design (the two-sample
+t-test). The R package routes crossed mixed-effects designs to lme4 and glmmTMB. The Python
+analysis backends (statsmodels and pymer4) are planned for a future release.
 """
 
 from __future__ import annotations
@@ -68,16 +69,17 @@ def power_mixed(spec, n_sims=50, alpha=0.05):
     """Crossed mixed-effects simulation-based power in Python, via statsmodels MixedLM with
     by-subject and by-item random intercepts and slopes as (independent) variance components.
 
-    IMPORTANT — accuracy caveat (verified, not a bug). statsmodels fits crossed random
-    effects as *independent* variance components and, in our tests, substantially overstates
-    random-SLOPE variance (e.g. by-subject slope SD ~0.12 estimated vs 0.04 true). This
-    inflates the fixed-effect standard error, so for designs with by-subject/by-item random
-    SLOPES this backend is markedly CONSERVATIVE: on the flagship crossed RT design it reports
-    power ~0.48 versus the R/lme4 reference ~0.73. It still recovers the fixed effect (mean
-    estimate ~0.048 vs 0.05 true) and Type S/M correctly, and is reliable for random-INTERCEPT
-    designs. Treat it as a conservative lower bound; use the R/lme4 `power_mixed` as the
-    reference whenever random slopes (or random-effect correlations) matter. Data *generation*
-    is identical across R and Python; this gap is purely in the Python LMM estimator.
+    Accuracy caveat (verified behaviour, not a bug). statsmodels fits crossed random effects
+    as independent variance components and, in our tests, substantially overstates random-slope
+    variance (for example, a by-subject slope SD of about 0.12 estimated against 0.04 true).
+    This inflates the fixed-effect standard error. For designs with by-subject or by-item random
+    slopes, the backend is therefore markedly conservative. On the crossed RT design it
+    reports power around 0.48, against the R/lme4 reference of about 0.73. It still recovers the
+    fixed effect (mean estimate about 0.048 against 0.05 true) and the Type S and Type M
+    quantities correctly, and it is reliable for random-intercept designs. We recommend treating
+    its output as a conservative lower bound and using the R/lme4 `power_mixed` as the reference
+    whenever random slopes or random-effect correlations matter. Data generation is identical
+    across R and Python. This discrepancy arises solely in the Python LMM estimator.
     """
     import copy, math, statistics, warnings
     import pandas as pd

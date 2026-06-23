@@ -1,6 +1,7 @@
-# Spec parsing + generative engine -- a bit-identical mirror of pilotr/simulate.py.
-# Supports categorical contrasts and continuous predictors (with interactions) as fixed
-# effects, and crossed by-subject/by-item random intercepts and slopes (on either).
+# Specification parsing and the generative engine. This is a bit-identical mirror of
+# pilotr/simulate.py. It supports categorical contrasts and continuous predictors (with
+# interactions) as fixed effects, together with crossed by-subject and by-item random
+# intercepts and slopes (on either unit).
 
 #' Load a JSON design specification.
 #' @export
@@ -9,7 +10,8 @@ load_spec <- function(path) {
                      simplifyMatrix = FALSE)
 }
 
-# itertools.product order: last index varies fastest. Returns a list of 0-based index vectors.
+# Follows itertools.product order, in which the last index varies fastest. Returns a list
+# of 0-based index vectors.
 .product_indices <- function(sizes) {
   if (length(sizes) == 0) return(list(integer(0)))
   n <- length(sizes); idx <- rep(0L, n); out <- list()
@@ -26,7 +28,7 @@ load_spec <- function(path) {
   out
 }
 
-# (columns, lower-Cholesky L) for one unit's random-effect covariance.
+# Returns the columns and the lower-Cholesky factor L for one unit's random-effect covariance.
 .ranef <- function(u) {
   slope_names <- names(u$slopes)
   cols <- c("intercept", slope_names)
@@ -52,8 +54,8 @@ load_spec <- function(path) {
   if (is.null(cvals[[key]])) 0 else cvals[[key]]
 }
 
-# Sample m distinct items from 1..n_items via partial Fisher-Yates on the shared RNG
-# (partial crossing). Bit-identical with simulate.py's _sample_items.
+# Samples m distinct items from 1..n_items via a partial Fisher-Yates shuffle on the shared
+# RNG, which produces partial crossing. This is bit-identical with simulate.py's _sample_items.
 .sample_items <- function(rng, n_items, m) {
   pool <- 1:n_items
   for (k in 0:(m - 1)) {
@@ -137,7 +139,7 @@ simulate_design <- function(spec) {
 
   # ---- additional grouping factors (e.g. units nested in higher-level clusters) ----
   # Any random entry other than subject/item declares `over` (the unit it groups) and `n`
-  # (number of groups); units are assigned to groups in equal blocks.
+  # (the number of groups). Units are assigned to groups in equal blocks.
   extra_names <- setdiff(names(rs), c("subject", "item"))
   b_group <- list(); group_meta <- list()
   for (gname in extra_names) {

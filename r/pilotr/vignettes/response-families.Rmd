@@ -15,14 +15,14 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height
 library(pilotr)
 ```
 
-Behavioral outcomes are rarely Gaussian. pilotr maps the linear predictor
+Behavioral outcomes are seldom Gaussian. pilotr maps the linear predictor
 $\eta = \beta_0 + \sum_k \beta_k x_k + (\text{random effects})$ to an outcome through one of
-six response families. Crucially, the **fixed intercept and effect live on the family's own
-scale** — identity for Gaussian, the log scale for reaction times and counts, and the logit
-scale for accuracy, ordinal, and proportion outcomes. This vignette shows each family with
-scale-appropriate parameters.
+six response families. An important consequence is that the fixed intercept and effect live on
+the family's own scale. That scale is the identity for Gaussian, the log scale for reaction
+times and counts, and the logit scale for accuracy, ordinal, and proportion outcomes. This
+vignette presents each family with scale-appropriate parameters.
 
-A small helper to build a two-group between-subjects design and report the group means:
+The helper below builds a two-group between-subjects design and reports the group means.
 
 ```{r}
 demo <- function(family, intercept, effect, n = 4000, ...) {
@@ -38,9 +38,9 @@ demo <- function(family, intercept, effect, n = 4000, ...) {
 
 ## Gaussian
 
-The default: $y = \eta + \varepsilon$, with residual standard deviation `sigma`. Use it for
-continuous, roughly symmetric outcomes (ratings averaged over many trials, standardized
-scores).
+This is the default, with $y = \eta + \varepsilon$ and residual standard deviation `sigma`. It
+suits continuous, roughly symmetric outcomes such as ratings averaged over many trials or
+standardized scores.
 
 ```{r}
 g <- demo("gaussian", intercept = 100, effect = 5, sigma = 10)
@@ -51,7 +51,7 @@ hist(g$y, breaks = 40, col = "#2C6FB0", border = "white", main = "Gaussian", xla
 ## Shifted lognormal (reaction times)
 
 Reaction times are right-skewed and bounded below. pilotr models them as
-$y = \text{shift} + \exp(\eta + \varepsilon)$, with the effect on the **log** scale. An
+$y = \text{shift} + \exp(\eta + \varepsilon)$, with the effect on the log scale. An
 intercept of 6 implies a typical RT near `exp(6)` ms above the shift.
 
 ```{r}
@@ -63,8 +63,8 @@ hist(rt$y, breaks = 40, col = "#B0402C", border = "white", main = "Shifted logno
 
 ## Bernoulli (accuracy)
 
-Binary accuracy via a logit link: the intercept is the log-odds of a correct response, the
-effect a log-odds difference between conditions.
+Binary accuracy is modeled through a logit link. The intercept is the log-odds of a correct
+response, and the effect is a log-odds difference between conditions.
 
 ```{r}
 acc <- demo("bernoulli", intercept = 0, effect = 0.5)
@@ -99,8 +99,8 @@ round(prop.table(table(r$group, r$rating), 1), 2)   # category proportions by gr
 
 ## Beta (proportions)
 
-Bounded proportions in (0, 1) via a mean–precision parameterization: the mean is
-`logit⁻¹(η)` and `phi` is the precision (larger = tighter).
+Bounded proportions in (0, 1) are modeled through a mean–precision parameterization. The mean
+is `logit⁻¹(η)` and `phi` is the precision, with larger values giving a tighter distribution.
 
 ```{r}
 bt <- demo("beta", intercept = 0, effect = 0.8, phi = 8)
@@ -119,7 +119,7 @@ hist(bt$y, breaks = 40, col = "#2E8B57", border = "white", main = "Beta", xlab =
 | Likert / ordered categories | `ordinal` | logit (cumulative) |
 | Proportions in (0, 1) | `beta` | logit (mean) |
 
-These match the families researchers fit in `lme4`, `glmmTMB`, and `brms`, so a design
-simulated here lines up with the model you will fit. The point-and-click app exposes all six;
-the full engine (continuous predictors, interactions, nesting, partial crossing) is available
-by writing the specification directly.
+These match the families that researchers fit in `lme4`, `glmmTMB`, and `brms`, so a design
+simulated here corresponds to the model that will later be fit. The point-and-click application
+exposes all six families. The full engine, including continuous predictors, interactions,
+nesting, and partial crossing, is available by writing the specification directly.

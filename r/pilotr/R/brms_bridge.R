@@ -1,14 +1,15 @@
-# Bridge to a Bayesian workflow: translate a pilotr design spec into a ready-to-fit brms
-# model -- the response family, the fixed + random-effects formula, and a weakly-informative
-# prior set. pilotr simulates the data; brms (Stan) fits the confirmatory Bayesian model. This
-# emits copy-pasteable code and needs neither brms nor Stan installed.
+# Bridge to a Bayesian workflow. This translates a pilotr design spec into a ready-to-fit brms
+# model, comprising the response family, the fixed and random-effects formula, and a
+# weakly informative prior set. pilotr simulates the data, while brms (Stan) fits the
+# confirmatory Bayesian model. The function emits code that can be copied into a script, and it
+# requires neither brms nor Stan to be installed.
 
-#' Emit a brms formula, family, and priors from a design spec.
+#' Derive a brms formula, family, and priors from a design spec
 #'
 #' @param spec a design spec (path or list).
 #' @param prior_scale SD of the Normal prior on fixed main effects (standardized scale).
 #' @param interaction_scale SD of the Normal prior on interaction terms (default prior_scale/2).
-#' @return invisibly, a list with `formula`, `family`, `priors`, and `code`; also prints `code`.
+#' @return invisibly, a list with `formula`, `family`, `priors`, and `code`. The `code` element is also printed.
 #' @export
 brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
   if (is.character(spec)) spec <- load_spec(spec)

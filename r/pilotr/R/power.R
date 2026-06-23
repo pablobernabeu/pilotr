@@ -1,4 +1,4 @@
-# Simulation-based power + design analysis (Type S / Type M) -- mirror of power.py.
+# Simulation-based power and design analysis (Type S and Type M), mirroring power.py.
 
 #' Simulation-based power and design analysis for a two-group Gaussian design.
 #' @export

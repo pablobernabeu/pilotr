@@ -6,8 +6,8 @@ Description: Generative simulation of experimental and behavioral data sets from
     JSON design specification shared with the Python package of the same name. Supports
     user-specified fixed effect sizes, crossed by-subject and by-item random intercepts
     and slopes, realistic response families (Gaussian, shifted lognormal, Bernoulli,
-    Poisson, ordinal), and simulation-based power and design analysis (Type S and Type M
-    errors). Uses a shared cross-language random-number generator so that, given the same
+    Poisson, ordinal, and Beta), and simulation-based power and precision-based design
+    analysis (Type S and Type M errors, and a region of practical equivalence). Uses a shared cross-language random-number generator so that, given the same
     specification and seed, the R and Python implementations produce identical data.
 License: MIT + file LICENSE
 URL: https://pablobernabeu.github.io/pilotr, https://github.com/pablobernabeu/pilotr

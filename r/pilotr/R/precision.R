@@ -1,8 +1,8 @@
-# Precision-based design analysis against a Region of Practical Equivalence (ROPE), and an
-# N-sweep to find the minimum analysable sample size. A fast frequentist analog of a Bayesian
-# HDI-vs-ROPE design analysis: over Monte Carlo replicates we record, for each focal fixed
-# effect, the 95% CI and whether it falls determinately outside the ROPE (a practically
-# meaningful effect) or entirely inside it (practical equivalence).
+# Precision-based design analysis against a Region of Practical Equivalence (ROPE), together
+# with an N-sweep to find the minimum analysable sample size. This is a fast frequentist
+# analogue of a Bayesian HDI-versus-ROPE design analysis. Across Monte Carlo replicates we
+# record, for each focal fixed effect, the 95% CI and whether it falls determinately outside
+# the ROPE (a practically meaningful effect) or entirely inside it (practical equivalence).
 
 #' Precision/ROPE design analysis at a fixed design size.
 #'
@@ -12,9 +12,9 @@
 #' @param rope half-width of the ROPE (|beta| < rope is "practically equivalent to zero").
 #' @param n_sims number of Monte Carlo replicates.
 #' @param formula optional `lmer` formula; if NULL it is auto-derived via [model_formula()].
-#' @param prep optional function mapping simulated data to modelling data; if NULL it is
-#'   auto-derived via [model_data()] (log-transform the outcome, build contrast / interaction
-#'   columns). Focal names then follow the auto-formula (interactions as `a_b`).
+#' @param prep optional function mapping simulated data to modelling data. If NULL it is
+#'   auto-derived via [model_data()], which log-transforms the outcome and builds the contrast
+#'   and interaction columns. Focal names then follow the auto-formula (interactions as `a_b`).
 #' @export
 precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.05, n_sims = 100) {
   if (is.character(spec)) spec <- load_spec(spec)
@@ -49,8 +49,8 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 }
 
 #' Sweep the number of subjects and report the ROPE decision probabilities at each size.
-#' Use it to find the minimum analysable N at which a focal effect reaches a determinate
-#' decision with at least some target probability (e.g. 0.90).
+#' This helps identify the minimum analysable N at which a focal effect reaches a determinate
+#' decision with at least some target probability (for example 0.90).
 #' @export
 precision_curve <- function(spec, focal, subject_ns, formula = NULL, prep = NULL, rope = 0.05, n_sims = 60) {
   if (is.character(spec)) spec <- load_spec(spec)

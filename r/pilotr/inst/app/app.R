@@ -1,7 +1,7 @@
-# pilotr no-code app -- the third interface over the shared design spec.
+# pilotr no-code app. This is the third interface over the shared design spec.
 #
-# Thin client: every control writes into the portable JSON spec, which downloads and runs
-# unchanged in the R and Python packages. Launch with pilotr::run_app() (installed) or
+# A thin client. Every control writes into the portable JSON spec, which downloads and runs
+# unchanged in the R and Python packages. Launch with pilotr::run_app() (installed), or with
 # shiny::runApp("r/pilotr/inst/app") (from source).
 
 library(shiny)
@@ -31,7 +31,7 @@ MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))
 
 # ---------------------------------------------------------------- UI ----
 ui <- fluidPage(
-  titlePanel("pilotr — design · simulate · power (one spec, three interfaces)"),
+  titlePanel("pilotr: design, simulate, and power analysis (one spec, three interfaces)"),
   sidebarLayout(
     sidebarPanel(
       width = 4,
@@ -98,7 +98,7 @@ ui <- fluidPage(
       tabsetPanel(
         tabPanel("Design spec (JSON)",
           p("This portable spec is the single source of truth. Download it and run it ",
-            "unchanged in R or Python — you get the identical data set."),
+            "unchanged in R or Python to obtain the identical data set."),
           verbatimTextOutput("json")),
         tabPanel("Data", verbatimTextOutput("dims"), tableOutput("head")),
         tabPanel("Summary & plot", verbatimTextOutput("summary"), plotOutput("plot", height = "320px")),
@@ -108,8 +108,8 @@ ui <- fluidPage(
           actionButton("run_power", "Run power analysis"),
           verbatimTextOutput("power_out")),
         tabPanel("Reproducible R script",
-          p("Your no-code design as a self-contained R script. Download it, or ",
-            tags$b("verify"), " it reproduces this exact data by running it in a clean R session."),
+          p("Your no-code design as a self-contained R script. You can download it, or ",
+            "verify that it reproduces this exact data by running it in a clean R session."),
           downloadButton("dl_rscript", "Download .R"),
           actionButton("verify_code", "Verify (clean R session)"),
           verbatimTextOutput("verify_out"),
@@ -210,10 +210,10 @@ server <- function(input, output, session) {
   })
   output$verify_out <- renderText({
     r <- verify_result()
-    if (is.null(r)) return("Click 'Verify' to run the script in a fresh R process and confirm it reproduces this data.")
+    if (is.null(r)) return("Select Verify to run the script in a fresh R process and confirm that it reproduces this data.")
     if (!is.null(r$msg)) return(r$msg)
-    if (isTRUE(r$ok)) sprintf("OK - reproduces identically in a clean R session.\n  %d rows (app) = %d rows (clean run); response checksum matches.", r$ref_n, r$n)
-    else sprintf("MISMATCH - app %d rows vs clean run %d rows, or checksum differs.", r$ref_n, r$n)
+    if (isTRUE(r$ok)) sprintf("Reproduces identically in a clean R session.\n  %d rows (app) match %d rows (clean run), and the response checksum matches.", r$ref_n, r$n)
+    else sprintf("Mismatch. The app produced %d rows and the clean run produced %d rows, or the checksum differs.", r$ref_n, r$n)
   })
 
   # ---- power: capped, async when installed (worker process), else synchronous ----
@@ -222,7 +222,7 @@ server <- function(input, output, session) {
     spec <- current_spec()
     if (spec$response$family != "gaussian" || identical(input$design_kind, "within")) {
       power_result(list(msg = paste0("The in-app power backend covers the two-group Gaussian design.\n",
-        "For crossed mixed-effects designs use power_mixed() in the package (fits lme4; minutes).")))
+        "For crossed mixed-effects designs, please use power_mixed() in the package. It fits lme4 models and may take a few minutes.")))
       return()
     }
     n <- min(max(as.integer(input$n_sims), 100L), MAX_SIMS)
@@ -238,7 +238,7 @@ server <- function(input, output, session) {
   })
   output$power_out <- renderPrint({
     r <- power_result()
-    if (is.null(r)) { cat(sprintf("Set simulations (capped at %d here; unlimited when you install the package) and click Run.", MAX_SIMS)); return() }
+    if (is.null(r)) { cat(sprintf("Set the number of simulations (capped at %d in the app, and unlimited once you install the package), then select Run.", MAX_SIMS)); return() }
     if (!is.null(r$msg)) { cat(r$msg); return() }
     cat(sprintf("Simulations  : %d\nPower        : %.3f\nType S error : %.4f\nType M (exag): %.3f\nTrue effect  : %.3f | mean estimate: %.3f\n",
                 r$n_sims, r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate))

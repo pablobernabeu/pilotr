@@ -1,11 +1,12 @@
-"""Spec parsing + the generative simulation engine.
+"""Spec parsing and the generative simulation engine.
 
-Implements the data-generating process the prototype app lacks: a linear predictor with
-user-specified fixed effect sizes (for categorical contrasts AND continuous predictors,
-including their interactions) plus crossed by-subject / by-item random intercepts and slopes
-(on contrasts or continuous predictors), pushed through a link + response family. RNG draw
-order follows spec/SPEC.md: continuous predictors -> subject random effects -> item random
-effects -> per-row residuals. Specs without a `predictors` block keep the original stream.
+Implements the data-generating process that the prototype app does not provide. The model is
+a linear predictor with user-specified fixed effect sizes, covering categorical contrasts and
+continuous predictors as well as their interactions. To this it adds crossed by-subject and
+by-item random intercepts and slopes (on contrasts or continuous predictors), and passes the
+result through a link and a response family. The RNG draw order follows spec/SPEC.md, namely
+continuous predictors -> subject random effects -> item random effects -> per-row residuals.
+Specs without a `predictors` block keep the original stream.
 """
 
 from __future__ import annotations
@@ -68,8 +69,8 @@ def _design_value(cvals, key):
 
 
 def _sample_items(rng, n_items, m):
-    """Sample m distinct items from 1..n_items via partial Fisher-Yates on the shared RNG
-    (for partial crossing: each subject sees a self-selected subset of items)."""
+    """Sample m distinct items from 1..n_items via partial Fisher-Yates on the shared RNG.
+    This supports partial crossing, where each subject sees a self-selected subset of items."""
     pool = list(range(1, n_items + 1))
     for k in range(m):
         j = k + int(rng.uniform() * (n_items - k))
@@ -94,8 +95,8 @@ def simulate(spec) -> Dataset:
     per_subject = spec["units"]["item"].get("per_subject") if has_item else None
 
     # ---- build design rows in canonical order ----
-    # When per_subject is set, each subject's item subset is sampled here -- the FIRST RNG
-    # consumption (see spec/SPEC.md). Full-crossing specs draw nothing here, keeping the stream.
+    # When per_subject is set, each subject's item subset is sampled here, which is the first
+    # RNG consumption (see spec/SPEC.md). Full-crossing specs draw nothing here, keeping the stream.
     within_level_ranges = [range(len(f["levels"])) for f in within]
     rows = []
     for s in range(1, S + 1):
@@ -146,7 +147,7 @@ def simulate(spec) -> Dataset:
 
     # ---- additional grouping factors (e.g. units nested in higher-level clusters) ----
     # Any random-effect entry other than subject/item declares `over` (which unit it groups)
-    # and `n` (number of groups); units are assigned to groups in equal blocks.
+    # and `n` (number of groups). Units are assigned to groups in equal blocks.
     extra = [(k, v) for k, v in random_spec.items() if k not in ("subject", "item")]
     b_group, group_meta = {}, {}
     for gname, gspec in extra:

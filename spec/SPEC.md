@@ -1,9 +1,9 @@
 # The `pilotr` design specification (v0.1)
 
-A design specification is a single JSON object describing a **data-generating process**
-(DGP) for an experiment. It is the contract shared by the web app, the R package, and the
-Python package. Given the same spec and seed, every implementation must produce the
-**identical** data set.
+A design specification is a single JSON object describing a data-generating process
+(DGP) for an experiment. It is the contract shared by the web application, the R package, and the
+Python package. Given the same spec and seed, every implementation must produce an
+identical data set.
 
 ## Top-level fields
 
@@ -11,10 +11,10 @@ Python package. Given the same spec and seed, every implementation must produce 
 |---|---|---|
 | `name` | string | Human label for the design. |
 | `seed` | integer | Master seed (see RNG contract below). |
-| `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. Add `per_subject` to `item` (e.g. `{"n": 40, "per_subject": 12}`) for **partial crossing** — each subject sees a random subset of items. |
+| `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. Add `per_subject` to `item` (e.g. `{"n": 40, "per_subject": 12}`) for partial crossing, in which each subject sees a random subset of items. |
 | `factors` | array | Experimental factors (categorical; see below). |
 | `predictors` | array | Optional continuous predictors (see below). |
-| `fixed` | object | Fixed effects: `intercept` + `coefficients` (map column → β). A coefficient key may be a single column or an `"a:b"` **interaction** (product of columns a and b). |
+| `fixed` | object | Fixed effects: `intercept` + `coefficients` (map column → β). A coefficient key may be a single column or an `"a:b"` interaction (the product of columns a and b). |
 | `random` | object | Random-effect structure by unit (`subject`, `item`). Empty `{}` ⇒ no random effects. |
 | `response` | object | Outcome family + parameters (see below). |
 
@@ -27,14 +27,14 @@ Python package. Given the same spec and seed, every implementation must produce 
   "vary_within": ["subject", "item"] }
 ```
 
-* `contrasts` maps one or more **contrast-column names** to a numeric value per level
+* `contrasts` maps one or more contrast-column names to a numeric value per level
   (length = number of levels). Fixed coefficients and random slopes are keyed by these
-  contrast-column names. This is exactly how effects are specified in `lme4`/DeBruine &
-  Barr (2021): effects are coefficients on contrast-coded predictors.
+  contrast-column names. This follows the convention used in `lme4` and in DeBruine and
+  Barr (2021), where effects are coefficients on contrast-coded predictors.
 * `vary_within`: the factor is crossed *within* the listed units (a within-unit factor),
   expanding each unit combination into one row per level.
-* `between`: `"subject"` or `"item"` — the factor partitions that unit into equal blocks
-  in level order (a between-unit factor; does not expand rows).
+* `between`: `"subject"` or `"item"`. The factor partitions that unit into equal blocks
+  in level order (a between-unit factor that does not expand rows).
 
 ### Continuous predictors
 
@@ -45,11 +45,11 @@ Python package. Given the same spec and seed, every implementation must produce 
 ]
 ```
 
-Each continuous predictor draws **one value per unit** (`varies_by` = `"subject"` or
+Each continuous predictor draws one value per unit (`varies_by` = `"subject"` or
 `"item"`) from `N(mean, sd)` and assigns it to all of that unit's rows. The predictor name is
 a column usable in fixed `coefficients` (as a main effect or in an `"a:b"` interaction) and in
 random-effect `slopes` (e.g. a by-subject random slope on an item-level predictor, as in
-`(1 + SyntaxPC | subject)`). Defaults: `mean` 0, `sd` 1.
+`(1 + SyntaxPC | subject)`). The defaults are `mean` 0 and `sd` 1.
 
 ### Random effects (per unit)
 
@@ -61,21 +61,21 @@ random-effect `slopes` (e.g. a by-subject random slope on an item-level predicto
 }
 ```
 
-The random-effect **column order** is `["intercept", <slopes in listed order>]`. A
-covariance matrix `Σ = D · R · D` is formed from the SDs `D` and correlation matrix `R`
-(unit diagonal; off-diagonals from `correlations`, keyed `"a,b"`). Per unit, a vector
+The random-effect column order is `["intercept", <slopes in listed order>]`. A
+covariance matrix `Σ = D · R · D` is formed from the SDs `D` and the correlation matrix `R`,
+which has a unit diagonal and off-diagonals taken from `correlations`, keyed `"a,b"`. Per unit, a vector
 `b = L z` is drawn, where `L` is the lower Cholesky factor of `Σ` and `z` are iid standard
 normals. The unit's contribution to a row's linear predictor is
 `b[intercept] + Σ_k b[slope_k] · (contrast value of slope_k for that row)`.
 
-Slopes may be keyed by a contrast column **or a continuous predictor** (e.g. a by-subject
+Slopes may be keyed by a contrast column or by a continuous predictor (e.g. a by-subject
 random slope on an item-level predictor, `(1 + SyntaxPC | subject)`).
 
 ### Additional grouping factors
 
-Any `random` entry whose name is **not** `subject` or `item` is an extra grouping factor. It
-adds `over` (the unit it groups — `"subject"` or `"item"`) and `n` (number of groups); the
-units are assigned to groups in equal blocks. For example, subjects nested in clusters:
+Any `random` entry whose name is not `subject` or `item` is an extra grouping factor. It
+adds `over` (the unit it groups, either `"subject"` or `"item"`) and `n` (the number of groups).
+The units are assigned to groups in equal blocks. For example, subjects nested in clusters:
 
 ```json
 "site": { "over": "subject", "n": 12, "intercept_sd": 0.5, "slopes": { ... } }
@@ -98,8 +98,8 @@ hierarchical designs (e.g. participants within sites, schools, or languages).
 | `beta` | `phi` (precision) | `μ = invlogit(η)`, `y ~ Beta(μ·φ, (1−μ)·φ)` (proportions in (0,1)) |
 
 `η` (the linear predictor for a row) = `intercept + Σ β_col · contrast_col +`
-subject random part `+` item random part. `name` sets the output column name; optional
-`round` sets decimal rounding of the response.
+subject random part `+` item random part. `name` sets the output column name. An optional
+`round` sets the decimal rounding of the response.
 
 ## RNG contract (identical across all implementations)
 
@@ -113,11 +113,11 @@ u  ← d / 2147483563            # u ∈ (0, 1)
 ```
 
 All products stay below 2^53, so the arithmetic is exact in IEEE-754 doubles and in
-Python integers alike. Seeding: `s1 ← 1 + (|seed| mod 2147483562)`,
-`s2 ← 1 + ((40692 · s1) mod 2147483398)`, then 10 warm-up draws are discarded.
+Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` and
+`s2 ← 1 + ((40692 · s1) mod 2147483398)`, after which 10 warm-up draws are discarded.
 
-**Normal deviates.** Wichura (1988) Algorithm AS 241 applied to `u` (the algorithm R's
-`qnorm` uses); deviates therefore agree to full double precision.
+**Normal deviates.** Wichura (1988) Algorithm AS 241 applied to `u`, the algorithm R's
+`qnorm` uses. Deviates therefore agree to full double precision.
 
 **Draw order (must be identical everywhere):**
 
@@ -132,10 +132,10 @@ Python integers alike. Seeding: `s1 ← 1 + (|seed| mod 2147483562)`,
    (normal for gaussian/lognormal/shifted_lognormal; uniform for bernoulli/poisson/ordinal)
    per row.
 
-**Canonical row order:** nested loops, outermost first —
+**Canonical row order:** nested loops, outermost first,
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
 listed order, levels in listed order): emit row`. Between-unit factors assign a level to
-each unit by equal blocks in level order and do **not** expand rows.
+each unit by equal blocks in level order and do not expand rows.
 
 ## References
 
