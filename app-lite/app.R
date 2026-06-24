@@ -402,7 +402,15 @@ server <- function(input, output, session) {
     power_plot(list(grid = grid, pw = pw))
   })
 
-  output$power_out <- renderText(power_out())
+  # The script above shows "Computing…" the instant a power button is clicked. Clearing it
+  # needs the server to push a fresh value, but Shiny skips sending an output whose value is
+  # unchanged, so a repeated (identical) result would otherwise leave "Computing…" stuck.
+  # Toggling an invisible trailing space by the click count makes each value distinct, so the
+  # update is always sent. The space does not show in the monospaced output.
+  output$power_out <- renderText({
+    n <- sum(input$run_power, input$run_curve)
+    paste0(power_out(), strrep(" ", n %% 2))
+  })
   output$power_plot <- renderPlot({
     pc <- power_plot(); if (is.null(pc)) return(NULL)
     op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
