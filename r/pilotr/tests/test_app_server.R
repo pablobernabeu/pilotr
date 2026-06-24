@@ -36,7 +36,7 @@ testServer(app = app_dir, {
   # verified R-script export: run the design in a clean R subprocess and compare
   session$setInputs(spec_json_in = "", verify_code = 1)
   vo <- output$verify_out
-  check(grepl("reproduces identically", vo), "verify: clean R session reproduces the data bit-for-bit")
+  check(grepl("reproduces identically", vo, ignore.case = TRUE), "verify: clean R session reproduces the data bit-for-bit")
   cat("  verify:", gsub("\n", " ", vo), "\n")
 })
 

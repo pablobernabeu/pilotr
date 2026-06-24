@@ -40,7 +40,8 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: r/pilotr
-          dependencies: '"all"'   # Imports + Suggests (lme4, lmerTest, faux, shiny, callr, ...)
+          dependencies: '"all"'        # Imports + Suggests (lme4, lmerTest, shiny, callr, ...)
+          extra-packages: any::faux    # equivalence_faux.R uses faux, a dev/CI dependency (not a package Suggests)
       - name: Smoke-test the engine and every key dependency
         run: |
           set -e
