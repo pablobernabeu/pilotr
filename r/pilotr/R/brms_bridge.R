@@ -9,7 +9,17 @@
 #' @param spec a design spec (path or list).
 #' @param prior_scale SD of the Normal prior on fixed main effects (standardized scale).
 #' @param interaction_scale SD of the Normal prior on interaction terms (default prior_scale/2).
-#' @return invisibly, a list with `formula`, `family`, `priors`, and `code`. The `code` element is also printed.
+#' @return Invisibly, a list with elements `formula`, `family`, `priors`, and `code`; the
+#'   `code` element (a ready-to-fit `brms` model) is also printed to the console.
+#' @examples
+#' spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
+#'   include_items = TRUE, n_subject = 20, n_item = 12, factor_name = "cond",
+#'   lev1 = "a", lev2 = "b", intercept = 6, effect = 0.05,
+#'   subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+#'   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+#'   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
+#' bridge <- brms_bridge(spec)
+#' bridge$formula
 #' @export
 brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
   if (is.character(spec)) spec <- load_spec(spec)

@@ -1,6 +1,25 @@
 # Simulation-based power and design analysis (Type S and Type M), mirroring power.py.
 
-#' Simulation-based power and design analysis for a two-group Gaussian design.
+#' Simulation-based power and design analysis for a two-group Gaussian design
+#'
+#' Estimate power by repeatedly simulating from the specification and applying a two-sample
+#' t-test, alongside the Type S (sign) and Type M (magnitude) design-analysis errors of
+#' Gelman and Carlin (2014).
+#'
+#' @param spec A design specification (path or list) for a two-group Gaussian design.
+#' @param n_sims Number of Monte Carlo replicates.
+#' @param alpha Two-sided significance level.
+#' @return A list with elements `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`,
+#'   `mean_estimate`, `type_s` (sign-error rate among significant replicates), and `type_m`
+#'   (mean exaggeration ratio among significant replicates).
+#' @references Gelman, A. and Carlin, J. (2014). Beyond Power Calculations: Assessing Type S
+#'   (Sign) and Type M (Magnitude) Errors. \emph{Perspectives on Psychological Science},
+#'   9(6), 641-651. \doi{10.1177/1745691614551642}
+#' @examples
+#' spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
+#'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 64,
+#'   intercept = 100, effect = 5, family = "gaussian", resp_name = "", sigma = 10))
+#' power_design(spec, n_sims = 50)
 #' @export
 power_design <- function(spec, n_sims = 1000, alpha = 0.05) {
   if (is.character(spec)) spec <- load_spec(spec)

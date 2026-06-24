@@ -1,20 +1,27 @@
 Package: pilotr
 Title: Simulate Experimental and Behavioral Data from a Portable Design Specification
 Version: 0.1.0
-Authors@R: person("Pablo", "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com")
-Description: Generative simulation of experimental and behavioral data sets from a portable
-    JSON design specification shared with the Python package of the same name. Supports
-    user-specified fixed effect sizes, crossed by-subject and by-item random intercepts
-    and slopes, realistic response families (Gaussian, shifted lognormal, Bernoulli,
-    Poisson, ordinal, and Beta), and simulation-based power and precision-based design
-    analysis (Type S and Type M errors, and a region of practical equivalence). Uses a shared cross-language random-number generator so that, given the same
-    specification and seed, the R and Python implementations produce identical data.
+Authors@R:
+    person("Pablo", "Bernabeu", role = c("aut", "cre"),
+           email = "pcbernabeu@gmail.com",
+           comment = c(ORCID = "0000-0003-1083-2460"))
+Description: Generative simulation of experimental and behavioral data sets from a
+    portable JavaScript Object Notation (JSON) design specification shared with the
+    'Python' package of the same name.
+    Supports user-specified fixed effect sizes, crossed by-subject and by-item random
+    intercepts and slopes, realistic response families (Gaussian, shifted lognormal,
+    Bernoulli, Poisson, ordinal, and Beta), and simulation-based power and
+    precision-based design analysis, including the Type S and Type M errors of Gelman
+    and Carlin (2014) <doi:10.1177/1745691614551642> and a region of practical
+    equivalence. A shared cross-language random-number generator ensures that, given the
+    same specification and seed, the R and 'Python' implementations produce identical data.
 License: MIT + file LICENSE
-URL: https://pablobernabeu.github.io/pilotr, https://github.com/pablobernabeu/pilotr
+URL: https://pablobernabeu.github.io/pilotr/, https://github.com/pablobernabeu/pilotr
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
 Imports: jsonlite, stats
-Suggests: shiny, future, promises, shinylive, lme4, lmerTest, faux, callr, knitr,
-    rmarkdown
+Suggests: shiny, future, promises, lme4, lmerTest, callr, knitr, rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
-RoxygenNote: 7.3.1
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

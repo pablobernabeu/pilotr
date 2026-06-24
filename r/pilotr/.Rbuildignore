@@ -1,0 +1,10 @@
+^examples$
+^_pkgdown\.yml$
+^cran-comments\.md$
+^tests/test_app_logic\.R$
+^tests/test_app_server\.R$
+^\.github$
+^doc$
+^Meta$
+^.*\.Rproj$
+^\.Rproj\.user$

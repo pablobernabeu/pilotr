@@ -7,7 +7,21 @@
 
 .us <- function(k) gsub(":", "_", k, fixed = TRUE)   # "a:b" -> "a_b"
 
-#' Build the modelling data frame from a simulated data set + its spec.
+#' Build the modelling data frame from a simulated data set and its specification
+#'
+#' Add the analysis response column `.y` (log-transformed for the lognormal families), the
+#' numeric contrast columns implied by the categorical factors, and any interaction product
+#' columns (an `a:b` coefficient becomes a column `a_b`).
+#'
+#' @param spec A design specification (path or list).
+#' @param d A simulated data set, as returned by [simulate_design()].
+#' @return The data frame `d` augmented with the `.y` response column and the contrast and
+#'   interaction columns required by the auto-derived model.
+#' @examples
+#' spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
+#'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 20,
+#'   intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
+#' head(model_data(spec, simulate_design(spec)))
 #' @export
 model_data <- function(spec, d) {
   resp <- spec$response; shift <- if (is.null(resp$shift)) 0 else resp$shift
@@ -21,7 +35,22 @@ model_data <- function(spec, d) {
   d
 }
 
-#' Derive the lmer formula implied by a spec (response `.y` from `model_data`).
+#' Derive the lmer formula implied by a specification
+#'
+#' Construct the mixed-model formula (with response `.y`, as produced by [model_data()]) from
+#' the fixed-effect coefficients and random-effects structure of a specification. Interaction
+#' coefficients written `a:b` become formula terms `a_b`.
+#'
+#' @param spec A design specification (path or list).
+#' @return A [stats::formula] object suitable for fitting with `lme4` or `lmerTest`.
+#' @examples
+#' spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
+#'   include_items = TRUE, n_subject = 10, n_item = 8, factor_name = "cond",
+#'   lev1 = "a", lev2 = "b", intercept = 6, effect = 0.05,
+#'   subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+#'   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+#'   family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+#' model_formula(spec)
 #' @export
 model_formula <- function(spec) {
   fixed <- vapply(names(spec$fixed$coefficients), .us, character(1))

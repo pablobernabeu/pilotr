@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,34 @@ version = "0.1.0"
 description = "Simulate experimental and behavioral data from a portable design specification (cross-language with the R package of the same name)."
 readme = "README.md"
 requires-python = ">=3.9"
-authors = [{ name = "Pablo Bernabeu" }]
-license = { text = "MIT" }
+authors = [{ name = "Pablo Bernabeu", email = "pcbernabeu@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["simulation", "power analysis", "mixed-effects", "experimental design", "behavioral science"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = []  # the generative core is pure-Python and dependency-free
 
 [project.optional-dependencies]
 power = ["scipy>=1.7"]   # simulation-based power demo (p-values)
 dev = ["scipy>=1.7", "pytest>=7"]
+
+[project.urls]
+Homepage = "https://pablobernabeu.github.io/pilotr/"
+Repository = "https://github.com/pablobernabeu/pilotr"
+Documentation = "https://pablobernabeu.github.io/pilotr/"
+Issues = "https://github.com/pablobernabeu/pilotr/issues"
 
 [tool.setuptools]
 packages = ["pilotr"]

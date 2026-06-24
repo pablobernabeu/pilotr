@@ -5,7 +5,20 @@
 
 .M1 <- 2147483563; .M2 <- 2147483399; .A1 <- 40014; .A2 <- 40692
 
-#' Create a shared cross-language RNG (see spec/SPEC.md for the contract).
+#' Create a shared cross-language random-number generator
+#'
+#' Build the combined linear congruential generator (L'Ecuyer 1988) used by both the R and
+#' Python implementations, so that a given specification and seed produce identical data in
+#' either language. See the package `SPEC.md` for the draw-order contract.
+#'
+#' @param seed A single number used to seed the generator (coerced to a non-negative integer).
+#' @return A list of three functions: `uniform()` returns one standard-uniform draw,
+#'   `normal()` returns one standard-normal draw, and `normals(k)` returns a length-`k`
+#'   numeric vector of standard-normal draws.
+#' @examples
+#' rng <- make_rng(1)
+#' rng$uniform()
+#' rng$normals(3)
 #' @export
 make_rng <- function(seed) {
   e <- new.env(parent = emptyenv())
@@ -27,7 +40,16 @@ make_rng <- function(seed) {
   )
 }
 
-#' Wichura (1988) AS 241 inverse normal CDF (PPND16), the same algorithm as R's qnorm.
+#' Inverse normal cumulative distribution function (Wichura's AS 241)
+#'
+#' Compute the standard-normal quantile for a probability using Wichura's (1988) Algorithm
+#' AS 241 (the PPND16 routine), the same algorithm underlying [stats::qnorm()]. It is
+#' implemented identically in the R and Python ports.
+#'
+#' @param p A probability in the open interval (0, 1).
+#' @return The standard-normal quantile (a numeric value) corresponding to `p`.
+#' @examples
+#' as241(0.975)   # about 1.959964
 #' @export
 as241 <- function(p) {
   q <- p - 0.5

@@ -12,6 +12,12 @@
 #' @param async If TRUE (default when 'future' and 'promises' are installed), set a
 #'   multisession future plan so power runs execute in a background worker and do not block
 #'   the UI. This is the relevant case when the app is deployed as a shared multi-user instance.
+#' @return No return value; called for its side effect of launching the Shiny application,
+#'   which blocks the R session until the app is closed.
+#' @examples
+#' \dontrun{
+#' run_app()
+#' }
 #' @export
 run_app <- function(..., async = NULL) {
   if (!requireNamespace("shiny", quietly = TRUE)) stop("Please install 'shiny' to run the app.")
