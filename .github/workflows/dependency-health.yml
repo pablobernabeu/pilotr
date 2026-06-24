@@ -33,7 +33,7 @@ jobs:
     name: R suite (latest CRAN deps)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true   # fast binaries tracking the latest released versions
@@ -59,7 +59,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -83,7 +83,7 @@ jobs:
       issues: write
       models: read   # free GitHub Models access via GITHUB_TOKEN
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Collect the failing logs and config
         env:
@@ -170,7 +170,7 @@ jobs:
 # Then add a job (needs: [r-deps, python-deps]; if failure;
 # permissions: { contents: write, pull-requests: write }):
 #
-#   - uses: actions/checkout@v6
+#   - uses: actions/checkout@v7
 #   - uses: r-lib/actions/setup-r@v2
 #   - uses: r-lib/actions/setup-r-dependencies@v2
 #       with: { working-directory: r/pilotr, dependencies: '"all"' }
