@@ -81,12 +81,26 @@ computing_js <- tags$script(HTML(
 app_css <- tags$style(HTML(
   "table.shiny-table { width: auto !important; align-self: flex-start; margin-bottom: 0; }",
   ".shiny-table th, .shiny-table td { padding: 0.25rem 0.9rem; }",
-  ".sidebar hr { margin: 0.5rem 0; }"))
+  ".sidebar hr { margin: 0.5rem 0; }",
+  # Buttons: clear, smooth hover feedback (the solid primary did not visibly react).
+  ".btn { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }",
+  ".btn-primary:hover { background-color: #245d93; border-color: #21568a; }",
+  ".btn-primary:active { background-color: #1f4f80 !important; border-color: #1f4f80 !important; }",
+  ".btn-primary:hover, .btn-outline-primary:hover { box-shadow: 0 2px 7px rgba(44,111,176,.28); }",
+  # Guide: section sub-headings and a tidy footer of links.
+  ".guide-body h5 { margin-top: 1.6rem; margin-bottom: .55rem; font-size: 1.05rem; font-weight: 600;",
+  "  color: #2C6FB0; border-bottom: 1px solid #e7eef5; padding-bottom: .3rem; }",
+  ".guide-links { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem;",
+  "  margin-top: 1.6rem; padding-top: .9rem; border-top: 1px solid #e7eef5; font-size: .92rem; }",
+  ".guide-links a { text-decoration: none; color: #2C6FB0; font-weight: 500; }",
+  ".guide-links a:hover { text-decoration: underline; }",
+  ".guide-links .sep { color: #c4ccd4; }"))
 
 # ---------------------------------------------------------------------------------------------
 guide <- card(
   card_header("How to use pilotr (lite)"),
   card_body(
+    class = "guide-body",
     tags$p(tags$b("pilotr"), " simulates experimental and behavioral data from a portable ",
            "design specification. This browser version runs entirely on your device, with no ",
            "server and nothing uploaded. It covers the light path. You can build a design, ",
@@ -105,7 +119,7 @@ guide <- card(
               ") or the data (", tags$code(".csv"), "). You can also copy the R script and run ",
               "it in the installed package to reproduce the same data exactly.")
     ),
-    tags$h6("Field guide"),
+    tags$h5("Field guide"),
     tags$ul(
       tags$li(tags$b("Effect (±0.5)"), ", the difference between the two levels on ",
               "the response scale. This is the identity scale for Gaussian, the log scale ",
@@ -117,7 +131,7 @@ guide <- card(
       tags$li(tags$b("Seed"), ", which fixes the pseudo-random draw, so the same specification ",
               "and seed give identical data here, in R, and in Python.")
     ),
-    tags$h6("Advanced: paste a spec"),
+    tags$h5("Advanced: paste a spec"),
     tags$p("The point-and-click controls cover common two-level designs across six response ",
            "families. The ", tags$b("Advanced: paste a full JSON spec"), " box in the sidebar ",
            "overrides those controls and gives access to the rest of the engine. This includes ",
@@ -131,9 +145,12 @@ guide <- card(
       " R and Python packages rather than in the browser. The specification you build here ",
       "drives all three."
     ),
-    tags$p(
-      tags$a(href = DOCS, target = "_blank", "Documentation"), " · ",
-      tags$a(href = GH, target = "_blank", "Source and packages (R and Python)"), " · ",
+    tags$div(
+      class = "guide-links",
+      tags$a(href = DOCS, target = "_blank", "Documentation"),
+      tags$span(class = "sep", "·"),
+      tags$a(href = GH, target = "_blank", "Source and packages (R and Python)"),
+      tags$span(class = "sep", "·"),
       tags$a(href = paste0(GH, "/blob/main/spec/SPEC.md"), target = "_blank", "Specification format")
     )
   )
