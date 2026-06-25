@@ -11,6 +11,16 @@ front-ends, a no-code web application, an R package, and a Python package, that 
 identical data. Together they close the loop from design to simulation to analysis, and
 on to simulation-based power and design analysis (Type S/M).
 
+## Documentation
+
+- **R package**: reference and articles at <https://pablobernabeu.github.io/pilotr/>,
+  including a guide to [the no-code app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.html).
+- **Python package**: guides and API reference at <https://pablobernabeu.github.io/pilotr/py/>.
+- **No-code app**: try it in the browser, with nothing to install, at
+  <https://pablobernabeu.github.io/pilotr/demo/>.
+- **Specification format**: the portable JSON spec and the RNG contract in
+  [`spec/SPEC.md`](spec/SPEC.md).
+
 ## Position relative to existing tools (verified against the literature)
 
 | Capability | faux | simstudy | simr / Superpower | **pilotr** |

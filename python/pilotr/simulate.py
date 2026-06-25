@@ -15,6 +15,19 @@ from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, be
 
 
 class Dataset:
+    """A simulated data set: named columns and a list of row dicts.
+
+    Returned by `simulate`. Lightweight and dependency-free; build a pandas `DataFrame`
+    from `dataset.rows` when you need one.
+
+    Attributes
+    ----------
+    columns : list of str
+        Column names, in order.
+    rows : list of dict
+        One dict per observation, keyed by column name.
+    """
+
     def __init__(self, columns, rows):
         self.columns = columns
         self.rows = rows  # list of dict
@@ -23,12 +36,15 @@ class Dataset:
         return len(self.rows)
 
     def column(self, name):
+        """Return the values in column `name` as a list."""
         return [r[name] for r in self.rows]
 
     def head(self, n=6):
+        """Return the first `n` rows (default 6) as a list of dicts."""
         return self.rows[:n]
 
     def to_csv(self, path):
+        """Write the data set to `path` as CSV: a header row then one row per observation."""
         with open(path, "w", newline="") as f:
             f.write(",".join(self.columns) + "\n")
             for r in self.rows:
@@ -40,6 +56,18 @@ def _fmt(v):
 
 
 def load_spec(path):
+    """Load a JSON design specification from a file.
+
+    Parameters
+    ----------
+    path : str
+        Path to a JSON design-specification file.
+
+    Returns
+    -------
+    dict
+        The parsed specification, ready for `simulate` or `power`.
+    """
     with open(path, "r") as f:
         return json.load(f)
 
@@ -79,6 +107,26 @@ def _sample_items(rng, n_items, m):
 
 
 def simulate(spec) -> Dataset:
+    """Simulate a data set from a design specification.
+
+    Build a linear predictor from the fixed effect sizes (categorical contrasts, continuous
+    predictors, and their interactions) plus the crossed by-subject and by-item random
+    intercepts and slopes, then map it through the chosen response family. Given the same
+    specification and seed, the output is bit-identical to the R package's `simulate_design`.
+
+    Parameters
+    ----------
+    spec : dict or str
+        A design specification, either an already-parsed `dict` or a path to a JSON spec
+        file. See `spec/SPEC.md` for the format.
+
+    Returns
+    -------
+    Dataset
+        A table with one row per observation: a `subject` column, an optional `item` column,
+        any grouping, factor, and continuous-predictor columns, and the response column named
+        by ``spec["response"]["name"]``.
+    """
     if isinstance(spec, str):
         spec = load_spec(spec)
 

@@ -9,9 +9,9 @@ replicates.
 * Type S (sign) error  -- P(estimate has the wrong sign | significant)
 * Type M (magnitude)   -- E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
-Version 0.1 provides the analytic backend for a two-group Gaussian design (the two-sample
-t-test). The R package routes crossed mixed-effects designs to lme4 and glmmTMB. The Python
-analysis backends (statsmodels and pymer4) are planned for a future release.
+The two-group Gaussian design uses a two-sample t-test (`power`). Crossed mixed-effects
+designs use a statsmodels MixedLM backend (`power_mixed`), which is conservative for
+random-slope designs; the R package's lme4 backend is the reference there.
 """
 
 from __future__ import annotations
@@ -20,6 +20,36 @@ from .simulate import simulate, load_spec
 
 
 def power(spec, n_sims=1000, alpha=0.05):
+    """Simulation-based power and design analysis for a two-group Gaussian design.
+
+    Repeatedly simulate from the specification, apply a two-sample t-test, and report power
+    together with the Type S (sign) and Type M (magnitude) errors of Gelman and Carlin
+    (2014), computed over the significant replicates.
+
+    Parameters
+    ----------
+    spec : dict or str
+        A two-group Gaussian design specification (dict or path to a JSON file).
+    n_sims : int, optional
+        Number of Monte Carlo replicates (default 1000).
+    alpha : float, optional
+        Two-sided significance level (default 0.05).
+
+    Returns
+    -------
+    dict
+        Keys: `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
+        `type_s`, `type_m`.
+
+    Raises
+    ------
+    NotImplementedError
+        If the design is not a single two-level between-subjects Gaussian factor.
+
+    Notes
+    -----
+    Requires `scipy` (imported lazily); install the `power` or `dev` extra.
+    """
     from scipy import stats  # lazy: only the power demo needs scipy
 
     if isinstance(spec, str):
@@ -129,7 +159,26 @@ def power_mixed(spec, n_sims=50, alpha=0.05):
 
 
 def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05):
-    """Sweep the number of subjects and return power (and Type M) at each grid point."""
+    """Power curve over sample size for a two-group Gaussian design.
+
+    Sweep the number of subjects and compute `power` at each grid point.
+
+    Parameters
+    ----------
+    spec : dict or str
+        A two-group Gaussian design specification.
+    subject_ns : iterable of int
+        Subject counts to evaluate.
+    n_sims : int, optional
+        Replicates per grid point (default 1000).
+    alpha : float, optional
+        Significance level (default 0.05).
+
+    Returns
+    -------
+    list of dict
+        One dict per grid point, with keys `n_subject`, `power`, `type_m`.
+    """
     import copy
     if isinstance(spec, str):
         spec = load_spec(spec)

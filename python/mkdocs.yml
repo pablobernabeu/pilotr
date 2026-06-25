@@ -1,0 +1,44 @@
+site_name: pilotr (Python)
+site_description: Simulate experimental and behavioral data from a portable design specification.
+site_url: https://pablobernabeu.github.io/pilotr/py/
+repo_url: https://github.com/pablobernabeu/pilotr
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Cross-language reproducibility: cross-language.md
+  - Power and design analysis: power.md
+  - Response families: families.md
+  - API reference: api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["."]
+          options:
+            docstring_style: numpy
+            show_source: false
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences

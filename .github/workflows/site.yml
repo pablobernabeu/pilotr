@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - 'r/pilotr/**'
+      - 'python/**'
       - 'app-lite/**'
       - 'spec/**'
       - 'README.md'
@@ -60,6 +61,16 @@ jobs:
                     stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
           shinylive::export(stage, "r/pilotr/docs/demo")
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build Python docs into the site (/py)
+        run: |
+          set -e
+          python -m pip install --quiet mkdocs-material "mkdocstrings[python]"
+          cd python && python -m mkdocs build --strict --site-dir ../r/pilotr/docs/py
 
       - name: Deploy to gh-pages
         env:

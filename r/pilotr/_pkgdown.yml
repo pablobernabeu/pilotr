@@ -8,8 +8,11 @@ template:
 navbar:
   structure:
     left:  [reference, articles]
-    right: [demo, github]
+    right: [pydocs, demo, github]
   components:
+    pydocs:
+      text: "Python docs"
+      href: https://pablobernabeu.github.io/pilotr/py/
     demo:
       text: "Live demo"
       href: https://pablobernabeu.github.io/pilotr/demo/

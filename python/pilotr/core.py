@@ -20,7 +20,18 @@ _A2 = 40692
 
 
 class RNG:
-    """Combined LCG producing uniforms in (0, 1). See spec/SPEC.md for the contract."""
+    """Shared cross-language random-number generator.
+
+    The combined linear congruential generator of L'Ecuyer (1988), implemented identically
+    in R and Python so that a given seed yields the same stream in both. All intermediate
+    products stay below `2**53`, so the arithmetic is exact in IEEE-754 doubles. See
+    `spec/SPEC.md` for the draw-order contract.
+
+    Parameters
+    ----------
+    seed : int
+        Seed for the generator (coerced to a non-negative integer).
+    """
 
     __slots__ = ("s1", "s2")
 
@@ -32,6 +43,7 @@ class RNG:
             self.uniform()
 
     def uniform(self) -> float:
+        """Return one draw from the standard uniform distribution on (0, 1)."""
         self.s1 = (_A1 * self.s1) % _M1
         self.s2 = (_A2 * self.s2) % _M2
         d = self.s1 - self.s2
@@ -40,16 +52,31 @@ class RNG:
         return d / _M1
 
     def normal(self) -> float:
+        """Return one draw from the standard normal distribution."""
         return as241(self.uniform())
 
     def normals(self, k: int) -> list[float]:
+        """Return a list of `k` standard-normal draws."""
         return [self.normal() for _ in range(k)]
 
 
 # --- Wichura (1988) Algorithm AS 241: inverse normal CDF (PPND16) -----------------
 
 def as241(p: float) -> float:
-    """Inverse standard-normal CDF; full double precision. Same algorithm as R's qnorm."""
+    """Inverse standard-normal CDF (quantile function), Wichura's (1988) Algorithm AS 241.
+
+    The PPND16 routine underlying R's `qnorm`, accurate to full double precision.
+
+    Parameters
+    ----------
+    p : float
+        A probability in the open interval (0, 1).
+
+    Returns
+    -------
+    float
+        The standard-normal quantile for `p`.
+    """
     q = p - 0.5
     if abs(q) <= 0.425:
         r = 0.180625 - q * q
@@ -111,6 +138,7 @@ def matvec(L: list[list[float]], z: list[float]) -> list[float]:
 # --- Response transforms (inverse-CDF / link functions) ---------------------------
 
 def inv_logit(x: float) -> float:
+    """Logistic (inverse-logit) link `1 / (1 + exp(-x))`, evaluated stably for large `|x|`."""
     if x >= 0:
         return 1.0 / (1.0 + math.exp(-x))
     e = math.exp(x)
