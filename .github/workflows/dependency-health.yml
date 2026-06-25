@@ -161,28 +161,3 @@ jobs:
                 await github.rest.issues.update({ owner, repo, issue_number: i.number, state: "closed" });
               }
             }
-
-# -----------------------------------------------------------------------------------------
-# OPTIONAL: fully autonomous fix-and-open-PR (NOT free). It needs:
-#   * an ANTHROPIC_API_KEY repository secret, and
-#   * Settings > Actions > General > Workflow permissions >
-#       "Allow GitHub Actions to create and approve pull requests" (enabled).
-# Then add a job (needs: [r-deps, python-deps]; if failure;
-# permissions: { contents: write, pull-requests: write }):
-#
-#   - uses: actions/checkout@v7
-#   - uses: r-lib/actions/setup-r@v2
-#   - uses: r-lib/actions/setup-r-dependencies@v2
-#       with: { working-directory: r/pilotr, dependencies: '"all"' }
-#   - uses: actions/setup-python@v6
-#       with: { python-version: "3.12" }
-#   - uses: anthropics/claude-code-action@v1
-#       with:
-#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-#         prompt: |
-#           Diagnose and fix the failing dependency tests run by dependency-health.yml.
-#           Make the smallest change; do not weaken or delete tests.
-#         claude_args: "--max-turns 30 --allowedTools Bash,Edit,Read,Write,Glob,Grep"
-#   - uses: peter-evans/create-pull-request@v7
-#       with: { branch: auto/dependency-remediation, title: "Automated dependency remediation", labels: dependencies }
-# -----------------------------------------------------------------------------------------

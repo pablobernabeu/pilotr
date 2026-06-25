@@ -32,5 +32,5 @@ data uploaded. It is available as a [live demo](https://pablobernabeu.github.io/
 ## Learn more
 
 The full toolkit, comprising the specification format, the Python package, the no-code app,
-the validation suite, and the manuscript, is available at
+and the validation suite, is available at
 <https://github.com/pablobernabeu/pilotr>.

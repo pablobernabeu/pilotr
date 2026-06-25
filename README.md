@@ -40,7 +40,7 @@ pilotr/  (repo root)
     inst/app/      the no-code Shiny app, bundled in the package (pilotr::run_app())
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
   docs/
-    positioning.md   the Behavior Research Methods positioning statement / abstract
+    mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
 ```
 
 ## One model, three interfaces
@@ -117,10 +117,8 @@ implemented identically in both languages.
   is derived from those two via inverse-CDF transforms, in a documented draw order
   (see `spec/SPEC.md`). The same spec and seed yield identical data in R and Python.
 
-This is the v0.x research-grade engine, which is auditable and dependency-free. The
-production roadmap upgrades the generator to a counter-based RNG (Philox/Threefry) via a
-compiled backend for speed and parallel streams, preserving the same cross-language
-contract.
+The generator is auditable and dependency-free, and it is implemented identically in R and
+Python, so a design reproduces bit-for-bit across the two languages.
 
 ## Quick start
 
