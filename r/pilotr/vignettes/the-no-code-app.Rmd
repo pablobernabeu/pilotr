@@ -56,5 +56,5 @@ interactions, and nesting.
 The app does not own the design; the specification does. Download the specification (`.json`)
 or the data (`.csv`), and run the specification unchanged in R with `simulate_design()` or in
 Python with `pilotr.simulate()` for identical data. Crossed mixed-effects power (via `lme4`)
-and precision/ROPE design analysis run in the installed packages rather than in the browser;
-the specification you build in the app drives all three interfaces.
+and precision/ROPE design analysis run in the installed packages rather than in the browser.
+Whichever interface you use, the specification you build in the app drives all three.
