@@ -39,6 +39,7 @@ nav:
   - Worked examples: examples.md
   - Specification format: specification.md
   - API reference: api.md
+  - About: about.md
 
 plugins:
   - search

@@ -1,5 +1,9 @@
 url: https://pablobernabeu.github.io/pilotr
 
+authors:
+  Pablo Bernabeu:
+    href: https://pablobernabeu.github.io
+
 template:
   bootstrap: 5
   light-switch: true
