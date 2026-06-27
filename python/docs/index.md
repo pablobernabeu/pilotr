@@ -54,11 +54,13 @@ print(table(data.head(5)))          # the first rows, as a table
 dicts, and `data.to_csv("data.csv")` writes the table to disk.
 
 To run a spec authored elsewhere (for example, one downloaded from the no-code app), load it
-with `load_spec` and simulate:
+with `load_spec` and simulate. Here we load one of the worked examples that ship with pilotr:
 
-```python
+```python exec="true" source="material-block" session="quick"
 from pilotr import load_spec, simulate
-data = simulate(load_spec("design.json"))
+
+data = simulate(load_spec("../spec/examples/poisson_counts_between.json"))
+print(table(data.head(5)))
 ```
 
 ## Where to go next
@@ -67,7 +69,6 @@ data = simulate(load_spec("design.json"))
   in R and Python.
 - [Power and design analysis](power.md): `power`, `power_curve`, and `power_mixed`.
 - [Response families](families.md): Gaussian, reaction times, accuracy, counts, ordinal, Beta.
+- [Worked examples](examples.md): one ready-to-run design per family.
+- [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.
-
-The specification format itself is documented in
-[`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md).

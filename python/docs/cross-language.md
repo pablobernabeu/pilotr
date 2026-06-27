@@ -18,8 +18,7 @@ generator implemented identically in both languages.
   draws, Marsaglia and Tsang gamma draws for the Beta family) derives from those two through
   a documented, identical draw order.
 
-The draw order is specified in
-[`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md).
+The draw order is specified on the [Specification](specification.md) page.
 
 ## Verifying parity
 

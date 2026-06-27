@@ -54,30 +54,59 @@ for a in ax:
 print(show(fig))
 ```
 
-A Bernoulli accuracy design:
+## Discrete and bounded outcomes
 
-```python
+The same machinery covers binary, count, and proportion outcomes. The fixed effect moves the two
+group means apart on each family's own scale:
+
+```python exec="true" source="material-block" session="fam"
+from statistics import mean
 from pilotr import simulate
 
+def group_means(family, intercept, effect, name, **resp):
+    spec = {
+        "name": family, "seed": 1, "units": {"subject": {"n": 4000}},
+        "factors": [{"name": "group", "levels": ["control", "treatment"],
+                     "contrasts": {"effect": [-0.5, 0.5]}, "between": "subject"}],
+        "fixed": {"intercept": intercept, "coefficients": {"effect": effect}},
+        "response": {"family": family, "name": name, **resp},
+    }
+    d = simulate(spec)
+    return {g: mean(r[name] for r in d.rows if r["group"] == g) for g in ("control", "treatment")}
+
+rows = []
+for label, fam, ic, ef, nm, kw in [
+    ("Bernoulli — P(correct)", "bernoulli", 0.0, 0.5, "accuracy", {}),
+    ("Poisson — mean count", "poisson", 1.5, 0.3, "count", {}),
+    ("Beta — mean proportion", "beta", 0.0, 0.8, "p", {"phi": 8}),
+]:
+    m = group_means(fam, ic, ef, nm, **kw)
+    rows.append({"outcome": label, "control": m["control"], "treatment": m["treatment"]})
+print(table(rows))
+```
+
+An ordinal (Likert) design sets the category thresholds directly; the effect shifts mass across
+the categories. The category proportions by group:
+
+```python exec="true" source="material-block" session="fam"
 spec = {
-    "name": "acc", "seed": 1,
-    "units": {"subject": {"n": 80}},
-    "factors": [{"name": "group", "levels": ["a", "b"],
+    "name": "likert", "seed": 1, "units": {"subject": {"n": 4000}},
+    "factors": [{"name": "group", "levels": ["control", "treatment"],
                  "contrasts": {"effect": [-0.5, 0.5]}, "between": "subject"}],
-    "fixed": {"intercept": 0.0, "coefficients": {"effect": 0.5}},
-    "response": {"family": "bernoulli", "name": "accuracy"},
+    "fixed": {"intercept": 0.0, "coefficients": {"effect": 0.8}},
+    "response": {"family": "ordinal", "name": "rating", "thresholds": [-2, -0.6, 0.6, 2]},
 }
-set(simulate(spec).column("accuracy"))   # {0, 1}
+d = simulate(spec)
+cats = sorted(set(d.column("rating")))
+rows = []
+for g in ("control", "treatment"):
+    vals = [r["rating"] for r in d.rows if r["group"] == g]
+    row = {"group": g}
+    row.update({f"P({c})": vals.count(c) / len(vals) for c in cats})
+    rows.append(row)
+print(table(rows))
 ```
 
-An ordinal (5-point Likert) design needs four `thresholds`; a Beta design needs a precision
-`phi`. Only the `response` block changes:
-
-```python
-"response": {"family": "ordinal", "name": "rating", "thresholds": [-2, -0.6, 0.6, 2]}
-"response": {"family": "beta", "name": "proportion", "phi": 8}
-```
-
-The worked example specs in
-[`spec/examples/`](https://github.com/pablobernabeu/pilotr/tree/main/spec/examples) cover one
-design per family.
+Every family ships as a ready-to-run [worked example](examples.md), and the full format,
+including the thresholds and the Beta precision `phi`, is on the
+[Specification](specification.md) page.

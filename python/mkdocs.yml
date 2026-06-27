@@ -23,6 +23,8 @@ nav:
   - Cross-language reproducibility: cross-language.md
   - Power and design analysis: power.md
   - Response families: families.md
+  - Worked examples: examples.md
+  - Specification format: specification.md
   - API reference: api.md
 
 plugins:
@@ -48,3 +50,6 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight
   - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: [".."]
+      check_paths: true
