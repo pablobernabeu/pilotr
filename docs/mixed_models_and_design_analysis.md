@@ -16,7 +16,7 @@ planning.
 | Positive/log outcomes | `lognormal` and `shifted_lognormal` families |
 | Bounded proportions | the `beta` family, with a mean and precision parameterization |
 | Partial crossing | a per-subject item count (`item.per_subject`), so each subject sees a sampled subset of items |
-| Precision-based design analysis | `precision_design()` / `precision_curve()` report P(95% CI outside/inside a ROPE) and expected CI width, swept over N |
+| Precision-based design analysis | `precision_design()` / `precision_curve()` report P(95% CI outside/inside a ROPE) and expected CI width, swept over *N* |
 | Bayesian bridge | `brms_bridge()` emits a ready-to-fit `brms` formula and priors from the spec |
 
 ## Validation (`r/pilotr/examples/precision_design_analysis.R`, `r/pilotr/examples/run_demo.R`, `python/examples/run_demo.py`)
@@ -26,7 +26,7 @@ planning.
   predictors (e.g. interaction 0.020→0.020, by-subject slope SDs 0.055/0.042 vs spec 0.06/0.04,
   residual 0.251 vs 0.25).
 - Precision/ROPE design analysis. For a meaningful effect (β=0.10, outside the ROPE) the
-  probability the 95% CI lands entirely outside the ROPE rises with N. For a negligible effect
+  probability the 95% CI lands entirely outside the ROPE rises with *N*. For a negligible effect
   (β=0.02, inside the ROPE) the probability it lands entirely inside is high. This is the
   frequentist analog of a Bayesian HDI-vs-ROPE decision.
 - Additional grouping. A design with subjects nested in clusters generates a cluster random
@@ -39,9 +39,9 @@ planning.
 1. Build the design spec. You can point and click in the app (using the *advanced: paste a JSON
    spec* option for continuous-predictor designs), or edit a spec under `spec/examples/`. The
    same spec runs in R and Python.
-2. Plan N by precision. `precision_curve(spec, focal, subject_ns, rope = 0.05)` sweeps the
+2. Plan *N* by precision. `precision_curve(spec, focal, subject_ns, rope = 0.05)` sweeps the
    sample size and reports, per focal effect, P(meaningful) and P(equivalent) along with the
-   expected CI width, so you can read off the minimum analysable N for a determinate ROPE
+   expected CI width, so you can read off the minimum analysable *N* for a determinate ROPE
    decision.
 3. Confirm in `brms`. `brms_bridge(spec)` emits the confirmatory model (family, fixed/random
    formula, and weakly-informative priors). Simulate one dataset, fit it in `brms`, and check

@@ -77,9 +77,14 @@ The following sweep over the number of subjects shows where power crosses a targ
 curve <- power_curve_mixed(spec_c, subject_ns = c(15, 30), n_sims = 12)
 curve
 
-plot(curve$n_subject, curve$power, type = "b", pch = 19, ylim = c(0, 1),
-     xlab = "N subjects", ylab = "Power", col = "#2C6FB0", lwd = 2)
-abline(h = 0.8, lty = 2, col = "grey")
+library(ggplot2)
+ggplot(curve, aes(n_subject, power)) +
+  geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
+  geom_line(colour = "#2C6FB0", linewidth = 0.8) +
+  geom_point(colour = "#2C6FB0", size = 2.6) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
+  theme_minimal(base_size = 12)
 ```
 
 For a high-resolution sweep, these analyses are fully parallel and scale well on a cluster.

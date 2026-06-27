@@ -76,7 +76,7 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #' Precision and ROPE curve over sample size
 #'
 #' Sweep the number of subjects and report the ROPE decision probabilities at each size, to
-#' identify the minimum analysable N at which a focal effect reaches a determinate decision
+#' identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
 #' with a target probability (for example 0.90). Calls [precision_design()] and so requires
 #' the `lme4` package.
 #'

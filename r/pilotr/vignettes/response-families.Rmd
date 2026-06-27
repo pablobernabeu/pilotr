@@ -34,6 +34,14 @@ demo <- function(family, intercept, effect, n = 4000, ...) {
   y <- d[[spec$response$name]]
   list(spec = spec, data = d, y = y, by_group = tapply(y, d$group, mean))
 }
+
+library(ggplot2)
+fam_hist <- function(y, fill, title, xlab) {
+  ggplot(data.frame(y = y), aes(y)) +
+    geom_histogram(bins = 40, fill = fill, colour = "white") +
+    labs(title = title, x = xlab, y = "count") +
+    theme_minimal(base_size = 12)
+}
 ```
 
 ## Gaussian
@@ -45,7 +53,7 @@ standardized scores.
 ```{r}
 g <- demo("gaussian", intercept = 100, effect = 5, sigma = 10)
 round(g$by_group, 2)
-hist(g$y, breaks = 40, col = "#2C6FB0", border = "white", main = "Gaussian", xlab = "score")
+fam_hist(g$y, "#2C6FB0", "Gaussian", "score")
 ```
 
 ## Shifted lognormal (reaction times)
@@ -57,8 +65,7 @@ intercept of 6 implies a typical RT near `exp(6)` ms above the shift.
 ```{r}
 rt <- demo("shifted_lognormal", intercept = 6, effect = 0.1, sigma = 0.3, shift = 200)
 round(rt$by_group, 1)
-hist(rt$y, breaks = 40, col = "#B0402C", border = "white", main = "Shifted lognormal (RT)",
-     xlab = "RT (ms)")
+fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
 ```
 
 ## Bernoulli (accuracy)
@@ -105,7 +112,7 @@ is `logit⁻¹(η)` and `phi` is the precision, with larger values giving a tigh
 ```{r}
 bt <- demo("beta", intercept = 0, effect = 0.8, phi = 8)
 round(bt$by_group, 3)   # mean proportion by group
-hist(bt$y, breaks = 40, col = "#2E8B57", border = "white", main = "Beta", xlab = "proportion")
+fam_hist(bt$y, "#2E8B57", "Beta", "proportion")
 ```
 
 ## Choosing a family

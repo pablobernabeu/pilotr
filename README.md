@@ -107,7 +107,7 @@ reference deployment on the Oxford ARC cluster is organised as follows.
   (`R_LIBS`). The R module already provides `jsonlite`.
 - Submit the sweep: `sbatch hpc/precision_array.slurm`
   (smoke test: `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`).
-- Each task writes one `precision_N<n>.csv`. These combine into a full precision-vs-N curve
+- Each task writes one `precision_N<n>.csv`. These combine into a full precision-vs-*N* curve
   at a resolution far beyond a laptop.
 
 The simulation core is bit-identical across machines and R versions. ARC reproduces local

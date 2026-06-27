@@ -1,0 +1,18 @@
+/* Material theme overrides for the pilotr (Python) docs. */
+
+/* Brand the site with the pilotr blue, to match the R package website. */
+:root {
+  --md-primary-fg-color: #2c6fb0;
+  --md-primary-fg-color--light: #4f8ac4;
+  --md-primary-fg-color--dark: #21527f;
+  --md-accent-fg-color: #2c6fb0;
+}
+
+/* Give figures and images room to breathe. */
+.md-typeset img {
+  margin: 1.25rem 0 1.5rem;
+}
+
+.md-typeset figure {
+  margin: 1.75rem 0;
+}

@@ -5,6 +5,7 @@
 # shiny::runApp("r/pilotr/inst/app") (from source).
 
 library(shiny)
+library(ggplot2)
 
 # When the package is loaded (run_app), its functions are available; from source, locate
 # and source the engine + spec-builder. (Installed packages have no R/ source files, so we
@@ -240,13 +241,27 @@ server <- function(input, output, session) {
   output$plot <- renderPlot({
     d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
     has_grp <- !is.null(fn) && fn %in% names(d)
+    pal2 <- c("#2C6FB0", "#B0402C")
+    base <- theme_minimal(base_size = 14)
     if (is.numeric(d[[yn]])) {
-      if (has_grp) boxplot(d[[yn]] ~ d[[fn]], xlab = fn, ylab = yn, col = c("#2C6FB0", "#B0402C"),
-                           main = paste("Distribution of", yn))
-      else hist(d[[yn]], col = "#2C6FB0", xlab = yn, main = paste("Distribution of", yn))
-    } else if (has_grp) barplot(table(d[[fn]], d[[yn]]), beside = TRUE, legend = TRUE,
-                                col = c("#2C6FB0", "#B0402C"), main = paste("Counts of", yn))
-    else barplot(table(d[[yn]]), col = "#2C6FB0", main = paste("Counts of", yn))
+      if (has_grp)
+        ggplot(d, aes(.data[[fn]], .data[[yn]], fill = .data[[fn]])) +
+          geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
+          scale_fill_manual(values = pal2, guide = "none") +
+          labs(x = fn, y = yn, title = paste("Distribution of", yn)) + base
+      else
+        ggplot(d, aes(.data[[yn]])) +
+          geom_histogram(bins = 30, fill = "#2C6FB0", colour = "white") +
+          labs(x = yn, y = "count", title = paste("Distribution of", yn)) + base
+    } else if (has_grp)
+      ggplot(d, aes(.data[[yn]], fill = .data[[fn]])) +
+        geom_bar(position = "dodge") +
+        scale_fill_manual(values = pal2, name = fn) +
+        labs(x = yn, y = "count", title = paste("Counts of", yn)) + base
+    else
+      ggplot(d, aes(.data[[yn]])) +
+        geom_bar(fill = "#2C6FB0") +
+        labs(x = yn, y = "count", title = paste("Counts of", yn)) + base
   })
 
   output$rscript <- renderText(generate_r_script(current_spec()))
@@ -349,11 +364,16 @@ server <- function(input, output, session) {
   })
   output$power_plot <- renderPlot({
     pc <- power_curve_data(); if (is.null(pc)) return(NULL)
-    op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
-    plot(pc$grid, pc$pw, type = "b", pch = 19, col = "#2C6FB0", lwd = 2, ylim = c(0, 1),
-         xlab = "N subjects", ylab = "Power", main = "Power vs N subjects")
-    abline(h = 0.8, lty = 2, col = "#888888")
-    text(min(pc$grid), 0.8, "0.80 target", pos = 3, col = "#888888", cex = 0.8)
+    df <- data.frame(n = pc$grid, power = pc$pw)
+    ggplot(df, aes(n, power)) +
+      geom_hline(yintercept = 0.8, linetype = 2, colour = "#888888") +
+      annotate("text", x = min(df$n), y = 0.8, label = "0.80 target",
+               hjust = 0, vjust = -0.6, colour = "#888888", size = 3.6) +
+      geom_line(colour = "#2C6FB0", linewidth = 0.9) +
+      geom_point(colour = "#2C6FB0", size = 3) +
+      scale_y_continuous(limits = c(0, 1)) +
+      labs(x = expression(italic(N) ~ "subjects"), y = "Power", title = "Power curve") +
+      theme_minimal(base_size = 14)
   })
 
   output$dl_spec <- downloadHandler(

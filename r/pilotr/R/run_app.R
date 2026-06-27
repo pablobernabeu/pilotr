@@ -21,6 +21,7 @@
 #' @export
 run_app <- function(..., async = NULL) {
   if (!requireNamespace("shiny", quietly = TRUE)) stop("Please install 'shiny' to run the app.")
+  if (!requireNamespace("ggplot2", quietly = TRUE)) stop("Please install 'ggplot2' to run the app.")
   if (is.null(async)) async <- requireNamespace("future", quietly = TRUE) &&
       requireNamespace("promises", quietly = TRUE)
   if (isTRUE(async)) {

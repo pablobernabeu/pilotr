@@ -1,0 +1,21 @@
+/* pkgdown custom styles (auto-loaded by pkgdown as pkgdown/extra.css). */
+
+/* Give plots and figures room to breathe, and centre them in the article body. */
+main img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.75rem auto 2rem;
+}
+
+main .figure,
+main figure {
+  margin: 1.75rem 0 2rem;
+  text-align: center;
+}
+
+/* A little extra space above section headings that follow a plot. */
+main h2,
+main h3 {
+  margin-top: 2rem;
+}

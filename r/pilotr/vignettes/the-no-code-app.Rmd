@@ -47,7 +47,7 @@ standard deviations. Then read the tabs.
   by running it in a clean R session and confirming bit-for-bit reproduction.
 
 Changing the response family resets the intercept and effect to sensible values for that
-family's scale, so a point-and-click design stays valid. The advanced "paste a JSON spec" box
+family's scale, so a point-and-click design stays valid. The advanced 'paste a JSON spec' box
 accepts designs beyond the point-and-click controls, such as continuous predictors,
 interactions, and nesting.
 

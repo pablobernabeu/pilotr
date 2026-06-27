@@ -10,6 +10,7 @@
 
 library(shiny)
 library(bslib)
+library(ggplot2)
 for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) source(f)
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
@@ -360,21 +361,26 @@ server <- function(input, output, session) {
 
   output$plot <- renderPlot({
     d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
-    y <- d[[yn]]; op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
-    if (!is.na(gn) && !is.null(d[[gn]]) && is.numeric(y)) {
-      boxplot(y ~ d[[gn]], xlab = gn, ylab = yn, col = pal(2), border = "#333333",
-              main = paste(yn, "by", gn))
-    } else if (!is.na(gn) && !is.null(d[[gn]])) {
-      tab <- table(d[[gn]], y)
-      barplot(tab, beside = TRUE, legend = TRUE, xlab = yn, col = pal(nrow(tab)),
-              main = paste(yn, "by", gn))
+    y <- d[[yn]]; base <- theme_minimal(base_size = 14)
+    has_grp <- !is.na(gn) && !is.null(d[[gn]])
+    if (has_grp && is.numeric(y)) {
+      ggplot(d, aes(.data[[gn]], .data[[yn]], fill = .data[[gn]])) +
+        geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
+        scale_fill_manual(values = pal(2), guide = "none") +
+        labs(x = gn, y = yn, title = paste(yn, "by", gn)) + base
+    } else if (has_grp) {
+      ggplot(d, aes(.data[[yn]], fill = .data[[gn]])) +
+        geom_bar(position = "dodge") +
+        scale_fill_manual(values = pal(length(unique(d[[gn]]))), name = gn) +
+        labs(x = yn, y = "count", title = paste(yn, "by", gn)) + base
     } else if (is.numeric(y)) {
-      hist(y, breaks = 30, col = PALETTE[1], border = "white", xlab = yn,
-           main = paste("Distribution of", yn))
+      ggplot(d, aes(.data[[yn]])) +
+        geom_histogram(bins = 30, fill = PALETTE[1], colour = "white") +
+        labs(x = yn, y = "count", title = paste("Distribution of", yn)) + base
     } else {
-      tab <- table(y)
-      barplot(tab, col = pal(length(tab)), ylab = "count", xlab = yn,
-              main = paste("Distribution of", yn))
+      ggplot(d, aes(.data[[yn]])) +
+        geom_bar(fill = PALETTE[1]) +
+        labs(x = yn, y = "count", title = paste("Distribution of", yn)) + base
     }
   })
 
@@ -430,11 +436,16 @@ server <- function(input, output, session) {
   })
   output$power_plot <- renderPlot({
     pc <- power_plot(); if (is.null(pc)) return(NULL)
-    op <- par(mar = c(4, 4, 2, 1)); on.exit(par(op))
-    plot(pc$grid, pc$pw, type = "b", pch = 19, col = PALETTE[1], lwd = 2,
-         ylim = c(0, 1), xlab = "N subjects", ylab = "Power", main = "Power vs N subjects")
-    abline(h = 0.8, lty = 2, col = "#888888")
-    text(min(pc$grid), 0.8, "0.80 target", pos = 3, col = "#888888", cex = 0.8)
+    df <- data.frame(n = pc$grid, power = pc$pw)
+    ggplot(df, aes(n, power)) +
+      geom_hline(yintercept = 0.8, linetype = 2, colour = "#888888") +
+      annotate("text", x = min(df$n), y = 0.8, label = "0.80 target",
+               hjust = 0, vjust = -0.6, colour = "#888888", size = 3.6) +
+      geom_line(colour = PALETTE[1], linewidth = 0.9) +
+      geom_point(colour = PALETTE[1], size = 3) +
+      scale_y_continuous(limits = c(0, 1)) +
+      labs(x = expression(italic(N) ~ "subjects"), y = "Power", title = "Power curve") +
+      theme_minimal(base_size = 14)
   })
 
   # ---- reproducible R script ----

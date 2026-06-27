@@ -29,7 +29,7 @@ interval with a ROPE.
 Over Monte Carlo replicates, and for each focal fixed effect, pilotr records the 95% confidence
 interval and whether it falls determinately outside the ROPE (the effect is practically
 meaningful) or entirely inside it (practical equivalence to zero), together with the expected
-interval width. Sweeping sample size then locates the minimum N at which a focal effect reaches
+interval width. Sweeping sample size then locates the minimum *N* at which a focal effect reaches
 a determinate decision with a target probability.
 
 ## A worked design
@@ -55,7 +55,7 @@ model, including the contrast columns, the response transform, and the mixed-mod
 model_formula(spec_c)
 ```
 
-## Precision at a fixed N
+## Precision at a fixed *N*
 
 We declare the focal effect (its coefficient name and true value) and a ROPE half-width. Here
 the effect lives on the log scale, and we treat anything smaller than 0.02 as practically
@@ -67,8 +67,8 @@ pr
 ```
 
 The columns are interpreted as follows. `p_meaningful` is the probability the 95% CI lands
-entirely outside the ROPE, a determinate "meaningful" decision. `p_equivalent` is the
-probability it lands entirely inside, a determinate "equivalent" decision. `mean_ci_width` is
+entirely outside the ROPE, a determinate 'meaningful' decision. `p_equivalent` is the
+probability it lands entirely inside, a determinate 'equivalent' decision. `mean_ci_width` is
 the expected precision.
 
 ## Sweeping sample size
@@ -78,9 +78,9 @@ prc <- precision_curve(spec_c, focal = c(effect = 0.05), subject_ns = c(15, 30),
 prc[, c("n_subject", "param", "p_meaningful", "p_equivalent", "mean_ci_width")]
 ```
 
-As N grows the interval tightens, `p_meaningful` rises, and the design reaches a determinate
-decision more reliably. This curve can be used to choose the smallest N that meets a target, for
-example "`p_meaningful` ≥ 0.90", which provides a more informative criterion than power against
+As *N* grows the interval tightens, `p_meaningful` rises, and the design reaches a determinate
+decision more reliably. This curve can be used to choose the smallest *N* that meets a target, for
+example '`p_meaningful` ≥ 0.90', which provides a more informative criterion than power against
 a point null.
 
 ## See also

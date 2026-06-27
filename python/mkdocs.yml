@@ -15,6 +15,9 @@ theme:
     - navigation.top
     - content.code.copy
 
+extra_css:
+  - stylesheets/extra.css
+
 nav:
   - Home: index.md
   - Cross-language reproducibility: cross-language.md

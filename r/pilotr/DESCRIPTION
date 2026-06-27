@@ -20,8 +20,8 @@ URL: https://pablobernabeu.github.io/pilotr/, https://github.com/pablobernabeu/p
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
 Imports: jsonlite, stats
-Suggests: shiny, future, promises, lme4, lmerTest, callr, knitr, rmarkdown,
-    testthat (>= 3.0.0)
+Suggests: shiny, future, promises, ggplot2, lme4, lmerTest, callr, knitr,
+    rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
