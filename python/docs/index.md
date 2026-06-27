@@ -24,7 +24,17 @@ The generative core is pure Python with no required dependencies. `scipy` (for `
 A design is a plain dictionary, or a JSON file, describing the units, factors, fixed effects,
 optional random effects, and a response family. Simulate from it with `simulate`:
 
-```python
+!!! note "These examples run live"
+    The code blocks on this page (and throughout these docs) are executed when the site is
+    built, so the tables and plots are real `pilotr` output. `table(...)` and `show(...)` are
+    small helpers that render a result as a Markdown table or an inline figure.
+
+```python exec="true" session="quick"
+import sys; sys.path.insert(0, "docs")
+from _exec import table, show, BLUE, RED, GREEN
+```
+
+```python exec="true" source="material-block" session="quick"
 from pilotr import simulate
 
 spec = {
@@ -36,11 +46,12 @@ spec = {
     "response": {"family": "gaussian", "name": "score", "sigma": 10},
 }
 
-data = simulate(spec)
-len(data)                   # 64
-data.head(3)                # first rows as a list of dicts
-data.to_csv("data.csv")     # write to CSV
+data = simulate(spec)               # 64 rows
+print(table(data.head(5)))          # the first rows, as a table
 ```
+
+`len(data)` is the number of observations, `data.head(n)` returns the first rows as a list of
+dicts, and `data.to_csv("data.csv")` writes the table to disk.
 
 To run a spec authored elsewhere (for example, one downloaded from the no-code app), load it
 with `load_spec` and simulate:

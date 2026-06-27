@@ -40,3 +40,18 @@ write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 The numeric columns match to the last digit. The repository's `python/examples/parity_check.py`
 runs this comparison across the worked example designs and reports the maximum difference,
 which is zero up to floating-point accumulation.
+
+A simulated crossed design has one row per subject-by-item observation. The first rows of the
+worked crossed reaction-time example look like this (the same rows the R package produces):
+
+```python exec="true" session="xl"
+import sys; sys.path.insert(0, "docs")
+from _exec import table, show
+```
+
+```python exec="true" source="material-block" session="xl"
+from pilotr import simulate, load_spec
+
+data = simulate(load_spec("../spec/examples/crossed_mixed_rt.json"))
+print(table(data.head(6)))
+```

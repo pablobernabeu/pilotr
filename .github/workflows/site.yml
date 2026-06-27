@@ -69,7 +69,8 @@ jobs:
       - name: Build Python docs into the site (/py)
         run: |
           set -e
-          python -m pip install --quiet mkdocs-material "mkdocstrings[python]"
+          python -m pip install --quiet mkdocs-material "mkdocstrings[python]" \
+            markdown-exec matplotlib scipy
           cd python && python -m mkdocs build --strict --site-dir ../r/pilotr/docs/py
 
       - name: Deploy to gh-pages

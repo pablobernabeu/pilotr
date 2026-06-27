@@ -10,7 +10,12 @@ computed over the significant replicates.
 `power` handles the two-group Gaussian design with a two-sample t-test. It needs `scipy`
 (install the `power` extra):
 
-```python
+```python exec="true" session="pow"
+import sys; sys.path.insert(0, "docs")
+from _exec import table, show, BLUE
+```
+
+```python exec="true" source="material-block" session="pow"
 from pilotr import power
 
 spec = {
@@ -22,8 +27,8 @@ spec = {
     "response": {"family": "gaussian", "name": "score", "sigma": 10},
 }
 
-power(spec, n_sims=500)
-# {'power': ~0.50, 'type_s': 0.0, 'type_m': ~1.3, 'true_effect': 5.0, ...}
+res = power(spec, n_sims=500)
+print(table([{k: res[k] for k in ("power", "type_s", "type_m", "true_effect", "mean_estimate")}]))
 ```
 
 At roughly 50% power the Type M ratio is well above 1. Conditional on significance the
@@ -34,9 +39,21 @@ unbiased. This is the statistical-significance filter that design analysis is me
 
 `power_curve` sweeps the number of subjects so you can read off where power crosses a target:
 
-```python
+```python exec="true" source="material-block" html="true" session="pow"
+import matplotlib.pyplot as plt
 from pilotr import power_curve
-power_curve(spec, subject_ns=[32, 48, 64, 96, 128], n_sims=200)
+
+curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128], n_sims=200)
+ns = [p["n_subject"] for p in curve]
+pw = [p["power"] for p in curve]
+
+fig, ax = plt.subplots(figsize=(6, 3.4))
+ax.axhline(0.8, ls="--", color="grey")
+ax.plot(ns, pw, "-o", color=BLUE)
+ax.set_ylim(0, 1)
+ax.set_xlabel("$N$ subjects")
+ax.set_ylabel("Power")
+print(show(fig))
 ```
 
 ## Crossed mixed-effects power
