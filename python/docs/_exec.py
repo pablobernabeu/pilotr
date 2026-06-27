@@ -16,8 +16,7 @@ BLUE = "#2c6fb0"
 RED = "#b0402c"
 GREEN = "#2e8b57"
 
-plt.rcParams.update({"figure.autolayout": True, "axes.spines.top": False,
-                     "axes.spines.right": False, "font.size": 11})
+plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "font.size": 11})
 
 
 def _fmt(v):
@@ -44,6 +43,6 @@ def table(rows, columns=None):
 def show(fig):
     """Return a matplotlib figure as an inline SVG string (use with ``html="true"``)."""
     buf = StringIO()
-    fig.savefig(buf, format="svg")
+    fig.savefig(buf, format="svg", bbox_inches="tight")
     plt.close(fig)
     return buf.getvalue()

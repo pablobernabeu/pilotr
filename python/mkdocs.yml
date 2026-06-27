@@ -3,16 +3,29 @@ site_description: Simulate experimental and behavioral data from a portable desi
 site_url: https://pablobernabeu.github.io/pilotr/py/
 repo_url: https://github.com/pablobernabeu/pilotr
 docs_dir: docs
+copyright: Developed by <a href="https://orcid.org/0000-0003-1083-2460">Pablo Bernabeu</a>
 
 theme:
   name: material
   palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.top
+    - navigation.footer
     - content.code.copy
 
 extra_css:

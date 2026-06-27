@@ -70,7 +70,7 @@ jobs:
         run: |
           set -e
           python -m pip install --quiet mkdocs-material "mkdocstrings[python]" \
-            markdown-exec matplotlib scipy
+            markdown-exec matplotlib scipy statsmodels pandas
           cd python && python -m mkdocs build --strict --site-dir ../r/pilotr/docs/py
 
       - name: Deploy to gh-pages

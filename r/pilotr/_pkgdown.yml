@@ -2,13 +2,14 @@ url: https://pablobernabeu.github.io/pilotr
 
 template:
   bootstrap: 5
+  light-switch: true
   bslib:
     primary: "#2C6FB0"
 
 navbar:
   structure:
     left:  [reference, articles]
-    right: [pydocs, demo, github]
+    right: [lightswitch, pydocs, demo, github]
   components:
     pydocs:
       text: "Python docs"

@@ -1,10 +1,14 @@
 /* Material theme overrides for the pilotr (Python) docs. */
 
-/* Brand the site with the pilotr blue, to match the R package website. */
-:root {
+/* Brand the site with the pilotr blue, in both the light and dark schemes. Using the
+   `custom` colour name (set in mkdocs.yml) so the override wins over the built-in palettes. */
+[data-md-color-primary="custom"] {
   --md-primary-fg-color: #2c6fb0;
   --md-primary-fg-color--light: #4f8ac4;
   --md-primary-fg-color--dark: #21527f;
+}
+
+[data-md-color-accent="custom"] {
   --md-accent-fg-color: #2c6fb0;
 }
 
@@ -14,13 +18,17 @@
 }
 
 .md-typeset figure {
-  margin: 1.75rem 0;
+  margin: 1.5rem 0;
 }
 
-/* Inline SVG plots (from the executed examples): responsive and centred. */
+/* Inline SVG plots (from the executed examples): responsive, centred, and set on a white
+   card so they stay legible under the dark scheme. Keep the bottom margin tight. */
 .md-typeset svg {
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 1.25rem auto 1.5rem;
+  margin: 1rem auto 0.5rem;
+  background: #ffffff;
+  border-radius: 0.2rem;
+  padding: 0.4rem;
 }

@@ -59,12 +59,34 @@ print(show(fig))
 ## Crossed mixed-effects power
 
 `power_mixed` fits a crossed mixed model with `statsmodels` (needs `statsmodels` and
-`pandas`). One caveat: the statsmodels variance-component fit overstates random-slope variance,
-so the backend is conservative for random-slope designs. For those designs the R package's
+`pandas`). The design has one within-subject factor and crossed by-subject and by-item random
+intercepts and slopes:
+
+```python exec="true" source="material-block" session="pow"
+from pilotr import power_mixed
+
+spec_mixed = {
+    "name": "priming", "seed": 1,
+    "units": {"subject": {"n": 12}, "item": {"n": 8}},
+    "factors": [{"name": "condition", "levels": ["related", "unrelated"],
+                 "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+    "fixed": {"intercept": 6, "coefficients": {"cond": 0.1}},
+    "random": {
+        "subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04},
+                    "correlations": {"intercept~cond": 0.2}},
+        "item": {"intercept_sd": 0.08, "slopes": {"cond": 0.02},
+                 "correlations": {"intercept~cond": -0.1}},
+    },
+    "response": {"family": "shifted_lognormal", "name": "RT", "sigma": 0.3, "shift": 200},
+}
+
+res = power_mixed(spec_mixed, n_sims=12)   # tiny for the docs; use >= 200 in practice
+print(table([{k: res[k] for k in
+              ("power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m")}]))
+```
+
+Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
+`true_effect`). One caveat: the statsmodels variance-component fit overstates random-slope
+variance, so the power estimate is conservative for random-slope designs. The R package's
 `lme4`-based `power_mixed` is the reference; data generation is identical across the two
 languages, and the discrepancy is in the estimator alone.
-
-```python
-from pilotr import power_mixed
-power_mixed(spec_with_one_within_factor, n_sims=200)
-```
