@@ -1,9 +1,9 @@
 # pilotr (Python)
 
-Python implementation of pilotr. It simulates experimental and behavioral data from a
+Python implementation of pilotr. It simulates experimental and behavioural data from a
 portable JSON design specification, producing output that is bit-identical to the R package
 of the same name. See the [project README](https://github.com/pablobernabeu/pilotr) for the
-full toolkit (the no-code app, the R package, and the specification format).
+full toolkit (the no-code app, the R package and the specification format).
 
 ## Install
 

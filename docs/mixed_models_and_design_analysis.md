@@ -2,7 +2,7 @@
 
 Beyond simple factorial experiments, pilotr expresses observational and regression-style
 mixed-effects designs. This note summarises the advanced capabilities, the features that are
-validated, the features that are deferred, and the recommended workflow for design and analysis
+validated, the features that are deferred and the recommended workflow for design and analysis
 planning.
 
 ## Capabilities
@@ -14,7 +14,7 @@ planning.
 | Random slopes on continuous predictors | random `slopes` keyed by predictor, e.g. `(1 + x1 + x2 | subject)` |
 | Additional grouping factors | any `random` entry beyond subject/item with `over` + `n` (e.g. subjects nested in clusters) |
 | Positive/log outcomes | `lognormal` and `shifted_lognormal` families |
-| Bounded proportions | the `beta` family, with a mean and precision parameterization |
+| Bounded proportions | the `beta` family, with a mean and precision parameterisation |
 | Partial crossing | a per-subject item count (`item.per_subject`), so each subject sees a sampled subset of items |
 | Precision-based design analysis | `precision_design()` / `precision_curve()` report P(95% CI outside/inside a ROPE) and expected CI width, swept over *N* |
 | Bayesian bridge | `brms_bridge()` emits a ready-to-fit `brms` formula and priors from the spec |
@@ -22,13 +22,13 @@ planning.
 ## Validation (`r/pilotr/examples/precision_design_analysis.R`, `r/pilotr/examples/run_demo.R`, `python/examples/run_demo.py`)
 
 - Recovery. A maximal `lmer` fit to a large simulation recovers the full fixed-effect
-  model, including main effects, interactions, and the by-subject random slopes on continuous
+  model, including main effects, interactions and the by-subject random slopes on continuous
   predictors (e.g. interaction 0.020→0.020, by-subject slope SDs 0.055/0.042 vs spec 0.06/0.04,
   residual 0.251 vs 0.25).
 - Precision/ROPE design analysis. For a meaningful effect (β=0.10, outside the ROPE) the
   probability the 95% CI lands entirely outside the ROPE rises with *N*. For a negligible effect
   (β=0.02, inside the ROPE) the probability it lands entirely inside is high. This is the
-  frequentist analog of a Bayesian HDI-vs-ROPE decision.
+  frequentist analogue of a Bayesian HDI-vs-ROPE decision.
 - Additional grouping. A design with subjects nested in clusters generates a cluster random
   intercept and is bit-identical across R and Python (`nested_clusters.json`, parity diff 0.0).
 - Cross-language parity. The continuous-predictor design is bit-identical between R and Python
@@ -44,8 +44,8 @@ planning.
    expected CI width, so you can read off the minimum analysable *N* for a determinate ROPE
    decision.
 3. Confirm in `brms`. `brms_bridge(spec)` emits the confirmatory model (family, fixed/random
-   formula, and weakly-informative priors). Simulate one dataset, fit it in `brms`, and check
-   recovery, prior-predictive behaviour, and the HDI-vs-ROPE decision before collecting data.
+   formula and weakly-informative priors). Simulate one dataset, fit it in `brms` and check
+   recovery, prior-predictive behaviour and the HDI-vs-ROPE decision before collecting data.
 
 In this division of labour, pilotr serves as a design-and-planning engine, with `brms` (Stan)
 providing the confirmatory Bayesian layer.
@@ -54,5 +54,5 @@ providing the confirmatory Bayesian layer.
 
 | Gap | Note |
 |---|---|
-| Full Bayesian fit in-toolkit (HDI, LKJ priors, posterior precision) | use the `brms_bridge()` output. The built-in precision analysis is a fast frequentist analog |
+| Full Bayesian fit in-toolkit (HDI, LKJ priors, posterior precision) | use the `brms_bridge()` output. The built-in precision analysis is a fast frequentist analogue |
 | Crossed-random-slope power in Python | `statsmodels` overstates slope variance (conservative). R/`lme4` is the reference |

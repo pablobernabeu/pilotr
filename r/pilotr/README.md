@@ -1,10 +1,15 @@
-# pilotr
+# pilotr <img src="man/figures/logo.png" align="right" height="139" alt="pilotr hex logo" />
 
-Simulate experimental and behavioral data from a portable design specification, with
-integrated simulation-based power and design analysis (Type S / Type M errors, and
-precision against a region of practical equivalence). A single specification drives three
-interchangeable interfaces, namely a no-code web app, this R package, and a Python
-package. Given the same specification and seed, all three produce bit-identical data.
+Simulate experimental and behavioural data from a portable design specification, with
+integrated simulation-based power and design analysis (the Type S and Type M errors, and
+precision against a region of practical equivalence).
+
+pilotr lets you pilot a study before you run it. Describe the design you plan to collect, with
+its groups, conditions, sample sizes, effect sizes and outcome family, and pilotr generates the
+data that design would produce. You can then check the study's power and design analysis before
+gathering anything. A single specification drives three interchangeable interfaces, namely a
+no-code web app, this R package and a Python package; given the same specification and seed, all
+three produce bit-identical data.
 
 ## Installation
 
@@ -26,11 +31,10 @@ cat(generate_r_script(spec))              # a self-contained, reproducible scrip
 
 ## Try it without installing
 
-A serverless build runs entirely in your browser, with no installation required and no
-data uploaded. It is available as a [live demo](https://pablobernabeu.github.io/pilotr/demo/).
+A serverless build runs entirely in your browser, with no installation required and no data
+uploaded. It is available as a [live demo](https://pablobernabeu.github.io/pilotr/demo/).
 
 ## Learn more
 
-The full toolkit, comprising the specification format, the Python package, the no-code app,
-and the validation suite, is available at
-<https://github.com/pablobernabeu/pilotr>.
+The full toolkit, comprising the specification format, the Python package, the no-code app and
+the validation suite, is documented at <https://pablobernabeu.github.io/pilotr/>.

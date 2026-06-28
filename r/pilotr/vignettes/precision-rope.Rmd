@@ -18,7 +18,7 @@ library(pilotr)
 When sample sizes are large, or when the question of interest is whether an effect is
 *practically* meaningful, power against a point null is often the wrong target. pilotr
 implements a precision-based design analysis against a region of practical equivalence (ROPE).
-This is a fast, frequentist analog of the Bayesian approach that compares a highest-density
+This is a fast, frequentist analogue of the Bayesian approach that compares a highest-density
 interval with a ROPE.
 
 > As in the power vignette, `n_sims` is kept small here so the vignette builds quickly. For real
@@ -49,7 +49,7 @@ spec_c <- build_spec(list(
 ```
 
 So that the analysis can run from the specification alone, pilotr auto-derives the analysis
-model, including the contrast columns, the response transform, and the mixed-model formula.
+model, including the contrast columns, the response transform and the mixed-model formula.
 
 ```{r}
 model_formula(spec_c)
@@ -78,7 +78,7 @@ prc <- precision_curve(spec_c, focal = c(effect = 0.05), subject_ns = c(15, 30),
 prc[, c("n_subject", "param", "p_meaningful", "p_equivalent", "mean_ci_width")]
 ```
 
-As *N* grows the interval tightens, `p_meaningful` rises, and the design reaches a determinate
+As *N* grows the interval tightens, `p_meaningful` rises and the design reaches a determinate
 decision more reliably. This curve can be used to choose the smallest *N* that meets a target, for
 example '`p_meaningful` ≥ 0.90', which provides a more informative criterion than power against
 a point null.

@@ -14,7 +14,7 @@ its parameters live in the spec's `response` block, and the response column is n
 | Proportions in (0, 1) | `beta` | logit (mean) | `phi` (precision) |
 
 The fixed `effect` is always expressed on the response scale: the identity scale for Gaussian,
-the log scale for reaction times and counts, and the logit scale for accuracy, ordinal, and
+the log scale for reaction times and counts, and the logit scale for accuracy, ordinal and
 Beta.
 
 ## What the families look like

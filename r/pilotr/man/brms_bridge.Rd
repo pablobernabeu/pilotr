@@ -9,7 +9,7 @@ brms_bridge(spec, prior_scale = 0.5, interaction_scale = NULL)
 \arguments{
 \item{spec}{a design spec (path or list).}
 
-\item{prior_scale}{SD of the Normal prior on fixed main effects (standardized scale).}
+\item{prior_scale}{SD of the Normal prior on fixed main effects (standardised scale).}
 
 \item{interaction_scale}{SD of the Normal prior on interaction terms (default prior_scale/2).}
 }

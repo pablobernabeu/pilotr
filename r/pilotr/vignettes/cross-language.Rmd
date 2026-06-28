@@ -25,17 +25,14 @@ that a design authored once can be reproduced anywhere.
 ## A shared generator
 
 pilotr sets aside the native RNGs and provides a shared generator implemented identically
-in both languages.
-
-- Uniform deviates come from L'Ecuyer's (1988) combined linear congruential generator,
-  whose arithmetic stays below $2^{53}$ and is therefore exact in IEEE-754 doubles (R) and
-  Python integers alike.
-- Normal deviates use Wichura's (1988) Algorithm AS 241 inverse-CDF, the algorithm R's
-  `qnorm()` uses, so deviates agree to full double precision.
-- The remaining draws (Cholesky-correlated random effects, inverse-CDF Poisson and ordinal
-  draws, Marsaglia–Tsang gamma draws for the Beta family, a Fisher–Yates item sampler for
-  partial crossing) are derived from those two through a documented, identical consumption
-  order.
+in both languages. Uniform deviates come from L'Ecuyer's (1988) combined linear congruential
+generator, whose arithmetic stays below $2^{53}$ and is therefore exact in IEEE-754 doubles
+(R) and Python integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241
+inverse-CDF, the algorithm R's `qnorm()` uses, so deviates agree to full double precision.
+The remaining draws (Cholesky-correlated random effects, inverse-CDF Poisson and ordinal
+draws, Marsaglia–Tsang gamma draws for the Beta family, a Fisher–Yates item sampler for
+partial crossing) are derived from those two through a documented, identical consumption
+order.
 
 As a result, given the same specification and seed, the R and Python implementations
 produce bit-identical data sets. The specification, rather than the implementation, serves
@@ -82,12 +79,10 @@ so a design verified on a laptop reproduces exactly on an HPC node.
 
 ## Why this matters
 
-Because the specification is the source of truth and the generator is shared, a design can be:
-
-- authored once (in the app, in R, or in Python) and reproduced everywhere;
-- preregistered as a small JSON file that anyone can run;
-- scaled from a laptop to a cluster without drift;
-- handed between collaborators who work in different languages.
+Because the specification is the source of truth and the generator is shared, a design can be
+authored once (in the app, in R or in Python) and reproduced everywhere. It can be preregistered
+as a small JSON file that anyone can run, scaled from a laptop to a cluster without drift, and
+handed between collaborators who work in different languages.
 
 This property turns an informal request to simulate some data into a reproducible, shareable
-methodological artifact.
+methodological artefact.

@@ -18,12 +18,12 @@ mu <- c(100, 105); total_sd <- 15; r <- 0.5
 sigma_b <- sqrt(r) * total_sd          # by-subject intercept SD that reproduces r
 sigma_e <- sqrt(1 - r) * total_sd      # residual SD
 
-# ---- faux: correlation-matrix parameterization ----
+# ---- faux: correlation-matrix parameterisation ----
 set.seed(1)
 df_faux <- sim_design(within = list(cond = c("c1", "c2")),
                       n = N, mu = mu, sd = total_sd, r = r, plot = FALSE)
 
-# ---- pilotr: random-intercept parameterization (same design, via the portable spec) ----
+# ---- pilotr: random-intercept parameterisation (same design, via the portable spec) ----
 spec <- list(
   name = "faux_equivalence", seed = 1,
   units = list(subject = list(n = N)),

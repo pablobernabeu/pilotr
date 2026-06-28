@@ -1,7 +1,7 @@
 # Power and design analysis
 
 `pilotr` turns a specification into evidence for study planning: simulate from the ground
-truth, fit the analysis model, and summarize across replicates. Alongside power it reports the
+truth, fit the analysis model and summarise across replicates. Alongside power it reports the
 Type S (sign) and Type M (magnitude, or exaggeration) errors of Gelman and Carlin (2014),
 computed over the significant replicates.
 
@@ -88,5 +88,5 @@ print(table([{k: res[k] for k in
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
 `true_effect`). One caveat: the statsmodels variance-component fit overstates random-slope
 variance, so the power estimate is conservative for random-slope designs. The R package's
-`lme4`-based `power_mixed` is the reference; data generation is identical across the two
+`lme4`-based `power_mixed` is the reference. Data generation is identical across the two
 languages, and the discrepancy is in the estimator alone.

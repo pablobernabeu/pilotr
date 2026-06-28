@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pilotr"
 version = "0.1.0"
-description = "Simulate experimental and behavioral data from a portable design specification (cross-language with the R package of the same name)."
+description = "Simulate experimental and behavioural data from a portable design specification (cross-language with the R package of the same name)."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Pablo Bernabeu", email = "pcbernabeu@gmail.com" }]
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["simulation", "power analysis", "mixed-effects", "experimental design", "behavioral science"]
+keywords = ["simulation", "power analysis", "mixed-effects", "experimental design", "behavioural science"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

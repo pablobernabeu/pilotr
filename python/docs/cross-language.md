@@ -9,14 +9,13 @@ Native random-number generators differ across ecosystems (R uses Mersenne-Twiste
 inversion, NumPy uses PCG64), so a naive port would diverge. `pilotr` instead ships one
 generator implemented identically in both languages.
 
-- **Uniforms** come from L'Ecuyer's (1988) combined linear congruential generator. Every
-  intermediate product stays below `2**53`, so the arithmetic is exact in IEEE-754 doubles
-  and in Python integers alike.
-- **Normals** use Wichura's (1988) Algorithm AS 241 inverse-CDF, the same routine R's
-  `qnorm` uses, so deviates agree to full double precision.
-- **Everything else** (Cholesky-correlated random effects, inverse-CDF Poisson and ordinal
-  draws, Marsaglia and Tsang gamma draws for the Beta family) derives from those two through
-  a documented, identical draw order.
+Uniforms come from L'Ecuyer's (1988) combined linear congruential generator. Every
+intermediate product stays below `2**53`, so the arithmetic is exact in IEEE-754 doubles
+and in Python integers alike. Normals use Wichura's (1988) Algorithm AS 241 inverse-CDF, the
+same routine R's `qnorm` uses, so deviates agree to full double precision. Everything else
+(Cholesky-correlated random effects, inverse-CDF Poisson and ordinal draws, Marsaglia and
+Tsang gamma draws for the Beta family) derives from those two through a documented, identical
+draw order.
 
 The draw order is specified on the [Specification](specification.md) page.
 

@@ -47,7 +47,7 @@ guide_tab <- tabPanel(
   tags$div(
     style = "max-width: 52rem;",
     tags$p(tags$b("pilotr"), " builds a portable design specification and simulates ",
-           "experimental and behavioral data from it. This is the no-code interface. The ",
+           "experimental and behavioural data from it. This is the no-code interface. The ",
            "same specification runs unchanged in the R and Python packages and reproduces ",
            "the identical data."),
     tags$ol(
@@ -86,7 +86,8 @@ guide_tab <- tabPanel(
 
 # ---------------------------------------------------------------- UI ----
 ui <- fluidPage(
-  titlePanel("pilotr: design, simulate, and power analysis (one spec, three interfaces)"),
+  tags$head(tags$link(rel = "icon", type = "image/png", href = "favicon.png")),
+  titlePanel("pilotr: design, simulate and power analysis (one spec, three interfaces)"),
   sidebarLayout(
     sidebarPanel(
       width = 4,

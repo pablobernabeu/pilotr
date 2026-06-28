@@ -1,8 +1,8 @@
 # pilotr (Python)
 
-`pilotr` simulates experimental and behavioral data from a portable JSON **design
-specification**. The same specification drives the R package, a no-code web app, and this
-Python package; given the same spec and seed, all three produce bit-identical data.
+`pilotr` simulates experimental and behavioural data from a portable JSON design
+specification. The same specification drives the R package, a no-code web app and this
+Python package. Given the same spec and seed, all three produce bit-identical data.
 
 This is the Python documentation. For the R reference and the live no-code demo, see the
 [project documentation](https://pablobernabeu.github.io/pilotr/).
@@ -22,7 +22,7 @@ The generative core is pure Python with no required dependencies. `scipy` (for `
 ## Quick start
 
 A design is a plain dictionary, or a JSON file, describing the units, factors, fixed effects,
-optional random effects, and a response family. Simulate from it with `simulate`:
+optional random effects and a response family. Simulate from it with `simulate`:
 
 !!! note "These examples run live"
     The code blocks on this page (and throughout these docs) are executed when the site is

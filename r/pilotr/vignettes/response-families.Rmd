@@ -15,11 +15,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height
 library(pilotr)
 ```
 
-Behavioral outcomes are seldom Gaussian. pilotr maps the linear predictor
+Behavioural outcomes are seldom Gaussian. pilotr maps the linear predictor
 $\eta = \beta_0 + \sum_k \beta_k x_k + (\text{random effects})$ to an outcome through one of
 six response families. An important consequence is that the fixed intercept and effect live on
 the family's own scale. That scale is the identity for Gaussian, the log scale for reaction
-times and counts, and the logit scale for accuracy, ordinal, and proportion outcomes. This
+times and counts, and the logit scale for accuracy, ordinal and proportion outcomes. This
 vignette presents each family with scale-appropriate parameters.
 
 The helper below builds a two-group between-subjects design and reports the group means.
@@ -48,7 +48,7 @@ fam_hist <- function(y, fill, title, xlab) {
 
 This is the default, with $y = \eta + \varepsilon$ and residual standard deviation `sigma`. It
 suits continuous, roughly symmetric outcomes such as ratings averaged over many trials or
-standardized scores.
+standardised scores.
 
 ```{r}
 g <- demo("gaussian", intercept = 100, effect = 5, sigma = 10)
@@ -70,7 +70,7 @@ fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
 
 ## Bernoulli (accuracy)
 
-Binary accuracy is modeled through a logit link. The intercept is the log-odds of a correct
+Binary accuracy is modelled through a logit link. The intercept is the log-odds of a correct
 response, and the effect is a log-odds difference between conditions.
 
 ```{r}
@@ -106,7 +106,7 @@ round(prop.table(table(r$group, r$rating), 1), 2)   # category proportions by gr
 
 ## Beta (proportions)
 
-Bounded proportions in (0, 1) are modeled through a mean–precision parameterization. The mean
+Bounded proportions in (0, 1) are modelled through a mean–precision parameterisation. The mean
 is `logit⁻¹(η)` and `phi` is the precision, with larger values giving a tighter distribution.
 
 ```{r}
@@ -126,7 +126,7 @@ fam_hist(bt$y, "#2E8B57", "Beta", "proportion")
 | Likert / ordered categories | `ordinal` | logit (cumulative) |
 | Proportions in (0, 1) | `beta` | logit (mean) |
 
-These match the families that researchers fit in `lme4`, `glmmTMB`, and `brms`, so a design
+These match the families that researchers fit in `lme4`, `glmmTMB` and `brms`, so a design
 simulated here corresponds to the model that will later be fit. The point-and-click application
 exposes all six families. The full engine, including continuous predictors, interactions,
-nesting, and partial crossing, is available by writing the specification directly.
+nesting and partial crossing, is available by writing the specification directly.

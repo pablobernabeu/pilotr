@@ -11,7 +11,7 @@ spec_json(spec)
 }
 \value{
 A length-one character string containing the specification as pretty-printed JSON,
-  the portable artifact that the R and 'Python' packages both consume.
+  the portable artefact that the R and 'Python' packages both consume.
 }
 \description{
 Serialise a design specification to pretty-printed JSON

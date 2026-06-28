@@ -1,5 +1,5 @@
 site_name: pilotr (Python)
-site_description: Simulate experimental and behavioral data from a portable design specification.
+site_description: Simulate experimental and behavioural data from a portable design specification.
 site_url: https://pablobernabeu.github.io/pilotr/py/
 repo_url: https://github.com/pablobernabeu/pilotr
 docs_dir: docs
@@ -7,6 +7,8 @@ copyright: Developed by <a href="https://orcid.org/0000-0003-1083-2460">Pablo Be
 
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

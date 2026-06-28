@@ -17,7 +17,7 @@ library(pilotr)
 
 Simulation-based power addresses how often an analysis would detect an effect if the world
 matched the specification exactly. pilotr estimates this by repeatedly simulating from the
-ground-truth specification, fitting the analysis model, and recording the proportion of
+ground-truth specification, fitting the analysis model and recording the proportion of
 significant results. Beyond power, it reports the design-analysis quantities of Gelman and
 Carlin (2014), namely the Type S (sign) error and the Type M (magnitude, or exaggeration)
 ratio.

@@ -30,7 +30,7 @@ simulations use all of your local cores.
 In the browser, with nothing to install. A serverless build runs entirely in the browser
 through WebAssembly, with no server and nothing uploaded. Try it at the
 [live demo](https://pablobernabeu.github.io/pilotr/demo/). It covers the light path: build a
-design, simulate, inspect the data, estimate two-group Gaussian power, and export.
+design, simulate, inspect the data, estimate two-group Gaussian power and export.
 
 ## What the app does
 
@@ -49,7 +49,7 @@ standard deviations. Then read the tabs.
 Changing the response family resets the intercept and effect to sensible values for that
 family's scale, so a point-and-click design stays valid. The advanced 'paste a JSON spec' box
 accepts designs beyond the point-and-click controls, such as continuous predictors,
-interactions, and nesting.
+interactions and nesting.
 
 ## One specification, three interfaces
 

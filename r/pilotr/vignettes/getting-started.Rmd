@@ -19,13 +19,13 @@ library(pilotr)
 
 pilotr is built around a portable design specification that fully describes a data-generating
 process and is consumed identically by three interfaces, namely a no-code web application,
-this R package, and a Python package. The specification is the unit of reproducibility. It is
+this R package and a Python package. The specification is the unit of reproducibility. It is
 a complete, executable description rather than a screenshot of a graphical interface or a
 language-specific script. You can place it under version control, attach it to a
 preregistration, share it with a collaborator, and run it unchanged in R or Python to obtain
 bit-identical data.
 
-This vignette walks through the core loop of describe, simulate, inspect, and export. The
+This vignette walks through the core loop of describe, simulate, inspect and export. The
 other vignettes go deeper into [power](power-analysis.html),
 [precision/ROPE design analysis](precision-rope.html),
 [cross-language reproducibility](cross-language.html), and the
@@ -52,7 +52,7 @@ spec <- build_spec(list(
 ))
 ```
 
-The portable artifact is plain JSON. This is exactly what the web application downloads and
+The portable artefact is plain JSON. This is exactly what the web application downloads and
 what the Python package reads.
 
 ```{r}
@@ -109,4 +109,4 @@ cat(generate_r_script(spec))
 - [Cross-language reproducibility](cross-language.html), describing the shared generator that
   makes R and Python agree to the last bit.
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,
-  count, ordinal, and proportion outcomes.
+  count, ordinal and proportion outcomes.

@@ -1,11 +1,11 @@
 Package: pilotr
-Title: Simulate Experimental and Behavioral Data from a Portable Design Specification
+Title: Simulate Experimental and Behavioural Data from a Portable Design Specification
 Version: 0.1.0
 Authors@R:
     person("Pablo", "Bernabeu", role = c("aut", "cre"),
            email = "pcbernabeu@gmail.com",
            comment = c(ORCID = "0000-0003-1083-2460"))
-Description: Generative simulation of experimental and behavioral data sets from a
+Description: Generative simulation of experimental and behavioural data sets from a
     portable JavaScript Object Notation (JSON) design specification shared with the
     'Python' package of the same name.
     Supports user-specified fixed effect sizes, crossed by-subject and by-item random

@@ -92,7 +92,7 @@ build_spec <- function(p) {
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing the specification as pretty-printed JSON,
-#'   the portable artifact that the R and 'Python' packages both consume.
+#'   the portable artefact that the R and 'Python' packages both consume.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 20,

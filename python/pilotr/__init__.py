@@ -1,4 +1,4 @@
-"""pilotr, for simulating experimental and behavioral data from a portable design specification."""
+"""pilotr, for simulating experimental and behavioural data from a portable design specification."""
 from .core import RNG, as241, inv_logit
 from .simulate import simulate, load_spec, Dataset
 from .power import power, power_curve, power_mixed
