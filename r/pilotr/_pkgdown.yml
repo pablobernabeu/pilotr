@@ -12,12 +12,12 @@ template:
 
 navbar:
   structure:
-    left:  [reference, articles]
-    right: [lightswitch, pydocs, demo, github]
+    left:  [reference, articles, about]
+    right: [lightswitch, demo, github]
   components:
-    pydocs:
-      text: "Python docs"
-      href: https://pablobernabeu.github.io/pilotr/py/
+    about:
+      text: About
+      href: articles/about.html
     demo:
       text: "Live demo"
       href: https://pablobernabeu.github.io/pilotr/demo/
@@ -25,3 +25,11 @@ navbar:
       icon: fa-github
       href: https://github.com/pablobernabeu/pilotr
       aria-label: GitHub
+
+home:
+  sidebar:
+    structure: [links, license, citation, authors, dev]
+    components:
+      citation:
+        title: Citation
+        text: See the [About page](articles/about.html) for how to cite pilotr.

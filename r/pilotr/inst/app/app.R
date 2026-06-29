@@ -65,12 +65,12 @@ guide_tab <- tabPanel(
     ),
     tags$h5("Response families"),
     tags$p("Gaussian, shifted lognormal (reaction times), Bernoulli (accuracy), Poisson ",
-           "(counts), ordinal (Likert), and Beta (proportions). The effect is the difference ",
+           "(counts), ordinal (Likert) and Beta (proportions). The effect is the difference ",
            "between the two levels on the response scale: the identity scale for Gaussian, ",
            "the log scale for reaction times and Poisson, and the logit scale for accuracy, ",
-           "ordinal, and Beta. The ", tags$b("Advanced: paste a JSON spec"), " box accepts ",
+           "ordinal and Beta. The ", tags$b("Advanced: paste a JSON spec"), " box accepts ",
            "designs beyond the point-and-click controls, such as continuous predictors, ",
-           "interactions, and nesting."),
+           "interactions and nesting."),
     tags$h5("Power and design analysis"),
     tags$p("The in-app backend estimates power for the two-group Gaussian design, reports the ",
            "Type S and Type M errors of Gelman and Carlin (2014), and draws a power curve over ",
@@ -312,9 +312,16 @@ server <- function(input, output, session) {
     identical(spec$response$family, "gaussian") &&
       length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
   not_supported <- paste0(
-    "The in-app power backend covers the two-group Gaussian design.\n",
-    "For crossed mixed-effects designs, use power_mixed() in the package. It fits lme4 models\n",
-    "and may take a few minutes.")
+    "The in-app power backend covers the two-group Gaussian design. For a crossed\n",
+    "mixed-effects design, download the spec (the Design spec tab) and run it directly:\n\n",
+    "R (lme4; may take a few minutes):\n",
+    "    library(pilotr)\n",
+    "    spec <- load_spec(\"design.json\")\n",
+    "    power_mixed(spec, n_sims = 200)\n",
+    "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)\n\n",
+    "Python (statsmodels backend):\n",
+    "    from pilotr import load_spec, power_mixed\n",
+    "    power_mixed(load_spec(\"design.json\"), n_sims=200)")
 
   observeEvent(input$run_power, {
     power_curve_data(NULL)

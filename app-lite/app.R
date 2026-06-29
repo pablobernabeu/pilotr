@@ -19,7 +19,7 @@ DOCS <- "https://pablobernabeu.github.io/pilotr/"
 GH   <- "https://github.com/pablobernabeu/pilotr"
 
 # Favicon embedded as a data URI so the serverless build stays self-contained (no separate asset).
-FAVICON <- "data:image/png;base64,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"
+FAVICON <- "data:image/png;base64,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"
 
 # Reasonable intercept/effect (and noise) defaults per family, on each family's own scale.
 # Switching family in the controls resets these so the point-and-click design stays valid
@@ -32,35 +32,6 @@ FAMILY_DEFAULTS <- list(
   ordinal           = list(intercept = 0,   effect = 0.8),
   beta              = list(intercept = 0,   effect = 0.8, phi = 8)
 )
-
-# ---- worked examples for the "paste a spec" advanced mode (the full engine) ----------------
-# The strings below are JSON specifications used as examples; leave their contents unchanged.
-EX_BETA <- '{
-  "name": "beta_proportion_demo",
-  "seed": 2024,
-  "units": { "subject": { "n": 120 } },
-  "factors": [
-    { "name": "group", "levels": ["control", "treatment"],
-      "contrasts": { "effect": [-0.5, 0.5] }, "between": "subject" }
-  ],
-  "fixed": { "intercept": 0.0, "coefficients": { "effect": 0.8 } },
-  "response": { "family": "beta", "name": "proportion", "phi": 8 }
-}'
-
-EX_CONTINUOUS <- '{
-  "name": "continuous_predictor_demo",
-  "seed": 2024,
-  "units": { "subject": { "n": 40 }, "item": { "n": 30 } },
-  "predictors": [ { "name": "frequency", "varies_by": "item", "mean": 0, "sd": 1 } ],
-  "factors": [],
-  "fixed": { "intercept": 6.0, "coefficients": { "frequency": -0.05 } },
-  "random": {
-    "subject": { "intercept_sd": 0.12, "slopes": { "frequency": 0.04 },
-                 "correlations": { "intercept,frequency": 0.2 } },
-    "item": { "intercept_sd": 0.08 }
-  },
-  "response": { "family": "shifted_lognormal", "name": "RT", "sigma": 0.3, "shift": 200, "round": 4 }
-}'
 
 PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0", "#C8922A", "#5A5A5A")
 pal <- function(k) if (k <= length(PALETTE)) PALETTE[seq_len(k)] else grDevices::hcl.colors(k, "Dynamic")
@@ -108,7 +79,7 @@ guide <- card(
     tags$p(tags$b("pilotr"), " simulates experimental and behavioural data from a portable ",
            "design specification. This browser version runs entirely on your device, with no ",
            "server and nothing uploaded. It covers the light path. You can build a design, ",
-           "simulate data, inspect it, estimate two-group Gaussian power, and export a ",
+           "simulate data, inspect it, estimate two-group Gaussian power and export a ",
            "reproducible script or the specification itself."),
     tags$ol(
       tags$li("Describe the design in the left panel. This includes the sample sizes, the ",
@@ -127,13 +98,13 @@ guide <- card(
     tags$ul(
       tags$li(tags$b("Effect (±0.5)"), ", the difference between the two levels on ",
               "the response scale. This is the identity scale for Gaussian, the log scale ",
-              "for RT and Poisson, and the logit scale for accuracy, ordinal, and Beta."),
+              "for RT and Poisson, and the logit scale for accuracy, ordinal and Beta."),
       tags$li(tags$b("Residual SD / Precision"), ", the Gaussian and shifted-lognormal noise ",
               "(an SD). Beta instead uses a precision (phi)."),
       tags$li(tags$b("Random-effect SDs"), ", the by-subject and by-item intercept and slope ",
-              "standard deviations, and their correlation, for crossed designs."),
+              "standard deviations and their correlation, for crossed designs."),
       tags$li(tags$b("Seed"), ", which fixes the pseudo-random draw, so the same specification ",
-              "and seed give identical data here, in R, and in Python.")
+              "and seed give identical data here, in R and in Python.")
     ),
     tags$h5("Advanced: paste a spec"),
     tags$p("The point-and-click controls cover common two-level designs across six response ",
@@ -222,10 +193,11 @@ ui <- page_sidebar(
       tags$small(class = "text-muted", "Overrides the controls above and gives access to the full engine."),
       textAreaInput("pasted", "Design spec (JSON)", "", height = "150px",
                     placeholder = "Paste a pilotr design spec (JSON)..."),
-      div(class = "d-flex gap-2 align-items-center",
-          tags$small("Load example:"),
-          actionButton("ex_beta", "Beta", class = "btn btn-sm btn-outline-secondary"),
-          actionButton("ex_cont", "Continuous predictor", class = "btn btn-sm btn-outline-secondary"))
+      tags$small(class = "text-muted",
+                 "Need a starting point? Ready-to-run example specs are in ",
+                 tags$a(href = paste0(GH, "/tree/main/spec/examples"), target = "_blank", "spec/examples"),
+                 ", and the format is documented in ",
+                 tags$a(href = paste0(GH, "/blob/main/spec/SPEC.md"), target = "_blank", "SPEC.md"), ".")
     ),
     tags$hr(),
     actionButton("simulate", "Simulate", class = "btn-primary w-100"),
@@ -282,15 +254,6 @@ server <- function(input, output, session) {
     if (!is.null(d$sigma)) updateNumericInput(session, "sigma", value = d$sigma)
     if (!is.null(d$phi))   updateNumericInput(session, "phi",   value = d$phi)
   }, ignoreInit = TRUE)
-
-  observeEvent(input$ex_beta, {
-    updateCheckboxInput(session, "use_pasted", value = TRUE)
-    updateTextAreaInput(session, "pasted", value = EX_BETA)
-  })
-  observeEvent(input$ex_cont, {
-    updateCheckboxInput(session, "use_pasted", value = TRUE)
-    updateTextAreaInput(session, "pasted", value = EX_CONTINUOUS)
-  })
 
   parse_error <- reactiveVal(NULL)
 
@@ -394,11 +357,20 @@ server <- function(input, output, session) {
       length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
   }
   not_supported_msg <- paste0(
-    "The in-browser backend estimates power for the two-group Gaussian design.\n",
-    "For crossed mixed-effects power (lme4) and precision/ROPE analysis, please install\n",
-    "the pilotr package and run, for example:\n\n",
+    "The in-browser demo runs power only for the two-group Gaussian design.\n",
+    "This design needs the installed package. Download the spec with the Spec (.json)\n",
+    "button, then run one of the following.\n\n",
+    "R (crossed mixed-effects power and a power curve, via lme4):\n",
     "    library(pilotr)\n",
-    "    pow <- power_mixed(load_spec(\"design.json\"), n_sims = 200)")
+    "    spec <- load_spec(\"design.json\")\n",
+    "    power_mixed(spec, n_sims = 200)\n",
+    "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)\n\n",
+    "Python (statsmodels backend):\n",
+    "    from pilotr import load_spec, power_mixed\n",
+    "    power_mixed(load_spec(\"design.json\"), n_sims=200)\n\n",
+    "Install:\n",
+    "    remotes::install_github(\"pablobernabeu/pilotr\", subdir = \"r/pilotr\")   # R\n",
+    "    pip install \"git+https://github.com/pablobernabeu/pilotr#subdirectory=python\"   # Python")
 
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
   power_plot <- reactiveVal(NULL)

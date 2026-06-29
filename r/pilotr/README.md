@@ -36,5 +36,7 @@ uploaded. It is available as a [live demo](https://pablobernabeu.github.io/pilot
 
 ## Learn more
 
-The full toolkit, comprising the specification format, the Python package, the no-code app and
-the validation suite, is documented at <https://pablobernabeu.github.io/pilotr/>.
+This is the R package's documentation. Its companion
+**[Python package](https://pablobernabeu.github.io/pilotr/py/)** mirrors it exactly and produces
+identical data from the same specification. The full repository, including the specification
+format and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.

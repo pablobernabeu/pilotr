@@ -4,39 +4,29 @@
       <stop offset="0" stop-color="#3f82c4"/>
       <stop offset="1" stop-color="#1f4f7e"/>
     </linearGradient>
-    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0.03"/>
-    </linearGradient>
   </defs>
 
-  <!-- hexagon (pointy-top, the R-sticker orientation) -->
+  <!-- hexagon (pointy-top) -->
   <polygon points="150,12 288,93 288,253 150,334 12,253 12,93"
            fill="url(#hexbg)" stroke="#14375a" stroke-width="11" stroke-linejoin="round"/>
   <polygon points="150,12 288,93 288,253 150,334 12,253 12,93"
            fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="3" stroke-linejoin="round"/>
 
-  <!-- simulated density: area + outline, symmetric about x=150 -->
-  <path d="M 62 236 C 96 236 112 132 150 132 C 188 132 204 236 238 236 Z" fill="url(#area)"/>
-  <path d="M 62 236 C 96 236 112 132 150 132 C 188 132 204 236 238 236"
-        fill="none" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- baseline -->
-  <line x1="54" y1="236" x2="246" y2="236" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3"/>
-
-  <!-- effect / target line through the mean -->
-  <line x1="150" y1="126" x2="150" y2="242" stroke="#ffd98a" stroke-width="4" stroke-dasharray="8 7"/>
-
-  <!-- sampled observations along the baseline -->
-  <g fill="#ffffff">
-    <circle cx="96" cy="236" r="5"/>
-    <circle cx="123" cy="236" r="5"/>
-    <circle cx="150" cy="236" r="6"/>
-    <circle cx="177" cy="236" r="5"/>
-    <circle cx="204" cy="236" r="5"/>
+  <!-- power-curve plot, centred in the upper hex -->
+  <g stroke-linecap="round">
+    <!-- axes -->
+    <line x1="74" y1="78" x2="74" y2="196" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
+    <line x1="74" y1="196" x2="226" y2="196" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
+    <!-- 80% target bar -->
+    <line x1="74" y1="100" x2="226" y2="100" stroke="#ffd98a" stroke-width="4.5" stroke-dasharray="9 8"/>
+    <!-- rising power curve -->
+    <path d="M 80 188 C 120 186 138 170 158 134 C 176 102 198 90 220 86"
+          fill="none" stroke="#ffffff" stroke-width="7.5" stroke-linejoin="round"/>
+    <!-- marker where the curve reaches the 80% target -->
+    <circle cx="176" cy="100" r="8" fill="#ffd98a" stroke="#1f4f7e" stroke-width="2.5"/>
   </g>
 
   <!-- wordmark -->
-  <text x="150" y="302" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
-        font-size="48" font-weight="700" fill="#ffffff" letter-spacing="1.5">pilotr</text>
+  <text x="150" y="268" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
+        font-size="50" font-weight="700" fill="#ffffff" letter-spacing="1.5">pilotr</text>
 </svg>
