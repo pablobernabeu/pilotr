@@ -1,5 +1,8 @@
 ^examples$
 ^_pkgdown\.yml$
+^pkgdown$
+^vignettes/articles$
+^man/figures/logo\.svg$
 ^cran-comments\.md$
 ^tests/test_app_logic\.R$
 ^tests/test_app_server\.R$
