@@ -43,8 +43,5 @@ neuroscience, linguistics, education and research methods, with hands-on experie
 behavioural experiments, EEG, corpus analysis, computational modelling and statistics. He
 develops open, reproducible research software in R and Python, and is a certified Carpentries
 Instructor. pilotr grows out of that work and its predecessor, the *Experimental-data-simulation*
-Shiny app (Bernabeu & Lynott, 2024).
-
-- Website: <https://pablobernabeu.github.io>
-- ORCID: [0000-0003-1083-2460](https://orcid.org/0000-0003-1083-2460)
-- GitHub: [@pablobernabeu](https://github.com/pablobernabeu)
+Shiny app (Bernabeu & Lynott, 2024). He is on
+[ORCID](https://orcid.org/0000-0003-1083-2460) and [GitHub](https://github.com/pablobernabeu).

@@ -27,6 +27,6 @@
   </g>
 
   <!-- wordmark -->
-  <text x="150" y="268" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
+  <text x="150" y="255" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
         font-size="50" font-weight="700" fill="#ffffff" letter-spacing="1.5">pilotr</text>
 </svg>
