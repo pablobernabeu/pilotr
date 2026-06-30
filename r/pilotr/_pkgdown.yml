@@ -34,7 +34,9 @@ home:
         title: Citation
         text: See the [About page](articles/about.html) for how to cite pilotr.
 
-# Restrict the Articles navbar menu to the vignettes; About has its own navbar entry.
+# The Articles navbar menu lists only the vignettes (first section, navbar: ~). The About
+# article is indexed but kept out of the navbar (a section without a navbar key); it has its
+# own dedicated navbar entry instead.
 articles:
 - title: Articles
   navbar: ~
@@ -45,3 +47,6 @@ articles:
   - response-families
   - cross-language
   - the-no-code-app
+- title: About
+  contents:
+  - articles/about
