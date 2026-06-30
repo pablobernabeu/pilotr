@@ -12,10 +12,11 @@ The single note is the standard "New submission" note.
 
 ## Test environments
 
-* Local: Windows 11 x64, R 4.6.0, with pandoc 3.8.3.
+* Local: Windows 11 x64, R 4.6.0.
+* win-builder: R-devel, R-release and R-oldrelease.
 
-Before acceptance I will also run win-builder (R-release and R-devel) and a macOS
-environment (mac-builder / R-hub).
+All four checks gave the same result: 0 errors, 0 warnings, and only the standard
+"New submission" note.
 
 ## Notes
 
