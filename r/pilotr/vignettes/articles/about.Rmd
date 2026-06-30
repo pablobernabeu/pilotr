@@ -41,7 +41,6 @@ pilotr is developed by [Pablo Bernabeu](https://pablobernabeu.github.io), a rese
 Department of Education at the University of Oxford. His work spans cognitive psychology,
 neuroscience, linguistics, education and research methods, with hands-on experience of
 behavioural experiments, EEG, corpus analysis, computational modelling and statistics. He
-develops open, reproducible research software in R and Python, and is a certified Carpentries
-Instructor. pilotr grows out of that work and its predecessor, the *Experimental-data-simulation*
-Shiny app (Bernabeu & Lynott, 2024). He is on
-[ORCID](https://orcid.org/0000-0003-1083-2460) and [GitHub](https://github.com/pablobernabeu).
+develops open, reproducible research software in R and Python, and is a Fellow of the Software
+Sustainability Institute. pilotr grows out of that work and its predecessor, the
+*Experimental-data-simulation* Shiny app (Bernabeu & Lynott, 2024).

@@ -35,6 +35,7 @@ extra_css:
 
 nav:
   - Home: index.md
+  - Live demo (no-code app): https://pablobernabeu.github.io/pilotr/demo/
   - Cross-language reproducibility: cross-language.md
   - Power and design analysis: power.md
   - Response families: families.md

@@ -33,3 +33,15 @@ home:
       citation:
         title: Citation
         text: See the [About page](articles/about.html) for how to cite pilotr.
+
+# Restrict the Articles navbar menu to the vignettes; About has its own navbar entry.
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - getting-started
+  - power-analysis
+  - precision-rope
+  - response-families
+  - cross-language
+  - the-no-code-app
