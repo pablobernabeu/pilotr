@@ -1,0 +1,15 @@
+pandoc: 3.8.3
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  articles/about: about.html
+  cross-language: cross-language.html
+  getting-started: getting-started.html
+  power-analysis: power-analysis.html
+  precision-rope: precision-rope.html
+  response-families: response-families.html
+  the-no-code-app: the-no-code-app.html
+last_built: 2026-07-01T14:46Z
+urls:
+  reference: https://pablobernabeu.github.io/pilotr/reference
+  article: https://pablobernabeu.github.io/pilotr/articles

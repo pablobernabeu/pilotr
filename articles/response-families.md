@@ -1,0 +1,163 @@
+# Response families
+
+``` r
+
+library(pilotr)
+```
+
+Behavioural outcomes are seldom Gaussian. pilotr maps the linear
+predictor
+$`\eta = \beta_0 + \sum_k \beta_k x_k + (\text{random effects})`$ to an
+outcome through one of six response families. An important consequence
+is that the fixed intercept and effect live on the family’s own scale.
+That scale is the identity for Gaussian, the log scale for reaction
+times and counts, and the logit scale for accuracy, ordinal and
+proportion outcomes. This vignette presents each family with
+scale-appropriate parameters.
+
+The helper below builds a two-group between-subjects design and reports
+the group means.
+
+``` r
+
+demo <- function(family, intercept, effect, n = 4000, ...) {
+  spec <- build_spec(list(
+    name = family, seed = 1, design_kind = "between", n_subject = n,
+    factor_name = "group", lev1 = "control", lev2 = "treatment",
+    intercept = intercept, effect = effect, family = family, resp_name = "", ...))
+  d <- simulate_design(spec)
+  y <- d[[spec$response$name]]
+  list(spec = spec, data = d, y = y, by_group = tapply(y, d$group, mean))
+}
+
+library(ggplot2)
+fam_hist <- function(y, fill, title, xlab) {
+  ggplot(data.frame(y = y), aes(y)) +
+    geom_histogram(bins = 40, fill = fill, colour = "white") +
+    labs(title = title, x = xlab, y = "count") +
+    theme_minimal(base_size = 12)
+}
+```
+
+## Gaussian
+
+This is the default, with $`y = \eta + \varepsilon`$ and residual
+standard deviation `sigma`. It suits continuous, roughly symmetric
+outcomes such as ratings averaged over many trials or standardised
+scores.
+
+``` r
+
+g <- demo("gaussian", intercept = 100, effect = 5, sigma = 10)
+round(g$by_group, 2)
+#>   control treatment 
+#>     97.50    102.41
+fam_hist(g$y, "#2C6FB0", "Gaussian", "score")
+```
+
+![](response-families_files/figure-html/unnamed-chunk-3-1.png)
+
+## Shifted lognormal (reaction times)
+
+Reaction times are right-skewed and bounded below. pilotr models them as
+$`y = \text{shift} + \exp(\eta + \varepsilon)`$, with the effect on the
+log scale. An intercept of 6 implies a typical RT near `exp(6)` ms above
+the shift.
+
+``` r
+
+rt <- demo("shifted_lognormal", intercept = 6, effect = 0.1, sigma = 0.3, shift = 200)
+round(rt$by_group, 1)
+#>   control treatment 
+#>     600.6     642.6
+fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
+```
+
+![](response-families_files/figure-html/unnamed-chunk-4-1.png)
+
+## Bernoulli (accuracy)
+
+Binary accuracy is modelled through a logit link. The intercept is the
+log-odds of a correct response, and the effect is a log-odds difference
+between conditions.
+
+``` r
+
+acc <- demo("bernoulli", intercept = 0, effect = 0.5)
+round(acc$by_group, 3)   # P(correct) by group
+#>   control treatment 
+#>     0.446     0.569
+```
+
+## Poisson (counts)
+
+Counts via a log link (e.g. number of fixations, errors, or events). An
+intercept of 1.5 implies a base rate near `exp(1.5)`.
+
+``` r
+
+cts <- demo("poisson", intercept = 1.5, effect = 0.3)
+round(cts$by_group, 2)   # mean count by group
+#>   control treatment 
+#>      3.85      5.18
+table(cts$y)[1:8]
+#> 
+#>   0   1   2   3   4   5   6   7 
+#>  41 225 466 698 711 659 466 334
+```
+
+## Ordinal (Likert)
+
+Ordered categorical responses via a cumulative-logit model with user
+thresholds. The effect shifts the latent distribution across the
+thresholds.
+
+``` r
+
+ord <- build_spec(list(
+  name = "likert", seed = 1, design_kind = "between", n_subject = 4000,
+  factor_name = "group", lev1 = "control", lev2 = "treatment",
+  intercept = 0, effect = 0.8, family = "ordinal", resp_name = "rating",
+  thresholds = "-2, -0.6, 0.6, 2"))
+r <- simulate_design(ord)
+round(prop.table(table(r$group, r$rating), 1), 2)   # category proportions by group
+#>            
+#>                1    2    3    4    5
+#>   control   0.16 0.30 0.27 0.19 0.08
+#>   treatment 0.09 0.18 0.29 0.28 0.17
+```
+
+## Beta (proportions)
+
+Bounded proportions in (0, 1) are modelled through a mean–precision
+parameterisation. The mean is `logit⁻¹(η)` and `phi` is the precision,
+with larger values giving a tighter distribution.
+
+``` r
+
+bt <- demo("beta", intercept = 0, effect = 0.8, phi = 8)
+round(bt$by_group, 3)   # mean proportion by group
+#>   control treatment 
+#>     0.400     0.592
+fam_hist(bt$y, "#2E8B57", "Beta", "proportion")
+```
+
+![](response-families_files/figure-html/unnamed-chunk-8-1.png)
+
+## Choosing a family
+
+| Outcome                     | Family              | Scale of the effect |
+|-----------------------------|---------------------|---------------------|
+| Continuous, symmetric       | `gaussian`          | identity            |
+| Reaction time               | `shifted_lognormal` | log                 |
+| Accuracy (0/1)              | `bernoulli`         | logit               |
+| Counts                      | `poisson`           | log                 |
+| Likert / ordered categories | `ordinal`           | logit (cumulative)  |
+| Proportions in (0, 1)       | `beta`              | logit (mean)        |
+
+These match the families that researchers fit in `lme4`, `glmmTMB` and
+`brms`, so a design simulated here corresponds to the model that will
+later be fit. The point-and-click application exposes all six families.
+The full engine, including continuous predictors, interactions, nesting
+and partial crossing, is available by writing the specification
+directly.

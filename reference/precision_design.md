@@ -1,0 +1,77 @@
+# Precision and ROPE design analysis at a fixed sample size
+
+A fast frequentist analogue of a Bayesian
+highest-density-interval-versus-ROPE design analysis. Across Monte Carlo
+replicates, fit the model and record, for each focal fixed effect,
+whether its 95 equivalence (a practically meaningful effect) or entirely
+inside it (practical equivalence to zero), along with the expected
+interval width. Requires the \`lme4\` package.
+
+## Usage
+
+``` r
+precision_design(
+  spec,
+  focal,
+  formula = NULL,
+  prep = NULL,
+  rope = 0.05,
+  n_sims = 100
+)
+```
+
+## Arguments
+
+- spec:
+
+  A design specification (path or list).
+
+- focal:
+
+  A named numeric vector mapping focal coefficient names to their true
+  values, or a character vector of coefficient names.
+
+- formula:
+
+  Optional \`lme4\` formula; if \`NULL\` it is derived from the
+  specification via \[model_formula()\].
+
+- prep:
+
+  Optional function mapping a simulated data set to the modelling data;
+  if \`NULL\` it is derived via \[model_data()\], which log-transforms
+  the outcome and builds the contrast and interaction columns, so focal
+  names follow the auto-formula (interactions written as \`a_b\`).
+
+- rope:
+
+  Half-width of the region of practical equivalence; an effect with
+  \`abs(beta) \< rope\` is treated as practically equivalent to zero.
+
+- n_sims:
+
+  Number of Monte Carlo replicates.
+
+## Value
+
+A data frame with one row per focal effect and columns \`param\`,
+\`true\`, \`mean_ci_width\`, \`p_meaningful\`, \`p_equivalent\`, and
+\`n_converged\`.
+
+## Examples
+
+``` r
+# \donttest{
+if (requireNamespace("lme4", quietly = TRUE)) {
+  spec <- build_spec(list(name = "pr", seed = 1, design_kind = "within",
+    include_items = TRUE, n_subject = 12, n_item = 12, factor_name = "cond",
+    lev1 = "a", lev2 = "b", intercept = 6, effect = 0.05,
+    subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+    item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+    family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+  precision_design(spec, focal = c(effect = 0.05), rope = 0.02, n_sims = 10)
+}
+#>    param true mean_ci_width p_meaningful p_equivalent n_converged
+#> 1 effect 0.05     0.1698034          0.1            0          10
+# }
+```

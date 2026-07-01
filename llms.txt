@@ -1,0 +1,109 @@
+# pilotr
+
+Simulate experimental and behavioural data from a portable design
+specification, with integrated simulation-based power and design
+analysis (the Type S and Type M errors, and precision against a region
+of practical equivalence).
+
+pilotr lets you pilot a study before you run it. Describe the design you
+plan to collect, with its groups, conditions, sample sizes, effect sizes
+and outcome family, and pilotr generates the data that design would
+produce. You can then check the study’s power and design analysis before
+gathering anything. A single specification drives three interchangeable
+interfaces, namely a no-code web app, this R package and a [Python
+package](https://pablobernabeu.github.io/pilotr/py/); given the same
+specification and seed, all three produce bit-identical data.
+
+## Installation
+
+``` r
+
+# install.packages("remotes")
+remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
+```
+
+## Quick start
+
+``` r
+
+library(pilotr)
+
+spec <- load_spec("design.json")          # a pilotr JSON design spec
+data <- simulate_design(spec)             # analysis-ready data frame
+pow  <- power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4)
+cat(generate_r_script(spec))              # a self-contained, reproducible script
+```
+
+## Try it without installing
+
+A serverless build runs entirely in your browser, with no installation
+required and no data uploaded. It is available as a [live
+demo](https://pablobernabeu.github.io/pilotr/demo/).
+
+## Learn more
+
+This is the R package’s documentation; the companion Python package
+mirrors it exactly and produces identical data from the same
+specification. The full repository, including the specification format
+and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.
+
+# Package index
+
+## All functions
+
+- [`as241()`](https://pablobernabeu.github.io/pilotr/reference/as241.md)
+  : Inverse normal cumulative distribution function (Wichura's AS 241)
+- [`brms_bridge()`](https://pablobernabeu.github.io/pilotr/reference/brms_bridge.md)
+  : Derive a brms formula, family, and priors from a design spec
+- [`build_spec()`](https://pablobernabeu.github.io/pilotr/reference/build_spec.md)
+  : Build a design specification from a flat list of design inputs
+- [`default_response_name()`](https://pablobernabeu.github.io/pilotr/reference/default_response_name.md)
+  : Default response-column name for a family
+- [`generate_r_script()`](https://pablobernabeu.github.io/pilotr/reference/generate_r_script.md)
+  : Generate a self-contained, reproducible R script from a
+  specification
+- [`load_spec()`](https://pablobernabeu.github.io/pilotr/reference/load_spec.md)
+  : Load a design specification from a JSON file
+- [`make_rng()`](https://pablobernabeu.github.io/pilotr/reference/make_rng.md)
+  : Create a shared cross-language random-number generator
+- [`model_data()`](https://pablobernabeu.github.io/pilotr/reference/model_data.md)
+  : Build the modelling data frame from a simulated data set and its
+  specification
+- [`model_formula()`](https://pablobernabeu.github.io/pilotr/reference/model_formula.md)
+  : Derive the lmer formula implied by a specification
+- [`power_curve_mixed()`](https://pablobernabeu.github.io/pilotr/reference/power_curve_mixed.md)
+  : Power curve over sample size for a crossed mixed-effects design
+- [`power_design()`](https://pablobernabeu.github.io/pilotr/reference/power_design.md)
+  : Simulation-based power and design analysis for a two-group Gaussian
+  design
+- [`power_mixed()`](https://pablobernabeu.github.io/pilotr/reference/power_mixed.md)
+  : Simulation-based power and design analysis for a crossed
+  mixed-effects design
+- [`precision_curve()`](https://pablobernabeu.github.io/pilotr/reference/precision_curve.md)
+  : Precision and ROPE curve over sample size
+- [`precision_design()`](https://pablobernabeu.github.io/pilotr/reference/precision_design.md)
+  : Precision and ROPE design analysis at a fixed sample size
+- [`run_app()`](https://pablobernabeu.github.io/pilotr/reference/run_app.md)
+  : Launch the pilotr no-code app.
+- [`simulate_design()`](https://pablobernabeu.github.io/pilotr/reference/simulate_design.md)
+  : Simulate a data set from a design specification
+- [`spec_json()`](https://pablobernabeu.github.io/pilotr/reference/spec_json.md)
+  : Serialise a design specification to pretty-printed JSON
+
+# Articles
+
+### All vignettes
+
+- [About](https://pablobernabeu.github.io/pilotr/articles/about.md):
+- [Cross-language
+  reproducibility](https://pablobernabeu.github.io/pilotr/articles/cross-language.md):
+- [Getting started with
+  pilotr](https://pablobernabeu.github.io/pilotr/articles/getting-started.md):
+- [Power and design
+  analysis](https://pablobernabeu.github.io/pilotr/articles/power-analysis.md):
+- [Precision and ROPE design
+  analysis](https://pablobernabeu.github.io/pilotr/articles/precision-rope.md):
+- [Response
+  families](https://pablobernabeu.github.io/pilotr/articles/response-families.md):
+- [The no-code
+  app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.md):

@@ -1,0 +1,138 @@
+# Power and design analysis
+
+``` r
+
+library(pilotr)
+```
+
+Simulation-based power addresses how often an analysis would detect an
+effect if the world matched the specification exactly. pilotr estimates
+this by repeatedly simulating from the ground-truth specification,
+fitting the analysis model and recording the proportion of significant
+results. Beyond power, it reports the design-analysis quantities of
+Gelman and Carlin (2014), namely the Type S (sign) error and the Type M
+(magnitude, or exaggeration) ratio.
+
+> The mixed-effects examples below use very small `n_sims` so that the
+> vignette builds quickly. For real planning, we recommend
+> `n_sims >= 200`, with more replicates for stable Type S and Type M
+> estimates.
+
+## Two-group Gaussian
+
+The classic case has a closed-form analytic power, which the simulation
+matches.
+
+``` r
+
+spec <- build_spec(list(
+  name = "two_group", seed = 1, design_kind = "between", n_subject = 64,
+  factor_name = "group", lev1 = "control", lev2 = "treatment",
+  intercept = 100, effect = 5, family = "gaussian", resp_name = "score", sigma = 10))
+
+pw <- power_design(spec, n_sims = 500)
+unlist(pw[c("power", "type_s", "type_m", "true_effect", "mean_estimate")])
+#>         power        type_s        type_m   true_effect mean_estimate 
+#>      0.504000      0.000000      1.372571      5.000000      4.947259
+```
+
+At roughly 50% power, the Type M ratio is well above 1. Conditional on
+significance, the estimated effect is exaggerated, even though the
+average estimate over all replicates is unbiased. This reflects the
+statistical-significance filter, which is precisely what design analysis
+is meant to expose.
+
+## Crossed mixed-effects designs
+
+A feature that distinguishes pilotr from a marginal simulator is power
+estimation for crossed by-subject and by-item designs. The R interface
+fits the maximal model
+`y ~ cond + (1 + cond | subject) + (1 + cond | item)` with
+`lme4`/`lmerTest` and tests the fixed effect with Satterthwaite degrees
+of freedom.
+
+``` r
+
+spec_c <- build_spec(list(
+  name = "priming", seed = 1, design_kind = "within", include_items = TRUE,
+  n_subject = 24, n_item = 18,
+  factor_name = "condition", lev1 = "related", lev2 = "unrelated",
+  intercept = 6, effect = 0.05,
+  subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+  item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+  family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
+
+pm <- power_mixed(spec_c, n_sims = 20)   # tiny for the vignette; use >= 200 in practice
+unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+#>       power      type_s      type_m n_converged 
+#>    0.450000    0.000000    1.494293   20.000000
+```
+
+`n_converged` reports how many replicates the maximal model actually
+fit. This is a useful diagnostic in its own right, since convergence
+problems are common in small crossed designs.
+
+## A power curve
+
+The following sweep over the number of subjects shows where power
+crosses a target.
+
+``` r
+
+curve <- power_curve_mixed(spec_c, subject_ns = c(15, 30), n_sims = 12)
+curve
+#>   n_subject     power   type_m
+#> 1        15 0.2500000 1.843531
+#> 2        30 0.5833333 1.239214
+
+library(ggplot2)
+ggplot(curve, aes(n_subject, power)) +
+  geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
+  geom_line(colour = "#2C6FB0", linewidth = 0.8) +
+  geom_point(colour = "#2C6FB0", size = 2.6) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
+  theme_minimal(base_size = 12)
+```
+
+![](power-analysis_files/figure-html/unnamed-chunk-4-1.png)
+
+For a high-resolution sweep, these analyses are fully parallel and scale
+well on a cluster. The repository includes a SLURM array job
+(`hpc/precision_array.slurm`) that runs the precision sweep across many
+cores.
+
+## A bridge to the Bayesian workflow
+
+For a confirmatory Bayesian fit,
+[`brms_bridge()`](https://pablobernabeu.github.io/pilotr/reference/brms_bridge.md)
+emits a ready-to-run `brms` model. It provides the family, the fixed and
+random-effects formula, and a weakly-informative prior set, all derived
+from the same specification, so that the planning model and the
+confirmatory model remain consistent.
+
+``` r
+
+brms_bridge(spec_c)
+#> library(brms)
+#> fit <- brm(
+#>   RT ~ effect + (1 + effect | subject) + (1 + effect | item),
+#>   data   = your_data,
+#>   family = shifted_lognormal(),
+#>   prior  = c(
+#>     prior(normal(0, 2.5), class = "Intercept"),
+#>     prior(normal(0, 0.5), class = "b", coef = "effect"),
+#>     prior(normal(0, 1), class = "sd"),
+#>     prior(lkj(2), class = "cor")
+#>   ),
+#>   chains = 4, iter = 4000, warmup = 2000, cores = 4,
+#>   control = list(adapt_delta = 0.95)
+#> )
+```
+
+## See also
+
+The [precision / ROPE
+vignette](https://pablobernabeu.github.io/pilotr/articles/precision-rope.md)
+covers design analysis when the question concerns practical significance
+instead of statistical significance.
