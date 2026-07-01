@@ -1,11 +1,9 @@
 # pilotr (Python)
 
 `pilotr` simulates experimental and behavioural data from a portable JSON design
-specification. The same specification drives the R package, a no-code web app and this
-Python package. Given the same spec and seed, all three produce bit-identical data.
-
-This is the Python documentation. For the R reference and the live no-code demo, see the
-[project documentation](https://pablobernabeu.github.io/pilotr/).
+specification. The same specification drives the
+[R package](https://pablobernabeu.github.io/pilotr/), a no-code web app and this Python package.
+Given the same spec and seed, all three produce bit-identical data.
 
 ## Install
 
