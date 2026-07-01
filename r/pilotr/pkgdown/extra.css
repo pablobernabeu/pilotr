@@ -19,3 +19,10 @@ main h2,
 main h3 {
   margin-top: 2rem;
 }
+
+/* The Articles menu lists the vignettes explicitly, so drop pkgdown's auto "More articles..."
+   link to the articles index (and the divider immediately above it). */
+.dropdown-menu li:has(> a.dropdown-item[href$="articles/index.html"]),
+.dropdown-menu li:has(+ li > a.dropdown-item[href$="articles/index.html"]) {
+  display: none;
+}
