@@ -13,7 +13,7 @@ template:
 navbar:
   structure:
     left:  [reference, articles, about]
-    right: [lightswitch, demo, github]
+    right: [search, lightswitch, demo, github]
   components:
     articles:
       text: Articles
