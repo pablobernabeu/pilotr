@@ -1,5 +1,5 @@
 """Power-vs-N curve for the two-group Gaussian design (d = 0.5). Writes a CSV for the
-figure and prints the curve, including the Type M exaggeration ratio (which shrinks toward
+figure and prints the curve, including the Type M exaggeration ratio (which shrinks towards
 1 as power grows -- a design-analysis point worth teaching)."""
 import os, sys
 
