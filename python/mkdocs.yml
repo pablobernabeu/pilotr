@@ -7,31 +7,39 @@ copyright: Developed by <a href="https://orcid.org/0000-0003-1083-2460">Pablo Be
 
 theme:
   name: material
+  custom_dir: overrides
   logo: assets/logo.svg
   favicon: assets/favicon.png
+  font:
+    text: Inter
+    code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: custom
-      accent: custom
+      primary: black
+      accent: amber
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: custom
-      accent: custom
+      primary: black
+      accent: amber
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.footer
+    - toc.follow
     - content.code.copy
+    - search.suggest
+    - search.highlight
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/brand.css
 
 nav:
   - Home: index.md
