@@ -2,6 +2,8 @@
 
 <img src="r/pilotr/man/figures/logo.png" align="right" height="150" alt="pilotr hex logo" />
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+
 `pilotr` lets researchers pilot a study before they run it.
 
 ## Why pilotr

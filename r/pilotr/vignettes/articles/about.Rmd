@@ -9,7 +9,7 @@ If you use pilotr in published work, please cite it.
 ```{r citation, echo = FALSE, results = "asis"}
 ver <- as.character(utils::packageVersion("pilotr"))
 cat(sprintf(
-"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R and Python package version %s). <https://github.com/pablobernabeu/pilotr>\n",
+"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R and Python package version %s). https://doi.org/10.5281/zenodo.21266313\n",
   ver))
 ```
 
@@ -25,7 +25,8 @@ bib <- paste(
   "  title   = {{pilotr}: Simulate Experimental and Behavioural Data from a Portable Design Specification},",
   "  year    = {2026},",
   sprintf("  version = {%s},", ver),
-  "  url     = {https://github.com/pablobernabeu/pilotr},",
+  "  doi     = {10.5281/zenodo.21266313},",
+  "  url     = {https://doi.org/10.5281/zenodo.21266313},",
   "}",
   sep = "\n"
 )

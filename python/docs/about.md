@@ -6,7 +6,7 @@ If you use pilotr in published work, please cite it:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
 > design specification* (Version 0.1.0) [Computer software].
-> <https://github.com/pablobernabeu/pilotr>
+> https://doi.org/10.5281/zenodo.21266313
 
 ```bibtex
 @software{bernabeu2026pilotr,
@@ -14,7 +14,8 @@ If you use pilotr in published work, please cite it:
   title   = {{pilotr}: Simulate Experimental and Behavioural Data from a Portable Design Specification},
   year    = {2026},
   version = {0.1.0},
-  url     = {https://github.com/pablobernabeu/pilotr}
+  doi     = {10.5281/zenodo.21266313},
+  url     = {https://doi.org/10.5281/zenodo.21266313}
 }
 ```
 
