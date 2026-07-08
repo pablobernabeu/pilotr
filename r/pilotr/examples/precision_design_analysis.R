@@ -1,6 +1,6 @@
 # Advanced design analysis for a continuous-predictor, interaction-rich, crossed mixed-effects
 # design with by-subject random slopes on continuous predictors. The analysis model is
-# AUTO-DERIVED from the spec (model_formula / model_data) -- no hand-coded formula. Shows:
+# auto-derived from the spec (model_formula / model_data), with no hand-coded formula. Shows:
 # (1) recovery of the full fixed-effect model; (2) a precision-based ROPE design analysis and
 # an N-sweep to find the minimum analysable sample size; (3) a brms bridge for the
 # confirmatory Bayesian fit.

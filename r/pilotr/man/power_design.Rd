@@ -30,7 +30,7 @@ spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
 power_design(spec, n_sims = 50)
 }
 \references{
-Gelman, A. and Carlin, J. (2014). Beyond Power Calculations: Assessing Type S
-  (Sign) and Type M (Magnitude) Errors. \emph{Perspectives on Psychological Science},
+Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+  (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
   9(6), 641-651. \doi{10.1177/1745691614551642}
 }

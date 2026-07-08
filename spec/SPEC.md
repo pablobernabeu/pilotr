@@ -63,7 +63,8 @@ random-effect `slopes` (e.g. a by-subject random slope on an item-level predicto
 
 The random-effect column order is `["intercept", <slopes in listed order>]`. A
 covariance matrix `Σ = D · R · D` is formed from the SDs `D` and the correlation matrix `R`,
-which has a unit diagonal and off-diagonals taken from `correlations`, keyed `"a,b"`. Per unit, a vector
+which has a unit diagonal and off-diagonals taken from `correlations`, keyed `"a,b"` (a tilde
+separator, `"a~b"`, is also accepted). Per unit, a vector
 `b = L z` is drawn, where `L` is the lower Cholesky factor of `Σ` and `z` are iid standard
 normals. The unit's contribution to a row's linear predictor is
 `b[intercept] + Σ_k b[slope_k] · (contrast value of slope_k for that row)`.
@@ -140,8 +141,9 @@ each unit by equal blocks in level order and do not expand rows.
 ## References
 
 * L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
-  *Communications of the ACM, 31*(6), 742–751.
+  *Communications of the ACM, 31*(6), 742–751. https://doi.org/10.1145/62959.62969
 * Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal
-  distribution. *Applied Statistics, 37*(3), 477–484.
+  distribution. *Applied Statistics, 37*(3), 477–484. https://doi.org/10.2307/2347330
 * DeBruine, L. M., & Barr, D. J. (2021). Understanding mixed-effects models through data
   simulation. *Advances in Methods and Practices in Psychological Science, 4*(1).
+  https://doi.org/10.1177/2515245920965119

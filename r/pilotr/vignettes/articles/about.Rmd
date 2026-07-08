@@ -22,7 +22,7 @@ ver <- as.character(utils::packageVersion("pilotr"))
 bib <- paste(
   "@software{bernabeu2026pilotr,",
   "  author  = {Pablo Bernabeu},",
-  "  title   = {{pilotr}: Simulate Experimental and Behavioural Data from a Portable Design Specification},",
+  "  title   = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},",
   "  year    = {2026},",
   sprintf("  version = {%s},", ver),
   "  doi     = {10.5281/zenodo.21266313},",
@@ -73,3 +73,23 @@ Sustainability Institute. His [ORCID record](https://orcid.org/0000-0003-1083-24
 other work. pilotr and its [Python twin](https://pablobernabeu.github.io/pilotr/py/) are part
 of that work, keeping a design specification reproducible and its simulated data identical
 across both languages.
+
+## Licence
+
+pilotr is released under the [MIT licence](../LICENSE.html). The licence covers the R and
+Python packages, the no-code app and the design specification alike.
+
+## Versioning and archival
+
+Releases are tagged on GitHub and archived on Zenodo. The concept DOI
+[10.5281/zenodo.21266313](https://doi.org/10.5281/zenodo.21266313) always resolves to the
+latest archived version, so a citation stays current without naming a version. The
+[changelog](../news/index.html) records what changed in each release.
+
+## Contributing and support
+
+Bugs and feature requests are best raised on the
+[GitHub issues page](https://github.com/pablobernabeu/pilotr/issues). The
+[contributing guide](../CONTRIBUTING.html) describes the development setup and the
+conventions the repository follows, including the cross-language random-number contract
+that any change to the generative core must keep intact.

@@ -31,25 +31,25 @@ toolkit built around effect sizes, random structure and realistic response famil
 
 ## Documentation
 
-- **R package** — reference and articles at <https://pablobernabeu.github.io/pilotr/>, including
-  a guide to [the no-code app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.html).
-- **Python package** — guides and API reference at <https://pablobernabeu.github.io/pilotr/py/>.
-- **No-code app** — try it in the browser, with nothing to install, at
-  <https://pablobernabeu.github.io/pilotr/demo/>.
-- **Specification format** — the portable JSON spec and the RNG contract in
-  [`spec/SPEC.md`](spec/SPEC.md).
+The R package's reference and articles live at <https://pablobernabeu.github.io/pilotr/>,
+including a guide to
+[the no-code app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.html).
+The Python package's guides and API reference are at
+<https://pablobernabeu.github.io/pilotr/py/>. The no-code app itself can be tried in the
+browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/demo/>. The
+portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
 
 ## How pilotr compares to existing tools
 
-| Capability | faux | simstudy | simr / Superpower | **pilotr** |
+| Capability | faux | simstudy | simr / Superpower | pilotr |
 |---|:--:|:--:|:--:|:--:|
 | Generative IV→DV effect sizes | ✗ | ✓ | (from fitted model) | ✓ |
-| Crossed by-subject **and** by-item random slopes | ✓ | partial | ✓ | ✓ |
+| Crossed by-subject and by-item random slopes | ✓ | partial | ✓ | ✓ |
 | Realistic distributions (RT/count/ordinal) | ✓ | ✓ | family-dependent | ✓ |
-| Simulation-based power + **Type S/M** | ✗ | ✗ | ✓ (power only) | ✓ |
+| Simulation-based power + Type S/M | ✗ | ✗ | ✓ (power only) | ✓ |
 | No-code GUI | ✗ | ✗ | ANOVA only | ✓ |
-| **Python implementation** | ✗ | ✗ | ✗ | **✓** |
-| **R = Python bit-identical from one spec** | — | — | — | **✓** |
+| Python implementation | ✗ | ✗ | ✗ | ✓ |
+| R = Python bit-identical from one spec | — | — | — | ✓ |
 
 No single existing tool spans these capabilities, and the Python column is empty across the
 board. SDV learns from real data, pyDOE3 builds design matrices, Faker produces placeholder
@@ -182,7 +182,7 @@ python python/examples/power_mixed_demo.py
 Rscript r/pilotr/examples/precision_design_analysis.R
 ```
 
-> **R↔Python coverage.** Data generation is bit-identical across languages (proven), and both
+> A note on R and Python coverage. Data generation is bit-identical across languages, and both
 > ecosystems run crossed mixed-effects power from the same spec. The LMM estimators, however,
 > differ. R (`lme4`/`lmerTest`, REML, correlated random effects) is the reference. Python
 > (`statsmodels` MixedLM, crossed variance components) overstates random-slope variance, so it is

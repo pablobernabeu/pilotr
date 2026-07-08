@@ -1,7 +1,7 @@
 # Equivalence check against simstudy (Goldfeld & Wujciak-Jens), the generative IV->DV
 # competitor. simstudy specifies outcomes through a formula + link function; pilotr through
 # an intercept + effect-size on a contrast + response family. For matched parameters the two
-# produce statistically equivalent data -- on a Gaussian design and a Poisson (log-link) one.
+# produce statistically equivalent data, on a Gaussian design and a Poisson (log-link) one.
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))

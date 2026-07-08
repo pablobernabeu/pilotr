@@ -2,15 +2,15 @@ citHeader("To cite pilotr in publications, please use:")
 
 bibentry(
   bibtype = "Manual",
-  title   = "pilotr: Simulate Experimental and Behavioural Data from a Portable Design Specification",
+  title   = "pilotr: Simulate experimental and behavioural data from a portable design specification",
   author  = person("Pablo", "Bernabeu"),
   year    = "2026",
   note    = "R and Python package version 0.1.0",
   doi     = "10.5281/zenodo.21266313",
   url     = "https://doi.org/10.5281/zenodo.21266313",
   textVersion = paste0(
-    "Bernabeu, P. (2026). pilotr: Simulate Experimental and Behavioural Data ",
-    "from a Portable Design Specification. R and Python package version 0.1.0. ",
+    "Bernabeu, P. (2026). pilotr: Simulate experimental and behavioural data ",
+    "from a portable design specification. R and Python package version 0.1.0. ",
     "https://doi.org/10.5281/zenodo.21266313"
   )
 )

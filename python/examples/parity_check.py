@@ -27,7 +27,7 @@ def compare(name):
     py, r = os.path.join(BUILD, f"py_{name}.csv"), os.path.join(BUILD, f"r_{name}.csv")
     for p in (py, r):
         if not os.path.exists(p):
-            print(f"  [{name}] MISSING {os.path.basename(p)} -- run both demos first.")
+            print(f"  [{name}] MISSING {os.path.basename(p)}. Run both demos first.")
             return False
     h1, r1 = load(py)
     h2, r2 = load(r)

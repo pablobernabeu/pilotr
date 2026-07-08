@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # One ARC array task: a high-precision ROPE design analysis at a single sample size.
-# Embarrassingly parallel -- the task's n_sims replicates run across cpus-per-task cores via
+# Embarrassingly parallel: the task's n_sims replicates run across cpus-per-task cores via
 # mclapply. Each replicate simulates from the spec, fits the auto-derived lmer model, and
 # records the focal 95% CIs; the task aggregates ROPE decision probabilities and writes one
 # CSV per sample size to the project results dir. Combine the CSVs into a full precision curve.

@@ -1,6 +1,6 @@
 """Power-vs-N curve for the two-group Gaussian design (d = 0.5). Writes a CSV for the
 figure and prints the curve, including the Type M exaggeration ratio (which shrinks towards
-1 as power grows -- a design-analysis point worth teaching)."""
+1 as power grows, a design-analysis point worth teaching)."""
 import os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))

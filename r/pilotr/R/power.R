@@ -12,8 +12,8 @@
 #' @return A list with elements `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`,
 #'   `mean_estimate`, `type_s` (sign-error rate among significant replicates), and `type_m`
 #'   (mean exaggeration ratio among significant replicates).
-#' @references Gelman, A. and Carlin, J. (2014). Beyond Power Calculations: Assessing Type S
-#'   (Sign) and Type M (Magnitude) Errors. \emph{Perspectives on Psychological Science},
+#' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+#'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
 #' @examples
 #' spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",

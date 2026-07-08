@@ -6,8 +6,8 @@ addition to classical power (the proportion of significant replicates), we repor
 design-analysis quantities of Gelman and Carlin (2014), computed over the significant
 replicates.
 
-* Type S (sign) error  -- P(estimate has the wrong sign | significant)
-* Type M (magnitude)   -- E(|estimate| / |true effect| | significant)  (exaggeration ratio)
+* Type S (sign) error: P(estimate has the wrong sign | significant)
+* Type M (magnitude): E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
 The two-group Gaussian design uses a two-sample t-test (`power`). Crossed mixed-effects
 designs use a statsmodels MixedLM backend (`power_mixed`), which is conservative for

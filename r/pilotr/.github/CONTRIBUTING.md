@@ -50,8 +50,9 @@ pilotr handles no credentials and makes no network requests.
 ## Submitting a pull request
 
 Base your work on `main`, keep the change focused, and add or update tests and
-documentation alongside the code. Continuous integration runs both test suites
-on every push.
+documentation alongside the code. A scheduled continuous-integration workflow
+runs both test suites against the latest released dependency versions, and the
+website build exercises the vignettes and guides on every push to `main`.
 
 By contributing you agree that your contribution is licensed under the same MIT
 licence as the package, and that you will follow the

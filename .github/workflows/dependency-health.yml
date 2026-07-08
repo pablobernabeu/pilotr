@@ -1,5 +1,5 @@
 # Dependency health: detect breakage from upstream dependency updates, triage it with a free
-# AI model, and flag the maintainer. Runs entirely on free, native GitHub features --
+# AI model, and flag the maintainer. Runs entirely on free, native GitHub features:
 # GitHub Actions is free for public repositories, and the triage uses GitHub Models (free,
 # rate-limited) authenticated by the built-in GITHUB_TOKEN. No paid API key or external service.
 #

@@ -76,9 +76,9 @@ def group_means(family, intercept, effect, name, **resp):
 
 rows = []
 for label, fam, ic, ef, nm, kw in [
-    ("Bernoulli — P(correct)", "bernoulli", 0.0, 0.5, "accuracy", {}),
-    ("Poisson — mean count", "poisson", 1.5, 0.3, "count", {}),
-    ("Beta — mean proportion", "beta", 0.0, 0.8, "p", {"phi": 8}),
+    ("Bernoulli: P(correct)", "bernoulli", 0.0, 0.5, "accuracy", {}),
+    ("Poisson: mean count", "poisson", 1.5, 0.3, "count", {}),
+    ("Beta: mean proportion", "beta", 0.0, 0.8, "p", {"phi": 8}),
 ]:
     m = group_means(fam, ic, ef, nm, **kw)
     rows.append({"outcome": label, "control": m["control"], "treatment": m["treatment"]})
