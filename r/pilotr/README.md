@@ -1,4 +1,6 @@
-# pilotr <img src="man/figures/logo.png" align="right" height="139" alt="pilotr hex logo" />
+# pilotr <small>(R)</small> <img src="man/figures/logo.png" align="right" height="139" alt="pilotr hex logo" />
+
+A feature-parity twin of the [Python package of the same name](https://pablobernabeu.github.io/pilotr/py/).
 
 Simulate experimental and behavioural data from a portable design specification, with
 integrated simulation-based power and design analysis (the Type S and Type M errors, and

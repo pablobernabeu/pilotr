@@ -6,31 +6,57 @@ title: "About"
 
 If you use pilotr in published work, please cite it.
 
-> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (R and Python package version 0.1.0).
-> <https://github.com/pablobernabeu/pilotr>
-
-```bibtex
-@software{bernabeu2026pilotr,
-  author  = {Pablo Bernabeu},
-  title   = {{pilotr}: Simulate Experimental and Behavioural Data from a Portable Design Specification},
-  year    = {2026},
-  version = {0.1.0},
-  url     = {https://github.com/pablobernabeu/pilotr}
-}
+```{r citation, echo = FALSE, results = "asis"}
+ver <- as.character(utils::packageVersion("pilotr"))
+cat(sprintf(
+"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R and Python package version %s). <https://github.com/pablobernabeu/pilotr>\n",
+  ver))
 ```
 
-```{r bib-download, echo = FALSE, results = "asis"}
-bib <- paste(c(
+```{r bibtex, echo = FALSE, results = "asis"}
+# Build the BibTeX entry from the installed version so it never drifts, then
+# render it with a copy button and a download link. The button uses the browser
+# clipboard API; the link is a self-contained data URI, so neither depends on a
+# static file being shipped alongside the site.
+ver <- as.character(utils::packageVersion("pilotr"))
+bib <- paste(
   "@software{bernabeu2026pilotr,",
   "  author  = {Pablo Bernabeu},",
   "  title   = {{pilotr}: Simulate Experimental and Behavioural Data from a Portable Design Specification},",
   "  year    = {2026},",
-  "  version = {0.1.0},",
-  "  url     = {https://github.com/pablobernabeu/pilotr}",
-  "}"), collapse = "\n")
-uri <- sprintf("data:application/x-bibtex;base64,%s", jsonlite::base64_enc(charToRaw(bib)))
-cat(sprintf('<p><a class="btn btn-primary btn-sm" download="pilotr.bib" href="%s">Download the BibTeX entry</a></p>', uri))
+  sprintf("  version = {%s},", ver),
+  "  url     = {https://github.com/pablobernabeu/pilotr},",
+  "}",
+  sep = "\n"
+)
+esc <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  gsub(">", "&gt;", x, fixed = TRUE)
+}
+uri <- paste0(
+  "data:application/x-bibtex;charset=utf-8,",
+  utils::URLencode(bib, reserved = TRUE)
+)
+cat(sprintf(
+'<div class="citation-bibtex">
+<pre id="pilotr-bibtex"><code>%s</code></pre>
+<p class="citation-bibtex-actions">
+<button type="button" class="btn btn-primary btn-sm" onclick="pilotrCopyBibtex(this)">Copy BibTeX</button>
+<a class="btn btn-outline-primary btn-sm" download="pilotr.bib" href="%s">Download .bib</a>
+</p>
+</div>
+<script>
+function pilotrCopyBibtex(btn) {
+  var code = document.getElementById("pilotr-bibtex");
+  navigator.clipboard.writeText(code.innerText).then(function () {
+    var label = btn.textContent;
+    btn.textContent = "Copied";
+    setTimeout(function () { btn.textContent = label; }, 1500);
+  });
+}
+</script>
+', esc(bib), uri))
 ```
 
 In R, `citation("pilotr")` returns the same reference.
@@ -42,4 +68,7 @@ Department of Education at the University of Oxford. His work spans cognitive ps
 neuroscience, linguistics, education and research methods, with hands-on experience of
 behavioural experiments, EEG, corpus analysis, computational modelling and statistics. He
 develops open, reproducible research software in R and Python, and is a Fellow of the Software
-Sustainability Institute.
+Sustainability Institute. His [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his
+other work. pilotr and its [Python twin](https://pablobernabeu.github.io/pilotr/py/) are part
+of that work, keeping a design specification reproducible and its simulated data identical
+across both languages.

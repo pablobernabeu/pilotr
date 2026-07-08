@@ -50,6 +50,7 @@ nav:
   - Worked examples: examples.md
   - Specification format: specification.md
   - API reference: api.md
+  - Changelog: changelog.md
   - About: about.md
 
 plugins:
@@ -77,5 +78,5 @@ markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
   - pymdownx.snippets:
-      base_path: [".."]
+      base_path: [".", ".."]
       check_paths: true

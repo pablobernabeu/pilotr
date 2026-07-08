@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Pablo Bernabeu", email = "pcbernabeu@gmail.com" }]
 license = "MIT"
-license-files = ["LICENCE"]
+license-files = ["LICENSE"]
 keywords = ["simulation", "power analysis", "mixed-effects", "experimental design", "behavioural science"]
 classifiers = [
     "Development Status :: 4 - Beta",
