@@ -9,6 +9,7 @@
 ^tests/test_app_server\.R$
 ^\.github$
 ^doc$
+^docs$
 ^Meta$
 ^.*\.Rproj$
 ^\.Rproj\.user$
