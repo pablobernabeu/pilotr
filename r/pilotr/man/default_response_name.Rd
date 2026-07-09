@@ -7,12 +7,12 @@
 default_response_name(family)
 }
 \arguments{
-\item{family}{A response-family name, one of `"gaussian"`, `"shifted_lognormal"`,
-`"bernoulli"`, `"poisson"`, `"ordinal"`, or `"beta"`.}
+\item{family}{A response-family name, one of `"gaussian"`, `"lognormal"`,
+`"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or `"beta"`.}
 }
 \value{
 The conventional response-column name for that family (for example `"RT"` for
-  `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
+  `"lognormal"` and `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
 }
 \description{
 Default response-column name for a family

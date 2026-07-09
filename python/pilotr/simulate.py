@@ -5,8 +5,11 @@ a linear predictor with user-specified fixed effect sizes, covering categorical 
 continuous predictors as well as their interactions. To this it adds crossed by-subject and
 by-item random intercepts and slopes (on contrasts or continuous predictors), and passes the
 result through a link and a response family. The RNG draw order follows spec/SPEC.md, namely
-continuous predictors -> subject random effects -> item random effects -> per-row residuals.
-Specs without a `predictors` block keep the original stream.
+per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
+effects -> item random effects -> extra grouping-factor random effects -> per-row response
+draws (one deviate per row, except the beta family's rejection sampler, which consumes a
+variable number). Specs without partial crossing or a `predictors` block keep the original
+stream.
 """
 
 from __future__ import annotations
@@ -141,6 +144,11 @@ def simulate(spec) -> Dataset:
 
     rng = RNG(spec["seed"])
     per_subject = spec["units"]["item"].get("per_subject") if has_item else None
+    if per_subject is not None:
+        if per_subject < 1:
+            raise ValueError(f"per_subject ({per_subject}) must be at least 1")
+        if per_subject > I:
+            raise ValueError(f"per_subject ({per_subject}) cannot exceed the number of items ({I})")
 
     # ---- build design rows in canonical order ----
     # When per_subject is set, each subject's item subset is sampled here, which is the first

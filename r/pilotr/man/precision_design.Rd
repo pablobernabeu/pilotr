@@ -39,7 +39,9 @@ own index, any worker count returns results identical to a serial run.}
 }
 \value{
 A data frame with one row per focal effect and columns `param`, `true`,
-  `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`.
+  `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`. The interval
+  behind `mean_ci_width` and the ROPE decisions is the Wald approximation described in
+  Details.
 }
 \description{
 A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
@@ -47,6 +49,13 @@ analysis. Across Monte Carlo replicates, fit the model and record, for each foca
 effect, whether its 95% confidence interval falls entirely outside a region of practical
 equivalence (a practically meaningful effect) or entirely inside it (practical equivalence
 to zero), along with the expected interval width. Requires the `lme4` package.
+}
+\details{
+The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
+from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and
+for comparability across replicates; in small samples it is somewhat narrower than a
+Satterthwaite t interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic
+at small sample sizes.
 }
 \examples{
 \donttest{

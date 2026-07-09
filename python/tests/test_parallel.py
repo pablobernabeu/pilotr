@@ -52,6 +52,25 @@ def test_power_curve_parallel_matches_serial():
     assert serial == parallel2
 
 
+def test_power_mixed_rejects_spec_without_items():
+    pytest.importorskip("statsmodels")
+    pytest.importorskip("pandas")
+    from pilotr import power_mixed
+
+    spec = {
+        "name": "w", "seed": 1,
+        "units": {"subject": {"n": 20}},
+        "factors": [{"name": "cond", "levels": ["a", "b"],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+        "fixed": {"intercept": 6, "coefficients": {"cond": 0.05}},
+        "random": {"subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04},
+                               "correlations": {"intercept~cond": 0.2}}},
+        "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
+    }
+    with pytest.raises(ValueError, match="requires a crossed design with an item unit"):
+        power_mixed(spec, n_sims=2)
+
+
 def test_power_mixed_parallel_matches_serial():
     pytest.importorskip("statsmodels")
     pytest.importorskip("pandas")

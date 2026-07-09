@@ -44,6 +44,7 @@ test_that("power_design returns Type S / Type M and a plausible power", {
 
 test_that("default_response_name covers every family", {
   expect_equal(default_response_name("gaussian"), "score")
+  expect_equal(default_response_name("lognormal"), "RT")
   expect_equal(default_response_name("shifted_lognormal"), "RT")
   expect_equal(default_response_name("bernoulli"), "accuracy")
   expect_equal(default_response_name("poisson"), "count")
@@ -66,6 +67,53 @@ test_that("each response family simulates a column on the expected scale", {
   expect_true(all(ord >= 1) && all(ord <= 5))
   prop <- fam("beta", list(intercept = 0, effect = 0.8, phi = 8))$proportion
   expect_true(all(prop > 0) && all(prop < 1))
+})
+
+test_that("build_spec carries sigma through for the lognormal family", {
+  spec <- build_spec(list(name = "ln", seed = 1, design_kind = "between",
+                          factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
+                          intercept = 0, effect = 0.5, family = "lognormal",
+                          resp_name = "", sigma = 1))
+  expect_equal(spec$response$sigma, 1)
+  expect_equal(spec$response$name, "RT")
+  d <- simulate_design(spec)
+  expect_equal(nrow(d), 10)
+  expect_true(all(d$RT > 0))
+})
+
+test_that("per_subject must lie between 1 and the number of items", {
+  spec <- build_spec(list(name = "pc", seed = 1, design_kind = "within",
+                          include_items = TRUE, n_subject = 2, n_item = 3,
+                          factor_name = "cond", lev1 = "a", lev2 = "b",
+                          intercept = 6, effect = 0.05, subj_int_sd = 0.1,
+                          subj_slope_sd = 0, item_int_sd = 0.1, item_slope_sd = 0,
+                          family = "gaussian", resp_name = "", sigma = 0.3))
+  spec$units$item$per_subject <- 5
+  expect_error(simulate_design(spec), "cannot exceed the number of items")
+  spec$units$item$per_subject <- 0
+  expect_error(simulate_design(spec), "at least 1")
+})
+
+test_that("power_mixed rejects a spec without an item unit", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  spec <- build_spec(list(name = "w", seed = 1, design_kind = "within",
+                          include_items = FALSE, n_subject = 20,
+                          factor_name = "cond", lev1 = "a", lev2 = "b",
+                          intercept = 6, effect = 0.05, subj_int_sd = 0.12,
+                          subj_slope_sd = 0.04, subj_corr = 0.2,
+                          family = "gaussian", resp_name = "", sigma = 0.3))
+  expect_error(power_mixed(spec, n_sims = 2),
+               "requires a crossed design with an item unit")
+})
+
+test_that("brms_bridge maps the beta family to brms's Beta()", {
+  spec <- build_spec(list(name = "b", seed = 1, design_kind = "between",
+                          factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
+                          intercept = 0, effect = 0.8, family = "beta",
+                          resp_name = "", phi = 8))
+  out <- capture.output(bridge <- brms_bridge(spec))
+  expect_equal(bridge$family, "Beta()")
 })
 
 test_that("a crossed within-design has by-subject and by-item random slopes", {

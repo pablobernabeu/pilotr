@@ -1,0 +1,42 @@
+# The Python package lives in the python/ subdirectory of this monorepo, so the
+# install targets ./python and the tests run with working-directory: python.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'python/**'
+      - '.github/workflows/python-tests.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'python/**'
+      - '.github/workflows/python-tests.yml'
+  workflow_dispatch:
+
+name: python-tests
+
+permissions: read-all
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install with the power extra
+        run: |
+          python -m pip install --upgrade pip pytest
+          pip install -e "./python[power]"
+
+      - name: Run the test suite
+        working-directory: python
+        run: python -m pytest

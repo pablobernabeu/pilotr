@@ -35,9 +35,11 @@ library(pilotr)
 write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 ```
 
-The numeric columns match to the last digit. The repository's [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
-runs this comparison across the worked example designs and reports the maximum difference,
-which is zero up to floating-point accumulation.
+The two CSVs compare exactly, up to CSV number formatting. The repository's [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
+runs this comparison across the worked example designs and reports the maximum difference:
+zero for every design with rounded responses, and below 1e-14 for the unrounded continuous
+design, where R's CSV writer prints 15 significant digits. The script's small tolerance
+(1e-6) absorbs that number formatting only, never a divergence in the generators.
 
 A simulated crossed design has one row per subject-by-item observation. The first rows of the
 worked crossed reaction-time example look like this (the same rows the R package produces):

@@ -11,7 +11,8 @@
 #' @param ... passed to [shiny::runApp()] (e.g. `port`, `launch.browser`).
 #' @param async If TRUE (default when 'future' and 'promises' are installed), set a
 #'   multisession future plan so power runs execute in a background worker and do not block
-#'   the UI. This is the relevant case when the app is deployed as a shared multi-user instance.
+#'   the UI. This keeps the app responsive on your own machine while a long power run
+#'   completes in the background.
 #' @return No return value; called for its side effect of launching the Shiny application,
 #'   which blocks the R session until the app is closed.
 #' @examples

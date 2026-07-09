@@ -5,6 +5,17 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `power_mixed` rejects a specification without an item unit with a clear `ValueError`
+  instead of returning `nan` power with zero converged replicates.
+- `simulate` rejects a `per_subject` value below 1 or above the number of items with a
+  clear `ValueError` instead of failing deep inside the item sampler; the R package raises
+  on the same inputs.
+- The power backends' error messages no longer carry a version prefix.
+
 ## [0.2.0] - 2026-07-09
 
 ### Added

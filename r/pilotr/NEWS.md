@@ -1,5 +1,21 @@
 # pilotr 0.2.0
 
+* Precision replicates (`precision_design()`, `precision_curve()` and the HPC array script)
+  seed the shared RNG as `seed + (replicate - 1)`, the same indexed-seed rule as the power
+  functions; they previously used `seed + replicate`. This pre-release alignment keeps the
+  seed rule identical across all analyses and languages, and it changes the results of
+  precision runs performed before the alignment.
+* `power_curve_mixed()` returns an `n_converged` column alongside `power` and `type_m`, so
+  the Monte Carlo standard error can be computed over the converged replicates.
+* `power_mixed()` and `power_curve_mixed()` reject a specification without an item unit with
+  a clear error instead of returning `NaN` power.
+* `simulate_design()` rejects a `per_subject` value below 1 or above the number of items with
+  a clear error; the Python package raises on the same inputs.
+* `build_spec()` supports the lognormal family: `sigma` is carried through and the default
+  response name matches the shifted lognormal's.
+* `brms_bridge()` maps the beta family to `brms`'s `Beta()`.
+* `citation("pilotr")` builds its version note from the package metadata, so it can no longer
+  drift from `DESCRIPTION`.
 * All simulation-based power and precision analyses (`power_design()`, `power_mixed()`,
   `power_curve_mixed()`, `precision_design()` and `precision_curve()`) gain a `workers`
   argument that spreads the Monte Carlo replicates across local cores with base R's

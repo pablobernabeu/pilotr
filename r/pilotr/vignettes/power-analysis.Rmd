@@ -22,7 +22,8 @@ significant results. Beyond power, it reports the design-analysis quantities of 
 Carlin (2014), namely the Type S (sign) error and the Type M (magnitude, or exaggeration)
 ratio.
 
-> The mixed-effects examples below use very small `n_sims` so that the vignette builds quickly.
+> The mixed-effects examples below use small `n_sims`, and their results were precomputed with
+> exactly the code shown and shipped with the package, so that the vignette builds quickly.
 > For real planning, we recommend `n_sims >= 200`, with more replicates for stable Type S and
 > Type M estimates.
 
@@ -61,27 +62,52 @@ spec_c <- build_spec(list(
   subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
+```
 
+```{r, eval = FALSE}
 pm <- power_mixed(spec_c, n_sims = 20)   # tiny for the vignette; use >= 200 in practice
 unlist(pm[c("power", "type_s", "type_m", "n_converged")])
 ```
 
+```{r, include = FALSE}
+# The result of running exactly the chunk above, precomputed and shipped with the
+# package so that the vignette builds within CRAN's check-time budget.
+pm <- as.list(read.csv("power-mixed-cache.csv"))
+```
+
+```{r, echo = FALSE}
+unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+```
+
 `n_converged` reports how many replicates the maximal model actually fit. This is a useful
-diagnostic in its own right, since convergence problems are common in small crossed designs.
+diagnostic in its own right, since convergence problems are common in small crossed designs,
+and it is the denominator of `power`, which is the significant proportion among the converged
+replicates.
 
 ## A power curve
 
 The following sweep over the number of subjects shows where power crosses a target.
 
-```{r, fig.width = 6, fig.height = 3.6}
-n_sims <- 50
-curve <- power_curve_mixed(spec_c, subject_ns = c(8, 12, 16, 24, 32, 44, 56), n_sims = n_sims)
+```{r, eval = FALSE}
+curve <- power_curve_mixed(spec_c, subject_ns = c(8, 12, 16, 24, 32, 44, 56), n_sims = 50)
 curve
+```
 
+```{r, include = FALSE}
+# The result of running exactly the chunk above, precomputed and shipped with the
+# package so that the vignette builds within CRAN's check-time budget.
+curve <- read.csv("power-curve-cache.csv")
+```
+
+```{r, echo = FALSE}
+curve
+```
+
+```{r, fig.width = 6, fig.height = 3.6}
 library(ggplot2)
-# Each power estimate is a proportion over n_sims replicates, so it carries a
+# Each power estimate is a proportion over the converged replicates, so it carries a
 # binomial Monte Carlo standard error. The shaded band is the 95% interval.
-curve$se <- sqrt(curve$power * (1 - curve$power) / n_sims)
+curve$se <- sqrt(curve$power * (1 - curve$power) / curve$n_converged)
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
   geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se), ymax = pmin(1, power + 1.96 * se)),
@@ -94,7 +120,7 @@ ggplot(curve, aes(n_subject, power)) +
 ```
 
 The shaded band shows the Monte Carlo interval, the binomial standard error of each
-power estimate over the `n_sims` replicates widened to a 95% envelope.
+power estimate over its converged replicates widened to a 95% envelope.
 
 ## Parallel execution
 

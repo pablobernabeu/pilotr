@@ -12,6 +12,13 @@
 #' equivalence (a practically meaningful effect) or entirely inside it (practical equivalence
 #' to zero), along with the expected interval width. Requires the `lme4` package.
 #'
+#' @details
+#' The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
+#' from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and
+#' for comparability across replicates; in small samples it is somewhat narrower than a
+#' Satterthwaite t interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic
+#' at small sample sizes.
+#'
 #' @param spec A design specification (path or list).
 #' @param focal A named numeric vector mapping focal coefficient names to their true values,
 #'   or a character vector of coefficient names.
@@ -28,7 +35,9 @@
 #'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
 #'   own index, any worker count returns results identical to a serial run.
 #' @return A data frame with one row per focal effect and columns `param`, `true`,
-#'   `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`.
+#'   `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`. The interval
+#'   behind `mean_ci_width` and the ROPE decisions is the Wald approximation described in
+#'   Details.
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE)) {
@@ -93,7 +102,7 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 # workers. Returns NULL when the fit fails; otherwise, per focal effect, the CI width and
 # the two ROPE decisions, with `present` recording whether the effect was in the fit.
 .precision_rep <- function(i, spec, base, prep, formula, fnames, rope) {
-  s <- spec; s$seed <- base + i
+  s <- spec; s$seed <- base + (i - 1)          # same indexed-seed rule as the power functions
   d <- prep(simulate_design(s))
   fit <- tryCatch(suppressWarnings(suppressMessages(
     lme4::lmer(formula, data = d, control = lme4::lmerControl(calc.derivs = FALSE)))),

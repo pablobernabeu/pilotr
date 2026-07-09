@@ -1,6 +1,6 @@
 # Response families
 
-The same linear predictor can be mapped through any of six response families. The family and
+The same linear predictor can be mapped through any of seven response families. The family and
 its parameters live in the spec's `response` block, and the response column is named by
 `response["name"]`.
 
@@ -8,14 +8,15 @@ its parameters live in the spec's `response` block, and the response column is n
 |---|---|---|---|
 | Continuous | `gaussian` | identity | `sigma` |
 | Reaction time | `shifted_lognormal` | log | `sigma`, `shift` |
+| Positive continuous (e.g. reading time) | `lognormal` | log | `sigma` |
 | Accuracy (0/1) | `bernoulli` | logit | none |
 | Counts | `poisson` | log | none |
 | Likert / ordered | `ordinal` | cumulative logit | `thresholds` |
 | Proportions in (0, 1) | `beta` | logit (mean) | `phi` (precision) |
 
-The fixed `effect` is always expressed on the response scale: the identity scale for Gaussian,
-the log scale for reaction times and counts, and the logit scale for accuracy, ordinal and
-Beta.
+The fixed `effect` is always expressed on the scale of the linear predictor (the link scale):
+the identity scale for Gaussian, the log scale for reaction times and counts, and the logit
+scale for accuracy, ordinal and Beta.
 
 ## What the families look like
 
@@ -56,7 +57,7 @@ print(show(fig))
 
 ## Discrete and bounded outcomes
 
-The same machinery covers binary, count, and proportion outcomes. The fixed effect moves the two
+The same machinery covers binary, count and proportion outcomes. The fixed effect moves the two
 group means apart on each family's own scale:
 
 ```python exec="true" source="material-block" session="fam"

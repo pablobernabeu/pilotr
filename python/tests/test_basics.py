@@ -6,6 +6,9 @@ ground-truth parameters it was given.
 """
 import os, sys, statistics, math
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+import pytest
+
 from pilotr import RNG, as241, simulate, load_spec
 
 SPEC = os.path.join(os.path.dirname(__file__), "..", "..", "spec", "examples")
@@ -68,6 +71,24 @@ def test_partial_crossing_subset_size():
         items_by_subject.setdefault(r["subject"], set()).add(r["item"])
     assert len(items_by_subject) == 60
     assert all(len(v) == 12 for v in items_by_subject.values())  # per_subject = 12
+
+
+def test_per_subject_must_lie_between_1_and_n_items():
+    # The same inputs must raise in the R twin, preserving cross-language parity.
+    spec = {
+        "name": "pc", "seed": 1,
+        "units": {"subject": {"n": 2}, "item": {"n": 3, "per_subject": 5}},
+        "factors": [{"name": "cond", "levels": ["a", "b"],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": ["subject", "item"]}],
+        "fixed": {"intercept": 6, "coefficients": {"cond": 0.05}},
+        "random": {"subject": {"intercept_sd": 0.1}, "item": {"intercept_sd": 0.1}},
+        "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
+    }
+    with pytest.raises(ValueError, match="cannot exceed the number of items"):
+        simulate(spec)
+    spec["units"]["item"]["per_subject"] = 0
+    with pytest.raises(ValueError, match="at least 1"):
+        simulate(spec)
 
 
 def test_additional_grouping_column_present():

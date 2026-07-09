@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use pilotr, please cite it as below."
+title: "pilotr: Simulate experimental and behavioural data from a portable design specification"
+abstract: "Generative simulation of experimental and behavioural data from a portable JSON design specification shared by a no-code app, an R package and a Python package, with simulation-based power and precision/ROPE design analysis and a shared cross-language random-number generator that makes the simulated data bit-identical across implementations."
+type: software
+authors:
+  - family-names: Bernabeu
+    given-names: Pablo
+    orcid: "https://orcid.org/0000-0003-1083-2460"
+    email: pcbernabeu@gmail.com
+version: "0.2.0"
+date-released: "2026-07-09"
+doi: "10.5281/zenodo.21266313"
+license: MIT
+repository-code: "https://github.com/pablobernabeu/pilotr"
+url: "https://pablobernabeu.github.io/pilotr/"
+keywords:
+  - simulation
+  - power analysis
+  - mixed-effects models
+  - experimental design
+  - reproducible research

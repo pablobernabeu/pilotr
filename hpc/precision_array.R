@@ -29,7 +29,7 @@ focal <- c(SyntaxPC = 0.10, cond_age = 0.02)       # meaningful (outside ROPE) +
 base  <- spec$seed
 
 one_sim <- function(i) {
-  s <- spec; s$seed <- base + i
+  s <- spec; s$seed <- base + (i - 1)          # same indexed-seed rule as the package
   d <- model_data(spec, simulate_design(s))
   fit <- tryCatch(lme4::lmer(form, d, control = lme4::lmerControl(calc.derivs = FALSE)),
                   error = function(e) NULL)

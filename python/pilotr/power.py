@@ -108,11 +108,11 @@ def _power_impl(spec, n_sims, alpha, executor):
     if isinstance(spec, str):
         spec = load_spec(spec)
     if spec["response"]["family"] != "gaussian":
-        raise NotImplementedError("v0.1 power backend handles the gaussian two-group design.")
+        raise NotImplementedError("The power backend currently handles only the gaussian two-group design.")
 
     between = [f for f in spec["factors"] if f.get("between")]
     if len(between) != 1 or len(between[0]["levels"]) != 2:
-        raise NotImplementedError("v0.1 power backend expects exactly one 2-level between factor.")
+        raise NotImplementedError("The power backend expects exactly one 2-level between factor.")
     factor = between[0]
     fname = factor["name"]
     lev0, lev1 = factor["levels"]
@@ -190,6 +190,41 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     its output as a conservative lower bound and using the R/lme4 `power_mixed` as the reference
     whenever random slopes or random-effect correlations matter. Data generation is identical
     across R and Python. This discrepancy arises solely in the Python LMM estimator.
+
+    Parameters
+    ----------
+    spec : dict or str
+        A design specification (dict or path to a JSON file) with exactly one within-unit
+        factor and a crossed design with an item unit.
+    n_sims : int, optional
+        Number of Monte Carlo replicates (default 50, smaller than `power`'s 1000 because
+        each replicate fits a mixed model).
+    alpha : float, optional
+        Two-sided significance level (default 0.05).
+    workers : int, optional
+        Number of local worker processes over which to spread the replicates (default 1,
+        serial). Each replicate seeds the shared RNG from its own index, so any worker
+        count returns results identical to a serial run.
+
+    Returns
+    -------
+    dict
+        Keys: `backend` (the estimator used), `n_sims`, `n_converged` (how many replicates
+        the model fit), `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
+        `type_s`, `type_m`. `power` is the proportion of significant results among the
+        `n_converged` converged replicates, not among `n_sims`.
+
+    Raises
+    ------
+    ValueError
+        If the spec has no item unit (`power_mixed` requires a crossed design).
+    NotImplementedError
+        If the design does not have exactly one within-unit factor.
+
+    Notes
+    -----
+    Requires the `mixed` extra (`statsmodels` and `pandas`, imported lazily in each worker
+    process when parallel).
     """
     workers = _check_workers(workers)
     import pandas as _pd  # noqa: F401  fail fast before simulating
@@ -197,9 +232,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
 
     if isinstance(spec, str):
         spec = load_spec(spec)
+    if "item" not in spec["units"]:
+        raise ValueError("power_mixed() requires a crossed design with an item unit.")
     within = [f for f in spec["factors"] if f.get("vary_within")]
     if len(within) != 1:
-        raise NotImplementedError("v0.1 Python power_mixed expects exactly one within factor.")
+        raise NotImplementedError("The Python power_mixed backend expects exactly one within factor.")
     f = within[0]
     fname = f["name"]
     col, vals = next(iter(f["contrasts"].items()))

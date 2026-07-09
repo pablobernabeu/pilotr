@@ -27,7 +27,8 @@ brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
 
   family_map <- list(gaussian = "gaussian()", lognormal = "lognormal()",
                      shifted_lognormal = "shifted_lognormal()", bernoulli = "bernoulli()",
-                     poisson = "poisson()", ordinal = "cumulative()")
+                     poisson = "poisson()", ordinal = "cumulative()",
+                     beta = "Beta()")  # brms Beta(): logit mu + precision phi, as simulated
   family <- family_map[[spec$response$family]]
   if (is.null(family)) stop("no brms family mapping for '", spec$response$family, "'")
 

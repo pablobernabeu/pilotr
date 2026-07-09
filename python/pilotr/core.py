@@ -24,8 +24,9 @@ class RNG:
 
     The combined linear congruential generator of L'Ecuyer (1988), implemented identically
     in R and Python so that a given seed yields the same stream in both. All intermediate
-    products stay below `2**53`, so the arithmetic is exact in IEEE-754 doubles. See
-    `spec/SPEC.md` for the draw-order contract.
+    products stay below `2**53`, so the arithmetic is exact in IEEE-754 doubles. The
+    draw-order contract is documented in the specification at
+    https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md.
 
     Parameters
     ----------

@@ -98,9 +98,11 @@ hierarchical designs (e.g. participants within sites, schools, or languages).
 | `ordinal` | `thresholds` (K−1 cut-points) | cumulative-logit: `P(Y≤k) = invlogit(θ_k − η)` (Likert) |
 | `beta` | `phi` (precision) | `μ = invlogit(η)`, `y ~ Beta(μ·φ, (1−μ)·φ)` (proportions in (0,1)) |
 
-`η` (the linear predictor for a row) = `intercept + Σ β_col · contrast_col +`
-subject random part `+` item random part. `name` sets the output column name. An optional
-`round` sets the decimal rounding of the response.
+`η` (the linear predictor for a row) = `intercept + Σ β_key · value(key)`, where a key is a
+contrast column, a continuous predictor, or an `"a:b"` interaction (the product of the named
+columns), `+` subject random part `+` item random part `+` the random parts of any additional
+grouping factors. `name` sets the output column name. An optional `round` sets the decimal
+rounding of the response.
 
 ## RNG contract (identical across all implementations)
 
@@ -122,6 +124,11 @@ Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` 
 
 **Draw order (must be identical everywhere):**
 
+0. If `units.item.per_subject` is set (partial crossing): for each subject `s = 1..S`, in
+   row-build order, sample that subject's item subset by a partial Fisher–Yates shuffle,
+   consuming one uniform per sampled item (`per_subject` uniforms per subject). These are
+   the first RNG draws. (Skipped entirely under full crossing, so fully crossed specs keep
+   the original stream.)
 1. For each continuous predictor (in listed order): for each of its units `u = 1..N`, draw
    one `N(mean, sd)` deviate. (Skipped entirely when there is no `predictors` block, so
    factor-only specs keep the original stream.)
@@ -129,9 +136,14 @@ Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` 
    slope in listed order); set `b_subject[s] = L_subject · z`.
 3. For each item `t = 1..I` (if items exist): draw `q_item` standard normals; set
    `b_item[t] = L_item · z`.
-4. Iterate observations in **canonical row order** and draw exactly one response deviate
-   (normal for gaussian/lognormal/shifted_lognormal; uniform for bernoulli/poisson/ordinal)
-   per row.
+4. For each additional grouping factor (in the order the `random` entries are listed): for
+   each group `g = 0..K−1`, draw `q_group` standard normals; set `b_group[g] = L_group · z`.
+5. Iterate observations in **canonical row order** and draw the response. Most families
+   consume exactly one deviate per row (normal for gaussian/lognormal/shifted_lognormal;
+   uniform for bernoulli/poisson/ordinal). The beta family instead consumes a variable,
+   data-dependent number of draws per row: two Gamma variates through the Marsaglia–Tsang
+   rejection sampler, each consuming normal–uniform pairs until acceptance (with one extra
+   uniform per Gamma variate whose shape is below 1).
 
 **Canonical row order:** nested loops, outermost first,
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in

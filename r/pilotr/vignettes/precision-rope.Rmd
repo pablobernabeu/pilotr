@@ -29,7 +29,8 @@ interval with a ROPE.
 Over Monte Carlo replicates, and for each focal fixed effect, pilotr records the 95% confidence
 interval and whether it falls determinately outside the ROPE (the effect is practically
 meaningful) or entirely inside it (practical equivalence to zero), together with the expected
-interval width. Sweeping sample size then locates the minimum *N* at which a focal effect reaches
+interval width. The interval is a Wald approximation, the estimate plus or minus 1.96 standard
+errors, chosen for speed and for comparability across replicates. Sweeping sample size then locates the minimum *N* at which a focal effect reaches
 a determinate decision with a target probability.
 
 ## A worked design

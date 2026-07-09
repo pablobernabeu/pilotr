@@ -9,8 +9,8 @@ Description: Generative simulation of experimental and behavioural data sets fro
     portable JavaScript Object Notation (JSON) design specification shared with the
     'Python' package of the same name.
     Supports user-specified fixed effect sizes, crossed by-subject and by-item random
-    intercepts and slopes, realistic response families (Gaussian, shifted lognormal,
-    Bernoulli, Poisson, ordinal and Beta), and simulation-based power and
+    intercepts and slopes, realistic response families (Gaussian, lognormal, shifted
+    lognormal, Bernoulli, Poisson, ordinal and Beta), and simulation-based power and
     precision-based design analysis, including the Type S and Type M errors of Gelman
     and Carlin (2014) <doi:10.1177/1745691614551642> and a region of practical
     equivalence. A shared cross-language random-number generator ensures that, given the

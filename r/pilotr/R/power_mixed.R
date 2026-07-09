@@ -1,9 +1,9 @@
 # Simulation-based power for crossed mixed-effects designs, fit with lme4 / lmerTest.
 # This capability distinguishes pilotr from the prototype (Bernabeu & Lynott, 2024,
 # doi:10.5281/zenodo.10615953). It covers the territory of simr (Green & MacLeod, 2016)
-# and mixedpower (Kumle et al., 2021), driven here by the portable design spec. v0.1
-# handles one within-subject/within-item factor (single contrast column) with a gaussian
-# or shifted_lognormal response.
+# and mixedpower (Kumle et al., 2021), driven here by the portable design spec. The
+# backend handles one within-subject/within-item factor (single contrast column) with a
+# gaussian or shifted_lognormal response.
 
 #' Simulation-based power and design analysis for a crossed mixed-effects design
 #'
@@ -21,7 +21,8 @@
 #' and Type M design-analysis errors alongside power, and in parallelising its replicates
 #' through the `workers` argument.
 #'
-#' @param spec A design specification (path or list) with exactly one within-unit factor.
+#' @param spec A design specification (path or list) with exactly one within-unit factor and
+#'   a crossed design with an item unit.
 #' @param n_sims Number of Monte Carlo replicates.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
@@ -29,7 +30,8 @@
 #'   own index, any worker count returns results identical to a serial run. The mixed-model
 #'   fits dominate the cost, so the speed-up is close to linear in the number of cores.
 #' @return A list with elements `n_sims`, `n_converged`, `alpha`, `power`, `n_significant`,
-#'   `true_effect`, `mean_estimate`, `type_s`, and `type_m`.
+#'   `true_effect`, `mean_estimate`, `type_s`, and `type_m`. `power` is the proportion of
+#'   significant results among the converged replicates (`n_converged`), not among `n_sims`.
 #' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
@@ -73,8 +75,10 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 # functions can create one cluster and reuse it across grid points.
 .power_mixed_impl <- function(spec, n_sims, alpha, cl = NULL) {
   if (is.character(spec)) spec <- load_spec(spec)
+  if (is.null(spec$units$item))
+    stop("power_mixed() requires a crossed design with an item unit.", call. = FALSE)
   within <- Filter(function(f) !is.null(f$vary_within), spec$factors)
-  if (length(within) != 1) stop("v0.1 power_mixed expects exactly one within factor.")
+  if (length(within) != 1) stop("power_mixed() expects exactly one within factor.")
   f <- within[[1]]; fname <- f$name
   col <- names(f$contrasts)[1]; cvals <- f$contrasts[[col]]; levs <- f$levels
   beta <- spec$fixed$coefficients[[col]]
@@ -138,8 +142,9 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run.
-#' @return A data frame with one row per sample size and columns `n_subject`, `power`, and
-#'   `type_m`.
+#' @return A data frame with one row per sample size and columns `n_subject`, `power`,
+#'   `type_m`, and `n_converged`. As in [power_mixed()], `power` at each sample size is the
+#'   proportion of significant results among the `n_converged` converged replicates.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
 #'   of generalized linear mixed models by simulation. \emph{Methods in Ecology and
 #'   Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
@@ -176,7 +181,8 @@ power_curve_mixed <- function(spec, subject_ns, n_sims = 60, alpha = 0.05, worke
   parts <- lapply(subject_ns, function(n) {
     s <- spec; s$units$subject$n <- n
     r <- .power_mixed_impl(s, n_sims = n_sims, alpha = alpha, cl = cl)
-    data.frame(n_subject = n, power = r$power, type_m = r$type_m)
+    data.frame(n_subject = n, power = r$power, type_m = r$type_m,
+               n_converged = r$n_converged)
   })
   do.call(rbind, parts)
 }

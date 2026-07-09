@@ -7,7 +7,8 @@
 power_mixed(spec, n_sims = 100, alpha = 0.05, workers = 1)
 }
 \arguments{
-\item{spec}{A design specification (path or list) with exactly one within-unit factor.}
+\item{spec}{A design specification (path or list) with exactly one within-unit factor and
+a crossed design with an item unit.}
 
 \item{n_sims}{Number of Monte Carlo replicates.}
 
@@ -20,7 +21,8 @@ fits dominate the cost, so the speed-up is close to linear in the number of core
 }
 \value{
 A list with elements `n_sims`, `n_converged`, `alpha`, `power`, `n_significant`,
-  `true_effect`, `mean_estimate`, `type_s`, and `type_m`.
+  `true_effect`, `mean_estimate`, `type_s`, and `type_m`. `power` is the proportion of
+  significant results among the converged replicates (`n_converged`), not among `n_sims`.
 }
 \description{
 For each replicate, simulate from the ground-truth specification, fit the maximal model

@@ -20,8 +20,9 @@ each grid point. The default of 1 runs serially, and any worker count returns re
 identical to a serial run.}
 }
 \value{
-A data frame with one row per sample size and columns `n_subject`, `power`, and
-  `type_m`.
+A data frame with one row per sample size and columns `n_subject`, `power`,
+  `type_m`, and `n_converged`. As in [power_mixed()], `power` at each sample size is the
+  proportion of significant results among the `n_converged` converged replicates.
 }
 \description{
 Sweep the number of subjects and compute mixed-effects power at each, to locate where

@@ -109,6 +109,13 @@ simulate_design <- function(spec) {
 
   rng <- make_rng(spec$seed)
   per_subject <- if (has_item) spec$units$item$per_subject else NULL
+  if (!is.null(per_subject)) {
+    if (per_subject < 1)
+      stop("per_subject (", per_subject, ") must be at least 1", call. = FALSE)
+    if (per_subject > I)
+      stop("per_subject (", per_subject, ") cannot exceed the number of items (", I, ")",
+           call. = FALSE)
+  }
 
   # ---- canonical row order; per-subject item subsets (if any) are the first RNG draws ----
   rows <- list()

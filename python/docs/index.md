@@ -7,15 +7,19 @@ Given the same spec and seed, all three produce bit-identical data.
 
 ## Install
 
-The package is not yet on PyPI. Install it from a checkout of the repository:
+```bash
+pip install pilotr             # core engine (pure Python, dependency-free)
+pip install "pilotr[power]"    # + scipy, for the simulation-based power demo
+```
+
+Requires Python 3.9 or later; the generative core has no dependencies. `scipy` (for `power`)
+and `statsmodels` with `pandas` (for `power_mixed`) are optional extras. For development,
+install from a checkout of the repository instead:
 
 ```bash
 git clone https://github.com/pablobernabeu/pilotr.git
-pip install ./pilotr/python          # add the [power] extra for the scipy-based power demo
+pip install ./pilotr/python
 ```
-
-The generative core is pure Python with no required dependencies. `scipy` (for `power`) and
-`statsmodels` with `pandas` (for `power_mixed`) are optional extras.
 
 ## Quick start
 
@@ -65,8 +69,9 @@ print(table(data.head(5)))
 
 - [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
   in R and Python.
-- [Power and design analysis](power.md): `power`, `power_curve`, and `power_mixed`.
-- [Response families](families.md): Gaussian, reaction times, accuracy, counts, ordinal, Beta.
+- [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`.
+- [Response families](families.md): Gaussian, lognormal, reaction times, accuracy, counts,
+  ordinal, Beta.
 - [Worked examples](examples.md): one ready-to-run design per family.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.

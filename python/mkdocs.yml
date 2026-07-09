@@ -7,6 +7,7 @@ docs_dir: docs
 # relative link would resolve against nested pages and break.
 copyright: >-
   <span class="mrd-footer-badges">
+  <a href="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml"><img src="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg" alt="python-tests"></a>
   <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a>
   <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   </span>

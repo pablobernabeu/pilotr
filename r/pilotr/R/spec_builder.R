@@ -4,16 +4,16 @@
 
 #' Default response-column name for a family
 #'
-#' @param family A response-family name, one of `"gaussian"`, `"shifted_lognormal"`,
-#'   `"bernoulli"`, `"poisson"`, `"ordinal"`, or `"beta"`.
+#' @param family A response-family name, one of `"gaussian"`, `"lognormal"`,
+#'   `"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or `"beta"`.
 #' @return The conventional response-column name for that family (for example `"RT"` for
-#'   `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
+#'   `"lognormal"` and `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
 #' @examples
 #' default_response_name("bernoulli")
 #' @export
 default_response_name <- function(family) {
   switch(family,
-         gaussian = "score", shifted_lognormal = "RT",
+         gaussian = "score", lognormal = "RT", shifted_lognormal = "RT",
          bernoulli = "accuracy", poisson = "count", ordinal = "rating",
          beta = "proportion", "outcome")
 }
@@ -80,7 +80,7 @@ build_spec <- function(p) {
   }
 
   resp <- list(family = p$family, name = resp_name)
-  if (p$family %in% c("gaussian", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
+  if (p$family %in% c("gaussian", "lognormal", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   if (p$family == "beta") resp$phi <- p$phi

@@ -74,8 +74,10 @@ data = simulate("design.json")
 
 The repository includes a parity check that simulates both designs in both languages and reports
 the maximum absolute difference. That difference is 0.0 across thousands of rows, with no
-categorical mismatches. The simulation core is also bit-identical across machines and R versions,
-so a design verified on a laptop reproduces exactly on an HPC node.
+categorical mismatches. The uniform stream is exact by construction, since every intermediate
+product stays below $2^{53}$, and the full pipeline has been observed bit-identical across the
+platforms tested. The parity check can be rerun on any new platform, so a design verified on a
+laptop can be confirmed on an HPC node before a large run.
 
 ## Why this matters
 
