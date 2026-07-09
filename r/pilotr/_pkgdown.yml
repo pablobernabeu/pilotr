@@ -81,8 +81,10 @@ home:
           [Contributing guide](CONTRIBUTING.html)
       citation:
         title: Citation
-        text: >
+        text: |
           [How to cite pilotr](articles/about.html)
+
+          [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
 
 footer:
   structure:
@@ -93,4 +95,4 @@ footer:
       Developed by [Pablo Bernabeu](https://pablobernabeu.github.io). Open,
       reproducible research software in R and Python.
     legal: >
-      Released under the MIT licence.
+      Released under the [MIT licence](LICENSE.html).

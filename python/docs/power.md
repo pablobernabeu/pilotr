@@ -41,20 +41,31 @@ unbiased. This is the statistical-significance filter that design analysis is me
 
 ```python exec="true" source="material-block" html="true" session="pow"
 import matplotlib.pyplot as plt
+from math import sqrt
 from pilotr import power_curve
 
-curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128], n_sims=200)
+n_sims = 200
+curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128], n_sims=n_sims)
 ns = [p["n_subject"] for p in curve]
 pw = [p["power"] for p in curve]
+# Each power estimate is a proportion over n_sims replicates, so it carries a
+# binomial Monte Carlo standard error. The shaded band is the 95% interval.
+se = [sqrt(p * (1 - p) / n_sims) for p in pw]
+lo = [max(0, p - 1.96 * s) for p, s in zip(pw, se)]
+hi = [min(1, p + 1.96 * s) for p, s in zip(pw, se)]
 
 fig, ax = plt.subplots(figsize=(6, 3.4))
 ax.axhline(0.8, ls="--", color="grey")
+ax.fill_between(ns, lo, hi, color=BLUE, alpha=0.15)
 ax.plot(ns, pw, "-o", color=BLUE)
 ax.set_ylim(0, 1)
 ax.set_xlabel("$N$ subjects")
 ax.set_ylabel("Power")
 print(show(fig))
 ```
+
+The shaded band shows the Monte Carlo interval, the binomial standard error of each
+power estimate over the `n_sims` replicates widened to a 95% envelope.
 
 ## Crossed mixed-effects power
 

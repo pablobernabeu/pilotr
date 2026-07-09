@@ -5,7 +5,7 @@
 If you use pilotr in published work, please cite it:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (Version 0.1.0) [Computer software].
+> design specification* (Version 0.2.0) [Computer software].
 > https://doi.org/10.5281/zenodo.21266313
 
 ```bibtex
@@ -13,7 +13,7 @@ If you use pilotr in published work, please cite it:
   author  = {Pablo Bernabeu},
   title   = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},
   year    = {2026},
-  version = {0.1.0},
+  version = {0.2.0},
   doi     = {10.5281/zenodo.21266313},
   url     = {https://doi.org/10.5281/zenodo.21266313}
 }

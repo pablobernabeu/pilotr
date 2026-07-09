@@ -231,6 +231,13 @@
   background: rgba(127, 180, 224, .12);
 }
 
+/* Dark-mode content links: Material derives a muted mid-blue from the palette
+   hue that overrides --md-typeset-a-color; a direct rule restores the brighter,
+   on-brand teal-light, which also lifts the contrast on the navy page. */
+[data-md-color-scheme="slate"] .md-typeset a:not(.md-button) {
+  color: var(--brand-teal-light);
+}
+
 /* ---- Tables ------------------------------------------------------------- */
 .md-typeset table:not([class]) {
   border-radius: 10px;

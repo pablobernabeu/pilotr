@@ -1,7 +1,5 @@
 # pilotr <small>(R)</small> <img src="man/figures/logo.png" align="right" height="139" alt="pilotr hex logo" />
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
-
 A feature-parity twin of the [Python package of the same name](https://pablobernabeu.github.io/pilotr/py/).
 
 Simulate experimental and behavioural data from a portable design specification, with

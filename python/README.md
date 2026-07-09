@@ -1,7 +1,5 @@
 # pilotr (Python)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
-
 Python implementation of pilotr. It simulates experimental and behavioural data from a
 portable JSON design specification, producing output that is bit-identical to the R package
 of the same name. See the [project README](https://github.com/pablobernabeu/pilotr) for the

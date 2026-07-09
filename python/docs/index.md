@@ -1,7 +1,5 @@
 # pilotr <span class="mrd-lang">(Python)</span>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
-
 `pilotr` simulates experimental and behavioural data from a portable JSON design
 specification. The same specification drives the
 [R package](https://pablobernabeu.github.io/pilotr/), a no-code web app and this Python package.
@@ -72,3 +70,5 @@ print(table(data.head(5)))
 - [Worked examples](examples.md): one ready-to-run design per family.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.
+
+Archived on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)

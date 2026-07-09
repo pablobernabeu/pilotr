@@ -74,18 +74,27 @@ diagnostic in its own right, since convergence problems are common in small cros
 The following sweep over the number of subjects shows where power crosses a target.
 
 ```{r, fig.width = 6, fig.height = 3.6}
-curve <- power_curve_mixed(spec_c, subject_ns = c(15, 30), n_sims = 12)
+n_sims <- 50
+curve <- power_curve_mixed(spec_c, subject_ns = c(12, 20, 28, 36, 44), n_sims = n_sims)
 curve
 
 library(ggplot2)
+# Each power estimate is a proportion over n_sims replicates, so it carries a
+# binomial Monte Carlo standard error. The shaded band is the 95% interval.
+curve$se <- sqrt(curve$power * (1 - curve$power) / n_sims)
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
+  geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se), ymax = pmin(1, power + 1.96 * se)),
+              alpha = .15, fill = "#2C6FB0") +
   geom_line(colour = "#2C6FB0", linewidth = 0.8) +
   geom_point(colour = "#2C6FB0", size = 2.6) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
   theme_minimal(base_size = 12)
 ```
+
+The shaded band shows the Monte Carlo interval, the binomial standard error of each
+power estimate over the `n_sims` replicates widened to a 95% envelope.
 
 ## Parallel execution
 
