@@ -138,7 +138,7 @@ intermediate products stay below 2^53 and so remain exact in IEEE-754 doubles (R
 integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241 inverse-CDF, the algorithm
 behind R's `qnorm()`, so they agree to full double precision. Everything else (Cholesky factors
 for correlated random effects, and inverse-CDF draws for the Poisson, Bernoulli and ordinal
-families) derives from those two in a documented draw order (see `spec/SPEC.md`). The same
+families) derives from those two in a documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)). The same
 specification and seed therefore yield identical data in R and Python, and the generator is
 auditable and free of external dependencies.
 

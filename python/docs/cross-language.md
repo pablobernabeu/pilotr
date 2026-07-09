@@ -35,7 +35,7 @@ library(pilotr)
 write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 ```
 
-The numeric columns match to the last digit. The repository's `python/examples/parity_check.py`
+The numeric columns match to the last digit. The repository's [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
 runs this comparison across the worked example designs and reports the maximum difference,
 which is zero up to floating-point accumulation.
 

@@ -1,7 +1,7 @@
 # Worked examples
 
 One ready-to-run specification per design family ships with the package, in the repository's
-`spec/examples/` directory. The same JSON files drive the R package and the no-code app. Each is
+[`spec/examples/`](https://github.com/pablobernabeu/pilotr/tree/main/spec/examples) directory. The same JSON files drive the R package and the no-code app. Each is
 simulated below, showing the design it describes and the first rows of the data it produces. The
 specification format is documented on the [Specification](specification.md) page.
 

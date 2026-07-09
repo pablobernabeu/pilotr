@@ -57,7 +57,7 @@ spec_c <- build_spec(list(
   name = "priming", seed = 1, design_kind = "within", include_items = TRUE,
   n_subject = 24, n_item = 18,
   factor_name = "condition", lev1 = "related", lev2 = "unrelated",
-  intercept = 6, effect = 0.05,
+  intercept = 6, effect = 0.06,
   subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
@@ -75,7 +75,7 @@ The following sweep over the number of subjects shows where power crosses a targ
 
 ```{r, fig.width = 6, fig.height = 3.6}
 n_sims <- 50
-curve <- power_curve_mixed(spec_c, subject_ns = c(12, 20, 28, 36, 44), n_sims = n_sims)
+curve <- power_curve_mixed(spec_c, subject_ns = c(8, 12, 16, 24, 32, 44, 56), n_sims = n_sims)
 curve
 
 library(ggplot2)
