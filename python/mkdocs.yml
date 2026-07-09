@@ -6,6 +6,10 @@ docs_dir: docs
 # The licence link is absolute: the copyright line renders on every page, and a
 # relative link would resolve against nested pages and break.
 copyright: >-
+  <span class="mrd-footer-badges">
+  <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a>
+  <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  </span>
   Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a> ·
   Released under the
   <a href="https://pablobernabeu.github.io/pilotr/py/licence/">MIT licence</a>
@@ -50,11 +54,12 @@ extra_css:
 # matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
-  - Cross-language reproducibility: cross-language.md
-  - Power and design analysis: power.md
-  - Response families: families.md
-  - Worked examples: examples.md
-  - Specification format: specification.md
+  - Guides:
+      - Cross-language reproducibility: cross-language.md
+      - Power and design analysis: power.md
+      - Response families: families.md
+      - Worked examples: examples.md
+      - Specification format: specification.md
   - API reference: api.md
   - Changelog: changelog.md
   - About: about.md
