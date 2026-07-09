@@ -87,8 +87,25 @@ ggplot(curve, aes(n_subject, power)) +
   theme_minimal(base_size = 12)
 ```
 
-For a high-resolution sweep, these analyses are fully parallel and scale well on a cluster.
-The repository includes a SLURM array job
+## Parallel execution
+
+Every power and precision analysis in pilotr takes a `workers` argument that spreads the
+Monte Carlo replicates across local cores. Each replicate seeds the shared cross-language
+RNG from its own index, so the results are identical to a serial run whatever the worker
+count, and parallelisation costs nothing in reproducibility. The mixed-model fits dominate
+the running time, which makes the speed-up close to linear in the number of cores. In a
+sweep the worker pool is created once and reused across all sample sizes.
+
+```{r, eval = FALSE}
+power_curve_mixed(spec_c, subject_ns = seq(20, 60, 10), n_sims = 500, workers = 8)
+```
+
+This design answers a serial bottleneck familiar from `simr::powerCurve()`, which this
+package's maintainer previously worked around by splitting the sample-size grid across
+separate jobs by hand and recombining the results afterwards
+([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
+In pilotr the same gain takes one argument. For runs beyond a single machine, the
+repository includes a SLURM array job
 ([`hpc/precision_array.slurm`](https://github.com/pablobernabeu/pilotr/blob/main/hpc/precision_array.slurm))
 that runs the precision sweep across many cores.
 

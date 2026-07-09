@@ -10,7 +10,8 @@ precision_design(
   formula = NULL,
   prep = NULL,
   rope = 0.05,
-  n_sims = 100
+  n_sims = 100,
+  workers = 1
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ written as `a_b`).}
 `abs(beta) < rope` is treated as practically equivalent to zero.}
 
 \item{n_sims}{Number of Monte Carlo replicates.}
+
+\item{workers}{Number of local worker processes over which to spread the replicates.
+The default of 1 runs serially. Because every replicate seeds the shared RNG from its
+own index, any worker count returns results identical to a serial run.}
 }
 \value{
 A data frame with one row per focal effect and columns `param`, `true`,

@@ -4,7 +4,7 @@
 \alias{power_curve_mixed}
 \title{Power curve over sample size for a crossed mixed-effects design}
 \usage{
-power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05)
+power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05, workers = 1)
 }
 \arguments{
 \item{spec}{A design specification (path or list) with one within-unit factor.}
@@ -14,6 +14,10 @@ power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05)
 \item{n_sims}{Number of Monte Carlo replicates per point.}
 
 \item{alpha}{Two-sided significance level.}
+
+\item{workers}{Number of local worker processes over which to spread the replicates at
+each grid point. The default of 1 runs serially, and any worker count returns results
+identical to a serial run.}
 }
 \value{
 A data frame with one row per sample size and columns `n_subject`, `power`, and
@@ -21,8 +25,17 @@ A data frame with one row per sample size and columns `n_subject`, `power`, and
 }
 \description{
 Sweep the number of subjects and compute mixed-effects power at each, to locate where
-power crosses a target. Calls [power_mixed()] and so requires the `lme4` and `lmerTest`
-packages.
+power crosses a target. Runs the same replicate loop as [power_mixed()] and so requires
+the `lme4` and `lmerTest` packages.
+}
+\details{
+Like [power_mixed()], this function runs pilotr's own simulation loop over the portable
+design specification rather than wrapping an existing package. It covers territory
+pioneered by `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow,
+2021), and differs in being driven by the portable cross-language specification with
+bit-identical R and Python output, in reporting Type S and Type M errors, and in
+built-in parallelisation: with `workers > 1` a single worker pool is created once and
+reused across all sample sizes in the sweep.
 }
 \examples{
 \donttest{
@@ -37,4 +50,13 @@ if (requireNamespace("lme4", quietly = TRUE) &&
   power_curve_mixed(spec, subject_ns = c(12, 18), n_sims = 8)
 }
 }
+}
+\references{
+Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
+  of generalized linear mixed models by simulation. \emph{Methods in Ecology and
+  Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
+
+  Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+  linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+  Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
 }

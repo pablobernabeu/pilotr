@@ -4,7 +4,7 @@
 \alias{power_design}
 \title{Simulation-based power and design analysis for a two-group Gaussian design}
 \usage{
-power_design(spec, n_sims = 1000, alpha = 0.05)
+power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
 }
 \arguments{
 \item{spec}{A design specification (path or list) for a two-group Gaussian design.}
@@ -12,6 +12,10 @@ power_design(spec, n_sims = 1000, alpha = 0.05)
 \item{n_sims}{Number of Monte Carlo replicates.}
 
 \item{alpha}{Two-sided significance level.}
+
+\item{workers}{Number of local worker processes over which to spread the replicates.
+The default of 1 runs serially. Because every replicate seeds the shared RNG from its
+own index, any worker count returns results identical to a serial run.}
 }
 \value{
 A list with elements `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`,

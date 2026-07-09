@@ -1,6 +1,6 @@
 Package: pilotr
 Title: Simulate Experimental and Behavioural Data from a Portable Design Specification
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Pablo", "Bernabeu", role = c("aut", "cre"),
            email = "pcbernabeu@gmail.com",
@@ -19,7 +19,7 @@ License: MIT + file LICENSE
 URL: https://pablobernabeu.github.io/pilotr/, https://github.com/pablobernabeu/pilotr
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
-Imports: jsonlite, stats
+Imports: jsonlite, parallel, stats
 Suggests: shiny, future, promises, ggplot2, lme4, lmerTest, callr, knitr,
     rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr

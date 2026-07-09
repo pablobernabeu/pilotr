@@ -11,7 +11,8 @@ precision_curve(
   formula = NULL,
   prep = NULL,
   rope = 0.05,
-  n_sims = 60
+  n_sims = 60,
+  workers = 1
 )
 }
 \arguments{
@@ -29,6 +30,10 @@ of focal coefficient names.}
 \item{rope}{Half-width of the region of practical equivalence.}
 
 \item{n_sims}{Number of Monte Carlo replicates per sample size.}
+
+\item{workers}{Number of local worker processes over which to spread the replicates at
+each sample size. The default of 1 runs serially, and any worker count returns results
+identical to a serial run. The worker pool is created once and reused across the sweep.}
 }
 \value{
 A data frame with one row per focal effect and sample size, adding an `n_subject`
@@ -36,7 +41,7 @@ A data frame with one row per focal effect and sample size, adding an `n_subject
 }
 \description{
 Sweep the number of subjects and report the ROPE decision probabilities at each size, to
-identify the minimum analysable N at which a focal effect reaches a determinate decision
+identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
 with a target probability (for example 0.90). Calls [precision_design()] and so requires
 the `lme4` package.
 }

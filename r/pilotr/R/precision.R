@@ -24,6 +24,9 @@
 #' @param rope Half-width of the region of practical equivalence; an effect with
 #'   `abs(beta) < rope` is treated as practically equivalent to zero.
 #' @param n_sims Number of Monte Carlo replicates.
+#' @param workers Number of local worker processes over which to spread the replicates.
+#'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
+#'   own index, any worker count returns results identical to a serial run.
 #' @return A data frame with one row per focal effect and columns `param`, `true`,
 #'   `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`.
 #' @examples
@@ -39,31 +42,40 @@
 #' }
 #' }
 #' @export
-precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.05, n_sims = 100) {
+precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.05,
+                             n_sims = 100, workers = 1) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_design() requires the 'lme4' package; please install it.", call. = FALSE)
   if (is.character(spec)) spec <- load_spec(spec)
+  workers <- .check_workers(workers)
+  cl <- NULL
+  if (workers > 1L) {
+    cl <- parallel::makeCluster(workers)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+  }
+  .precision_design_impl(spec, focal, formula = formula, prep = prep, rope = rope,
+                         n_sims = n_sims, cl = cl)
+}
+
+# The replicate loop behind precision_design(), taking an optional PSOCK cluster so that
+# precision_curve() can create one cluster and reuse it across grid points.
+.precision_design_impl <- function(spec, focal, formula, prep, rope, n_sims, cl = NULL) {
   if (is.null(formula)) formula <- model_formula(spec)
-  if (is.null(prep)) prep <- function(d) model_data(spec, d)
+  if (is.null(prep)) prep <- .default_prep(spec)
   fnames <- if (!is.null(names(focal))) names(focal) else as.character(focal)
   W <- setNames(lapply(fnames, function(.) numeric(0)), fnames)
   OUT <- setNames(integer(length(fnames)), fnames); INS <- OUT; NC <- 0L
   base <- spec$seed
-  for (i in seq_len(n_sims)) {
-    s <- spec; s$seed <- base + i
-    d <- prep(simulate_design(s))
-    fit <- tryCatch(suppressWarnings(suppressMessages(
-      lme4::lmer(formula, data = d, control = lme4::lmerControl(calc.derivs = FALSE)))),
-      error = function(e) NULL)
-    if (is.null(fit)) next
+  res <- .p_lapply(seq_len(n_sims), .precision_rep, cl = cl, spec = spec, base = base,
+                   prep = prep, formula = formula, fnames = fnames, rope = rope)
+  for (r in res) {
+    if (is.null(r)) next
     NC <- NC + 1L
-    est <- lme4::fixef(fit); se <- sqrt(diag(as.matrix(stats::vcov(fit))))
     for (f in fnames) {
-      if (!(f %in% names(est))) next
-      lo <- est[f] - 1.96 * se[f]; hi <- est[f] + 1.96 * se[f]
-      W[[f]] <- c(W[[f]], hi - lo)
-      if (lo > rope || hi < -rope) OUT[f] <- OUT[f] + 1L
-      if (lo > -rope && hi < rope) INS[f] <- INS[f] + 1L
+      if (!r$present[[f]]) next
+      W[[f]] <- c(W[[f]], r$width[[f]])
+      if (r$out[[f]]) OUT[f] <- OUT[f] + 1L
+      if (r$ins[[f]]) INS[f] <- INS[f] + 1L
     }
   }
   data.frame(
@@ -71,6 +83,33 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
     true = if (!is.null(names(focal))) unname(focal) else NA_real_,
     mean_ci_width = vapply(fnames, function(f) if (length(W[[f]])) mean(W[[f]]) else NA_real_, numeric(1)),
     p_meaningful = OUT / NC, p_equivalent = INS / NC, n_converged = NC, row.names = NULL)
+}
+
+# The default data-preparation function, built in its own small frame so that only the
+# spec (not the caller's whole frame, cluster included) travels to PSOCK workers.
+.default_prep <- function(spec) function(d) model_data(spec, d)
+
+# One precision replicate. Kept at top level so that only the arguments travel to PSOCK
+# workers. Returns NULL when the fit fails; otherwise, per focal effect, the CI width and
+# the two ROPE decisions, with `present` recording whether the effect was in the fit.
+.precision_rep <- function(i, spec, base, prep, formula, fnames, rope) {
+  s <- spec; s$seed <- base + i
+  d <- prep(simulate_design(s))
+  fit <- tryCatch(suppressWarnings(suppressMessages(
+    lme4::lmer(formula, data = d, control = lme4::lmerControl(calc.derivs = FALSE)))),
+    error = function(e) NULL)
+  if (is.null(fit)) return(NULL)
+  est <- lme4::fixef(fit); se <- sqrt(diag(as.matrix(stats::vcov(fit))))
+  present <- setNames(fnames %in% names(est), fnames)
+  width <- setNames(rep(NA_real_, length(fnames)), fnames)
+  out <- setNames(logical(length(fnames)), fnames); ins <- out
+  for (f in fnames[present]) {
+    lo <- est[f] - 1.96 * se[f]; hi <- est[f] + 1.96 * se[f]
+    width[f] <- hi - lo
+    out[f] <- lo > rope || hi < -rope
+    ins[f] <- lo > -rope && hi < rope
+  }
+  list(present = present, width = width, out = out, ins = ins)
 }
 
 #' Precision and ROPE curve over sample size
@@ -88,6 +127,9 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #' @param prep Optional data-preparation function; if `NULL` it is derived via [model_data()].
 #' @param rope Half-width of the region of practical equivalence.
 #' @param n_sims Number of Monte Carlo replicates per sample size.
+#' @param workers Number of local worker processes over which to spread the replicates at
+#'   each sample size. The default of 1 runs serially, and any worker count returns results
+#'   identical to a serial run. The worker pool is created once and reused across the sweep.
 #' @return A data frame with one row per focal effect and sample size, adding an `n_subject`
 #'   column to the columns returned by [precision_design()].
 #' @examples
@@ -103,13 +145,23 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #' }
 #' }
 #' @export
-precision_curve <- function(spec, focal, subject_ns, formula = NULL, prep = NULL, rope = 0.05, n_sims = 60) {
+precision_curve <- function(spec, focal, subject_ns, formula = NULL, prep = NULL, rope = 0.05,
+                            n_sims = 60, workers = 1) {
+  if (!requireNamespace("lme4", quietly = TRUE))
+    stop("precision_curve() requires the 'lme4' package; please install it.", call. = FALSE)
   if (is.character(spec)) spec <- load_spec(spec)
   if (is.null(formula)) formula <- model_formula(spec)
-  if (is.null(prep)) prep <- function(d) model_data(spec, d)
+  if (is.null(prep)) prep <- .default_prep(spec)
+  workers <- .check_workers(workers)
+  cl <- NULL
+  if (workers > 1L) {
+    cl <- parallel::makeCluster(workers)   # one cluster, reused across the whole sweep
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+  }
   parts <- lapply(subject_ns, function(n) {
     s <- spec; s$units$subject$n <- n
-    cbind(n_subject = n, precision_design(s, focal, formula = formula, prep = prep, rope = rope, n_sims = n_sims))
+    cbind(n_subject = n, .precision_design_impl(s, focal, formula = formula, prep = prep,
+                                                rope = rope, n_sims = n_sims, cl = cl))
   })
   do.call(rbind, parts)
 }

@@ -4,7 +4,7 @@
 \alias{power_mixed}
 \title{Simulation-based power and design analysis for a crossed mixed-effects design}
 \usage{
-power_mixed(spec, n_sims = 100, alpha = 0.05)
+power_mixed(spec, n_sims = 100, alpha = 0.05, workers = 1)
 }
 \arguments{
 \item{spec}{A design specification (path or list) with exactly one within-unit factor.}
@@ -12,6 +12,11 @@ power_mixed(spec, n_sims = 100, alpha = 0.05)
 \item{n_sims}{Number of Monte Carlo replicates.}
 
 \item{alpha}{Two-sided significance level.}
+
+\item{workers}{Number of local worker processes over which to spread the replicates.
+The default of 1 runs serially. Because every replicate seeds the shared RNG from its
+own index, any worker count returns results identical to a serial run. The mixed-model
+fits dominate the cost, so the speed-up is close to linear in the number of cores.}
 }
 \value{
 A list with elements `n_sims`, `n_converged`, `alpha`, `power`, `n_significant`,
@@ -22,6 +27,15 @@ For each replicate, simulate from the ground-truth specification, fit the maxima
 `y ~ cond + (1 + cond | subject) + (1 + cond | item)` with `lmerTest`, and test the fixed
 effect using Satterthwaite p-values. Reports power together with the Type S and Type M
 errors of Gelman and Carlin (2014). Requires the `lme4` and `lmerTest` packages.
+}
+\details{
+`power_mixed()` is not a wrapper around an existing power package: it runs pilotr's own
+simulation loop over the portable design specification. It covers territory pioneered by
+`simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
+which it is indebted. pilotr differs in being driven by the portable cross-language
+specification, so that R and Python produce bit-identical data, in reporting the Type S
+and Type M design-analysis errors alongside power, and in parallelising its replicates
+through the `workers` argument.
 }
 \examples{
 \donttest{
@@ -36,4 +50,17 @@ if (requireNamespace("lme4", quietly = TRUE) &&
   power_mixed(spec, n_sims = 10)
 }
 }
+}
+\references{
+Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+  (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+  9(6), 641-651. \doi{10.1177/1745691614551642}
+
+  Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of
+  generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
+  7(4), 493-498. \doi{10.1111/2041-210x.12504}
+
+  Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+  linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+  Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
 }

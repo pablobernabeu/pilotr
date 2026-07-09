@@ -112,7 +112,9 @@ Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 ## Running at scale (HPC / SLURM)
 
 Simulation-based power and precision analyses are embarrassingly parallel, so they scale well on
-a cluster. The [`hpc/`](hpc/) directory holds a SLURM array job
+a cluster. Within one machine, every power and precision analysis takes a `workers` argument
+that parallelises the replicates in-process, with results identical to a serial run, while the
+SLURM array below covers multi-node sweeps. The [`hpc/`](hpc/) directory holds a SLURM array job
 ([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
 [`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size, with
 replicates parallelised across cores via `mclapply` and results written to project storage.

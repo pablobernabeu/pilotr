@@ -90,3 +90,40 @@ Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is cl
 variance, so the power estimate is conservative for random-slope designs. The R package's
 `lme4`-based `power_mixed` is the reference. Data generation is identical across the two
 languages, and the discrepancy is in the estimator alone.
+
+`power_mixed` runs pilotr's own simulation loop over the portable specification rather
+than wrapping an existing power package. It covers territory pioneered by
+[simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
+[mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021).
+pilotr differs in being driven by the cross-language specification with bit-identical R
+and Python data, in reporting Type S and Type M errors alongside power and in built-in
+parallelisation.
+
+## Parallel execution
+
+Every analysis on this page takes a `workers` argument that spreads the Monte Carlo
+replicates across local processes with `concurrent.futures`. Each replicate seeds the
+shared cross-language RNG from its own index, so the results are identical to a serial
+run whatever the worker count, and parallelisation costs nothing in reproducibility. The
+model fits dominate the running time, which makes the speed-up close to linear in the
+number of processes. `power_curve` starts one process pool and reuses it across the whole
+sweep.
+
+```python
+from pilotr import power, power_curve, power_mixed
+
+power(spec, n_sims=2000, workers=8)          # same numbers as workers=1, sooner
+power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128], n_sims=2000, workers=8)
+power_mixed(spec_mixed, n_sims=500, workers=8)
+```
+
+When calling a parallel analysis from a script on Windows or macOS, put the call inside an
+`if __name__ == "__main__":` block, the standard requirement for Python's spawn-based
+multiprocessing. Interactive sessions and notebooks need no guard.
+
+This design answers a serial bottleneck familiar from `simr::powerCurve()` in R, which
+pilotr's maintainer previously worked around by splitting the sample-size grid across
+separate jobs by hand and recombining the results afterwards
+([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
+In pilotr the same gain takes one argument. For runs beyond a single machine, the
+repository's SLURM array job covers multi-node sweeps.

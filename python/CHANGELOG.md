@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-09
+
+### Added
+
+- `power`, `power_mixed` and `power_curve` gain a `workers` argument that spreads the
+  Monte Carlo replicates across local processes with
+  `concurrent.futures.ProcessPoolExecutor`. Because every replicate seeds the shared
+  cross-language RNG from its own index, any worker count returns results identical to
+  a serial run.
+- `power_curve` starts one process pool and reuses it across the whole sweep, so a
+  high-resolution curve pays the pool start-up cost only once.
+
 ## [0.1.0] - 2026-07-08
 
 The first public version of the Python package. It simulates experimental and
