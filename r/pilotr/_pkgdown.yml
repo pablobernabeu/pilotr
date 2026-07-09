@@ -1,5 +1,17 @@
 url: https://pablobernabeu.github.io/pilotr
 
+# The R package lives in a subdirectory of the monorepo (r/pilotr/), not at the
+# repository root. Left to auto-detect, pkgdown's per-file "Source: <path>"
+# links (reference pages, articles, NEWS) resolve one level too high and 404.
+# Point the source template at the package's actual subdirectory; the repo and
+# issue links stay at the root, which is correct for those.
+repo:
+  url:
+    home: https://github.com/pablobernabeu/pilotr/
+    source: https://github.com/pablobernabeu/pilotr/blob/main/r/pilotr/
+    issue: https://github.com/pablobernabeu/pilotr/issues/
+    user: https://github.com/
+
 authors:
   Pablo Bernabeu:
     href: https://pablobernabeu.github.io
