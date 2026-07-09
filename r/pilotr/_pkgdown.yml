@@ -20,7 +20,7 @@ navbar:
   # search, light/dark switch, live demo and GitHub on the right.
   structure:
     left:  [intro, reference, articles, news, about]
-    right: [search, lightswitch, demo, github]
+    right: [app, search, github, lightswitch]
   components:
     intro:
       text: Get started
@@ -28,8 +28,6 @@ navbar:
     articles:
       text: Articles
       menu:
-      - text: Getting started with pilotr
-        href: articles/getting-started.html
       - text: Power and design analysis
         href: articles/power-analysis.html
       - text: Precision and ROPE design analysis
@@ -43,9 +41,11 @@ navbar:
     about:
       text: About
       href: articles/about.html
-    demo:
-      text: "Live demo"
+    app:
+      text: App
       href: https://pablobernabeu.github.io/pilotr/demo/
+      icon: fa-play
+      aria-label: The no-code app
     github:
       icon: fa-github
       href: https://github.com/pablobernabeu/pilotr

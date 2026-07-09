@@ -4,7 +4,7 @@ This is the first submission of pilotr to CRAN.
 
 ## R CMD check results
 
-Local `R CMD check --as-cran` (Windows 11 x64, R 4.6.0):
+Local `R CMD check --as-cran` (Windows 11 x64, R 4.6.1, 2026-07-08):
 
 0 errors | 0 warnings | 1 note
 
@@ -12,7 +12,7 @@ The single note is the standard "New submission" note.
 
 ## Test environments
 
-* Local: Windows 11 x64, R 4.6.0.
+* Local: Windows 11 x64, R 4.6.1.
 * win-builder: R-devel, R-release and R-oldrelease.
 
 All four checks gave the same result: 0 errors, 0 warnings, and only the standard

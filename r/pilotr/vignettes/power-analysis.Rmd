@@ -88,8 +88,9 @@ ggplot(curve, aes(n_subject, power)) +
 ```
 
 For a high-resolution sweep, these analyses are fully parallel and scale well on a cluster.
-The repository includes a SLURM array job (`hpc/precision_array.slurm`) that runs the
-precision sweep across many cores.
+The repository includes a SLURM array job
+([`hpc/precision_array.slurm`](https://github.com/pablobernabeu/pilotr/blob/main/hpc/precision_array.slurm))
+that runs the precision sweep across many cores.
 
 ## A bridge to the Bayesian workflow
 

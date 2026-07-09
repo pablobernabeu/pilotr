@@ -1,4 +1,6 @@
-# pilotr (Python)
+# pilotr <span class="mrd-lang">(Python)</span>
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
 
 `pilotr` simulates experimental and behavioural data from a portable JSON design
 specification. The same specification drives the

@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question or usage help
-    url: https://github.com/pablobernabeu/pilotr/discussions
-    about: For questions about using pilotr, please start a discussion.
+    url: https://github.com/pablobernabeu/pilotr/issues
+    about: For questions about using pilotr, please open an issue.

@@ -46,9 +46,10 @@ theme:
 extra_css:
   - stylesheets/brand.css
 
+# The app is reached through the header App pill (overrides/partials/header.html),
+# matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
-  - Live demo (no-code app): https://pablobernabeu.github.io/pilotr/demo/
   - Cross-language reproducibility: cross-language.md
   - Power and design analysis: power.md
   - Response families: families.md

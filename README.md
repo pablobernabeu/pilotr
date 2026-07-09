@@ -112,15 +112,16 @@ Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 ## Running at scale (HPC / SLURM)
 
 Simulation-based power and precision analyses are embarrassingly parallel, so they scale well on
-a cluster. The `hpc/` directory holds a SLURM array job (`precision_array.slurm` and its runner
-`precision_array.R`) that runs one task per sample size, with replicates parallelised across
-cores via `mclapply` and results written to project storage.
+a cluster. The [`hpc/`](hpc/) directory holds a SLURM array job
+([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
+[`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size, with
+replicates parallelised across cores via `mclapply` and results written to project storage.
 
 A reference deployment on the Oxford ARC cluster keeps the code and scripts under
 `~/pilotr_toolkit/` in home, and the heavy material (the R library, results and logs) under
 `/data/<project>/pilotr_toolkit/`, since the home quota is small. A one-time bootstrap installs
 `lme4` and `lmerTest` into the data-area library (`R_LIBS`); the R module already provides
-`jsonlite`. Submitting `sbatch hpc/precision_array.slurm` runs the sweep, and a quick smoke test
+`jsonlite`. Submitting [`sbatch hpc/precision_array.slurm`](hpc/precision_array.slurm) runs the sweep, and a quick smoke test
 is `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`. Each task
 writes one `precision_N<n>.csv`, and these combine into a full precision-vs-*N* curve at a
 resolution far beyond a laptop. The simulation core is bit-identical across machines and R
