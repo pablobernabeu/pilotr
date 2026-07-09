@@ -34,7 +34,7 @@ cat(generate_r_script(spec))              # a self-contained, reproducible scrip
 ## Try it without installing
 
 A serverless build runs entirely in your browser, with no installation required and no data
-uploaded. It is available as a [live demo](https://pablobernabeu.github.io/pilotr/demo/).
+uploaded. It is available as a [no-code app](https://pablobernabeu.github.io/pilotr/app/).
 
 ## Learn more
 

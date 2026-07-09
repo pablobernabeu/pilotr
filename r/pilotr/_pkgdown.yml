@@ -55,7 +55,7 @@ navbar:
       href: articles/about.html
     app:
       text: App
-      href: https://pablobernabeu.github.io/pilotr/demo/
+      href: https://pablobernabeu.github.io/pilotr/app/
       icon: fa-play
       aria-label: The no-code app
     github:

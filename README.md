@@ -34,7 +34,7 @@ including a guide to
 [the no-code app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.html).
 The Python package's guides and API reference are at
 <https://pablobernabeu.github.io/pilotr/py/>. The no-code app itself can be tried in the
-browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/demo/>. The
+browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/app/>. The
 portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
 
 ## How pilotr compares to existing tools
@@ -104,7 +104,7 @@ the downloaded spec.
 Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
 # The published website is built by CI (.github/workflows/site.yml): the pkgdown docs at
-# https://pablobernabeu.github.io/pilotr/ and this demo at https://pablobernabeu.github.io/pilotr/demo/
+# https://pablobernabeu.github.io/pilotr/ and this demo at https://pablobernabeu.github.io/pilotr/app/
 ```
 
 ## Running at scale (HPC / SLURM)

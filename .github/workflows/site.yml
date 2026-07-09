@@ -1,6 +1,6 @@
 # Build and publish the project website: the pkgdown documentation site at the repo-root
-# Pages URL (https://pablobernabeu.github.io/pilotr/) and the serverless shinylive demo at
-# the /demo/ sub-path. Both are deployed together to the gh-pages branch on every relevant
+# Pages URL (https://pablobernabeu.github.io/pilotr/) and the serverless no-code app at
+# the /app/ sub-path. Both are deployed together to the gh-pages branch on every relevant
 # push to main (and on demand). Free, native GitHub Actions; the gh-pages push uses the
 # built-in GITHUB_TOKEN. Replaces the former manual deploy script.
 
@@ -52,15 +52,15 @@ jobs:
         shell: Rscript {0}
         run: pkgdown::build_site(pkg = "r/pilotr", install = FALSE, new_process = FALSE)
 
-      - name: Build shinylive demo into the site (/demo)
+      - name: Build the no-code app into the site (/app)
         shell: Rscript {0}
         run: |
-          stage <- "demo-stage"
+          stage <- "app-stage"
           dir.create(stage, showWarnings = FALSE)
           file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "power.R", "spec_builder.R")),
                     stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
-          shinylive::export(stage, "r/pilotr/docs/demo")
+          shinylive::export(stage, "r/pilotr/docs/app")
 
       - uses: actions/setup-python@v6
         with:
