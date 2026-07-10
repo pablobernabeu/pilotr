@@ -55,7 +55,7 @@ spec <- build_spec(list(
 The portable artefact is plain JSON. This is exactly what the web application downloads and
 what the Python package reads.
 
-```{r}
+```{r, comment = ""}
 cat(spec_json(spec))
 ```
 
@@ -96,7 +96,7 @@ R and Python.
 reproduces the design with no external files. This is convenient for an appendix or a
 preregistration.
 
-```{r}
+```{r, comment = ""}
 cat(generate_r_script(spec))
 ```
 

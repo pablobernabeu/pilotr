@@ -151,7 +151,7 @@ provides the family, the fixed and random-effects formula, and a weakly-informat
 all derived from the same specification, so that the planning model and the confirmatory model
 remain consistent.
 
-```{r}
+```{r, comment = ""}
 brms_bridge(spec_c)
 ```
 
