@@ -16,8 +16,7 @@ pilotr lets you pilot a study before you run it. Describe the design you plan to
 its groups, conditions, sample sizes, effect sizes and outcome family, and pilotr generates the
 data that design would produce. You can then check the study's power and design analysis before
 gathering anything. A single specification drives three interchangeable interfaces, namely a
-no-code web app, this R package and a [Python package](https://pablobernabeu.github.io/pilotr/py/);
-given the same specification and seed, all three produce bit-identical data.
+no-code web app, this R package and the Python package.
 
 ## Installation
 
@@ -44,8 +43,7 @@ uploaded. It is available as a [no-code app](https://pablobernabeu.github.io/pil
 
 ## Learn more
 
-This is the R package's documentation. The companion Python package shares the specification
-and the random-number generator, producing bit-identical data from the same specification and
-seed, while precision/ROPE analysis, the `lme4` mixed-power reference backend, the `brms`
-bridge and the app launcher live on the R side. The full repository, including the
-specification format and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.
+The [Get started article](https://pablobernabeu.github.io/pilotr/articles/getting-started.html)
+walks through the core loop of describe, simulate, inspect and export, and the other articles
+each go deeper into one part of the workflow. The full repository, including the specification
+format and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.

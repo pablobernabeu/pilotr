@@ -55,11 +55,13 @@ extra_css:
 # matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
+  # Guides ordered by workflow: simulation topics first, then power analysis,
+  # then cross-language reproducibility and the spec format as reference topics.
   - Guides:
-      - Cross-language reproducibility: cross-language.md
-      - Power and design analysis: power.md
       - Response families: families.md
       - Worked examples: examples.md
+      - Power and design analysis: power.md
+      - Cross-language reproducibility: cross-language.md
       - Specification format: specification.md
   - API reference: api.md
   - Changelog: changelog.md

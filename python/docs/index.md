@@ -67,12 +67,12 @@ print(table(data.head(5)))
 
 ## Where to go next
 
-- [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
-  in R and Python.
-- [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`.
 - [Response families](families.md): Gaussian, lognormal, reaction times, accuracy, counts,
   ordinal, Beta.
 - [Worked examples](examples.md): one ready-to-run design per family.
+- [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`.
+- [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
+  in R and Python.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.
 
