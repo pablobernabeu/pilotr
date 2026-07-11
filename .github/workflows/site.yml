@@ -57,7 +57,7 @@ jobs:
         run: |
           stage <- "app-stage"
           dir.create(stage, showWarnings = FALSE)
-          file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "power.R", "spec_builder.R")),
+          file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")),
                     stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
           shinylive::export(stage, "r/pilotr/docs/app")

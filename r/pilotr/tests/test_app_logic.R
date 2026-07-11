@@ -4,7 +4,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R"))
+for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R"))
   source(file.path(here, "..", "R", f))
 
 ok <- TRUE

@@ -4,6 +4,7 @@ args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
 source(file.path(here, "..", "R", "core.R"))
 source(file.path(here, "..", "R", "simulate.R"))
+source(file.path(here, "..", "R", "parallel.R"))
 source(file.path(here, "..", "R", "power_mixed.R"))
 
 spec <- file.path(here, "..", "..", "..", "spec", "examples", "crossed_mixed_rt.json")

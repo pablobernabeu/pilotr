@@ -12,7 +12,7 @@ if (!requireNamespace("shinylive", quietly = TRUE))
   install.packages("shinylive", repos = "https://cloud.r-project.org")
 
 unlink(stage, recursive = TRUE); dir.create(stage, recursive = TRUE, showWarnings = FALSE)
-file.copy(file.path(pkg_R, c("core.R", "simulate.R", "power.R", "spec_builder.R")), stage)
+file.copy(file.path(pkg_R, c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")), stage)
 file.copy(file.path(here, "app.R"), stage, overwrite = TRUE)
 
 cat("Exporting shinylive site (downloads webR assets on first run)...\n")

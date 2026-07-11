@@ -11,7 +11,7 @@
 library(shiny)
 library(bslib)
 library(ggplot2)
-for (f in c("core.R", "simulate.R", "power.R", "spec_builder.R")) source(f)
+for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")) source(f)
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
 
