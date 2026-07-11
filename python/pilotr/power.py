@@ -175,9 +175,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     wrapper around an existing power package. It covers territory pioneered by simr (Green
     and MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Vo and Draschkow,
     2021, doi:10.3758/s13428-021-01546-0); pilotr differs in being driven by the portable
-    cross-language spec with bit-identical R and Python data, in reporting Type S and Type M
-    errors and in built-in parallelisation via `workers` (default 1, serial), which returns
-    results identical to a serial run for any worker count.
+    cross-language spec, in reporting Type S and Type M errors and in built-in
+    parallelisation via `workers` (default 1, serial), which returns results identical to a
+    serial run for any worker count.
 
     Accuracy caveat (verified behaviour, not a bug). statsmodels fits crossed random effects
     as independent variance components and, in our tests, substantially overstates random-slope

@@ -139,10 +139,7 @@ This design answers a serial bottleneck familiar from `simr::powerCurve()`, whic
 package's maintainer previously worked around by splitting the sample-size grid across
 separate jobs by hand and recombining the results afterwards
 ([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
-In pilotr the same gain takes one argument. For runs beyond a single machine, the
-repository includes a SLURM array job
-([`hpc/precision_array.slurm`](https://github.com/pablobernabeu/pilotr/blob/main/hpc/precision_array.slurm))
-that runs the precision sweep across many cores.
+In pilotr the same gain takes one argument.
 
 ## A bridge to the Bayesian workflow
 

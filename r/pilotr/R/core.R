@@ -44,8 +44,7 @@ make_rng <- function(seed) {
 #' Inverse normal cumulative distribution function (Wichura's AS 241)
 #'
 #' Compute the standard-normal quantile for a probability using Wichura's (1988) Algorithm
-#' AS 241 (the PPND16 routine), the same algorithm underlying [stats::qnorm()]. It is
-#' implemented identically in the R and Python ports.
+#' AS 241 (the PPND16 routine), the same algorithm underlying [stats::qnorm()].
 #'
 #' @param p A probability in the open interval (0, 1).
 #' @return The standard-normal quantile (a numeric value) corresponding to `p`.

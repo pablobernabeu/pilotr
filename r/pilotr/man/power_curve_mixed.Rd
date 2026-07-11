@@ -33,10 +33,9 @@ the `lme4` and `lmerTest` packages.
 Like [power_mixed()], this function runs pilotr's own simulation loop over the portable
 design specification rather than wrapping an existing package. It covers territory
 pioneered by `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow,
-2021), and differs in being driven by the portable cross-language specification with
-bit-identical R and Python output, in reporting Type S and Type M errors, and in
-built-in parallelisation: with `workers > 1` a single worker pool is created once and
-reused across all sample sizes in the sweep.
+2021), and differs in being driven by the portable cross-language specification, in
+reporting Type S and Type M errors, and in built-in parallelisation: with `workers > 1`
+a single worker pool is created once and reused across all sample sizes in the sweep.
 }
 \examples{
 \donttest{

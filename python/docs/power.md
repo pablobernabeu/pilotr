@@ -106,9 +106,8 @@ languages, and the discrepancy is in the estimator alone.
 than wrapping an existing power package. It covers territory pioneered by
 [simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
 [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021).
-pilotr differs in being driven by the cross-language specification with bit-identical R
-and Python data, in reporting Type S and Type M errors alongside power and in built-in
-parallelisation.
+pilotr differs in being driven by the portable cross-language specification, in reporting
+Type S and Type M errors alongside power and in built-in parallelisation.
 
 ## Parallel execution
 
@@ -136,5 +135,4 @@ This design answers a serial bottleneck familiar from `simr::powerCurve()` in R,
 pilotr's maintainer previously worked around by splitting the sample-size grid across
 separate jobs by hand and recombining the results afterwards
 ([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
-In pilotr the same gain takes one argument. For runs beyond a single machine, the
-repository's SLURM array job covers multi-node sweeps.
+In pilotr the same gain takes one argument.

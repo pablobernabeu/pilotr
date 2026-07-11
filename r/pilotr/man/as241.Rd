@@ -14,8 +14,7 @@ The standard-normal quantile (a numeric value) corresponding to `p`.
 }
 \description{
 Compute the standard-normal quantile for a probability using Wichura's (1988) Algorithm
-AS 241 (the PPND16 routine), the same algorithm underlying [stats::qnorm()]. It is
-implemented identically in the R and Python ports.
+AS 241 (the PPND16 routine), the same algorithm underlying [stats::qnorm()].
 }
 \examples{
 as241(0.975)   # about 1.959964

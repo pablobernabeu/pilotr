@@ -35,9 +35,8 @@ errors of Gelman and Carlin (2014). Requires the `lme4` and `lmerTest` packages.
 simulation loop over the portable design specification. It covers territory pioneered by
 `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
 which it is indebted. pilotr differs in being driven by the portable cross-language
-specification, so that R and Python produce bit-identical data, in reporting the Type S
-and Type M design-analysis errors alongside power, and in parallelising its replicates
-through the `workers` argument.
+specification, in reporting the Type S and Type M design-analysis errors alongside
+power, and in parallelising its replicates through the `workers` argument.
 }
 \examples{
 \donttest{

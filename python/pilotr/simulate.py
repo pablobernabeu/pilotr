@@ -1,8 +1,7 @@
 """Spec parsing and the generative simulation engine.
 
-Implements the data-generating process that the prototype app does not provide. The model is
-a linear predictor with user-specified fixed effect sizes, covering categorical contrasts and
-continuous predictors as well as their interactions. To this it adds crossed by-subject and
+The model is a linear predictor with user-specified fixed effect sizes, covering categorical
+contrasts and continuous predictors as well as their interactions. To this it adds crossed by-subject and
 by-item random intercepts and slopes (on contrasts or continuous predictors), and passes the
 result through a link and a response family. The RNG draw order follows spec/SPEC.md, namely
 per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
@@ -113,15 +112,15 @@ def simulate(spec) -> Dataset:
     """Simulate a data set from a design specification.
 
     Build a linear predictor from the fixed effect sizes (categorical contrasts, continuous
-    predictors, and their interactions) plus the crossed by-subject and by-item random
-    intercepts and slopes, then map it through the chosen response family. Given the same
-    specification and seed, the output is bit-identical to the R package's `simulate_design`.
+    predictors and their interactions) plus the crossed by-subject and by-item random
+    intercepts and slopes, then map it through the chosen response family.
 
     Parameters
     ----------
     spec : dict or str
         A design specification, either an already-parsed `dict` or a path to a JSON spec
-        file. See `spec/SPEC.md` for the format.
+        file. The format is documented at
+        https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md.
 
     Returns
     -------

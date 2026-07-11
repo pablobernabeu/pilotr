@@ -17,9 +17,8 @@
 #' simulation loop over the portable design specification. It covers territory pioneered by
 #' `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
 #' which it is indebted. pilotr differs in being driven by the portable cross-language
-#' specification, so that R and Python produce bit-identical data, in reporting the Type S
-#' and Type M design-analysis errors alongside power, and in parallelising its replicates
-#' through the `workers` argument.
+#' specification, in reporting the Type S and Type M design-analysis errors alongside
+#' power, and in parallelising its replicates through the `workers` argument.
 #'
 #' @param spec A design specification (path or list) with exactly one within-unit factor and
 #'   a crossed design with an item unit.
@@ -130,10 +129,9 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #' Like [power_mixed()], this function runs pilotr's own simulation loop over the portable
 #' design specification rather than wrapping an existing package. It covers territory
 #' pioneered by `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow,
-#' 2021), and differs in being driven by the portable cross-language specification with
-#' bit-identical R and Python output, in reporting Type S and Type M errors, and in
-#' built-in parallelisation: with `workers > 1` a single worker pool is created once and
-#' reused across all sample sizes in the sweep.
+#' 2021), and differs in being driven by the portable cross-language specification, in
+#' reporting Type S and Type M errors, and in built-in parallelisation: with `workers > 1`
+#' a single worker pool is created once and reused across all sample sizes in the sweep.
 #'
 #' @param spec A design specification (path or list) with one within-unit factor.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
