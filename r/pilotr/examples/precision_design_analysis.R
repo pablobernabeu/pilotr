@@ -7,7 +7,7 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-for (f in c("core.R", "simulate.R", "autoformula.R", "precision.R", "brms_bridge.R"))
+for (f in c("core.R", "simulate.R", "autoformula.R", "parallel.R", "precision.R", "brms_bridge.R"))
   source(file.path(here, "..", "R", f))
 suppressPackageStartupMessages(library(lme4))
 spec <- load_spec(file.path(here, "..", "..", "..", "spec", "examples", "reading_time_continuous.json"))
