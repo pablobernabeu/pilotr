@@ -40,3 +40,8 @@ Issues = "https://github.com/pablobernabeu/pilotr/issues"
 
 [tool.setuptools]
 packages = ["pilotr"]
+
+[tool.setuptools.package-data]
+# Ship the example design specifications inside the wheel so pilotr_example()
+# can reach them from an installed copy.
+pilotr = ["examples/*.json"]

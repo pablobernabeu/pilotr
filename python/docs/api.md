@@ -9,6 +9,8 @@ The public API. Import these from the top-level `pilotr` package, for example
 
 ::: pilotr.simulate.load_spec
 
+::: pilotr.examples.pilotr_example
+
 ::: pilotr.simulate.Dataset
 
 ## Power and design analysis

@@ -5,6 +5,15 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `pilotr_example()` lists the design specifications shipped with the package,
+  one per design family, and returns the path to each for `load_spec()`. The
+  JSON files now travel inside the wheel, so the *Worked examples* page and any
+  installed copy can reach them. This matches the R twin's `pilotr_example()`.
+
 ## [0.1.0] - 2026-07-10
 
 The first public version of the Python package. It simulates experimental and

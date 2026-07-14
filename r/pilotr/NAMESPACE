@@ -1,6 +1,7 @@
 export(make_rng)
 export(as241)
 export(load_spec)
+export(pilotr_example)
 export(simulate_design)
 export(power_design)
 export(power_mixed)

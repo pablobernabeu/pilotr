@@ -1,0 +1,12 @@
+{
+  "name": "partial_crossing",
+  "seed": 313,
+  "units": { "subject": { "n": 60 }, "item": { "n": 40, "per_subject": 12 } },
+  "factors": [
+    { "name": "condition", "levels": ["a", "b"], "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"] }
+  ],
+  "fixed": { "intercept": 500, "coefficients": { "cond": 20 } },
+  "random": { "subject": { "intercept_sd": 40 }, "item": { "intercept_sd": 30 } },
+  "response": { "family": "gaussian", "name": "rt", "sigma": 80, "round": 4 }
+}

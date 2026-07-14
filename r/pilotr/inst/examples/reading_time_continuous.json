@@ -1,0 +1,26 @@
+{
+  "name": "reading_time_continuous",
+  "seed": 11784,
+  "units": { "subject": { "n": 50 }, "item": { "n": 40 } },
+  "predictors": [
+    { "name": "SyntaxPC", "varies_by": "item", "mean": 0, "sd": 1 },
+    { "name": "CoherencePC", "varies_by": "item", "mean": 0, "sd": 1 },
+    { "name": "age", "varies_by": "subject", "mean": 0, "sd": 1 }
+  ],
+  "factors": [
+    { "name": "narration", "levels": ["off", "on"], "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"] }
+  ],
+  "fixed": {
+    "intercept": -1.2,
+    "coefficients": {
+      "SyntaxPC": 0.10, "CoherencePC": -0.06, "age": -0.08, "cond": 0.04,
+      "SyntaxPC:age": 0.05, "CoherencePC:age": 0.03, "cond:age": 0.02
+    }
+  },
+  "random": {
+    "subject": { "intercept_sd": 0.15, "slopes": { "SyntaxPC": 0.06, "CoherencePC": 0.04 } },
+    "item": { "intercept_sd": 0.10 }
+  },
+  "response": { "family": "lognormal", "name": "reading_time_per_word", "sigma": 0.25, "round": 5 }
+}

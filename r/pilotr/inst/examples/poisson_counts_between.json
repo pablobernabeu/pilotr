@@ -1,0 +1,16 @@
+{
+  "name": "poisson_counts_between",
+  "seed": 4242,
+  "units": { "subject": { "n": 2000 } },
+  "factors": [
+    {
+      "name": "group",
+      "levels": ["control", "treatment"],
+      "contrasts": { "grp": [-0.5, 0.5] },
+      "between": "subject"
+    }
+  ],
+  "fixed": { "intercept": 1.6094, "coefficients": { "grp": 0.4 } },
+  "random": {},
+  "response": { "family": "poisson", "name": "count" }
+}

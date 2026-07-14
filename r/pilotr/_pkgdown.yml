@@ -44,6 +44,8 @@ navbar:
       menu:
       - text: Response families
         href: articles/response-families.html
+      - text: Worked examples
+        href: articles/worked-examples.html
       - text: Power and design analysis
         href: articles/power-analysis.html
       - text: Precision and ROPE design analysis

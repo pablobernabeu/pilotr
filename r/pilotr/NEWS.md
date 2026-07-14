@@ -16,6 +16,10 @@ Initial release.
   given the same specification and seed.
 * A `per_subject` value below 1 or above the number of items is rejected with a clear
   error; the Python package raises on the same inputs.
+* `pilotr_example()` lists the design specifications shipped with the package, one per
+  design family, and returns the path to each for `load_spec()`. They are the same JSON
+  files that drive the Python package and the no-code app. The *Worked examples* article
+  simulates every one.
 
 ## Power and precision analysis
 

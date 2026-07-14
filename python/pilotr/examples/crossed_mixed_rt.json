@@ -1,0 +1,27 @@
+{
+  "name": "crossed_mixed_rt",
+  "seed": 90210,
+  "units": { "subject": { "n": 30 }, "item": { "n": 24 } },
+  "factors": [
+    {
+      "name": "condition",
+      "levels": ["related", "unrelated"],
+      "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"]
+    }
+  ],
+  "fixed": { "intercept": 6.0, "coefficients": { "cond": 0.05 } },
+  "random": {
+    "subject": {
+      "intercept_sd": 0.12,
+      "slopes": { "cond": 0.04 },
+      "correlations": { "intercept,cond": 0.2 }
+    },
+    "item": {
+      "intercept_sd": 0.08,
+      "slopes": { "cond": 0.02 },
+      "correlations": { "intercept,cond": -0.1 }
+    }
+  },
+  "response": { "family": "shifted_lognormal", "name": "RT", "sigma": 0.30, "shift": 200, "round": 4 }
+}

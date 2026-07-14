@@ -1,0 +1,53 @@
+---
+title: "Worked examples"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Worked examples}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(pilotr)
+```
+
+pilotr ships one ready-to-run specification per design family. The same JSON
+files drive the Python twin and the no-code app, so a design authored once runs
+unchanged across all three. `pilotr_example()` lists them, and returns the path
+to each for `load_spec()`.
+
+```{r list}
+pilotr_example()
+```
+
+Each specification is simulated below, showing the family it draws from and the
+first rows of the data it produces. The specification format itself is covered
+in the [Get started](getting-started.html) article.
+
+```{r examples, results = "asis"}
+desc <- c(
+  between_2group_gaussian = "Two-group between-subjects Gaussian.",
+  crossed_mixed_rt        = "Crossed by-subject and by-item reaction times, shifted lognormal.",
+  beta_proportion         = "Bounded proportions through the Beta family.",
+  ordinal_likert_between  = "Five-point Likert responses via a cumulative-logit model.",
+  poisson_counts_between  = "Count outcomes through a log link.",
+  reading_time_continuous = "A continuous predictor with a lognormal reading-time outcome.",
+  nested_clusters         = "Subjects nested in higher-level clusters, an extra grouping factor.",
+  partial_crossing        = "Each subject sees a sampled subset of items."
+)
+
+for (name in pilotr_example()) {
+  spec <- load_spec(pilotr_example(name))
+  d <- simulate_design(spec)
+  blurb <- if (name %in% names(desc)) desc[[name]] else ""
+  cat(sprintf("\n### %s\n\n", name))
+  cat(sprintf("%s The `%s` family, %d rows.\n\n",
+              blurb, spec$response$family, nrow(d)))
+  cat(knitr::kable(head(d, 4)), sep = "\n")
+  cat("\n\n")
+}
+```

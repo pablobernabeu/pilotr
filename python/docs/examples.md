@@ -1,7 +1,6 @@
 # Worked examples
 
-One ready-to-run specification per design family ships with the package, in the repository's
-[`spec/examples/`](https://github.com/pablobernabeu/pilotr/tree/main/spec/examples) directory. The same JSON files drive the R package and the no-code app. Each is
+One ready-to-run specification per design family ships with the package. `pilotr_example()` lists them and returns the path to each for `load_spec()`, and the same JSON files drive the R package and the no-code app. Each is
 simulated below, showing the design it describes and the first rows of the data it produces. The
 specification format is documented on the [Specification](specification.md) page.
 
@@ -11,8 +10,7 @@ from _exec import table
 ```
 
 ```python exec="true" session="ex"
-import glob
-from pilotr import simulate, load_spec
+from pilotr import simulate, load_spec, pilotr_example
 
 DESC = {
     "between_2group_gaussian": "Two-group between-subjects Gaussian.",
@@ -26,9 +24,8 @@ DESC = {
 }
 
 out = []
-for path in sorted(glob.glob("../spec/examples/*.json")):
-    spec = load_spec(path)
-    name = spec["name"]
+for name in pilotr_example():
+    spec = load_spec(pilotr_example(name))
     fam = spec["response"]["family"]
     d = simulate(spec)
     out.append(f"### {name}")

@@ -136,3 +136,29 @@ test_that("generate_r_script emits a self-contained, runnable script", {
   expect_true(grepl("simulate_design", rs, fixed = TRUE))
   expect_true(grepl("spec <-", rs, fixed = TRUE))
 })
+
+test_that("pilotr_example lists the bundled specs and resolves each to a file", {
+  names <- pilotr_example()
+  expect_type(names, "character")
+  expect_true(length(names) >= 1)
+  expect_true("between_2group_gaussian" %in% names)
+  for (nm in names) {
+    path <- pilotr_example(nm)
+    expect_true(file.exists(path))
+    # Every shipped example loads and simulates without error.
+    spec <- load_spec(path)
+    d <- simulate_design(spec)
+    expect_s3_class(d, "data.frame")
+    expect_gt(nrow(d), 0L)
+  }
+  # The .json extension is optional.
+  expect_identical(
+    pilotr_example("between_2group_gaussian"),
+    pilotr_example("between_2group_gaussian.json")
+  )
+})
+
+test_that("pilotr_example rejects unknown or malformed names", {
+  expect_error(pilotr_example("no_such_example"), "Unknown example")
+  expect_error(pilotr_example(c("a", "b")), "single example name")
+})
