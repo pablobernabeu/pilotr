@@ -19,6 +19,33 @@ draw order.
 
 The draw order is specified on the [Specification](specification.md) page.
 
+## Determinism in Python
+
+The same specification and seed always give the same data.
+
+```python exec="true" source="material-block" session="xl"
+from pilotr import simulate
+
+spec = {
+    "name": "demo", "seed": 2024,
+    "units": {"subject": {"n": 200}},
+    "factors": [{"name": "group", "levels": ["a", "b"],
+                 "contrasts": {"effect": [-0.5, 0.5]}, "between": "subject"}],
+    "fixed": {"intercept": 100, "coefficients": {"effect": 5}},
+    "response": {"family": "gaussian", "name": "score", "sigma": 10},
+}
+
+print(simulate(spec).rows == simulate(spec).rows)
+```
+
+Changing the seed changes the draws, while the structure and the ground-truth parameters stay
+fixed.
+
+```python exec="true" source="material-block" session="xl"
+spec2 = dict(spec, seed=spec["seed"] + 1)
+print(simulate(spec).column("score") == simulate(spec2).column("score"))
+```
+
 ## Verifying parity
 
 Simulate the same spec and seed in both languages and compare. In Python:

@@ -96,6 +96,10 @@ print(table([{k: res[k] for k in
               ("power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m")}]))
 ```
 
+`n_converged` reports how many replicates the mixed model actually fit. Convergence problems
+are common in small crossed designs, so this is a useful diagnostic in its own right, and it is
+the denominator of `power`, the significant proportion among the converged replicates.
+
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
 `true_effect`). One caveat: the statsmodels variance-component fit overstates random-slope
 variance, so the power estimate is conservative for random-slope designs. The R package's

@@ -26,7 +26,8 @@ from _exec import table, show, BLUE, RED, GREEN
 ```
 
 A large two-group draw makes each family's shape clear: Gaussian is symmetric, the shifted
-lognormal has the right skew of reaction times, and the Beta is bounded in (0, 1).
+lognormal has the right skew of reaction times, the plain lognormal is the same right-skewed
+shape without the shift and suits per-word reading times, and the Beta is bounded in (0, 1).
 
 ```python exec="true" source="material-block" html="true" session="fam"
 import matplotlib.pyplot as plt
@@ -42,14 +43,17 @@ def draw(family, intercept, effect, name, **resp):
     }
     return simulate(spec).column(name)
 
-fig, ax = plt.subplots(1, 3, figsize=(9, 3))
+fig, ax = plt.subplots(1, 4, figsize=(12, 3))
 ax[0].hist(draw("gaussian", 100, 5, "score", sigma=10), bins=40, color=BLUE, edgecolor="white")
 ax[0].set_title("Gaussian"); ax[0].set_xlabel("score")
 ax[1].hist(draw("shifted_lognormal", 6, 0.1, "RT", sigma=0.3, shift=200),
            bins=40, color=RED, edgecolor="white")
 ax[1].set_title("Shifted lognormal (RT)"); ax[1].set_xlabel("RT (ms)")
-ax[2].hist(draw("beta", 0, 0.8, "proportion", phi=8), bins=40, color=GREEN, edgecolor="white")
-ax[2].set_title("Beta"); ax[2].set_xlabel("proportion")
+ax[2].hist(draw("lognormal", -1.2, 0.1, "reading_time", sigma=0.25),
+           bins=40, color=RED, edgecolor="white")
+ax[2].set_title("Lognormal (reading time)"); ax[2].set_xlabel("reading time")
+ax[3].hist(draw("beta", 0, 0.8, "proportion", phi=8), bins=40, color=GREEN, edgecolor="white")
+ax[3].set_title("Beta"); ax[3].set_xlabel("proportion")
 for a in ax:
     a.set_ylabel("count")
 print(show(fig))

@@ -84,6 +84,13 @@ diagnostic in its own right, since convergence problems are common in small cros
 and it is the denominator of `power`, which is the significant proportion among the converged
 replicates.
 
+`power_mixed()` runs pilotr's own simulation loop over the portable specification rather than
+wrapping an existing power package. It covers territory pioneered by
+[simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
+[mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021). pilotr
+differs in being driven by the cross-language specification, in reporting Type S and Type M
+errors alongside power, and in built-in parallelisation.
+
 ## A power curve
 
 The following sweep over the number of subjects shows where power crosses a target.

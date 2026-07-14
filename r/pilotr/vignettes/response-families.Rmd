@@ -68,8 +68,17 @@ round(rt$by_group, 1)
 fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
 ```
 
-A plain `lognormal` family (the same generation without the shift) is also available for
-positive continuous outcomes such as per-word reading times.
+## Lognormal (positive continuous)
+
+The plain `lognormal` family is the shifted lognormal without the shift,
+$y = \exp(\eta + \varepsilon)$, suited to positive continuous outcomes such as per-word reading
+times. As with reaction times the effect is on the log scale.
+
+```{r}
+ln <- demo("lognormal", intercept = 6, effect = 0.1, sigma = 0.3)
+round(ln$by_group, 1)
+fam_hist(ln$y, "#7A4FB0", "Lognormal", "reading time (ms)")
+```
 
 ## Bernoulli (accuracy)
 
@@ -134,4 +143,42 @@ These match the families that researchers fit in `lme4`, `glmmTMB` and `brms`, s
 simulated here corresponds to the model that will later be fit. The point-and-click application
 exposes six of the seven families. The full engine, including the plain lognormal, continuous
 predictors, interactions, nesting and partial crossing, is available by writing the
-specification directly.
+specification directly, as shown next.
+
+## Writing the specification directly
+
+The specification is a plain list, so richer designs than the builder covers can be assembled
+by hand. Starting from a `build_spec()` result, the example below adds a continuous item-level
+predictor, an interaction with the categorical effect, a per-subject item subset (partial
+crossing) and an extra grouping factor that nests subjects.
+
+```{r}
+spec <- build_spec(list(
+  name = "reading", seed = 1, design_kind = "within", include_items = TRUE,
+  n_subject = 12, n_item = 24,
+  factor_name = "condition", lev1 = "related", lev2 = "unrelated",
+  intercept = 6, effect = 0.05,
+  subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+  item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+  family = "lognormal", resp_name = "RT", sigma = 0.25))
+
+spec$predictors <- list(list(name = "freq", varies_by = "item", mean = 0, sd = 1))
+spec$fixed$coefficients[["effect:freq"]] <- 0.02   # an interaction with the effect
+spec$units$item$per_subject <- 10                  # each subject sees 10 of the 24 items
+spec$random$class <- list(over = "subject", n = 6, intercept_sd = 0.05)  # subjects nested in classes
+
+head(simulate_design(spec))
+```
+
+The derived columns follow from the specification: `freq` is the continuous predictor and
+`class` is the nesting factor. The auto-derived formula picks up the interaction as
+`effect_freq` and the extra grouping factor as `(1 | class)`.
+
+```{r}
+model_formula(spec)
+```
+
+Ready-to-run specifications of this kind, including a continuous-predictor reading-time design,
+a nested-clusters design and a partial-crossing design, ship in the repository's
+[`spec/examples/`](https://github.com/pablobernabeu/pilotr/tree/main/spec/examples) directory,
+and `load_spec()` reads any of them back.

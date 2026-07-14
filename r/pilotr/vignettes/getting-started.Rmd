@@ -57,7 +57,9 @@ cat(spec_json(spec))
 ```
 
 You can read a specification back from a file (or string) with `load_spec()`, so a design
-authored anywhere runs everywhere.
+authored anywhere runs everywhere. The full specification format, including every field and the
+cross-language RNG draw order, is documented in
+[`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md).
 
 ## Simulate
 
@@ -107,3 +109,5 @@ cat(generate_r_script(spec))
   region of practical equivalence and sweeps sample size.
 - [Cross-language reproducibility](cross-language.html), describing the shared generator that
   makes R and Python agree to the last bit.
+- [The no-code app](the-no-code-app.html), the point-and-click interface over the same
+  specification, running in the browser or locally with `run_app()`.

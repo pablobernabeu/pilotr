@@ -56,6 +56,14 @@ model, including the contrast columns, the response transform and the mixed-mode
 model_formula(spec_c)
 ```
 
+The companion `model_data()` adds the other two derivations to a simulated data set, the
+numeric `effect` contrast column the formula's terms refer to and the `.y` response, here the
+log-transformed RT because the family is `shifted_lognormal`.
+
+```{r}
+head(model_data(spec_c, simulate_design(spec_c)))
+```
+
 ## Precision at a fixed *N*
 
 We declare the focal effect (its coefficient name and true value) and a ROPE half-width. Here
