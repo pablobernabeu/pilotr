@@ -1,6 +1,6 @@
 Package: pilotr
 Title: Simulate Experimental and Behavioural Data from a Portable Design Specification
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Pablo", "Bernabeu", role = c("aut", "cre"),
            email = "pcbernabeu@gmail.com",

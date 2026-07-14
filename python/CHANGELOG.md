@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-15
+
 ### Added
 
 - `pilotr_example()` lists the design specifications shipped with the package,
   one per design family, and returns the path to each for `load_spec()`. The
-  JSON files now travel inside the wheel, so the *Worked examples* page and any
-  installed copy can reach them. This matches the R twin's `pilotr_example()`.
+  eight JSON files now travel inside the wheel, so the *Worked examples* page and
+  any installed copy can reach them. This matches the R twin's `pilotr_example()`.
 
 ## [0.1.0] - 2026-07-10
 
@@ -47,4 +49,5 @@ and seed.
 - A documentation site whose guides execute their examples at build time, so the
   tables and figures shown are real `pilotr` output.
 
+[0.2.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.0
 [0.1.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.1.0
