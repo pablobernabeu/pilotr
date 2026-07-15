@@ -1,6 +1,6 @@
 ## Submission
 
-This is the first submission of pilotr (version 0.1.0) to CRAN.
+This is the first submission of pilotr (version 0.2.0) to CRAN.
 
 ## R CMD check results
 
@@ -13,8 +13,8 @@ The single note is the standard "New submission" note.
 ## Test environments
 
 * Local: Windows 11 x64, R 4.6.1 (R CMD check --as-cran, 2026-07-10).
-* GitHub Actions: windows-latest, macOS-latest, ubuntu-latest
-  (release, devel and oldrel-1).
+* GitHub Actions: windows-latest (release and devel), macOS-latest (release),
+  ubuntu-latest (release, devel and oldrel-1).
 
 All checks gave the same result: 0 errors, 0 warnings, and only the standard
 "New submission" note.
