@@ -57,5 +57,12 @@ model_formula <- function(spec) {
   re <- vapply(names(spec$random), function(g)
     sprintf("(%s | %s)", paste(c("1", vapply(names(spec$random[[g]]$slopes), .us, character(1))),
                                collapse = " + "), g), character(1))
-  stats::as.formula(paste(".y ~", paste(c(fixed, re), collapse = " + ")))
+  # Anchor the formula in the global environment rather than this function's evaluation
+  # frame. print.formula omits its `<environment: ...>` line only for the global
+  # environment, so any other choice trails a raw memory address that changes on every
+  # run, which is noise in the printed result and makes the documented output impossible
+  # to reproduce. Nothing is lost by it: every term is a column name that model_data()
+  # creates, and those are always resolved from the `data` argument of the fit, never
+  # through the formula's environment.
+  stats::as.formula(paste(".y ~", paste(c(fixed, re), collapse = " + ")), env = globalenv())
 }

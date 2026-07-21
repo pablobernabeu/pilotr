@@ -16,7 +16,29 @@ BLUE = "#2c6fb0"
 RED = "#b0402c"
 GREEN = "#2e8b57"
 
-plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "font.size": 11})
+# The site ships a light and a slate palette, and the same SVG is served to both, so the
+# figure furniture cannot be black. FURNITURE is a mid grey that reads against the warm
+# paper (#FBFAF6) and the navy slate ground (#0A1B2E) alike, and the figure itself is saved
+# transparent so whichever background is in force shows through. Data colours are left
+# alone: they were chosen to carry on either ground.
+FURNITURE = "#7a8794"
+
+plt.rcParams.update({
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "font.size": 11,
+    "text.color": FURNITURE,
+    "axes.labelcolor": FURNITURE,
+    "axes.edgecolor": FURNITURE,
+    "axes.titlecolor": FURNITURE,
+    "xtick.color": FURNITURE,
+    "ytick.color": FURNITURE,
+    # transparent=True does not reach the legend frame, which would otherwise keep its
+    # opaque white patch. No page draws a legend today; this keeps the next one safe.
+    "legend.facecolor": "none",
+    "legend.edgecolor": "none",
+    "legend.framealpha": 0,
+})
 
 
 def _fmt(v):
@@ -43,6 +65,6 @@ def table(rows, columns=None):
 def show(fig):
     """Return a matplotlib figure as an inline SVG string (use with ``html="true"``)."""
     buf = StringIO()
-    fig.savefig(buf, format="svg", bbox_inches="tight")
+    fig.savefig(buf, format="svg", bbox_inches="tight", transparent=True)
     plt.close(fig)
     return buf.getvalue()

@@ -8,7 +8,13 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 3.4)
+# The graphics device canvas, not the ggplot theme, is what makes a figure's background
+# opaque, so the transparent device is what lets the page colour show through. On the
+# package website that matters twice over: the light page is warm off-white rather than
+# pure white, and the dark page inverts the figure, where an opaque matte would read as a
+# slab in either mode.
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 3.4,
+                      dev.args = list(bg = "transparent"))
 ```
 
 ```{r setup}
@@ -38,9 +44,16 @@ demo <- function(family, intercept, effect, n = 4000, ...) {
 library(ggplot2)
 fam_hist <- function(y, fill, title, xlab) {
   ggplot(data.frame(y = y), aes(y)) +
-    geom_histogram(bins = 40, fill = fill, colour = "white") +
+    geom_histogram(bins = 40, fill = fill, colour = NA) +
     labs(title = title, x = xlab, y = "count") +
-    theme_minimal(base_size = 12)
+    theme_minimal(base_size = 12) +
+    # theme_minimal still paints a white plot.background over the transparent device
+    # canvas, so both surfaces have to be cleared for the page colour to reach the
+    # figure. The ink stays at its default: the website inverts the figure in dark mode,
+    # which turns the dark axis text light of its own accord.
+    theme(plot.background  = element_rect(fill = NA, colour = NA),
+          panel.background = element_rect(fill = NA, colour = NA),
+          panel.grid       = element_line(colour = "grey80"))
 }
 ```
 

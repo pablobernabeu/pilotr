@@ -47,7 +47,11 @@ for (name in pilotr_example()) {
   cat(sprintf("\n### %s\n\n", name))
   cat(sprintf("%s The `%s` family, %d rows.\n\n",
               blurb, spec$response$family, nrow(d)))
-  cat(knitr::kable(head(d, 4)), sep = "\n")
+  # These tables are printed data, so they take the site's code size rather than the prose
+  # size a pipe table would inherit. The class is what the stylesheet keys on, and
+  # table.attr reaches the output only for format = "html"; pipe output discards it.
+  cat(knitr::kable(head(d, 4), format = "html",
+                   table.attr = 'class="table data-output"'), sep = "\n")
   cat("\n\n")
 }
 ```

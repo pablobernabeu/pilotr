@@ -44,15 +44,15 @@ def draw(family, intercept, effect, name, **resp):
     return simulate(spec).column(name)
 
 fig, ax = plt.subplots(1, 4, figsize=(12, 3))
-ax[0].hist(draw("gaussian", 100, 5, "score", sigma=10), bins=40, color=BLUE, edgecolor="white")
+ax[0].hist(draw("gaussian", 100, 5, "score", sigma=10), bins=40, color=BLUE, edgecolor="none")
 ax[0].set_title("Gaussian"); ax[0].set_xlabel("score")
 ax[1].hist(draw("shifted_lognormal", 6, 0.1, "RT", sigma=0.3, shift=200),
-           bins=40, color=RED, edgecolor="white")
+           bins=40, color=RED, edgecolor="none")
 ax[1].set_title("Shifted lognormal (RT)"); ax[1].set_xlabel("RT (ms)")
 ax[2].hist(draw("lognormal", -1.2, 0.1, "reading_time", sigma=0.25),
-           bins=40, color=RED, edgecolor="white")
+           bins=40, color=RED, edgecolor="none")
 ax[2].set_title("Lognormal (reading time)"); ax[2].set_xlabel("reading time")
-ax[3].hist(draw("beta", 0, 0.8, "proportion", phi=8), bins=40, color=GREEN, edgecolor="white")
+ax[3].hist(draw("beta", 0, 0.8, "proportion", phi=8), bins=40, color=GREEN, edgecolor="none")
 ax[3].set_title("Beta"); ax[3].set_xlabel("proportion")
 for a in ax:
     a.set_ylabel("count")

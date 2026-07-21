@@ -1,0 +1,7 @@
+design,rows,columns,max_abs_diff,categorical_mismatches
+between,64,3,0,0
+crossed,1440,4,0,0
+continuous,4000,7,4.885e-15,0
+nested,4800,5,0,0
+beta,200,3,0,0
+partial,1440,4,0,0

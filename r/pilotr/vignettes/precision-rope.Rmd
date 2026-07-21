@@ -21,8 +21,10 @@ implements a precision-based design analysis against a region of practical equiv
 This is a fast, frequentist analogue of the Bayesian approach that compares a highest-density
 interval with a ROPE.
 
-> As in the power vignette, `n_sims` is kept small here so the vignette builds quickly. For real
-> planning, a value of `n_sims >= 200` is recommended.
+> As in the power vignette, the fixed-*N* analysis below uses a small `n_sims` so that the
+> vignette builds quickly, and the sample-size sweep, which needs far more model fits, was
+> precomputed with exactly the code shown and shipped with the package. For real planning we
+> recommend `n_sims >= 200`, the value the sweep uses.
 
 ## The idea
 
@@ -82,15 +84,81 @@ the expected precision.
 
 ## Sweeping sample size
 
-```{r}
-prc <- precision_curve(spec_c, focal = c(effect = 0.05), subject_ns = c(15, 30), n_sims = 15)
-prc[, c("n_subject", "param", "p_meaningful", "p_equivalent", "mean_ci_width")]
+The same ROPE has to be carried into the sweep. Leaving `rope` at its default would compare
+the interval against a region as wide as the effect itself, and the decision probability would
+then fall with *N* rather than rise.
+
+```{r, eval = FALSE}
+prc <- precision_curve(spec_c, focal = c(effect = 0.05),
+                       subject_ns = c(15, 30, 60, 100, 140, 180, 220, 260),
+                       rope = 0.02, n_sims = 200)
+prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width", "n_converged")]
 ```
 
-As *N* grows the interval tightens, `p_meaningful` rises and the design reaches a determinate
-decision more reliably. This curve can be used to choose the smallest *N* that meets a target, for
-example '`p_meaningful` ≥ 0.90', which provides a more informative criterion than power against
-a point null.
+```{r, include = FALSE}
+# The result of running exactly the chunk above, precomputed and shipped with the
+# package so that the vignette builds within CRAN's check-time budget. All 200
+# replicates converged at every sample size.
+prc <- read.csv("precision-curve-cache.csv")
+```
+
+```{r, echo = FALSE}
+prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width", "n_converged")]
+```
+
+As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
+decision more reliably. Reading the sweep for the smallest *N* that meets a target of
+'`p_meaningful` ≥ 0.90' puts this design at around 220 subjects. That is a
+more informative criterion than power against a point null, because it asks whether the study
+can distinguish the effect from a negligible one rather than merely from zero. Each estimate
+rests on 200 replicates, all of which converged, so its Monte Carlo standard error is at most
+about 0.035, which the figure below shows as a band.
+
+`p_equivalent` stays at 0 throughout, and correctly so. The true effect of 0.05 lies outside
+the ROPE by construction, so no interval should ever land entirely inside it. The column earns
+its place in designs where practical equivalence is the hypothesis of interest.
+
+```{r, fig.width = 6.5, fig.height = 3.2, dev.args = list(bg = "transparent")}
+library(ggplot2)
+# Each probability is a proportion over the converged replicates, so it carries a binomial
+# Monte Carlo standard error, and the band is its 95% interval. The two panels are on
+# different scales, hence the free y axis.
+prc$se <- sqrt(prc$p_meaningful * (1 - prc$p_meaningful) / prc$n_converged)
+panels <- c("P(CI outside the ROPE)", "Mean 95% CI width")
+long <- rbind(
+  data.frame(n_subject = prc$n_subject, panel = panels[1], y = prc$p_meaningful,
+             lo = pmax(0, prc$p_meaningful - 1.96 * prc$se),
+             hi = pmin(1, prc$p_meaningful + 1.96 * prc$se)),
+  data.frame(n_subject = prc$n_subject, panel = panels[2], y = prc$mean_ci_width,
+             lo = NA, hi = NA))
+long$panel <- factor(long$panel, levels = panels)
+# 0.90 is the target decision probability; 0.06 is the width at which a CI centred on the
+# true effect just clears the ROPE, that is 2 * (0.05 - 0.02).
+refs <- data.frame(panel = factor(panels, levels = panels), ref = c(0.90, 0.06))
+
+ggplot(long, aes(n_subject, y)) +
+  geom_hline(data = refs, aes(yintercept = ref), linetype = 2, colour = "grey60") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = .15, fill = "#2C6FB0", na.rm = TRUE) +
+  geom_line(colour = "#2C6FB0", linewidth = 0.8) +
+  geom_point(colour = "#2C6FB0", size = 2.2) +
+  facet_wrap(~ panel, scales = "free_y") +
+  labs(x = expression(italic(N) ~ "subjects"), y = NULL) +
+  theme_minimal(base_size = 12) +
+  # theme_minimal still paints a white plot.background over the transparent canvas, so both
+  # surfaces have to be cleared for the page colour to reach the figure.
+  theme(plot.background  = element_rect(fill = NA, colour = NA),
+        panel.background = element_rect(fill = NA, colour = NA),
+        panel.grid       = element_line(colour = "grey80"),
+        strip.background = element_rect(fill = NA, colour = NA))
+```
+
+The two panels answer the same question from either side. On the left, the dashed line marks
+the 0.90 target the sweep is read against. On the right it marks a width of 0.06, which is
+where a confidence interval centred on the true effect just clears a ROPE of 0.02, since the
+interval has to keep its lower limit above the ROPE and so must be narrower than
+2 × (0.05 − 0.02). Width falls below that line well before the decision probability reaches
+0.90, because an interval centred exactly on the true effect is the best case and sampling
+variation moves the centre about.
 
 ## See also
 

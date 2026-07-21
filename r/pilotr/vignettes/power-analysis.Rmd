@@ -110,7 +110,11 @@ curve <- read.csv("power-curve-cache.csv")
 curve
 ```
 
-```{r, fig.width = 6, fig.height = 3.6}
+```{r, fig.width = 6, fig.height = 3.6, dev.args = list(bg = "transparent")}
+# The transparent device canvas is what lets the page colour through: a ggplot theme alone
+# cannot do it, since the device paints white underneath. The website's dark mode then
+# inverts the figure's ink, so the axes and labels follow the theme instead of sitting on
+# an opaque matte.
 library(ggplot2)
 # Each power estimate is a proportion over the converged replicates, so it carries a
 # binomial Monte Carlo standard error. The shaded band is the 95% interval.
@@ -123,7 +127,14 @@ ggplot(curve, aes(n_subject, power)) +
   geom_point(colour = "#2C6FB0", size = 2.6) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
-  theme_minimal(base_size = 12)
+  theme_minimal(base_size = 12) +
+  # theme_minimal still paints a white plot.background over the transparent canvas, so
+  # both surfaces have to be cleared for the page colour to reach the figure. The ink is
+  # left at its default: the website inverts the figure in dark mode, which turns the dark
+  # axis text light, whereas a fixed mid-grey would be inverted into a muddy tan.
+  theme(plot.background  = element_rect(fill = NA, colour = NA),
+        panel.background = element_rect(fill = NA, colour = NA),
+        panel.grid       = element_line(colour = "grey80"))
 ```
 
 The shaded band shows the Monte Carlo interval, the binomial standard error of each

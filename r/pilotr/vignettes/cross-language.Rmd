@@ -72,12 +72,28 @@ from pilotr import simulate, load_spec
 data = simulate("design.json")
 ```
 
-The repository includes a parity check that simulates both designs in both languages and reports
-the maximum absolute difference. That difference is 0.0 across thousands of rows, with no
-categorical mismatches. The uniform stream is exact by construction, since every intermediate
-product stays below $2^{53}$, and the full pipeline has been observed bit-identical across the
-platforms tested. The parity check can be rerun on any new platform, so a design verified on a
-laptop can be confirmed on an HPC node before a large run.
+The repository includes a parity check that simulates the worked example designs in both
+languages and reports the maximum absolute difference per design.
+
+```{r, echo = FALSE}
+# Output of python/examples/parity_check.py --csv, precomputed and shipped with the
+# package: the comparison needs both a Python and an R installation, so it cannot run
+# at vignette build time.
+# max_abs_diff is read as text: as a number, kable would round 4.885e-15 to 0 and the
+# table would claim a stricter result than the check actually produced.
+knitr::kable(read.csv("parity-summary.csv", colClasses = c(max_abs_diff = "character")),
+             format = "html", table.attr = 'class="table data-output"')
+```
+
+The difference is exactly zero for every design whose responses are rounded, and about
+5e-15 for the unrounded continuous design, where R's CSV writer prints 15 significant
+digits. That residual is a number-formatting artefact of the comparison rather than a
+divergence between the generators, and it is what the check's 1e-6 tolerance is there to
+absorb. There are no categorical mismatches anywhere. The uniform stream is exact by
+construction, since every intermediate product stays below $2^{53}$, and the full pipeline has
+been observed bit-identical across the platforms tested. The parity check can be rerun on any
+new platform, so a design verified on a laptop can be confirmed on an HPC node before a large
+run.
 
 ## Why this matters
 
