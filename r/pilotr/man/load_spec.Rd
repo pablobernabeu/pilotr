@@ -11,7 +11,7 @@ load_spec(path)
 }
 \value{
 The specification as a nested list, with sub-lists left unsimplified so that the
-  structure round-trips exactly. Pass the result to [simulate_design()].
+structure round-trips exactly. Pass the result to \code{\link[=simulate_design]{simulate_design()}}.
 }
 \description{
 Load a design specification from a JSON file

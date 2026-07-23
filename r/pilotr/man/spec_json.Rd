@@ -7,11 +7,11 @@
 spec_json(spec)
 }
 \arguments{
-\item{spec}{A design specification (list), as produced by [build_spec()].}
+\item{spec}{A design specification (list), as produced by \code{\link[=build_spec]{build_spec()}}.}
 }
 \value{
 A length-one character string containing the specification as pretty-printed JSON,
-  the portable artefact that the R and 'Python' packages both consume.
+the portable artefact that the R and 'Python' packages both consume.
 }
 \description{
 Serialise a design specification to pretty-printed JSON

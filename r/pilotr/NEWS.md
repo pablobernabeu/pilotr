@@ -1,3 +1,24 @@
+# pilotr 0.2.1
+
+Released 2026-07-23.
+
+## Documentation
+
+* A package-level help topic, `?pilotr`, introduces the workflow and groups
+  every export by the stage it belongs to.
+* The reference examples that cut the replicate count so they run quickly now
+  say so, and each `n_sims` argument documents the Monte Carlo error and a
+  usable recommendation for real planning.
+* The `precision_curve()` example passes a region of practical equivalence
+  clearly inside the effect it declares. It previously fell back to a default
+  equal to that effect, the configuration the vignette warns against.
+
+## Fixes
+
+* `model_formula()` binds the global environment, so a formula prints without
+  the environment tag that varied between builds and leaked into the rendered
+  reference pages.
+
 # pilotr 0.2.0
 
 Released 2026-07-15.

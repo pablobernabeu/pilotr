@@ -18,8 +18,8 @@
 #' @return When `name` is `NULL`, a character vector of the available example
 #'   names. Otherwise, the full path to that example's JSON file, ready to pass
 #'   to [load_spec()].
-#' @seealso [load_spec()] to read a specification and [simulate_design()] to
-#'   simulate from it.
+#' @seealso [load_spec()] to read a specification and
+#'   [simulate_design()] to simulate from it.
 #' @examples
 #' pilotr_example()                       # the available examples
 #' spec <- load_spec(pilotr_example("between_2group_gaussian"))

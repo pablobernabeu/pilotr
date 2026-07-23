@@ -5,7 +5,8 @@
 #' Default response-column name for a family
 #'
 #' @param family A response-family name, one of `"gaussian"`, `"lognormal"`,
-#'   `"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or `"beta"`.
+#'   `"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or
+#'   `"beta"`.
 #' @return The conventional response-column name for that family (for example `"RT"` for
 #'   `"lognormal"` and `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
 #' @examples
@@ -20,20 +21,23 @@ default_response_name <- function(family) {
 
 #' Build a design specification from a flat list of design inputs
 #'
-#' Assemble a portable design specification (a plain list, serialisable with [spec_json()])
-#' from the flat set of inputs collected by the no-code application: sample sizes, the
-#' two-level factor and its levels, the fixed intercept and effect, the random-effect
-#' standard deviations for within-subject and crossed designs, and the response family with
-#' its parameters.
+#' Assemble a portable design specification (a plain list, serialisable with
+#' [spec_json()]) from the flat set of inputs collected by the no-code
+#' application: sample sizes, the two-level factor and its levels, the fixed
+#' intercept and effect, the random-effect standard deviations for
+#' within-subject and crossed designs, and the response family with its
+#' parameters.
 #'
-#' @param p A named list of design inputs. Common fields are `name`, `seed`, `n_subject`,
-#'   `design_kind` (`"between"` or `"within"`), `include_items`, `n_item`, `factor_name`,
-#'   `lev1`, `lev2`, `intercept`, `effect`, `family`, `resp_name`, and family parameters such
-#'   as `sigma`, `shift`, `thresholds`, or `phi`; within-design random effects use
-#'   `subj_int_sd`, `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
+#' @param p A named list of design inputs. Common fields are `name`, `seed`,
+#'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items`,
+#'   `n_item`, `factor_name`, `lev1`, `lev2`, `intercept`, `effect`,
+#'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`,
+#'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
+#'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
 #'   `item_corr`.
-#' @return A design specification as a nested list, ready for [simulate_design()],
-#'   [spec_json()], or the power and precision functions.
+#' @return A design specification as a nested list, ready for
+#'   [simulate_design()], [spec_json()], or the
+#'   power and precision functions.
 #' @examples
 #' build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "control", lev2 = "treatment", n_subject = 40,

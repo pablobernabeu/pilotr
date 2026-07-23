@@ -9,16 +9,16 @@ model_data(spec, d)
 \arguments{
 \item{spec}{A design specification (path or list).}
 
-\item{d}{A simulated data set, as returned by [simulate_design()].}
+\item{d}{A simulated data set, as returned by \code{\link[=simulate_design]{simulate_design()}}.}
 }
 \value{
-The data frame `d` augmented with the `.y` response column and the contrast and
-  interaction columns required by the auto-derived model.
+The data frame \code{d} augmented with the \code{.y} response column and the contrast and
+interaction columns required by the auto-derived model.
 }
 \description{
-Add the analysis response column `.y` (log-transformed for the lognormal families), the
+Add the analysis response column \code{.y} (log-transformed for the lognormal families), the
 numeric contrast columns implied by the categorical factors, and any interaction product
-columns (an `a:b` coefficient becomes a column `a_b`).
+columns (an \code{a:b} coefficient becomes a column \code{a_b}).
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",

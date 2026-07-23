@@ -8,12 +8,13 @@ simulate_design(spec)
 }
 \arguments{
 \item{spec}{A design specification, given either as a path to a JSON file or as an
-already-parsed list (for example from [build_spec()] or [load_spec()]).}
+already-parsed list (for example from \code{\link[=build_spec]{build_spec()}} or
+\code{\link[=load_spec]{load_spec()}}).}
 }
 \value{
-A data frame with one row per observation, containing a `subject` column, an
-  optional `item` column, any grouping, factor, and continuous-predictor columns, and the
-  response column named by the specification.
+A data frame with one row per observation, containing a \code{subject} column, an
+optional \code{item} column, any grouping, factor, and continuous-predictor columns, and the
+response column named by the specification.
 }
 \description{
 Generate an analysis-ready data set from a portable design specification: a linear

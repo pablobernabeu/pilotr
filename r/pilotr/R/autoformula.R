@@ -37,12 +37,14 @@ model_data <- function(spec, d) {
 
 #' Derive the lmer formula implied by a specification
 #'
-#' Construct the mixed-model formula (with response `.y`, as produced by [model_data()]) from
-#' the fixed-effect coefficients and random-effects structure of a specification. Interaction
-#' coefficients written `a:b` become formula terms `a_b`.
+#' Construct the mixed-model formula (with response `.y`, as produced by
+#' [model_data()]) from the fixed-effect coefficients and random-effects
+#' structure of a specification. Interaction coefficients written `a:b` become
+#' formula terms `a_b`.
 #'
 #' @param spec A design specification (path or list).
-#' @return A [stats::formula] object suitable for fitting with `lme4` or `lmerTest`.
+#' @return A [stats::formula] object suitable for fitting with `lme4` or
+#'   `lmerTest`.
 #' @examples
 #' spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
 #'   include_items = TRUE, n_subject = 10, n_item = 8, factor_name = "cond",

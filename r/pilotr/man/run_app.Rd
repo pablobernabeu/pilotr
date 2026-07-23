@@ -7,7 +7,8 @@
 run_app(..., async = NULL)
 }
 \arguments{
-\item{...}{passed to [shiny::runApp()] (e.g. `port`, `launch.browser`).}
+\item{...}{passed to \code{\link[shiny:runApp]{shiny::runApp()}} (e.g. \code{port},
+\code{launch.browser}).}
 
 \item{async}{If TRUE (default when 'future' and 'promises' are installed), set a
 multisession future plan so power runs execute in a background worker and do not block
@@ -16,7 +17,7 @@ completes in the background.}
 }
 \value{
 No return value; called for its side effect of launching the Shiny application,
-  which blocks the R session until the app is closed.
+which blocks the R session until the app is closed.
 }
 \description{
 Runs the bundled Shiny app locally. When the package is installed, the app calls the

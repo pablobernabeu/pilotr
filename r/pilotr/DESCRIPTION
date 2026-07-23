@@ -1,6 +1,6 @@
 Package: pilotr
 Title: Simulate Experimental and Behavioural Data from a Portable Design Specification
-Version: 0.2.0
+Version: 0.2.1
 Authors@R:
     person("Pablo", "Bernabeu", role = c("aut", "cre"),
            email = "pcbernabeu@gmail.com",
@@ -24,4 +24,5 @@ Suggests: shiny, future, promises, ggplot2 (>= 3.4.0), lme4, lmerTest, callr, kn
     rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.0.0

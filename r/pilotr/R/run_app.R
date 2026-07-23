@@ -8,7 +8,8 @@
 #' work is not blocked by a shared process, and power simulations can be parallelised across
 #' the user's own cores.
 #'
-#' @param ... passed to [shiny::runApp()] (e.g. `port`, `launch.browser`).
+#' @param ... passed to [shiny::runApp()] (e.g. `port`,
+#'   `launch.browser`).
 #' @param async If TRUE (default when 'future' and 'promises' are installed), set a
 #'   multisession future plan so power runs execute in a background worker and do not block
 #'   the UI. This keeps the app responsive on your own machine while a long power run

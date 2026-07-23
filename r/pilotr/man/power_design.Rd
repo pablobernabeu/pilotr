@@ -10,9 +10,9 @@ power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
 \item{spec}{A design specification (path or list) for a two-group Gaussian design.}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
-standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and `type_m` average
-over the significant replicates alone, so they settle more slowly still. At least 200
-replicates are advisable for study planning.}
+standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
+\code{type_m} average over the significant replicates alone, so they settle more
+slowly still. At least 200 replicates are advisable for study planning.}
 
 \item{alpha}{Two-sided significance level.}
 
@@ -21,9 +21,10 @@ The default of 1 runs serially. Because every replicate seeds the shared RNG fro
 own index, any worker count returns results identical to a serial run.}
 }
 \value{
-A list with elements `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`,
-  `mean_estimate`, `type_s` (sign-error rate among significant replicates), and `type_m`
-  (mean exaggeration ratio among significant replicates).
+A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{n_significant},
+\code{true_effect}, \code{mean_estimate}, \code{type_s} (sign-error rate among significant
+replicates), and \code{type_m} (mean exaggeration ratio among significant
+replicates).
 }
 \description{
 Estimate power by repeatedly simulating from the specification and applying a two-sample
@@ -39,6 +40,6 @@ power_design(spec, n_sims = 50)
 }
 \references{
 Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
-  (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
-  9(6), 641-651. \doi{10.1177/1745691614551642}
+(sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+9(6), 641-651. \doi{10.1177/1745691614551642}
 }

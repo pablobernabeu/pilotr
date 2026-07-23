@@ -14,8 +14,8 @@ brms_bridge(spec, prior_scale = 0.5, interaction_scale = NULL)
 \item{interaction_scale}{SD of the Normal prior on interaction terms (default prior_scale/2).}
 }
 \value{
-Invisibly, a list with elements `formula`, `family`, `priors`, and `code`; the
-  `code` element (a ready-to-fit `brms` model) is also printed to the console.
+Invisibly, a list with elements \code{formula}, \code{family}, \code{priors}, and \code{code}; the
+\code{code} element (a ready-to-fit \code{brms} model) is also printed to the console.
 }
 \description{
 Derive a brms formula, family, and priors from a design spec

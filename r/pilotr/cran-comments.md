@@ -1,18 +1,24 @@
 ## Submission
 
-This is the first submission of pilotr (version 0.2.0) to CRAN.
+This is the first submission of pilotr (version 0.2.1) to CRAN.
 
 ## R CMD check results
 
-Local `R CMD check --as-cran` (Windows 11 x64, R 4.6.1, 2026-07-15):
+Local `R CMD check --as-cran` (Windows 11 x64, R 4.6.1, 2026-07-23):
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 2 notes
 
 The single note is the standard "New submission" note.
 
+The local machine has no pandoc on the check subprocess PATH, so the local run
+also reports that 'README.md' and 'NEWS.md' cannot be checked. That note is an
+artefact of this machine and does not arise where pandoc is present, including
+the GitHub Actions runs above.
+
+
 ## Test environments
 
-* Local: Windows 11 x64, R 4.6.1 (R CMD check --as-cran, 2026-07-15).
+* Local: Windows 11 x64, R 4.6.1 (R CMD check --as-cran, 2026-07-23).
 * GitHub Actions: windows-latest (release and devel), macOS-latest (release),
   ubuntu-latest (release, devel and oldrel-1).
 

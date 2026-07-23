@@ -10,12 +10,14 @@ model_formula(spec)
 \item{spec}{A design specification (path or list).}
 }
 \value{
-A [stats::formula] object suitable for fitting with `lme4` or `lmerTest`.
+A \link[stats:formula]{stats::formula} object suitable for fitting with \code{lme4} or
+\code{lmerTest}.
 }
 \description{
-Construct the mixed-model formula (with response `.y`, as produced by [model_data()]) from
-the fixed-effect coefficients and random-effects structure of a specification. Interaction
-coefficients written `a:b` become formula terms `a_b`.
+Construct the mixed-model formula (with response \code{.y}, as produced by
+\code{\link[=model_data]{model_data()}}) from the fixed-effect coefficients and random-effects
+structure of a specification. Interaction coefficients written \code{a:b} become
+formula terms \code{a_b}.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

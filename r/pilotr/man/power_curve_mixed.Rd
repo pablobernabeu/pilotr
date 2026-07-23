@@ -12,9 +12,9 @@ power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05, workers = 1)
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
 \item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte
-Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_m` averages over the
-significant replicates alone, so it settles more slowly still. At least 200 replicates are
-advisable for study planning.}
+Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_m}
+averages over the significant replicates alone, so it settles more slowly
+still. At least 200 replicates are advisable for study planning.}
 
 \item{alpha}{Two-sided significance level.}
 
@@ -23,21 +23,22 @@ each grid point. The default of 1 runs serially, and any worker count returns re
 identical to a serial run.}
 }
 \value{
-A data frame with one row per sample size and columns `n_subject`, `power`,
-  `type_m`, and `n_converged`. As in [power_mixed()], `power` at each sample size is the
-  proportion of significant results among the `n_converged` converged replicates.
+A data frame with one row per sample size and columns \code{n_subject},
+\code{power}, \code{type_m}, and \code{n_converged}.
+As in \code{\link[=power_mixed]{power_mixed()}}, \code{power} at each sample size is the proportion
+of significant results among the \code{n_converged} converged replicates.
 }
 \description{
 Sweep the number of subjects and compute mixed-effects power at each, to locate where
-power crosses a target. Runs the same replicate loop as [power_mixed()] and so requires
-the `lme4` and `lmerTest` packages.
+power crosses a target. Runs the same replicate loop as \code{\link[=power_mixed]{power_mixed()}}
+and so requires the \code{lme4} and \code{lmerTest} packages.
 }
 \details{
-Like [power_mixed()], this function runs pilotr's own simulation loop over the portable
-design specification rather than wrapping an existing package. It covers territory
-pioneered by `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow,
+Like \code{\link[=power_mixed]{power_mixed()}}, this function runs pilotr's own simulation loop over
+the portable design specification rather than wrapping an existing package. It covers territory
+pioneered by \code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow,
 2021), and differs in being driven by the portable cross-language specification, in
-reporting Type S and Type M errors, and in built-in parallelisation: with `workers > 1`
+reporting Type S and Type M errors, and in built-in parallelisation: with \code{workers > 1}
 a single worker pool is created once and reused across all sample sizes in the sweep.
 }
 \examples{
@@ -57,10 +58,10 @@ if (requireNamespace("lme4", quietly = TRUE) &&
 }
 \references{
 Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
-  of generalized linear mixed models by simulation. \emph{Methods in Ecology and
-  Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
+of generalized linear mixed models by simulation. \emph{Methods in Ecology and
+Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
 
-  Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
-  linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-  Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
 }

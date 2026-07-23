@@ -7,23 +7,26 @@
 build_spec(p)
 }
 \arguments{
-\item{p}{A named list of design inputs. Common fields are `name`, `seed`, `n_subject`,
-`design_kind` (`"between"` or `"within"`), `include_items`, `n_item`, `factor_name`,
-`lev1`, `lev2`, `intercept`, `effect`, `family`, `resp_name`, and family parameters such
-as `sigma`, `shift`, `thresholds`, or `phi`; within-design random effects use
-`subj_int_sd`, `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
-`item_corr`.}
+\item{p}{A named list of design inputs. Common fields are \code{name}, \code{seed},
+\code{n_subject}, \code{design_kind} (\code{"between"} or \code{"within"}), \code{include_items},
+\code{n_item}, \code{factor_name}, \code{lev1}, \code{lev2}, \code{intercept}, \code{effect},
+\code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift},
+\code{thresholds}, or \code{phi}; within-design random effects use \code{subj_int_sd},
+\code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
+\code{item_corr}.}
 }
 \value{
-A design specification as a nested list, ready for [simulate_design()],
-  [spec_json()], or the power and precision functions.
+A design specification as a nested list, ready for
+\code{\link[=simulate_design]{simulate_design()}}, \code{\link[=spec_json]{spec_json()}}, or the
+power and precision functions.
 }
 \description{
-Assemble a portable design specification (a plain list, serialisable with [spec_json()])
-from the flat set of inputs collected by the no-code application: sample sizes, the
-two-level factor and its levels, the fixed intercept and effect, the random-effect
-standard deviations for within-subject and crossed designs, and the response family with
-its parameters.
+Assemble a portable design specification (a plain list, serialisable with
+\code{\link[=spec_json]{spec_json()}}) from the flat set of inputs collected by the no-code
+application: sample sizes, the two-level factor and its levels, the fixed
+intercept and effect, the random-effect standard deviations for
+within-subject and crossed designs, and the response family with its
+parameters.
 }
 \examples{
 build_spec(list(name = "demo", seed = 1, design_kind = "between",

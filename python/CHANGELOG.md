@@ -5,7 +5,14 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.1] - 2026-07-23
+
+### Changed
+
+- The guides load a bundled design specification through `pilotr_example()`
+  rather than by a path relative to the repository. The path resolved only
+  inside a checkout, so a reader who had installed pilotr and copied the line
+  met a missing-file error.
 
 ## [0.2.0] - 2026-07-15
 

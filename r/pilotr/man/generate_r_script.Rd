@@ -7,14 +7,14 @@
 generate_r_script(spec)
 }
 \arguments{
-\item{spec}{A design specification (list), as produced by [build_spec()].}
+\item{spec}{A design specification (list), as produced by \code{\link[=build_spec]{build_spec()}}.}
 }
 \value{
-A length-one character string containing a runnable R script that loads `pilotr`,
-  embeds the specification, and simulates the data.
+A length-one character string containing a runnable R script that loads \code{pilotr},
+embeds the specification, and simulates the data.
 }
 \description{
-Embed the specification as an R list literal (via `deparse`, which round-trips exactly), so
+Embed the specification as an R list literal (via \code{deparse}, which round-trips exactly), so
 that the returned script reproduces the design without any external file. This turns a
 design built in the no-code application into a reproducible script; the application's Verify
 button runs that script in a clean R session and confirms that it reproduces the data

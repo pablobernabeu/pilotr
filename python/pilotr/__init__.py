@@ -4,6 +4,6 @@ from .simulate import simulate, load_spec, Dataset
 from .power import power, power_curve, power_mixed
 from .examples import pilotr_example
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["RNG", "as241", "inv_logit", "simulate", "load_spec", "Dataset",
            "power", "power_curve", "power_mixed", "pilotr_example"]

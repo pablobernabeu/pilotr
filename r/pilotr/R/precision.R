@@ -25,9 +25,9 @@
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
 #'   [model_formula()].
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL`
-#'   it is derived via [model_data()], which log-transforms the outcome and builds the
-#'   contrast and interaction columns, so focal names follow the auto-formula (interactions
-#'   written as `a_b`).
+#'   it is derived via [model_data()], which log-transforms the outcome and
+#'   builds the contrast and interaction columns, so focal names follow the
+#'   auto-formula (interactions written as `a_b`).
 #' @param rope Half-width of the region of practical equivalence; an effect with
 #'   `abs(beta) < rope` is treated as practically equivalent to zero. Set it clearly narrower
 #'   than the smallest effect worth detecting, because the probability of a determinate
@@ -132,23 +132,26 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #'
 #' Sweep the number of subjects and report the ROPE decision probabilities at each size, to
 #' identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
-#' with a target probability (for example 0.90). Calls [precision_design()] and so requires
-#' the `lme4` package.
+#' with a target probability (for example 0.90). Calls
+#' [precision_design()] and so requires the `lme4` package.
 #'
 #' @param spec A design specification (path or list).
 #' @param focal A named numeric vector (coefficient name to true value) or character vector
 #'   of focal coefficient names.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
-#' @param formula Optional `lme4` formula; if `NULL` it is derived via [model_formula()].
-#' @param prep Optional data-preparation function; if `NULL` it is derived via [model_data()].
+#' @param formula Optional `lme4` formula; if `NULL` it is derived via
+#'   [model_formula()].
+#' @param prep Optional data-preparation function; if `NULL` it is derived via
+#'   [model_data()].
 #' @param rope Half-width of the region of practical equivalence. Set it clearly narrower than
 #'   the smallest effect worth detecting, because the probability of a determinate meaningful
 #'   decision about an effect no larger than `rope` cannot rise above 0.5 however large the
 #'   sample, so the curve would fall with \emph{N} rather than rise.
 #' @param n_sims Number of Monte Carlo replicates per sample size. `p_meaningful` and
-#'   `p_equivalent` are proportions over the converged replicates, so they carry a Monte Carlo
-#'   standard error of about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims`
-#'   is small. At least 200 replicates are advisable for real planning.
+#'   `p_equivalent` are proportions over the converged replicates, so they carry
+#'   a Monte Carlo standard error of about `sqrt(p * (1 - p) / n_sims)` and move
+#'   in coarse steps when `n_sims` is small. At least 200 replicates are
+#'   advisable for real planning.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each sample size. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run. The worker pool is created once and reused across the sweep.

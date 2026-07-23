@@ -7,21 +7,21 @@
 pilotr_example(name = NULL)
 }
 \arguments{
-\item{name}{The base name of an example, with or without the `.json`
-extension, for example `"between_2group_gaussian"`. When `NULL` (the
+\item{name}{The base name of an example, with or without the \code{.json}
+extension, for example \code{"between_2group_gaussian"}. When \code{NULL} (the
 default), the available example names are returned instead of a path.}
 }
 \value{
-When `name` is `NULL`, a character vector of the available example
-  names. Otherwise, the full path to that example's JSON file, ready to pass
-  to [load_spec()].
+When \code{name} is \code{NULL}, a character vector of the available example
+names. Otherwise, the full path to that example's JSON file, ready to pass
+to \code{\link[=load_spec]{load_spec()}}.
 }
 \description{
 pilotr ships one ready-to-run specification per design family, as JSON, in the
-package's `examples/` directory. These are the same files that drive the
+package's \verb{examples/} directory. These are the same files that drive the
 Python twin and the no-code app, so a design authored in one place runs
-unchanged in the others. `pilotr_example()` lists them, or returns the path to
-one for [load_spec()].
+unchanged in the others. \code{pilotr_example()} lists them, or returns the path to
+one for \code{\link[=load_spec]{load_spec()}}.
 }
 \examples{
 pilotr_example()                       # the available examples
@@ -29,6 +29,6 @@ spec <- load_spec(pilotr_example("between_2group_gaussian"))
 head(simulate_design(spec))
 }
 \seealso{
-[load_spec()] to read a specification and [simulate_design()] to
-  simulate from it.
+\code{\link[=load_spec]{load_spec()}} to read a specification and
+\code{\link[=simulate_design]{simulate_design()}} to simulate from it.
 }

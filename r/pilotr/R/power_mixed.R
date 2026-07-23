@@ -23,17 +23,18 @@
 #' @param spec A design specification (path or list) with exactly one within-unit factor and
 #'   a crossed design with an item unit.
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
-#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and `type_m` average
-#'   over the significant replicates alone, so they settle more slowly still. At least 200
-#'   replicates are advisable for study planning.
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and
+#'   `type_m` average over the significant replicates alone, so they settle more
+#'   slowly still. At least 200 replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
 #'   own index, any worker count returns results identical to a serial run. The mixed-model
 #'   fits dominate the cost, so the speed-up is close to linear in the number of cores.
-#' @return A list with elements `n_sims`, `n_converged`, `alpha`, `power`, `n_significant`,
-#'   `true_effect`, `mean_estimate`, `type_s`, and `type_m`. `power` is the proportion of
-#'   significant results among the converged replicates (`n_converged`), not among `n_sims`.
+#' @return A list with elements `n_sims`, `n_converged`, `alpha`, `power`,
+#'   `n_significant`, `true_effect`, `mean_estimate`, `type_s`, and `type_m`.
+#'   `power` is the proportion of significant results among the converged
+#'   replicates (`n_converged`), not among `n_sims`.
 #' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
@@ -126,12 +127,12 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #' Power curve over sample size for a crossed mixed-effects design
 #'
 #' Sweep the number of subjects and compute mixed-effects power at each, to locate where
-#' power crosses a target. Runs the same replicate loop as [power_mixed()] and so requires
-#' the `lme4` and `lmerTest` packages.
+#' power crosses a target. Runs the same replicate loop as [power_mixed()]
+#' and so requires the `lme4` and `lmerTest` packages.
 #'
 #' @details
-#' Like [power_mixed()], this function runs pilotr's own simulation loop over the portable
-#' design specification rather than wrapping an existing package. It covers territory
+#' Like [power_mixed()], this function runs pilotr's own simulation loop over
+#' the portable design specification rather than wrapping an existing package. It covers territory
 #' pioneered by `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow,
 #' 2021), and differs in being driven by the portable cross-language specification, in
 #' reporting Type S and Type M errors, and in built-in parallelisation: with `workers > 1`
@@ -140,16 +141,17 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #' @param spec A design specification (path or list) with one within-unit factor.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
 #' @param n_sims Number of Monte Carlo replicates per point. A power estimate carries a Monte
-#'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_m` averages over the
-#'   significant replicates alone, so it settles more slowly still. At least 200 replicates are
-#'   advisable for study planning.
+#'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_m`
+#'   averages over the significant replicates alone, so it settles more slowly
+#'   still. At least 200 replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run.
-#' @return A data frame with one row per sample size and columns `n_subject`, `power`,
-#'   `type_m`, and `n_converged`. As in [power_mixed()], `power` at each sample size is the
-#'   proportion of significant results among the `n_converged` converged replicates.
+#' @return A data frame with one row per sample size and columns `n_subject`,
+#'   `power`, `type_m`, and `n_converged`.
+#'   As in [power_mixed()], `power` at each sample size is the proportion
+#'   of significant results among the `n_converged` converged replicates.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
 #'   of generalized linear mixed models by simulation. \emph{Methods in Ecology and
 #'   Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}

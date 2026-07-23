@@ -11,9 +11,9 @@ power_mixed(spec, n_sims = 100, alpha = 0.05, workers = 1)
 a crossed design with an item unit.}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
-standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and `type_m` average
-over the significant replicates alone, so they settle more slowly still. At least 200
-replicates are advisable for study planning.}
+standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
+\code{type_m} average over the significant replicates alone, so they settle more
+slowly still. At least 200 replicates are advisable for study planning.}
 
 \item{alpha}{Two-sided significance level.}
 
@@ -23,23 +23,24 @@ own index, any worker count returns results identical to a serial run. The mixed
 fits dominate the cost, so the speed-up is close to linear in the number of cores.}
 }
 \value{
-A list with elements `n_sims`, `n_converged`, `alpha`, `power`, `n_significant`,
-  `true_effect`, `mean_estimate`, `type_s`, and `type_m`. `power` is the proportion of
-  significant results among the converged replicates (`n_converged`), not among `n_sims`.
+A list with elements \code{n_sims}, \code{n_converged}, \code{alpha}, \code{power},
+\code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s}, and \code{type_m}.
+\code{power} is the proportion of significant results among the converged
+replicates (\code{n_converged}), not among \code{n_sims}.
 }
 \description{
 For each replicate, simulate from the ground-truth specification, fit the maximal model
-`y ~ cond + (1 + cond | subject) + (1 + cond | item)` with `lmerTest`, and test the fixed
+\code{y ~ cond + (1 + cond | subject) + (1 + cond | item)} with \code{lmerTest}, and test the fixed
 effect using Satterthwaite p-values. Reports power together with the Type S and Type M
-errors of Gelman and Carlin (2014). Requires the `lme4` and `lmerTest` packages.
+errors of Gelman and Carlin (2014). Requires the \code{lme4} and \code{lmerTest} packages.
 }
 \details{
-`power_mixed()` is not a wrapper around an existing power package: it runs pilotr's own
+\code{power_mixed()} is not a wrapper around an existing power package: it runs pilotr's own
 simulation loop over the portable design specification. It covers territory pioneered by
-`simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
+\code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021), to
 which it is indebted. pilotr differs in being driven by the portable cross-language
 specification, in reporting the Type S and Type M design-analysis errors alongside
-power, and in parallelising its replicates through the `workers` argument.
+power, and in parallelising its replicates through the \code{workers} argument.
 }
 \examples{
 \donttest{
@@ -58,14 +59,14 @@ if (requireNamespace("lme4", quietly = TRUE) &&
 }
 \references{
 Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
-  (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
-  9(6), 641-651. \doi{10.1177/1745691614551642}
+(sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+9(6), 641-651. \doi{10.1177/1745691614551642}
 
-  Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of
-  generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
-  7(4), 493-498. \doi{10.1111/2041-210x.12504}
+Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of
+generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
+7(4), 493-498. \doi{10.1111/2041-210x.12504}
 
-  Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
-  linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-  Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
 }

@@ -84,7 +84,8 @@ load_spec <- function(path) {
 #' mapped through the chosen response family.
 #'
 #' @param spec A design specification, given either as a path to a JSON file or as an
-#'   already-parsed list (for example from [build_spec()] or [load_spec()]).
+#'   already-parsed list (for example from [build_spec()] or
+#'   [load_spec()]).
 #' @return A data frame with one row per observation, containing a `subject` column, an
 #'   optional `item` column, any grouping, factor, and continuous-predictor columns, and the
 #'   response column named by the specification.

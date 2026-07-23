@@ -20,23 +20,23 @@ precision_design(
 \item{focal}{A named numeric vector mapping focal coefficient names to their true values,
 or a character vector of coefficient names.}
 
-\item{formula}{Optional `lme4` formula; if `NULL` it is derived from the specification via
-[model_formula()].}
+\item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
+\code{\link[=model_formula]{model_formula()}}.}
 
-\item{prep}{Optional function mapping a simulated data set to the modelling data; if `NULL`
-it is derived via [model_data()], which log-transforms the outcome and builds the
-contrast and interaction columns, so focal names follow the auto-formula (interactions
-written as `a_b`).}
+\item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL}
+it is derived via \code{\link[=model_data]{model_data()}}, which log-transforms the outcome and
+builds the contrast and interaction columns, so focal names follow the
+auto-formula (interactions written as \code{a_b}).}
 
 \item{rope}{Half-width of the region of practical equivalence; an effect with
-`abs(beta) < rope` is treated as practically equivalent to zero. Set it clearly narrower
+\code{abs(beta) < rope} is treated as practically equivalent to zero. Set it clearly narrower
 than the smallest effect worth detecting, because the probability of a determinate
-meaningful decision about an effect no larger than `rope` cannot rise above 0.5 however
+meaningful decision about an effect no larger than \code{rope} cannot rise above 0.5 however
 large the sample.}
 
-\item{n_sims}{Number of Monte Carlo replicates. `p_meaningful` and `p_equivalent` are
+\item{n_sims}{Number of Monte Carlo replicates. \code{p_meaningful} and \code{p_equivalent} are
 proportions over the converged replicates, so they carry a Monte Carlo standard error of
-about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims` is small. At
+about \code{sqrt(p * (1 - p) / n_sims)} and move in coarse steps when \code{n_sims} is small. At
 least 200 replicates are advisable for real planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
@@ -44,23 +44,23 @@ The default of 1 runs serially. Because every replicate seeds the shared RNG fro
 own index, any worker count returns results identical to a serial run.}
 }
 \value{
-A data frame with one row per focal effect and columns `param`, `true`,
-  `mean_ci_width`, `p_meaningful`, `p_equivalent`, and `n_converged`. The interval
-  behind `mean_ci_width` and the ROPE decisions is the Wald approximation described in
-  Details.
+A data frame with one row per focal effect and columns \code{param}, \code{true},
+\code{mean_ci_width}, \code{p_meaningful}, \code{p_equivalent}, and \code{n_converged}. The interval
+behind \code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
+Details.
 }
 \description{
 A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
 analysis. Across Monte Carlo replicates, fit the model and record, for each focal fixed
-effect, whether its 95% confidence interval falls entirely outside a region of practical
+effect, whether its 95\% confidence interval falls entirely outside a region of practical
 equivalence (a practically meaningful effect) or entirely inside it (practical equivalence
-to zero), along with the expected interval width. Requires the `lme4` package.
+to zero), along with the expected interval width. Requires the \code{lme4} package.
 }
 \details{
 The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
 from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and
 for comparability across replicates; in small samples it is somewhat narrower than a
-Satterthwaite t interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic
+Satterthwaite t interval, so \code{p_meaningful} and \code{mean_ci_width} are slightly optimistic
 at small sample sizes.
 }
 \examples{
