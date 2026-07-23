@@ -1,0 +1,120 @@
+# Simulation-based power and design analysis for a crossed mixed-effects design
+
+For each replicate, simulate from the ground-truth specification, fit
+the maximal model `y ~ cond + (1 + cond | subject) + (1 + cond | item)`
+with `lmerTest`, and test the fixed effect using Satterthwaite p-values.
+Reports power together with the Type S and Type M errors of Gelman and
+Carlin (2014). Requires the `lme4` and `lmerTest` packages.
+
+## Usage
+
+``` r
+power_mixed(spec, n_sims = 100, alpha = 0.05, workers = 1)
+```
+
+## Arguments
+
+- spec:
+
+  A design specification (path or list) with exactly one within-unit
+  factor and a crossed design with an item unit.
+
+- n_sims:
+
+  Number of Monte Carlo replicates. A power estimate carries a Monte
+  Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and
+  `type_s` and `type_m` average over the significant replicates alone,
+  so they settle more slowly still. At least 200 replicates are
+  advisable for study planning.
+
+- alpha:
+
+  Two-sided significance level.
+
+- workers:
+
+  Number of local worker processes over which to spread the replicates.
+  The default of 1 runs serially. Because every replicate seeds the
+  shared RNG from its own index, any worker count returns results
+  identical to a serial run. The mixed-model fits dominate the cost, so
+  the speed-up is close to linear in the number of cores.
+
+## Value
+
+A list with elements `n_sims`, `n_converged`, `alpha`, `power`,
+`n_significant`, `true_effect`, `mean_estimate`, `type_s`, and `type_m`.
+`power` is the proportion of significant results among the converged
+replicates (`n_converged`), not among `n_sims`.
+
+## Details
+
+`power_mixed()` is not a wrapper around an existing power package: it
+runs pilotr's own simulation loop over the portable design
+specification. It covers territory pioneered by `simr` (Green and
+MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
+which it is indebted. pilotr differs in being driven by the portable
+cross-language specification, in reporting the Type S and Type M
+design-analysis errors alongside power, and in parallelising its
+replicates through the `workers` argument.
+
+## References
+
+Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing
+Type S (sign) and Type M (magnitude) errors. *Perspectives on
+Psychological Science*, 9(6), 641-651.
+[doi:10.1177/1745691614551642](https://doi.org/10.1177/1745691614551642)
+
+Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power
+analysis of generalized linear mixed models by simulation. *Methods in
+Ecology and Evolution*, 7(4), 493-498.
+[doi:10.1111/2041-210x.12504](https://doi.org/10.1111/2041-210x.12504)
+
+Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in
+(generalized) linear mixed models: An open introduction and tutorial in
+R. *Behavior Research Methods*, 53, 2528-2543.
+[doi:10.3758/s13428-021-01546-0](https://doi.org/10.3758/s13428-021-01546-0)
+
+## Examples
+
+``` r
+# \donttest{
+if (requireNamespace("lme4", quietly = TRUE) &&
+    requireNamespace("lmerTest", quietly = TRUE)) {
+  spec <- build_spec(list(name = "p", seed = 1, design_kind = "within",
+    include_items = TRUE, n_subject = 12, n_item = 12, factor_name = "cond",
+    lev1 = "a", lev2 = "b", intercept = 6, effect = 0.05,
+    subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
+    item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
+    family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+  # n_sims is small so the example runs quickly. Use 200 or more for real planning.
+  power_mixed(spec, n_sims = 10)
+}
+#> $n_sims
+#> [1] 10
+#> 
+#> $n_converged
+#> [1] 10
+#> 
+#> $alpha
+#> [1] 0.05
+#> 
+#> $power
+#> [1] 0.2
+#> 
+#> $n_significant
+#> [1] 2
+#> 
+#> $true_effect
+#> [1] 0.05
+#> 
+#> $mean_estimate
+#> [1] 0.05286316
+#> 
+#> $type_s
+#> [1] 0
+#> 
+#> $type_m
+#> [1] 2.57308
+#> 
+# }
+```
