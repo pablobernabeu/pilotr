@@ -29,9 +29,15 @@ contrast and interaction columns, so focal names follow the auto-formula (intera
 written as `a_b`).}
 
 \item{rope}{Half-width of the region of practical equivalence; an effect with
-`abs(beta) < rope` is treated as practically equivalent to zero.}
+`abs(beta) < rope` is treated as practically equivalent to zero. Set it clearly narrower
+than the smallest effect worth detecting, because the probability of a determinate
+meaningful decision about an effect no larger than `rope` cannot rise above 0.5 however
+large the sample.}
 
-\item{n_sims}{Number of Monte Carlo replicates.}
+\item{n_sims}{Number of Monte Carlo replicates. `p_meaningful` and `p_equivalent` are
+proportions over the converged replicates, so they carry a Monte Carlo standard error of
+about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims` is small. At
+least 200 replicates are advisable for real planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because every replicate seeds the shared RNG from its
@@ -66,6 +72,7 @@ if (requireNamespace("lme4", quietly = TRUE)) {
     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+  # n_sims is small so the example runs quickly. Use 200 or more for real planning.
   precision_design(spec, focal = c(effect = 0.05), rope = 0.02, n_sims = 10)
 }
 }

@@ -7,7 +7,10 @@
 #' Gelman and Carlin (2014).
 #'
 #' @param spec A design specification (path or list) for a two-group Gaussian design.
-#' @param n_sims Number of Monte Carlo replicates.
+#' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and `type_m` average
+#'   over the significant replicates alone, so they settle more slowly still. At least 200
+#'   replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
@@ -22,6 +25,7 @@
 #' spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 64,
 #'   intercept = 100, effect = 5, family = "gaussian", resp_name = "", sigma = 10))
+#' # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #' power_design(spec, n_sims = 50)
 #' @export
 power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {

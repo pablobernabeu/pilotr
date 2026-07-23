@@ -22,7 +22,10 @@
 #'
 #' @param spec A design specification (path or list) with exactly one within-unit factor and
 #'   a crossed design with an item unit.
-#' @param n_sims Number of Monte Carlo replicates.
+#' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and `type_m` average
+#'   over the significant replicates alone, so they settle more slowly still. At least 200
+#'   replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
@@ -52,6 +55,7 @@
 #'     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
 #'     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
 #'     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+#'   # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #'   power_mixed(spec, n_sims = 10)
 #' }
 #' }
@@ -135,7 +139,10 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #'
 #' @param spec A design specification (path or list) with one within-unit factor.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
-#' @param n_sims Number of Monte Carlo replicates per point.
+#' @param n_sims Number of Monte Carlo replicates per point. A power estimate carries a Monte
+#'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_m` averages over the
+#'   significant replicates alone, so it settles more slowly still. At least 200 replicates are
+#'   advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
@@ -160,6 +167,7 @@ power_mixed <- function(spec, n_sims = 100, alpha = 0.05, workers = 1) {
 #'     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
 #'     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
 #'     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+#'   # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #'   power_curve_mixed(spec, subject_ns = c(12, 18), n_sims = 8)
 #' }
 #' }

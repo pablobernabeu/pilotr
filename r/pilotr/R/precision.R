@@ -29,8 +29,14 @@
 #'   contrast and interaction columns, so focal names follow the auto-formula (interactions
 #'   written as `a_b`).
 #' @param rope Half-width of the region of practical equivalence; an effect with
-#'   `abs(beta) < rope` is treated as practically equivalent to zero.
-#' @param n_sims Number of Monte Carlo replicates.
+#'   `abs(beta) < rope` is treated as practically equivalent to zero. Set it clearly narrower
+#'   than the smallest effect worth detecting, because the probability of a determinate
+#'   meaningful decision about an effect no larger than `rope` cannot rise above 0.5 however
+#'   large the sample.
+#' @param n_sims Number of Monte Carlo replicates. `p_meaningful` and `p_equivalent` are
+#'   proportions over the converged replicates, so they carry a Monte Carlo standard error of
+#'   about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims` is small. At
+#'   least 200 replicates are advisable for real planning.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
 #'   own index, any worker count returns results identical to a serial run.
@@ -47,6 +53,7 @@
 #'     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
 #'     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
 #'     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+#'   # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #'   precision_design(spec, focal = c(effect = 0.05), rope = 0.02, n_sims = 10)
 #' }
 #' }
@@ -134,8 +141,14 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived via [model_formula()].
 #' @param prep Optional data-preparation function; if `NULL` it is derived via [model_data()].
-#' @param rope Half-width of the region of practical equivalence.
-#' @param n_sims Number of Monte Carlo replicates per sample size.
+#' @param rope Half-width of the region of practical equivalence. Set it clearly narrower than
+#'   the smallest effect worth detecting, because the probability of a determinate meaningful
+#'   decision about an effect no larger than `rope` cannot rise above 0.5 however large the
+#'   sample, so the curve would fall with \emph{N} rather than rise.
+#' @param n_sims Number of Monte Carlo replicates per sample size. `p_meaningful` and
+#'   `p_equivalent` are proportions over the converged replicates, so they carry a Monte Carlo
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims`
+#'   is small. At least 200 replicates are advisable for real planning.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each sample size. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run. The worker pool is created once and reused across the sweep.
@@ -150,7 +163,9 @@ precision_design <- function(spec, focal, formula = NULL, prep = NULL, rope = 0.
 #'     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
 #'     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
 #'     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
-#'   precision_curve(spec, focal = c(effect = 0.05), subject_ns = c(12, 18), n_sims = 8)
+#'   # n_sims is small so the example runs quickly. Use 200 or more for real planning.
+#'   precision_curve(spec, focal = c(effect = 0.05), subject_ns = c(12, 18), rope = 0.02,
+#'                   n_sims = 8)
 #' }
 #' }
 #' @export

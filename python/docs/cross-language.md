@@ -77,8 +77,8 @@ from _exec import table, show
 ```
 
 ```python exec="true" source="material-block" session="xl"
-from pilotr import simulate, load_spec
+from pilotr import simulate, load_spec, pilotr_example
 
-data = simulate(load_spec("../spec/examples/crossed_mixed_rt.json"))
+data = simulate(load_spec(pilotr_example("crossed_mixed_rt")))
 print(table(data.head(6)))
 ```

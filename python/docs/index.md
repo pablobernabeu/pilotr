@@ -56,12 +56,13 @@ print(table(data.head(5)))          # the first rows, as a table
 dicts, and `data.to_csv("data.csv")` writes the table to disk.
 
 To run a spec authored elsewhere (for example, one downloaded from the no-code app), load it
-with `load_spec` and simulate. Here we load one of the worked examples that ship with pilotr:
+with `load_spec` and simulate. Here we load one of the worked examples that ship with pilotr,
+using `pilotr_example` to find it inside the installed package:
 
 ```python exec="true" source="material-block" session="quick"
-from pilotr import load_spec, simulate
+from pilotr import load_spec, pilotr_example, simulate
 
-data = simulate(load_spec("../spec/examples/poisson_counts_between.json"))
+data = simulate(load_spec(pilotr_example("poisson_counts_between")))
 print(table(data.head(5)))
 ```
 

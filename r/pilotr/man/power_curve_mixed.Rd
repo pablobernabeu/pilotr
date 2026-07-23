@@ -11,7 +11,10 @@ power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05, workers = 1)
 
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
-\item{n_sims}{Number of Monte Carlo replicates per point.}
+\item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte
+Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_m` averages over the
+significant replicates alone, so it settles more slowly still. At least 200 replicates are
+advisable for study planning.}
 
 \item{alpha}{Two-sided significance level.}
 
@@ -47,6 +50,7 @@ if (requireNamespace("lme4", quietly = TRUE) &&
     subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
     item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
+  # n_sims is small so the example runs quickly. Use 200 or more for real planning.
   power_curve_mixed(spec, subject_ns = c(12, 18), n_sims = 8)
 }
 }
