@@ -62,7 +62,7 @@ jobs:
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
           shinylive::export(stage, "r/pilotr/docs/app")
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
