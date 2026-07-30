@@ -52,6 +52,28 @@ jobs:
         shell: Rscript {0}
         run: pkgdown::build_site(pkg = "r/pilotr", install = FALSE, new_process = FALSE)
 
+      - name: Remove the redundant, unrendered licence stub page
+        # pkgdown always renders the bare LICENSE file (needed for CRAN's
+        # "MIT + file LICENSE" field) to its own orphaned page, alongside the
+        # full text built from LICENSE.md. Keep only the full-text page live,
+        # and drop the markdown copy pkgdown leaves beside the stub.
+        #
+        # The sitemap entry has to go with the page. pkgdown writes sitemap.xml
+        # before this step runs, so deleting the page alone left a <loc>
+        # advertising a URL that 404s -- and a sitemap is read by search engines,
+        # which is the one audience that would then follow it. pkgdown emits one
+        # <url> per line, so a line filter removes exactly that entry.
+        run: |
+          rm -f r/pilotr/docs/LICENSE-text.html r/pilotr/docs/LICENSE-text.md
+          if [ -f r/pilotr/docs/sitemap.xml ]; then
+            grep -v '/LICENSE-text\.html<' r/pilotr/docs/sitemap.xml > r/pilotr/docs/sitemap.new || true
+            if [ -s r/pilotr/docs/sitemap.new ]; then
+              mv r/pilotr/docs/sitemap.new r/pilotr/docs/sitemap.xml
+            else
+              rm -f r/pilotr/docs/sitemap.new
+            fi
+          fi
+
       - name: Build the no-code app into the site (/app)
         shell: Rscript {0}
         run: |
