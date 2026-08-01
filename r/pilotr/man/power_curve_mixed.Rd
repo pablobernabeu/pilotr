@@ -2,19 +2,28 @@
 % Please edit documentation in R/power_mixed.R
 \name{power_curve_mixed}
 \alias{power_curve_mixed}
-\title{Power curve over sample size for a crossed mixed-effects design}
+\title{Power curve over sample size for a mixed-effects design}
 \usage{
-power_curve_mixed(spec, subject_ns, n_sims = 60, alpha = 0.05, workers = 1)
+power_curve_mixed(
+  spec,
+  subject_ns,
+  focal = NULL,
+  n_sims = 60,
+  alpha = 0.05,
+  workers = 1
+)
 }
 \arguments{
-\item{spec}{A design specification (path or list) with one within-unit factor.}
+\item{spec}{A design specification (path or list).}
 
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
+\item{focal}{The fixed effects to test, as in \code{\link[=power_mixed]{power_mixed()}}.}
+
 \item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte
-Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_m}
-averages over the significant replicates alone, so it settles more slowly
-still. At least 200 replicates are advisable for study planning.}
+Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported alongside it as
+\code{power_mcse}. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
+too coarse to support a claim about a design; raise it to at least 200 for planning.}
 
 \item{alpha}{Two-sided significance level.}
 
@@ -23,23 +32,28 @@ each grid point. The default of 1 runs serially, and any worker count returns re
 identical to a serial run.}
 }
 \value{
-A data frame with one row per sample size and columns \code{n_subject},
-\code{power}, \code{type_m}, and \code{n_converged}.
-As in \code{\link[=power_mixed]{power_mixed()}}, \code{power} at each sample size is the proportion
-of significant results among the \code{n_converged} converged replicates.
+A data frame with one row per sample size and focal effect, with columns \code{n_subject},
+\code{effect}, \code{true}, \code{power}, \code{power_mcse}, \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{type_s},
+\code{type_m}, and the \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning} fit
+counts. \code{n_singular} typically falls as the sample size rises, so reading it down the sweep
+shows where the model becomes supportable.
 }
 \description{
-Sweep the number of subjects and compute mixed-effects power at each, to locate where
-power crosses a target. Runs the same replicate loop as \code{\link[=power_mixed]{power_mixed()}}
-and so requires the \code{lme4} and \code{lmerTest} packages.
+Sweep the number of subjects and compute mixed-effects power at each, to locate where power
+crosses a target. A thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a
+sample-size curve is the sweep users want most often. Requires the \code{lme4} and \code{lmerTest}
+packages.
 }
 \details{
-Like \code{\link[=power_mixed]{power_mixed()}}, this function runs pilotr's own simulation loop over
-the portable design specification rather than wrapping an existing package. It covers territory
-pioneered by \code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow,
-2021), and differs in being driven by the portable cross-language specification, in
-reporting Type S and Type M errors, and in built-in parallelisation: with \code{workers > 1}
-a single worker pool is created once and reused across all sample sizes in the sweep.
+Like \code{\link[=power_mixed]{power_mixed()}}, this runs pilotr's own simulation loop over the portable design
+specification rather than wrapping an existing package, and differs from \code{simr} (Green and
+MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021) in being driven by that
+specification, in reporting Type S and Type M errors, and in built-in parallelisation: with
+\code{workers > 1} a single worker pool is created once and reused across all sample sizes.
+
+For any axis other than sample size, call \code{\link[=sweep_spec]{sweep_spec()}} directly. Effect size is the axis a
+design analysis most often needs after sample size, and \code{\link[=design_conditions]{design_conditions()}} builds the
+coefficient overrides for it.
 }
 \examples{
 \donttest{
@@ -64,4 +78,7 @@ Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+}
+\seealso{
+\code{\link[=sweep_spec]{sweep_spec()}} for any other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

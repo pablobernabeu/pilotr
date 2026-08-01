@@ -4,12 +4,19 @@
 \alias{simulate_design}
 \title{Simulate a data set from a design specification}
 \usage{
-simulate_design(spec)
+simulate_design(spec, validate = TRUE)
 }
 \arguments{
 \item{spec}{A design specification, given either as a path to a JSON file or as an
 already-parsed list (for example from \code{\link[=build_spec]{build_spec()}} or
 \code{\link[=load_spec]{load_spec()}}).}
+
+\item{validate}{Whether to validate the specification first, via \code{\link[=validate_spec]{validate_spec()}}.
+The default \code{TRUE} catches the errors that would otherwise pass silently, such as a
+mistyped coefficient key, which resolves to no column and so sets that effect to zero.
+Validation costs a few milliseconds, so the replicate loops behind the power and precision
+functions validate once and then pass \code{FALSE}; there is rarely a reason to set it
+directly.}
 }
 \value{
 A data frame with one row per observation, containing a \code{subject} column, an

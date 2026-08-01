@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
 ```
 
 ```{r setup}
@@ -31,12 +31,16 @@ in the [Get started](getting-started.html) article.
 ```{r examples, results = "asis"}
 desc <- c(
   between_2group_gaussian = "Two-group between-subjects Gaussian.",
-  crossed_mixed_rt        = "Crossed by-subject and by-item reaction times, shifted lognormal.",
+  crossed_mixed_rt        =
+    "Crossed by-subject and by-item reaction times, shifted lognormal.",
   beta_proportion         = "Bounded proportions through the Beta family.",
-  ordinal_likert_between  = "Five-point Likert responses via a cumulative-logit model.",
+  ordinal_likert_between  =
+    "Five-point Likert responses via a cumulative-logit model.",
   poisson_counts_between  = "Count outcomes through a log link.",
-  reading_time_continuous = "A continuous predictor with a lognormal reading-time outcome.",
-  nested_clusters         = "Subjects nested in higher-level clusters, an extra grouping factor.",
+  reading_time_continuous =
+    "A continuous predictor with a lognormal reading-time outcome.",
+  nested_clusters         =
+    "Subjects nested in higher-level clusters, an extra grouping factor.",
   partial_crossing        = "Each subject sees a sampled subset of items."
 )
 
@@ -47,9 +51,10 @@ for (name in pilotr_example()) {
   cat(sprintf("\n### %s\n\n", name))
   cat(sprintf("%s The `%s` family, %d rows.\n\n",
               blurb, spec$response$family, nrow(d)))
-  # These tables are printed data, so they take the site's code size rather than the prose
-  # size a pipe table would inherit. The class is what the stylesheet keys on, and
-  # table.attr reaches the output only for format = "html"; pipe output discards it.
+  # These tables are printed data, so they take the site's code size rather
+  # than the prose size a pipe table would inherit. The class is what the
+  # stylesheet keys on, and table.attr reaches the output only for
+  # format = "html"; pipe output discards it.
   cat(knitr::kable(head(d, 4), format = "html",
                    table.attr = 'class="table data-output"'), sep = "\n")
   cat("\n\n")

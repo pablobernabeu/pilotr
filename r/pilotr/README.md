@@ -12,14 +12,6 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
 <!-- badges: end -->
 
-A twin of the [Python package of the same
-name](https://pablobernabeu.github.io/pilotr/py/): the two share the
-design specification and the random-number generator, so the same
-specification and seed produce bit-identical data in either language.
-The R package additionally offers precision/ROPE design analysis, the
-`lme4` reference backend for mixed-effects power, the `brms` bridge and
-the app launcher.
-
 Simulate experimental and behavioural data from a portable design
 specification, with integrated simulation-based power and design
 analysis (the Type S and Type M errors, and precision against a region
@@ -32,6 +24,14 @@ produce. You can then check the study’s power and design analysis before
 gathering anything. A single specification drives three interchangeable
 interfaces, namely a no-code web app, this R package and the Python
 package.
+
+This is the feature-parity twin of [the Python
+package](https://pablobernabeu.github.io/pilotr/py/) of the same name.
+The two share the design specification and the random-number generator,
+so the same specification and seed produce bit-identical data in either
+language. The R package additionally offers precision/ROPE design
+analysis, the `lme4` reference backend for mixed-effects power, the
+`brms` bridge and the app launcher.
 
 ## Installation
 
@@ -92,3 +92,29 @@ walks through the core loop of describe, simulate, inspect and export,
 and the other articles each go deeper into one part of the workflow. The
 full repository, including the specification format and the no-code app,
 is at <https://github.com/pablobernabeu/pilotr>.
+
+## Citation
+
+``` r
+citation("pilotr")
+```
+
+The [About
+page](https://pablobernabeu.github.io/pilotr/articles/about.html) carries
+the same citation with a BibTeX entry, and a short note on the
+developer. The repository also ships `CITATION.cff`, which is what
+GitHub’s *Cite this repository* button reads.
+
+## Licence
+
+MIT. The full text is in the repository’s
+[LICENSE](https://github.com/pablobernabeu/pilotr/blob/main/LICENSE)
+file.
+
+## Contributing
+
+Issues and pull requests are welcome. The [contributing
+guide](https://github.com/pablobernabeu/pilotr/blob/main/.github/CONTRIBUTING.md)
+describes the development setup and the conventions the package follows,
+and everyone taking part is asked to honour the [Code of
+Conduct](https://github.com/pablobernabeu/pilotr/blob/main/.github/CODE_OF_CONDUCT.md).

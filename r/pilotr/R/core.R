@@ -93,18 +93,66 @@ as241 <- function(p) {
   if (q < 0) -z else z
 }
 
+# Inner product of the first `m` elements, written as an explicit IEEE-754 double fold.
+#
+# Neither language's built-in reduction is a plain double fold, and the two disagree with each
+# other: base R's sum() accumulates in 80-bit long double on x86, while CPython's sum() has
+# applied Neumaier compensation to float sequences since version 3.12. Both are more accurate
+# than a naive fold, but they are more accurate in different ways, so an inner product of
+# length three or more can land on different doubles in the two ports. Spelling the loop out
+# keeps the arithmetic identical, which is what the cross-language guarantee actually needs.
+.dot <- function(a, b, m) {
+  s <- 0
+  if (m > 0) for (k in seq_len(m)) s <- s + a[k] * b[k]
+  s
+}
+
 # Lower Cholesky factor (Cholesky-Banachiewicz), mirroring core.py$cholesky.
-.cholesky <- function(cov) {
+#
+# A negative pivot means the covariance implied by the specified standard deviations and
+# correlations is not positive definite, so no random-effect distribution has those moments.
+# The previous code clamped the pivot at zero and carried on silently, which did not fail but
+# did not honour the specification either: the factor it returned generated random effects
+# whose standard deviations were several times the requested ones. A correlation set that base
+# R's chol() rejects has to be an error, because the alternative is plausible-looking data from
+# a process the user never described.
+#
+# A pivot of exactly zero is left alone. That is a genuinely useful case, not a failure: it is
+# what a slope with a standard deviation of zero produces, which is how a term is held fixed
+# while the rest of the structure is kept intact. The tolerance below absorbs the rounding of
+# an exactly-singular matrix, so a term that is only numerically rather than truly negative is
+# clamped as before rather than rejected.
+.cholesky <- function(cov, label = NULL, cols = NULL) {
   n <- nrow(cov); L <- matrix(0, n, n)
+  tol <- .Machine$double.eps * n * max(c(diag(cov), 1))
   for (i in 1:n) for (j in 1:i) {
-    s <- if (j > 1) sum(L[i, 1:(j - 1)] * L[j, 1:(j - 1)]) else 0
-    if (i == j) L[i, j] <- sqrt(max(cov[i, i] - s, 0))
-    else        L[i, j] <- if (L[j, j] != 0) (cov[i, j] - s) / L[j, j] else 0
+    s <- .dot(L[i, ], L[j, ], j - 1)
+    if (i == j) {
+      d <- cov[i, i] - s
+      if (d < -tol) .stop_not_pd(label, cols, i, d)
+      L[i, j] <- sqrt(max(d, 0))
+    } else {
+      L[i, j] <- if (L[j, j] != 0) (cov[i, j] - s) / L[j, j] else 0
+    }
   }
   L
 }
 
-.matvec <- function(L, z) vapply(seq_len(nrow(L)), function(i) sum(L[i, ] * z), numeric(1))
+# Reports which grouping factor failed, which random-effect column the factorisation reached,
+# and how negative the pivot was. The offending column is more actionable than the smallest
+# eigenvalue of the whole matrix, because it points at the correlations the user has to change,
+# and it costs no extra numerics, so the R and Python ports can report it identically.
+.stop_not_pd <- function(label, cols, i, d) {
+  where <- if (!is.null(cols) && length(cols) >= i) sprintf(" at column '%s'", cols[i]) else
+    sprintf(" at position %d", i)
+  involved <- if (!is.null(cols)) sprintf(" Check the correlations among %s.",
+                                          paste(sprintf("'%s'", cols[seq_len(i)]), collapse = ", ")) else ""
+  stop(sprintf(
+    "the random-effect covariance for '%s' is not positive definite: the Cholesky factorisation failed%s (pivot %g).%s No random-effect distribution has the requested standard deviations and correlations.",
+    if (is.null(label)) "unknown group" else label, where, d, involved), call. = FALSE)
+}
+
+.matvec <- function(L, z) vapply(seq_len(nrow(L)), function(i) .dot(L[i, ], z, length(z)), numeric(1))
 
 .inv_logit <- function(x) if (x >= 0) 1 / (1 + exp(-x)) else { e <- exp(x); e / (1 + e) }
 
@@ -120,11 +168,18 @@ as241 <- function(p) {
 }
 
 # Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG; bit-identical with core.py.
+#
+# The cube is written as two multiplications rather than `^3`. R's `^` special-cases small
+# integer exponents into repeated multiplication, whereas Python's `**` calls the library
+# pow(); measured over 200,000 draws in this generator's range the two disagree on a third of
+# inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both languages, and
+# they also decide the rejection step, so aligning them keeps the accept/reject sequence (and
+# hence the number of draws consumed) identical across the two ports.
 .gamma_mt <- function(rng, shape) {
   if (shape < 1) return(.gamma_mt(rng, shape + 1) * rng$uniform()^(1 / shape))
   d <- shape - 1 / 3; cc <- 1 / sqrt(9 * d)
   repeat {
-    x <- rng$normal(); v <- (1 + cc * x)^3
+    x <- rng$normal(); t <- 1 + cc * x; v <- t * t * t
     if (v <= 0) next
     if (log(rng$uniform()) < 0.5 * x * x + d - d * v + d * log(v)) return(d * v)
   }

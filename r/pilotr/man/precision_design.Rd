@@ -6,7 +6,7 @@
 \usage{
 precision_design(
   spec,
-  focal,
+  focal = NULL,
   formula = NULL,
   prep = NULL,
   rope = 0.05,
@@ -17,8 +17,10 @@ precision_design(
 \arguments{
 \item{spec}{A design specification (path or list).}
 
-\item{focal}{A named numeric vector mapping focal coefficient names to their true values,
-or a character vector of coefficient names.}
+\item{focal}{The focal effects. \code{NULL}, the default, analyses every coefficient in the
+specification and takes the true values from it. A named numeric vector maps coefficient names
+to their true values, and a character vector names them without their true values. Interaction
+effects follow the model's column naming, so a specification key \code{a:b} is the focal name \code{a_b}.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
 \code{\link[=model_formula]{model_formula()}}.}
@@ -45,9 +47,21 @@ own index, any worker count returns results identical to a serial run.}
 }
 \value{
 A data frame with one row per focal effect and columns \code{param}, \code{true},
-\code{mean_ci_width}, \code{p_meaningful}, \code{p_equivalent}, and \code{n_converged}. The interval
-behind \code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
+\code{mean_ci_width}, \code{p_meaningful}, \code{p_equivalent}, \code{n_attempted}, \code{n_returned},
+\code{n_converged}, \code{n_singular}, and \code{n_warning}. The interval behind
+\code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
 Details.
+
+The decision proportions are taken over \code{n_returned}, the replicates that
+produced an estimate. The remaining counts separate the fit outcomes, because a
+fit can return a usable estimate while still being boundary-singular or
+carrying a convergence warning: \code{n_converged} counts replicates with neither,
+\code{n_singular} those where \code{lme4::isSingular()} was true, and \code{n_warning} those
+with a warning or optimiser convergence message. Singular and warning fits are
+retained, since their fixed-effect estimates remain interpretable and
+discarding them would bias the result. A large \code{n_singular} means the model
+being fitted is richer than the design can support at that sample size, which
+is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017).
 }
 \description{
 A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
@@ -76,4 +90,12 @@ if (requireNamespace("lme4", quietly = TRUE)) {
   precision_design(spec, focal = c(effect = 0.05), rope = 0.02, n_sims = 10)
 }
 }
+}
+\references{
+Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed
+models. \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
+
+Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
+Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
+94, 305-315. \doi{10.1016/j.jml.2017.01.001}
 }

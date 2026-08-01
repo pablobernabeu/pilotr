@@ -23,3 +23,6 @@ r/pilotr/doc/
 r/pilotr/Meta/
 r/pilotr/docs/
 
+
+# Generated cross-language parity dumps; the harness is source, its output is not
+tools/parity/out/

@@ -28,11 +28,22 @@ model_data <- function(spec, d) {
   d$.y <- if (resp$family %in% c("lognormal", "shifted_lognormal")) log(d[[resp$name]] - shift) else d[[resp$name]]
   for (f in spec$factors) for (col in names(f$contrasts))      # contrast columns from labels
     d[[col]] <- f$contrasts[[col]][match(d[[f$name]], f$levels)]
-  for (key in names(spec$fixed$coefficients)) if (grepl(":", key, fixed = TRUE)) {  # interaction products
+  # Product columns for the union of the fixed-coefficient keys and every random-slope key.
+  # Taking only the fixed keys left an interaction random slope with no column to sit on, so
+  # the formula from model_formula() referred to a variable the modelling data did not have.
+  for (key in .interaction_keys(spec)) {
     parts <- strsplit(key, ":", fixed = TRUE)[[1]]
     d[[.us(key)]] <- Reduce(`*`, lapply(parts, function(p) d[[p]]))
   }
   d
+}
+
+# Every interaction key the analysis model needs a product column for: the fixed coefficients
+# and the random slopes of every grouping factor, de-duplicated and in first-seen order.
+.interaction_keys <- function(spec) {
+  keys <- names(spec$fixed$coefficients)
+  for (g in names(spec$random)) keys <- c(keys, names(spec$random[[g]]$slopes))
+  unique(keys[grepl(":", keys, fixed = TRUE)])
 }
 
 #' Derive the lmer formula implied by a specification
@@ -56,9 +67,16 @@ model_data <- function(spec, d) {
 #' @export
 model_formula <- function(spec) {
   fixed <- vapply(names(spec$fixed$coefficients), .us, character(1))
+  # `|` only when the process actually correlates the terms, `||` otherwise. Emitting `|`
+  # unconditionally asked lmer to estimate a correlation that the specification had fixed at
+  # zero, which spends degrees of freedom on a parameter known to be absent and makes a
+  # boundary-singular fit the likely outcome. Since model_data() supplies numeric contrast
+  # columns rather than factors, `||` genuinely decorrelates here, without the partial-effect
+  # caveat that applies to `||` on a factor.
   re <- vapply(names(spec$random), function(g)
-    sprintf("(%s | %s)", paste(c("1", vapply(names(spec$random[[g]]$slopes), .us, character(1))),
-                               collapse = " + "), g), character(1))
+    sprintf("(%s %s %s)", paste(c("1", vapply(names(spec$random[[g]]$slopes), .us, character(1))),
+                                collapse = " + "), .re_bar(spec$random[[g]]), g),
+    character(1))
   # Anchor the formula in the global environment rather than this function's evaluation
   # frame. print.formula omits its `<environment: ...>` line only for the global
   # environment, so any other choice trails a raw memory address that changes on every

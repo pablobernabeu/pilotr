@@ -8,13 +8,15 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-# The graphics device canvas, not the ggplot theme, is what makes a figure's background
-# opaque, so the transparent device is what lets the page colour show through. On the
-# package website that matters twice over: the light page is warm off-white rather than
-# pure white, and the dark page inverts the figure, where an opaque matte would read as a
-# slab in either mode.
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 3.4,
-                      dev.args = list(bg = "transparent"))
+# The graphics device canvas, not the ggplot theme, is what makes a figure's
+# background opaque, so the transparent device is what lets the page colour show
+# through. On the package website that matters twice over: the light page is
+# warm off-white rather than pure white, and the dark page inverts the figure,
+# where an opaque matte would read as a slab in either mode.
+knitr::opts_chunk$set(
+  collapse = FALSE, comment = "", fig.width = 6, fig.height = 3.4,
+  dev.args = list(bg = "transparent")
+)
 ```
 
 ```{r setup}
@@ -35,7 +37,8 @@ demo <- function(family, intercept, effect, n = 4000, ...) {
   spec <- build_spec(list(
     name = family, seed = 1, design_kind = "between", n_subject = n,
     factor_name = "group", lev1 = "control", lev2 = "treatment",
-    intercept = intercept, effect = effect, family = family, resp_name = "", ...))
+    intercept = intercept, effect = effect, family = family,
+    resp_name = "", ...))
   d <- simulate_design(spec)
   y <- d[[spec$response$name]]
   list(spec = spec, data = d, y = y, by_group = tapply(y, d$group, mean))
@@ -47,10 +50,11 @@ fam_hist <- function(y, fill, title, xlab) {
     geom_histogram(bins = 40, fill = fill, colour = NA) +
     labs(title = title, x = xlab, y = "count") +
     theme_minimal(base_size = 12) +
-    # theme_minimal still paints a white plot.background over the transparent device
-    # canvas, so both surfaces have to be cleared for the page colour to reach the
-    # figure. The ink stays at its default: the website inverts the figure in dark mode,
-    # which turns the dark axis text light of its own accord.
+    # theme_minimal still paints a white plot.background over the transparent
+    # device canvas, so both surfaces have to be cleared for the page colour to
+    # reach the figure. The ink stays at its default: the website inverts the
+    # figure in dark mode, which turns the dark axis text light of its own
+    # accord.
     theme(plot.background  = element_rect(fill = NA, colour = NA),
           panel.background = element_rect(fill = NA, colour = NA),
           panel.grid       = element_line(colour = "grey80"))
@@ -76,7 +80,9 @@ $y = \text{shift} + \exp(\eta + \varepsilon)$, with the effect on the log scale.
 intercept of 6 implies a typical RT near `exp(6)` ms above the shift.
 
 ```{r}
-rt <- demo("shifted_lognormal", intercept = 6, effect = 0.1, sigma = 0.3, shift = 200)
+rt <- demo(
+  "shifted_lognormal", intercept = 6, effect = 0.1, sigma = 0.3, shift = 200
+)
 round(rt$by_group, 1)
 fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
 ```
@@ -126,7 +132,8 @@ ord <- build_spec(list(
   intercept = 0, effect = 0.8, family = "ordinal", resp_name = "rating",
   thresholds = "-2, -0.6, 0.6, 2"))
 r <- simulate_design(ord)
-round(prop.table(table(r$group, r$rating), 1), 2)   # category proportions by group
+# category proportions by group
+round(prop.table(table(r$group, r$rating), 1), 2)
 ```
 
 ## Beta (proportions)
@@ -175,10 +182,15 @@ spec <- build_spec(list(
   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
   family = "lognormal", resp_name = "RT", sigma = 0.25))
 
-spec$predictors <- list(list(name = "freq", varies_by = "item", mean = 0, sd = 1))
-spec$fixed$coefficients[["effect:freq"]] <- 0.02   # an interaction with the effect
-spec$units$item$per_subject <- 10                  # each subject sees 10 of the 24 items
-spec$random$class <- list(over = "subject", n = 6, intercept_sd = 0.05)  # subjects nested in classes
+spec$predictors <- list(
+  list(name = "freq", varies_by = "item", mean = 0, sd = 1)
+)
+# an interaction with the effect
+spec$fixed$coefficients[["effect:freq"]] <- 0.02
+# each subject sees 10 of the 24 items
+spec$units$item$per_subject <- 10
+# subjects nested in classes
+spec$random$class <- list(over = "subject", n = 6, intercept_sd = 0.05)
 
 head(simulate_design(spec))
 ```

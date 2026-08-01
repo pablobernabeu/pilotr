@@ -6,7 +6,7 @@
 \usage{
 precision_curve(
   spec,
-  focal,
+  focal = NULL,
   subject_ns,
   formula = NULL,
   prep = NULL,
@@ -18,8 +18,8 @@ precision_curve(
 \arguments{
 \item{spec}{A design specification (path or list).}
 
-\item{focal}{A named numeric vector (coefficient name to true value) or character vector
-of focal coefficient names.}
+\item{focal}{The focal effects, as in \code{\link[=precision_design]{precision_design()}}. \code{NULL} uses every coefficient in the
+specification.}
 
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
@@ -35,24 +35,32 @@ decision about an effect no larger than \code{rope} cannot rise above 0.5 howeve
 sample, so the curve would fall with \emph{N} rather than rise.}
 
 \item{n_sims}{Number of Monte Carlo replicates per sample size. \code{p_meaningful} and
-\code{p_equivalent} are proportions over the converged replicates, so they carry
-a Monte Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)} and move
-in coarse steps when \code{n_sims} is small. At least 200 replicates are
-advisable for real planning.}
+\code{p_equivalent} are proportions over the replicates that produced an estimate, so each is
+reported with its Monte Carlo standard error and Wilson interval. The default of 60 gives a
+standard error of 0.065 at a rate of 0.5, which is too coarse to support a claim about a
+design; raise it to at least 200 for planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates at
 each sample size. The default of 1 runs serially, and any worker count returns results
-identical to a serial run. The worker pool is created once and reused across the sweep.}
+identical to a serial run.}
 }
 \value{
 A data frame with one row per focal effect and sample size, adding an \code{n_subject}
-column to the columns returned by \code{\link[=precision_design]{precision_design()}}.
+column to the columns returned by \code{\link[=precision_design]{precision_design()}}, including the Monte Carlo standard
+errors, the Wilson interval bounds, and the \code{n_returned}, \code{n_converged}, \code{n_singular} and
+\code{n_warning} fit counts.
 }
 \description{
 Sweep the number of subjects and report the ROPE decision probabilities at each size, to
 identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
 with a target probability (for example 0.90). Calls
 \code{\link[=precision_design]{precision_design()}} and so requires the \code{lme4} package.
+}
+\details{
+A thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a sample-size curve is
+the sweep users want most often. For any other axis, call \code{\link[=sweep_spec]{sweep_spec()}} directly; effect size is
+the axis a design analysis most often needs next, and \code{\link[=design_conditions]{design_conditions()}} builds the
+coefficient overrides for it.
 }
 \examples{
 \donttest{
@@ -68,4 +76,7 @@ if (requireNamespace("lme4", quietly = TRUE)) {
                   n_sims = 8)
 }
 }
+}
+\seealso{
+\code{\link[=sweep_spec]{sweep_spec()}} for any other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

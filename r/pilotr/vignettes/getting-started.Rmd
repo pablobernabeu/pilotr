@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
 ```
 
 ```{r setup}
@@ -52,7 +52,7 @@ spec <- build_spec(list(
 The portable artefact is plain JSON. This is exactly what the web application downloads and
 what the Python package reads.
 
-```{r, comment = ""}
+```{r}
 cat(spec_json(spec))
 ```
 
@@ -95,7 +95,7 @@ R and Python.
 reproduces the design with no external files. This is convenient for an appendix or a
 preregistration.
 
-```{r, comment = ""}
+```{r}
 cat(generate_r_script(spec))
 ```
 

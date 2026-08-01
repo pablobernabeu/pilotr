@@ -2,9 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
+  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, and that a specification using a 0.3 feature declares 0.3.",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "properties": {
+    "spec_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, because a 0.2 implementation reads such a design differently and generates different data without reporting a problem."
+    },
     "name": { "type": "string" },
     "seed": { "type": "integer" },
     "units": {
@@ -26,7 +32,9 @@
           "levels": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
           "contrasts": {
             "type": "object",
-            "additionalProperties": { "type": "array", "items": { "type": "number" } }
+            "minProperties": 1,
+            "additionalProperties": { "type": "array", "items": { "type": "number" } },
+            "description": "One numeric value per level, so each array's length equals the length of `levels`."
           },
           "vary_within": { "type": "array", "items": { "type": "string", "enum": ["subject", "item"] } },
           "between": { "type": "string", "enum": ["subject", "item"] }
@@ -41,9 +49,26 @@
         "required": ["name", "varies_by"],
         "properties": {
           "name": { "type": "string" },
-          "varies_by": { "type": "string", "enum": ["subject", "item"] },
+          "varies_by": {
+            "type": "string",
+            "enum": ["subject", "item", "observation"],
+            "description": "\"observation\" (new in 0.3) draws one value per row, for a predictor that varies trial by trial. Before 0.3 any value other than \"subject\" was read as item-level, so a design declaring \"trial\" silently received one value per item."
+          },
           "mean": { "type": "number" },
-          "sd": { "type": "number", "minimum": 0 }
+          "sd": { "type": "number", "minimum": 0 },
+          "dist": {
+            "type": "string",
+            "enum": ["normal", "uniform"],
+            "description": "New in 0.3. \"uniform\" uses min and max and ignores mean and sd. A uniform draw consumes exactly as much of the random stream as a normal one, so switching between them does not move the stream."
+          },
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "reliability": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1,
+            "description": "New in 0.3. The latent value drives the linear predictor and any random slope keyed on the predictor, while the contaminated observed value appears in the data. The observed variable keeps the latent one's variance and correlates sqrt(reliability) with it. Absent or 1 draws nothing extra, so the stream is unchanged."
+          }
         },
         "additionalProperties": false
       }
@@ -53,7 +78,11 @@
       "required": ["intercept", "coefficients"],
       "properties": {
         "intercept": { "type": "number" },
-        "coefficients": { "type": "object", "additionalProperties": { "type": "number" } }
+        "coefficients": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Keys are contrast columns, predictors, or an \"a:b\" interaction between them. A key naming no such column contributes zero, which silently removes the effect, so validate_spec() refuses one."
+        }
       },
       "additionalProperties": false
     },
@@ -71,14 +100,29 @@
       "properties": {
         "family": {
           "type": "string",
-          "enum": ["gaussian", "lognormal", "shifted_lognormal", "bernoulli", "poisson", "ordinal", "beta"]
+          "enum": ["gaussian", "lognormal", "shifted_lognormal", "exgaussian", "bernoulli",
+                   "poisson", "ordinal", "beta"]
         },
-        "name": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 },
         "sigma": { "type": "number", "exclusiveMinimum": 0 },
         "shift": { "type": "number" },
+        "beta": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The exponential component's mean, for the exgaussian family (new in 0.3). Matches brms's exgaussian(mu, sigma, beta), in which mu is the mean of the response."
+        },
         "phi": { "type": "number", "exclusiveMinimum": 0 },
-        "thresholds": { "type": "array", "items": { "type": "number" } },
-        "round": { "type": "integer", "minimum": 0 }
+        "thresholds": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 1,
+          "description": "K-1 strictly increasing cut-points, for the ordinal family."
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Decimal rounding of the response. Applies only to the families whose outcome is continuous; the others are integers already."
+        }
       },
       "additionalProperties": false
     }
@@ -89,7 +133,11 @@
       "required": ["n"],
       "properties": {
         "n": { "type": "integer", "minimum": 1 },
-        "per_subject": { "type": "integer", "minimum": 1 }
+        "per_subject": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Partial crossing: each subject sees this many items, sampled at random. Belongs to units.item and cannot exceed units.item.n."
+        }
       },
       "additionalProperties": false
     },
@@ -97,8 +145,20 @@
       "type": "object",
       "properties": {
         "intercept_sd": { "type": "number", "minimum": 0 },
-        "slopes": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
-        "correlations": { "type": "object", "additionalProperties": { "type": "number", "minimum": -1, "maximum": 1 } },
+        "slopes": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 },
+          "description": "Keys follow the same rule as fixed coefficients, so an \"a:b\" interaction slope is allowed from 0.3. Before 0.3 such a slope was accepted, sized into the covariance, drawn from the stream, and then discarded, which made the analysis model richer than the process that generated the data."
+        },
+        "correlations": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": -1, "maximum": 1 },
+          "description": "Keyed \"a,b\" or \"a~b\", naming two of this group's random-effect terms, where the first term is always \"intercept\". The resulting covariance has to be positive definite; one that is not is an error rather than something to clamp."
+        },
+        "correlated": {
+          "type": "boolean",
+          "description": "New in 0.3. Whether this group's random effects are correlated, defaulting to whether `correlations` is supplied. It decides whether the emitted lmer and brms formulas use a single or a double bar, so that the analysis model matches the generative process instead of always estimating a correlation the process may have fixed at zero. Setting it to false alongside `correlations` is contradictory and is refused."
+        },
         "over": { "type": "string", "enum": ["subject", "item"] },
         "n": { "type": "integer", "minimum": 1 }
       },

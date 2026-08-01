@@ -14,12 +14,16 @@ from pilotr import simulate, load_spec, pilotr_example
 
 DESC = {
     "between_2group_gaussian": "Two-group between-subjects Gaussian.",
-    "crossed_mixed_rt": "Crossed by-subject and by-item reaction times (shifted lognormal).",
+    "crossed_mixed_rt":
+        "Crossed by-subject and by-item reaction times (shifted lognormal).",
     "beta_proportion": "Bounded proportions through the Beta family.",
-    "ordinal_likert_between": "Five-point Likert responses via a cumulative-logit model.",
+    "ordinal_likert_between":
+        "Five-point Likert responses via a cumulative-logit model.",
     "poisson_counts_between": "Count outcomes through a log link.",
-    "reading_time_continuous": "A continuous predictor with a lognormal reading-time outcome.",
-    "nested_clusters": "Subjects nested in higher-level clusters (an extra grouping factor).",
+    "reading_time_continuous":
+        "A continuous predictor with a lognormal reading-time outcome.",
+    "nested_clusters":
+        "Subjects nested in higher-level clusters (an extra grouping factor).",
     "partial_crossing": "Each subject sees a sampled subset of items.",
 }
 

@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
 ```
 
 ```{r setup}
@@ -73,7 +73,8 @@ the effect lives on the log scale, and we treat anything smaller than 0.02 as pr
 equivalent to zero.
 
 ```{r}
-pr <- precision_design(spec_c, focal = c(effect = 0.05), rope = 0.02, n_sims = 25)
+pr <- precision_design(
+  spec_c, focal = c(effect = 0.05), rope = 0.02, n_sims = 25)
 pr
 ```
 
@@ -92,18 +93,20 @@ then fall with *N* rather than rise.
 prc <- precision_curve(spec_c, focal = c(effect = 0.05),
                        subject_ns = c(15, 30, 60, 100, 140, 180, 220, 260),
                        rope = 0.02, n_sims = 200)
-prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width", "n_converged")]
+prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
+        "n_converged")]
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with the
-# package so that the vignette builds within CRAN's check-time budget. All 200
-# replicates converged at every sample size.
+# The result of running exactly the chunk above, precomputed and shipped with
+# the package so that the vignette builds within CRAN's check-time budget. All
+# 200 replicates converged at every sample size.
 prc <- read.csv("precision-curve-cache.csv")
 ```
 
 ```{r, echo = FALSE}
-prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width", "n_converged")]
+prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
+        "n_converged")]
 ```
 
 As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
@@ -120,32 +123,36 @@ its place in designs where practical equivalence is the hypothesis of interest.
 
 ```{r, fig.width = 6.5, fig.height = 3.2, dev.args = list(bg = "transparent")}
 library(ggplot2)
-# Each probability is a proportion over the converged replicates, so it carries a binomial
-# Monte Carlo standard error, and the band is its 95% interval. The two panels are on
-# different scales, hence the free y axis.
+# Each probability is a proportion over the converged replicates, so it carries
+# a binomial Monte Carlo standard error, and the band is its 95% interval. The
+# two panels are on different scales, hence the free y axis.
 prc$se <- sqrt(prc$p_meaningful * (1 - prc$p_meaningful) / prc$n_converged)
 panels <- c("P(CI outside the ROPE)", "Mean 95% CI width")
 long <- rbind(
   data.frame(n_subject = prc$n_subject, panel = panels[1], y = prc$p_meaningful,
              lo = pmax(0, prc$p_meaningful - 1.96 * prc$se),
              hi = pmin(1, prc$p_meaningful + 1.96 * prc$se)),
-  data.frame(n_subject = prc$n_subject, panel = panels[2], y = prc$mean_ci_width,
+  data.frame(n_subject = prc$n_subject, panel = panels[2],
+             y = prc$mean_ci_width,
              lo = NA, hi = NA))
 long$panel <- factor(long$panel, levels = panels)
-# 0.90 is the target decision probability; 0.06 is the width at which a CI centred on the
-# true effect just clears the ROPE, that is 2 * (0.05 - 0.02).
+# 0.90 is the target decision probability; 0.06 is the width at which a CI
+# centred on the true effect just clears the ROPE, that is 2 * (0.05 - 0.02).
 refs <- data.frame(panel = factor(panels, levels = panels), ref = c(0.90, 0.06))
 
 ggplot(long, aes(n_subject, y)) +
-  geom_hline(data = refs, aes(yintercept = ref), linetype = 2, colour = "grey60") +
-  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = .15, fill = "#2C6FB0", na.rm = TRUE) +
+  geom_hline(data = refs, aes(yintercept = ref), linetype = 2,
+             colour = "grey60") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = .15, fill = "#2C6FB0",
+              na.rm = TRUE) +
   geom_line(colour = "#2C6FB0", linewidth = 0.8) +
   geom_point(colour = "#2C6FB0", size = 2.2) +
   facet_wrap(~ panel, scales = "free_y") +
   labs(x = expression(italic(N) ~ "subjects"), y = NULL) +
   theme_minimal(base_size = 12) +
-  # theme_minimal still paints a white plot.background over the transparent canvas, so both
-  # surfaces have to be cleared for the page colour to reach the figure.
+  # theme_minimal still paints a white plot.background over the transparent
+  # canvas, so both surfaces have to be cleared for the page colour to reach the
+  # figure.
   theme(plot.background  = element_rect(fill = NA, colour = NA),
         panel.background = element_rect(fill = NA, colour = NA),
         panel.grid       = element_line(colour = "grey80"),

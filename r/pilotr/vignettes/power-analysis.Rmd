@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
 ```
 
 ```{r setup}
@@ -35,7 +35,8 @@ The classic case has a closed-form analytic power, which the simulation matches.
 spec <- build_spec(list(
   name = "two_group", seed = 1, design_kind = "between", n_subject = 64,
   factor_name = "group", lev1 = "control", lev2 = "treatment",
-  intercept = 100, effect = 5, family = "gaussian", resp_name = "score", sigma = 10))
+  intercept = 100, effect = 5, family = "gaussian",
+  resp_name = "score", sigma = 10))
 
 pw <- power_design(spec, n_sims = 500)
 unlist(pw[c("power", "type_s", "type_m", "true_effect", "mean_estimate")])
@@ -65,13 +66,14 @@ spec_c <- build_spec(list(
 ```
 
 ```{r, eval = FALSE}
-pm <- power_mixed(spec_c, n_sims = 20)   # tiny for the vignette; use >= 200 in practice
+# tiny for the vignette; use >= 200 in practice
+pm <- power_mixed(spec_c, n_sims = 20)
 unlist(pm[c("power", "type_s", "type_m", "n_converged")])
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with the
-# package so that the vignette builds within CRAN's check-time budget.
+# The result of running exactly the chunk above, precomputed and shipped with
+# the package so that the vignette builds within CRAN's check-time budget.
 pm <- as.list(read.csv("power-mixed-cache.csv"))
 ```
 
@@ -96,13 +98,16 @@ errors alongside power, and in built-in parallelisation.
 The following sweep over the number of subjects shows where power crosses a target.
 
 ```{r, eval = FALSE}
-curve <- power_curve_mixed(spec_c, subject_ns = c(8, 12, 16, 24, 32, 44, 56), n_sims = 50)
+curve <- power_curve_mixed(
+  spec_c,
+  subject_ns = c(8, 12, 16, 24, 32, 44, 56),
+  n_sims = 50)
 curve
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with the
-# package so that the vignette builds within CRAN's check-time budget.
+# The result of running exactly the chunk above, precomputed and shipped with
+# the package so that the vignette builds within CRAN's check-time budget.
 curve <- read.csv("power-curve-cache.csv")
 ```
 
@@ -111,27 +116,30 @@ curve
 ```
 
 ```{r, fig.width = 6, fig.height = 3.6, dev.args = list(bg = "transparent")}
-# The transparent device canvas is what lets the page colour through: a ggplot theme alone
-# cannot do it, since the device paints white underneath. The website's dark mode then
-# inverts the figure's ink, so the axes and labels follow the theme instead of sitting on
-# an opaque matte.
+# The transparent device canvas is what lets the page colour through: a ggplot
+# theme alone cannot do it, since the device paints white underneath. The
+# website's dark mode then inverts the figure's ink, so the axes and labels
+# follow the theme instead of sitting on an opaque matte.
 library(ggplot2)
-# Each power estimate is a proportion over the converged replicates, so it carries a
-# binomial Monte Carlo standard error. The shaded band is the 95% interval.
+# Each power estimate is a proportion over the converged replicates, so it
+# carries a binomial Monte Carlo standard error. The shaded band is the 95%
+# interval.
 curve$se <- sqrt(curve$power * (1 - curve$power) / curve$n_converged)
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
-  geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se), ymax = pmin(1, power + 1.96 * se)),
+  geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se),
+                  ymax = pmin(1, power + 1.96 * se)),
               alpha = .15, fill = "#2C6FB0") +
   geom_line(colour = "#2C6FB0", linewidth = 0.8) +
   geom_point(colour = "#2C6FB0", size = 2.6) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
   theme_minimal(base_size = 12) +
-  # theme_minimal still paints a white plot.background over the transparent canvas, so
-  # both surfaces have to be cleared for the page colour to reach the figure. The ink is
-  # left at its default: the website inverts the figure in dark mode, which turns the dark
-  # axis text light, whereas a fixed mid-grey would be inverted into a muddy tan.
+  # theme_minimal still paints a white plot.background over the transparent
+  # canvas, both surfaces have to be cleared for the page colour to reach the
+  # figure. The ink is left at its default: the website inverts the figure in
+  # dark mode, which turns the dark axis text light, whereas a fixed mid-grey
+  # would be inverted into a muddy tan.
   theme(plot.background  = element_rect(fill = NA, colour = NA),
         panel.background = element_rect(fill = NA, colour = NA),
         panel.grid       = element_line(colour = "grey80"))
@@ -150,7 +158,8 @@ the running time, which makes the speed-up close to linear in the number of core
 sweep the worker pool is created once and reused across all sample sizes.
 
 ```{r, eval = FALSE}
-power_curve_mixed(spec_c, subject_ns = seq(20, 60, 10), n_sims = 500, workers = 8)
+power_curve_mixed(
+  spec_c, subject_ns = seq(20, 60, 10), n_sims = 500, workers = 8)
 ```
 
 This design answers a serial bottleneck familiar from `simr::powerCurve()`, which this
@@ -166,7 +175,7 @@ provides the family, the fixed and random-effects formula, and a weakly-informat
 all derived from the same specification, so that the planning model and the confirmatory model
 remain consistent.
 
-```{r, comment = ""}
+```{r}
 brms_bridge(spec_c)
 ```
 

@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
 ```
 
 ```{r setup}
@@ -46,7 +46,8 @@ The same specification and seed always give the same data.
 spec <- build_spec(list(
   name = "demo", seed = 2024, design_kind = "between", n_subject = 200,
   factor_name = "group", lev1 = "a", lev2 = "b",
-  intercept = 100, effect = 5, family = "gaussian", resp_name = "score", sigma = 10))
+  intercept = 100, effect = 5, family = "gaussian",
+  resp_name = "score", sigma = 10))
 
 isTRUE(all.equal(simulate_design(spec), simulate_design(spec)))
 ```
@@ -76,12 +77,13 @@ The repository includes a parity check that simulates the worked example designs
 languages and reports the maximum absolute difference per design.
 
 ```{r, echo = FALSE}
-# Output of python/examples/parity_check.py --csv, precomputed and shipped with the
-# package: the comparison needs both a Python and an R installation, so it cannot run
-# at vignette build time.
-# max_abs_diff is read as text: as a number, kable would round 4.885e-15 to 0 and the
-# table would claim a stricter result than the check actually produced.
-knitr::kable(read.csv("parity-summary.csv", colClasses = c(max_abs_diff = "character")),
+# Output of python/examples/parity_check.py --csv, precomputed and shipped with
+# the package: the comparison needs both a Python and an R installation, so it
+# cannot run at vignette build time.
+# max_abs_diff is read as text: as a number, kable would round 4.885e-15 to 0
+# and the table would claim a stricter result than the check actually produced.
+knitr::kable(read.csv("parity-summary.csv",
+                      colClasses = c(max_abs_diff = "character")),
              format = "html", table.attr = 'class="table data-output"')
 ```
 

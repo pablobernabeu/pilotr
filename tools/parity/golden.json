@@ -1,0 +1,31 @@
+{
+  "hashes": {
+    "beta_proportion.asis.txt": "c6273f0ed29ce27c67ff4a48d3e9163a486d72ce846c356a6a71128ae910535e",
+    "beta_proportion.noround.txt": "c90dc7b564053400b2e4cd4cf27815296571738b9a6c4178d888756e0f692d24",
+    "between_2group_gaussian.asis.txt": "61e61cbd768a13f6cd628568bc4aa576d1a7ef8e77b21cfd1ffe2c6889b03941",
+    "between_2group_gaussian.noround.txt": "b9699134b9454cb1e40d1b46b31f877fc14f93537209675013a759fe19a2a85b",
+    "control_rt_as_gaussian.asis.txt": "02cf6f7cffd021b1ac878306148b440e188787c591a5a27571ff8ea9f8a3fbf6",
+    "control_rt_as_gaussian.noround.txt": "02cf6f7cffd021b1ac878306148b440e188787c591a5a27571ff8ea9f8a3fbf6",
+    "crossed_mixed_rt.asis.txt": "be84ee10e78bec52f5ad62316c103970269dada97a0267a10f46bee8f967f724",
+    "crossed_mixed_rt.noround.txt": "f2778135dc96d14819a0c7f1e4dd5dc5a4bd8449c0214644f90ae51c1eba71b1",
+    "nested_clusters.asis.txt": "fdb4dc1f4454502d05e51e79b34e3b7037b6565766358aac09ef1bb579157ddb",
+    "nested_clusters.noround.txt": "9e9df55ebc4cc950a949d68f48d5ca0d928aabf9f0e0acf7f3c50436bbffaee8",
+    "ordinal_likert_between.asis.txt": "61bf95331213b75bf8ef19417b8ee732fdf733be1730e540dc892a7bca8bf500",
+    "ordinal_likert_between.noround.txt": "61bf95331213b75bf8ef19417b8ee732fdf733be1730e540dc892a7bca8bf500",
+    "partial_crossing.asis.txt": "c5535eb906bd88f96d128f707a60b2262cc1bf8a075b720e13b2b81c3c6ea575",
+    "partial_crossing.noround.txt": "fdc75ba2de8046c308a54b3216355acc8669fbdbe2bb768385cb0b81be5da668",
+    "poisson_counts_between.asis.txt": "5eac95c5b49e3e5aa9d657c78ff4b1dc7344e00b7b4212cdd168e71d6ce67672",
+    "poisson_counts_between.noround.txt": "5eac95c5b49e3e5aa9d657c78ff4b1dc7344e00b7b4212cdd168e71d6ce67672",
+    "reading_time_continuous.asis.txt": "c65e7be82833669b04b7c6198e7532d63d9ce40093a262e784f2b09b6a2393e2",
+    "reading_time_continuous.noround.txt": "6acd4ddee743a5f8463626ca06cb8da59bf1190157ba750db0e688c6ce601c1f",
+    "stress_exgaussian.asis.txt": "9d88d6643cb4291323ed27cf3b7ef116c0ffe92398874355182aa2280ce73f7b",
+    "stress_exgaussian.noround.txt": "9ea49b24f6c11262b5f9cfb87b270b8875acc490141bd89813afef0a1609103c",
+    "stress_gaussian_slopes.asis.txt": "a924522775761f9a30023d2305cdf3251bc1dc01b1148f0497dfa44f3388ca3e",
+    "stress_gaussian_slopes.noround.txt": "a924522775761f9a30023d2305cdf3251bc1dc01b1148f0497dfa44f3388ca3e",
+    "stress_interaction_slopes.asis.txt": "94976a0d18cf2c0ae30632d798109466d88733a5522267f844fb3ebac4f125ee",
+    "stress_interaction_slopes.noround.txt": "94976a0d18cf2c0ae30632d798109466d88733a5522267f844fb3ebac4f125ee",
+    "stress_v03_gaussian.asis.txt": "6adeeb4a3869c10b4ee1fe5ad68fa3682ea8f01aceb5f58164bfc4302b4ab998",
+    "stress_v03_gaussian.noround.txt": "6adeeb4a3869c10b4ee1fe5ad68fa3682ea8f01aceb5f58164bfc4302b4ab998"
+  },
+  "note": "SHA-256 of the R dumps in tools/parity/out/r; regenerate with `python tools/parity/compare.py --update`"
+}

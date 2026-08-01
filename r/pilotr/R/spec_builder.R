@@ -60,6 +60,7 @@ build_spec <- function(p) {
   }
 
   spec <- list(
+    spec_version = .SPEC_VERSION,
     name = p$name, seed = as.integer(p$seed),
     units = units,
     factors = list(factor),
@@ -92,7 +93,91 @@ build_spec <- function(p) {
   spec
 }
 
+# Fields that stay JSON arrays even when they hold a single value. Everything else of length
+# one is a JSON scalar. A blanket `auto_unbox = TRUE` could not draw this distinction: it
+# collapsed a one-element `vary_within`, a single-level `levels`, a one-cut-point `thresholds`
+# or a single-level contrast into a bare value, which violates design.schema.json and does not
+# round-trip through load_spec().
+.spec_array_fields <- c("levels", "vary_within", "thresholds")
+
+# Fields that are JSON objects, so that an empty one emits `{}` rather than `[]`. R cannot tell
+# an empty named list from an empty unnamed one, and `"random": []` fails the schema.
+.spec_object_fields <- c("units", "subject", "item", "contrasts", "fixed", "coefficients",
+                         "random", "slopes", "correlations", "response")
+
+# Recursive walk marking genuine scalars for jsonlite::unbox(). `parent` carries the enclosing
+# key so that the members of `contrasts` (one numeric array per contrast column) stay arrays.
+.unbox_spec <- function(x, key = NULL, parent = NULL) {
+  if (is.list(x)) {
+    if (length(x) == 0L)
+      return(if (!is.null(key) && key %in% .spec_object_fields)
+        structure(list(), names = character(0)) else x)
+    nms <- names(x)
+    if (is.null(nms)) return(lapply(x, .unbox_spec, key = key, parent = parent))
+    out <- lapply(seq_along(x), function(i) .unbox_spec(x[[i]], key = nms[i], parent = key))
+    names(out) <- nms
+    return(out)
+  }
+  keep_array <- identical(parent, "contrasts") ||
+    (!is.null(key) && key %in% .spec_array_fields)
+  if (keep_array || length(x) != 1) return(x)
+  jsonlite::unbox(x)
+}
+
+# The shortest decimal string that reads back as exactly this double, or NULL for a
+# non-finite value. Fifteen significant digits is enough for most numbers a user types, and
+# seventeen is enough for every double, so trying the three widths in turn gives both
+# exactness and readability.
+.shortest_double <- function(z) {
+  if (!is.finite(z)) return(NULL)
+  for (d in 15:17) {
+    s <- sprintf(paste0("%.", d, "g"), z)
+    if (as.numeric(s) == z) return(s)
+  }
+  NULL
+}
+
+# Rewrite every JSON number to its shortest exact form.
+#
+# jsonlite formats all numbers at one fixed precision. Seventeen significant digits round-trip
+# exactly but read badly: an effect the user typed as 0.3 is written 0.29999999999999999, which
+# in an exported specification looks like a defect. This pass keeps the exactness and restores
+# the readability, leaving 0.3 as "0.3" while 1/3 keeps every digit it needs. It walks the text
+# so that digits inside string literals, such as a factor level named "group 2", are untouched.
+.shorten_json_numbers <- function(txt) {
+  cs <- strsplit(txt, "", fixed = TRUE)[[1]]
+  n <- length(cs); out <- character(n); k <- 0L; i <- 1L; in_string <- FALSE
+  add <- function(s) { k <<- k + 1L; out[k] <<- s }
+  while (i <= n) {
+    ch <- cs[i]
+    if (in_string) {
+      add(ch)
+      if (ch == "\\" && i < n) { i <- i + 1L; add(cs[i]) } else if (ch == "\"") in_string <- FALSE
+      i <- i + 1L; next
+    }
+    if (ch == "\"") { in_string <- TRUE; add(ch); i <- i + 1L; next }
+    if (grepl("^[-0-9]$", ch)) {
+      j <- i
+      while (j <= n && grepl("^[-+0-9.eE]$", cs[j])) j <- j + 1L
+      tok <- paste(cs[i:(j - 1L)], collapse = "")
+      z <- suppressWarnings(as.numeric(tok))
+      short <- if (is.na(z)) NULL else .shortest_double(z)
+      add(if (is.null(short)) tok else short)
+      i <- j; next
+    }
+    add(ch); i <- i + 1L
+  }
+  paste(out[seq_len(k)], collapse = "")
+}
+
 #' Serialise a design specification to pretty-printed JSON
+#'
+#' @details
+#' Numbers are written at 17 significant digits, which is the shortest precision that
+#' round-trips every IEEE-754 double exactly. The JSON file is the portable artefact that the
+#' R and 'Python' implementations both read, so anything less makes the specification itself a
+#' source of cross-language divergence: at the previous setting a coefficient of `1/3` came
+#' back as `0.33333333333333298`, and over a sample of 214 doubles 189 failed to round-trip.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing the specification as pretty-printed JSON,
@@ -103,15 +188,57 @@ build_spec <- function(p) {
 #'   intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
 #' cat(spec_json(spec))
 #' @export
-spec_json <- function(spec) jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, digits = NA)
+spec_json <- function(spec) {
+  .shorten_json_numbers(
+    jsonlite::toJSON(.unbox_spec(spec), auto_unbox = FALSE, pretty = TRUE, digits = I(17)))
+}
+
+# A double as an R source literal that parses back to the same bit pattern. deparse() prints
+# 15 significant digits, so deparse(1/3) reads back as a different double.
+.num_literal <- function(z) {
+  if (is.na(z)) return("NA_real_")
+  short <- .shortest_double(z)
+  if (is.null(short)) return(if (z > 0) "Inf" else "-Inf")
+  short
+}
+
+# Backtick-quote a list name unless it is already a syntactic R name. Coefficient and
+# correlation keys such as "cond:z_freq" and "intercept,cond" are not.
+.r_name <- function(n) {
+  if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", n) && !grepl("^\\.[0-9]", n)) n else paste0("`", n, "`")
+}
+
+# The specification as an R expression, built term by term so that every number keeps full
+# precision. deparse() on the whole list would be shorter but silently rounds the numbers.
+.r_literal <- function(x) {
+  if (is.null(x)) return("NULL")
+  if (is.list(x)) {
+    nms <- names(x)
+    parts <- vapply(seq_along(x), function(i) {
+      v <- .r_literal(x[[i]])
+      if (!is.null(nms) && nzchar(nms[i])) paste0(.r_name(nms[i]), " = ", v) else v
+    }, character(1))
+    return(paste0("list(", paste(parts, collapse = ", "), ")"))
+  }
+  v <- if (is.character(x)) encodeString(x, quote = "\"")
+  else if (is.logical(x)) ifelse(is.na(x), "NA", ifelse(x, "TRUE", "FALSE"))
+  else if (is.integer(x)) ifelse(is.na(x), "NA_integer_", paste0(format(x), "L"))
+  else vapply(x, .num_literal, character(1))
+  if (length(v) == 1) v else paste0("c(", paste(v, collapse = ", "), ")")
+}
 
 #' Generate a self-contained, reproducible R script from a specification
 #'
-#' Embed the specification as an R list literal (via `deparse`, which round-trips exactly), so
-#' that the returned script reproduces the design without any external file. This turns a
-#' design built in the no-code application into a reproducible script; the application's Verify
-#' button runs that script in a clean R session and confirms that it reproduces the data
-#' bit-for-bit.
+#' Embed the specification as an R list literal, so that the returned script reproduces the
+#' design without any external file. This turns a design built in the no-code application into
+#' a reproducible script; the application's Verify button runs that script in a clean R session
+#' and confirms that it reproduces the data bit-for-bit.
+#'
+#' @details
+#' Numbers are emitted at 17 significant digits rather than through `deparse()`, which prints
+#' 15 and so does not round-trip: `deparse(1/3)` reads back as a different double. Since the
+#' point of the script is bit-for-bit reproduction, the embedded specification has to preserve
+#' every coefficient exactly.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing a runnable R script that loads `pilotr`,
@@ -127,7 +254,7 @@ generate_r_script <- function(spec) {
     "# Reproducible simulation exported by pilotr.\n",
     "# install.packages(\"pilotr\")   # once available; then run this script as-is.\n",
     "library(pilotr)\n\n",
-    "spec <- ", paste(deparse(spec), collapse = "\n"), "\n\n",
+    "spec <- ", .r_literal(spec), "\n\n",
     "data <- simulate_design(spec)              # analysis-ready data frame\n",
     "# write.csv(data, \"data.csv\", row.names = FALSE)\n",
     "# pow  <- power_mixed(spec, n_sims = 200)   # simulation-based power + Type S/M\n"

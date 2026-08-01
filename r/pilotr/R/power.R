@@ -30,7 +30,7 @@
 #' power_design(spec, n_sims = 50)
 #' @export
 power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
-  if (is.character(spec)) spec <- load_spec(spec)
+  spec <- .as_spec(spec)
   if (spec$response$family != "gaussian")
     stop("The power backend currently handles only the gaussian two-group design.")
   between <- Filter(function(f) !is.null(f$between), spec$factors)
@@ -40,7 +40,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   col <- names(f$contrasts)[1]; vals <- f$contrasts[[col]]
   true_effect <- spec$fixed$coefficients[[col]] * (vals[2] - vals[1])
   yname <- spec$response$name
-  base <- spec$seed
+  seeds <- replicate_seeds(spec$seed, n_sims)
 
   workers <- .check_workers(workers)
   cl <- NULL
@@ -48,7 +48,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
-  res <- .p_lapply(seq_len(n_sims), .power_design_rep, cl = cl, spec = spec, base = base,
+  res <- .p_lapply(seq_len(n_sims), .power_design_rep, cl = cl, spec = spec, seeds = seeds,
                    yname = yname, fname = fname, lev0 = lev0, lev1 = lev1)
   est <- vapply(res, `[[`, numeric(1), 1L)
   pv  <- vapply(res, `[[`, numeric(1), 2L)
@@ -64,9 +64,9 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
 
 # One Monte Carlo replicate of the two-group analysis. Kept at top level (rather than as
 # a closure) so that only the arguments travel to PSOCK workers. Returns c(estimate, p).
-.power_design_rep <- function(i, spec, base, yname, fname, lev0, lev1) {
-  s <- spec; s$seed <- base + (i - 1)          # same seeds as the Python port
-  d <- simulate_design(s)
+.power_design_rep <- function(i, spec, seeds, yname, fname, lev0, lev1) {
+  s <- spec; s$seed <- seeds[i]                # same seeds as the Python port
+  d <- simulate_design(s, validate = FALSE)
   g0 <- d[[yname]][d[[fname]] == lev0]
   g1 <- d[[yname]][d[[fname]] == lev1]
   c(mean(g1) - mean(g0), stats::t.test(g1, g0, var.equal = TRUE)$p.value)

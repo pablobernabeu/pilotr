@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+knitr::opts_chunk$set(collapse = FALSE, comment = "", eval = FALSE)
 ```
 
 pilotr ships a point-and-click application over the same design specification that the R and

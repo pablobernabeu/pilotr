@@ -28,7 +28,9 @@ spec = {
 }
 
 res = power(spec, n_sims=500)
-print(table([{k: res[k] for k in ("power", "type_s", "type_m", "true_effect", "mean_estimate")}]))
+print(table([{k: res[k] for k in (
+    "power", "type_s", "type_m", "true_effect", "mean_estimate"
+)}]))
 ```
 
 At roughly 50% power the Type M ratio is well above 1. Conditional on significance the
@@ -88,12 +90,14 @@ spec_mixed = {
         "item": {"intercept_sd": 0.08, "slopes": {"cond": 0.02},
                  "correlations": {"intercept~cond": -0.1}},
     },
-    "response": {"family": "shifted_lognormal", "name": "RT", "sigma": 0.3, "shift": 200},
+    "response": {"family": "shifted_lognormal", "name": "RT",
+                 "sigma": 0.3, "shift": 200},
 }
 
 res = power_mixed(spec_mixed, n_sims=12)   # tiny for the docs; use >= 200 in practice
-print(table([{k: res[k] for k in
-              ("power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m")}]))
+print(table([{k: res[k] for k in (
+    "power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m"
+)}]))
 ```
 
 `n_converged` reports how many replicates the mixed model actually fit. Convergence problems

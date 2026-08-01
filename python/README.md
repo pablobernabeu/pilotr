@@ -1,8 +1,19 @@
 # pilotr (Python)
 
+<!-- badges: start -->
+[![PyPI](https://img.shields.io/pypi/v/pilotr.svg)](https://pypi.org/project/pilotr/)
+[![python-tests](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+<!-- badges: end -->
+
 Python implementation of pilotr. It simulates experimental and behavioural data from a
-portable JSON design specification, producing output that is bit-identical to the
-[R package of the same name](https://pablobernabeu.github.io/pilotr/). See the
+portable JSON design specification.
+
+This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/) of
+the same name. The two share the design specification and the random-number generator, so the
+same specification and seed produce bit-identical data in either language. See the
 [project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code
 app, the R package and the specification format).
 
@@ -11,15 +22,19 @@ app, the R package and the specification format).
 ```bash
 pip install pilotr             # core engine (pure Python, dependency-free)
 pip install "pilotr[power]"    # + scipy, for the simulation-based power demo
+pip install "pilotr[mixed]"    # + scipy, statsmodels and pandas, for crossed mixed-effects power
 ```
 
-Requires Python 3.9 or later; the generative core has no dependencies.
+Requires Python 3.9 or later. The generative core has no dependencies.
 
-For development, install from a checkout of the repository instead: clone
+For development, install from a checkout of the repository instead. Clone
 <https://github.com/pablobernabeu/pilotr> and run `pip install .` (or `pip install ".[dev]"`)
 from the `python` directory.
 
 ## Quick start
+
+A design specification is an ordinary dictionary, so the shortest example needs nothing beyond
+the package itself.
 
 ```python
 from pilotr import simulate
@@ -50,3 +65,28 @@ The [Python documentation site](https://pablobernabeu.github.io/pilotr/py/) walk
 quick start, the response families, power and design analysis, the specification format and the
 API reference. The full repository, including the R package and the no-code app, is at
 <https://github.com/pablobernabeu/pilotr>.
+
+## Citation
+
+If pilotr contributes to published work, please cite it.
+
+> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
+> design specification* (R and Python package version 0.2.1).
+> https://doi.org/10.5281/zenodo.21266313
+
+The [About page](https://pablobernabeu.github.io/pilotr/py/about/) carries the same citation
+with a BibTeX entry, and a short note on the developer. The repository also ships
+[`CITATION.cff`](https://github.com/pablobernabeu/pilotr/blob/main/CITATION.cff), which is what
+GitHub's *Cite this repository* button reads.
+
+## Licence
+
+MIT. See [LICENSE](https://github.com/pablobernabeu/pilotr/blob/main/python/LICENSE).
+
+## Contributing
+
+Issues and pull requests are welcome. The
+[contributing guide](https://github.com/pablobernabeu/pilotr/blob/main/.github/CONTRIBUTING.md)
+describes the development setup and the conventions the package follows, and everyone taking
+part is asked to honour the
+[Code of Conduct](https://github.com/pablobernabeu/pilotr/blob/main/.github/CODE_OF_CONDUCT.md).

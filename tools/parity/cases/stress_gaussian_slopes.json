@@ -1,0 +1,50 @@
+{
+  "name": "stress_gaussian_slopes",
+  "seed": 4242,
+  "units": { "subject": { "n": 40 }, "item": { "n": 24 } },
+  "factors": [
+    { "name": "condition", "levels": ["a", "b"], "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"] }
+  ],
+  "predictors": [
+    { "name": "z_freq", "varies_by": "item", "mean": 0, "sd": 1 },
+    { "name": "z_len", "varies_by": "item", "mean": 0, "sd": 1 },
+    { "name": "z_span", "varies_by": "subject", "mean": 0, "sd": 1 }
+  ],
+  "fixed": {
+    "intercept": 0.0,
+    "coefficients": {
+      "cond": 0.3,
+      "z_freq": -0.2,
+      "z_len": 0.15,
+      "z_span": 0.25,
+      "cond:z_freq": 0.1,
+      "cond:z_span": -0.08,
+      "z_freq:z_span": 0.05
+    }
+  },
+  "random": {
+    "subject": {
+      "intercept_sd": 0.5,
+      "slopes": { "cond": 0.3, "z_freq": 0.2, "z_len": 0.15 },
+      "correlations": {
+        "intercept,cond": 0.3,
+        "intercept,z_freq": -0.2,
+        "intercept,z_len": 0.1,
+        "cond,z_freq": 0.15,
+        "cond,z_len": -0.05,
+        "z_freq,z_len": 0.2
+      }
+    },
+    "item": {
+      "intercept_sd": 0.4,
+      "slopes": { "cond": 0.25, "z_span": 0.2 },
+      "correlations": {
+        "intercept,cond": -0.25,
+        "intercept,z_span": 0.15,
+        "cond,z_span": 0.1
+      }
+    }
+  },
+  "response": { "family": "gaussian", "name": "score", "sigma": 1.0 }
+}

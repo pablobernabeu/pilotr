@@ -28,14 +28,20 @@ brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
   family_map <- list(gaussian = "gaussian()", lognormal = "lognormal()",
                      shifted_lognormal = "shifted_lognormal()", bernoulli = "bernoulli()",
                      poisson = "poisson()", ordinal = "cumulative()",
+                     # brms exgaussian(): mu is the mean, matching how the family is simulated.
+                     exgaussian = "exgaussian()",
                      beta = "Beta()")  # brms Beta(): logit mu + precision phi, as simulated
   family <- family_map[[spec$response$family]]
   if (is.null(family)) stop("no brms family mapping for '", spec$response$family, "'")
 
   fixed_terms <- names(spec$fixed$coefficients)
   rs <- spec$random
+  # `|` only for groups the specification actually correlates, `||` otherwise, matching what
+  # simulate_design() generates. Emitting `|` unconditionally, together with an LKJ prior, told
+  # Stan to estimate a correlation the process had fixed at zero.
   re_terms <- vapply(names(rs), function(g)
-    sprintf("(%s | %s)", paste(c("1", names(rs[[g]]$slopes)), collapse = " + "), g),
+    sprintf("(%s %s %s)", paste(c("1", names(rs[[g]]$slopes)), collapse = " + "),
+            .re_bar(rs[[g]]), g),
     character(1))
   rhs <- paste(c(fixed_terms, re_terms), collapse = " + ")
   formula <- sprintf("%s ~ %s", spec$response$name, rhs)
@@ -46,7 +52,10 @@ brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
     priors <- c(priors, sprintf('prior(normal(0, %s), class = "b", coef = "%s")', sc, term))
   }
   priors <- c(priors, 'prior(normal(0, 1), class = "sd")')        # half-normal (sd >= 0)
-  has_cor <- any(vapply(rs, function(g) length(names(g$slopes)) > 0, logical(1)))
+  # An LKJ prior only makes sense when some group has a correlation matrix to put it on. brms
+  # rejects a prior on a parameter the model does not contain, so this has to track the bars.
+  has_cor <- any(vapply(rs, function(g)
+    length(names(g$slopes)) > 0 && .re_correlated(g), logical(1)))
   if (has_cor) priors <- c(priors, 'prior(lkj(2), class = "cor")')
 
   code <- paste0(

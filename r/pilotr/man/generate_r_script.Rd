@@ -14,11 +14,16 @@ A length-one character string containing a runnable R script that loads \code{pi
 embeds the specification, and simulates the data.
 }
 \description{
-Embed the specification as an R list literal (via \code{deparse}, which round-trips exactly), so
-that the returned script reproduces the design without any external file. This turns a
-design built in the no-code application into a reproducible script; the application's Verify
-button runs that script in a clean R session and confirms that it reproduces the data
-bit-for-bit.
+Embed the specification as an R list literal, so that the returned script reproduces the
+design without any external file. This turns a design built in the no-code application into
+a reproducible script; the application's Verify button runs that script in a clean R session
+and confirms that it reproduces the data bit-for-bit.
+}
+\details{
+Numbers are emitted at 17 significant digits rather than through \code{deparse()}, which prints
+15 and so does not round-trip: \code{deparse(1/3)} reads back as a different double. Since the
+point of the script is bit-for-bit reproduction, the embedded specification has to preserve
+every coefficient exactly.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

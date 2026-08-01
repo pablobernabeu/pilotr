@@ -1,0 +1,20 @@
+{
+  "spec_version": "0.3",
+  "name": "stress_exgaussian",
+  "seed": 555,
+  "units": { "subject": { "n": 24 }, "item": { "n": 16 } },
+  "factors": [
+    { "name": "condition", "levels": ["related", "unrelated"],
+      "contrasts": { "cond": [-0.5, 0.5] }, "vary_within": ["subject", "item"] }
+  ],
+  "fixed": { "intercept": 600.0, "coefficients": { "cond": 25.0 } },
+  "random": {
+    "subject": {
+      "intercept_sd": 60.0,
+      "slopes": { "cond": 15.0 },
+      "correlations": { "intercept,cond": 0.2 }
+    },
+    "item": { "intercept_sd": 30.0 }
+  },
+  "response": { "family": "exgaussian", "name": "RT", "sigma": 40.0, "beta": 80.0, "round": 4 }
+}

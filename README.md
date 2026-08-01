@@ -2,12 +2,21 @@
 
 <img src="r/pilotr/man/figures/logo.png" align="right" height="150" alt="pilotr hex logo" />
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml)
+[![python-tests](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/pilotr.svg)](https://pypi.org/project/pilotr/)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+<!-- badges: end -->
+
 `pilotr` lets researchers pilot a study before they run it.
 
 ## Why pilotr
 
-Most planning tools ask for one effect size and return one power figure. A real study is
-richer: it has groups and conditions, crossed by-subject and by-item variation, and outcomes
+Most planning tools ask for one effect size and return one power figure. A real study is richer
+than that. It has groups and conditions, crossed by-subject and by-item variation, and outcomes
 that are rarely Gaussian, such as reaction times, accuracy, counts and Likert ratings. pilotr
 lets you describe that whole design and then generates the data the design would produce.
 Before collecting anything, you can see how often the planned analysis would detect the effect
@@ -18,14 +27,14 @@ about whether the design is worth running.
 ## How it works
 
 A design is written once, as a small portable specification. That one specification drives three
-interchangeable front-ends which produce identical data: a no-code web app, an R package and a
-Python package. Together they close the loop from design to simulation to analysis, and on to
-simulation-based power and design analysis.
+interchangeable front-ends which produce identical data, namely a no-code web app, an R package
+and a Python package. Together they close the loop from design to simulation to analysis, and on
+to simulation-based power and design analysis.
 
 pilotr succeeds the *Experimental-data-simulation* Shiny app (Bernabeu & Lynott, 2024), archived
 on Zenodo (doi:10.5281/zenodo.10615953). The prototype drew marginal distributions only
-(`rnorm`/`rbinom`, with no effects, correlations or random structure); pilotr is a generative
-toolkit built around effect sizes, random structure and realistic response families.
+(`rnorm`/`rbinom`, with no effects, correlations or random structure), whereas pilotr is a
+generative toolkit built around effect sizes, random structure and realistic response families.
 
 ## Documentation
 
@@ -37,7 +46,28 @@ The Python package's guides and API reference are at
 browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/app/>. The
 portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
 
+## Installation
+
+The Python package is on PyPI. The R package has not reached CRAN yet, so it installs from this
+repository, where it sits in the `r/pilotr` subdirectory.
+
+```bash
+pip install pilotr             # core engine, pure Python and dependency-free
+pip install "pilotr[power]"    # + scipy, for simulation-based power
+pip install "pilotr[mixed]"    # + scipy, statsmodels and pandas, for crossed mixed-effects power
+```
+
+```r
+# install.packages("remotes")
+remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
+```
+
+Neither package is needed to try the no-code app, which runs entirely in the browser.
+
 ## How pilotr compares to existing tools
+
+The table below places pilotr beside the packages researchers most often reach for when planning
+a study.
 
 | Capability | faux | simstudy | simr / Superpower | pilotr |
 |---|:--:|:--:|:--:|:--:|
@@ -49,9 +79,9 @@ portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/
 | Python implementation | ✗ | ✗ | ✗ | ✓ |
 | R = Python bit-identical from one spec | — | — | — | ✓ |
 
-No single existing tool spans these capabilities, and the Python column is empty across the
-board. SDV learns from real data, pyDOE3 builds design matrices, Faker produces placeholder
-values and the statsmodels power module covers analytic classical tests only.
+No single existing tool spans these capabilities, and the Python-implementation row is empty
+apart from pilotr. SDV learns from real data, pyDOE3 builds design matrices, Faker produces
+placeholder values and the statsmodels power module covers analytic classical tests only.
 
 ## Repository layout
 
@@ -62,9 +92,10 @@ pilotr/  (repo root)
     design.schema.json   JSON Schema for validation
     examples/        worked design specs (between-groups; crossed mixed-effects RT)
   python/        pilotr Python package (runnable; pure-Python generative core)
-  r/             pilotr R package (mirrors the Python core exactly)
+  r/pilotr/      pilotr R package (mirrors the Python core exactly)
     inst/app/      the no-code Shiny app, bundled in the package (pilotr::run_app())
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
+  hpc/           SLURM array job for large precision sweeps on a cluster
   docs/
     mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
 ```
@@ -72,7 +103,7 @@ pilotr/  (repo root)
 ## One model, three interfaces
 
 The same design spec drives a no-code web app, an R package and a Python package. The app is a
-thin client: every control writes into the portable JSON spec, which can be downloaded and run
+thin client. Every control writes into the portable JSON spec, which can be downloaded and run
 unchanged in either package to obtain identical data.
 
 ```r
@@ -90,7 +121,7 @@ sharing that process. The architecture is therefore split according to how the t
 
 | Path | How | Concurrency | Use for |
 |---|---|---|---|
-| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (installed from source until released on CRAN and PyPI) | unbounded, each user on their own machine and cores | real work, especially heavy power runs parallelised across cores |
+| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (`pip install pilotr`; the R package installs from this repository until it reaches CRAN) | unbounded, each user on their own machine and cores | real work, especially heavy power runs parallelised across cores |
 | Serverless demo | `app-lite/` exported with shinylive to a static site on GitHub Pages | unbounded, each browser computes via WebAssembly | a low-cost link for design, simulation and Gaussian power |
 | Shared hosted instance | shinyapps.io or ShinyProxy | low and costly | best avoided as the main channel, since it blocks and the prototype's free tier allowed 25 hours per month |
 
@@ -120,7 +151,7 @@ replicates parallelised across cores via `mclapply` and results written to proje
 A reference deployment on the Oxford ARC cluster keeps the code and scripts under
 `~/pilotr_toolkit/` in home, and the heavy material (the R library, results and logs) under
 `/data/<project>/pilotr_toolkit/`, since the home quota is small. A one-time bootstrap installs
-`lme4` and `lmerTest` into the data-area library (`R_LIBS`); the R module already provides
+`lme4` and `lmerTest` into the data-area library (`R_LIBS`). The R module already provides
 `jsonlite`. Submitting [`sbatch hpc/precision_array.slurm`](hpc/precision_array.slurm) runs the sweep, and a quick smoke test
 is `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`. Each task
 writes one `precision_N<n>.csv`, and these combine into a full precision-vs-*N* curve at a
@@ -144,43 +175,70 @@ auditable and free of external dependencies.
 
 ## Quick start
 
+Every command below runs from the repository root.
+
+### Simulate a design, in either language
+
+The two demo scripts are the shortest way in. Each simulates the bundled designs and runs
+classical simulation-based power with the Type S and Type M errors, and the parity check then
+confirms that the two languages produce identical data.
+
 ```bash
-# Python: simulate both designs + classical simulation-based power (Type S/M)
-python python/examples/run_demo.py
+python python/examples/run_demo.py         # Python
+Rscript r/pilotr/examples/run_demo.R       # R, bit-for-bit the same
+python python/examples/parity_check.py     # max abs diff = 0
+```
 
-# R: the same, bit-for-bit
-Rscript r/pilotr/examples/run_demo.R
+Realistic response families have a demo of their own, covering ordinal (Likert) outcomes and
+Poisson counts.
 
-# Check that R and Python produce identical data (max abs diff = 0)
-python python/examples/parity_check.py
-
-# R: crossed mixed-effects simulation-based power via lme4/lmerTest
-Rscript r/pilotr/examples/run_power_mixed.R
-
-# R: validate the generative model (a maximal lmer fit recovers the specified parameters)
-Rscript r/pilotr/examples/validate_recovery.R
-
-# Python validation suite
-python -m pytest python/tests -q
-
-# Realistic distributions: ordinal (Likert) + Poisson counts
+```bash
 python python/examples/families_demo.py
+```
 
-# Power-vs-N curves + the publication figure
+### Power and design analysis
+
+Three R scripts cover this ground. The first runs crossed mixed-effects power through `lme4`
+and `lmerTest`. The second validates the generative model by fitting a maximal `lmer` model and
+checking that it recovers the specified parameters. The third covers continuous predictors,
+interactions and continuous random slopes, together with a precision-based ROPE design analysis,
+an N-sweep and a brms bridge (documented in
+[`docs/mixed_models_and_design_analysis.md`](docs/mixed_models_and_design_analysis.md)).
+
+```bash
+Rscript r/pilotr/examples/run_power_mixed.R
+Rscript r/pilotr/examples/validate_recovery.R
+Rscript r/pilotr/examples/precision_design_analysis.R
+```
+
+Python runs crossed mixed-effects power through statsmodels, so the two languages are at
+capability parity here, though not at numerical parity. The note closing the Quick start
+explains where the two estimators diverge.
+
+```bash
+python python/examples/power_mixed_demo.py
+```
+
+### Power curves and the publication figure
+
+The Gaussian curve is quick. The crossed mixed curve is slow, because every point on it is a set
+of `lme4` fits. A third script draws both into one figure.
+
+```bash
 python python/examples/power_curves.py        # Gaussian curve  -> build/*.csv
 Rscript r/pilotr/examples/power_curve_mixed.R # crossed mixed curve (slow, lme4)
 Rscript r/pilotr/examples/plot_power_curves.R # -> build/power_curves.png
+```
 
-# equivalence with faux and simstudy where they overlap
+### Cross-checks and tests
+
+Two further scripts check that pilotr agrees with faux and simstudy where the three overlap, and
+the Python validation suite exercises the generative core.
+
+```bash
 Rscript r/pilotr/examples/equivalence_faux.R
 Rscript r/pilotr/examples/equivalence_simstudy.R
-
-# crossed mixed-effects power in Python (statsmodels), for R and Python capability parity
-python python/examples/power_mixed_demo.py
-
-# continuous predictors, interactions and continuous random slopes, with a precision-based
-# ROPE design analysis, an N-sweep and a brms bridge (see docs/mixed_models_and_design_analysis.md)
-Rscript r/pilotr/examples/precision_design_analysis.R
+python -m pytest python/tests -q
 ```
 
 > A note on R and Python coverage. Data generation is bit-identical across languages, and both
@@ -191,3 +249,26 @@ Rscript r/pilotr/examples/precision_design_analysis.R
 > 0.73 from lme4), although it recovers fixed effects correctly (mean estimate about 0.048 versus
 > 0.05). The two-group Gaussian power backend is identical in both languages. For correlated
 > random slopes, R is the recommended choice.
+
+## Citation
+
+If pilotr contributes to published work, please cite it.
+
+> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
+> specification* (R and Python package version 0.2.1). https://doi.org/10.5281/zenodo.21266313
+
+The About page of each documentation site carries the same reference with a BibTeX entry, for
+[the R package](https://pablobernabeu.github.io/pilotr/articles/about.html) and for
+[the Python package](https://pablobernabeu.github.io/pilotr/py/about/). GitHub builds a
+ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*
+button.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+## Contributing
+
+Issues and pull requests are welcome. The [contributing guide](.github/CONTRIBUTING.md) describes
+the development setup and the conventions the toolkit follows, and everyone taking part is asked
+to honour the [Code of Conduct](.github/CODE_OF_CONDUCT.md).

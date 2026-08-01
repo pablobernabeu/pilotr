@@ -14,7 +14,7 @@ designs use a statsmodels MixedLM backend (`power_mixed`), which is conservative
 random-slope designs; the R package's lme4 backend is the reference there.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
-processes. Each replicate seeds the shared cross-language RNG from its own index, so the
+processes. The replicate seeds are derived once from the specification's seed, so the
 results are identical to a serial run whatever the worker count. The per-replicate
 functions are module-level so that they pickle under the Windows spawn start method.
 """
@@ -22,6 +22,7 @@ functions are module-level so that they pickle under the Windows spawn start met
 from __future__ import annotations
 import copy, functools, statistics
 from .simulate import simulate, load_spec
+from .core import replicate_seeds
 
 
 def _check_workers(workers):
@@ -73,7 +74,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
         Two-sided significance level (default 0.05).
     workers : int, optional
         Number of local worker processes over which to spread the replicates (default 1,
-        serial). Each replicate seeds the shared RNG from its own index, so any worker
+        serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
 
     Returns
@@ -123,7 +124,7 @@ def _power_impl(spec, n_sims, alpha, executor):
     base_seed = spec["seed"]
     rep = functools.partial(_power_replicate, spec=spec, fname=fname,
                             lev0=lev0, lev1=lev1, yname=yname)
-    results = _map_replicates(rep, [base_seed + i for i in range(n_sims)], executor)
+    results = _map_replicates(rep, replicate_seeds(base_seed, n_sims), executor)
     estimates = [r[0] for r in results]
     pvals = [r[1] for r in results]
 
@@ -203,7 +204,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         Two-sided significance level (default 0.05).
     workers : int, optional
         Number of local worker processes over which to spread the replicates (default 1,
-        serial). Each replicate seeds the shared RNG from its own index, so any worker
+        serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
 
     Returns
@@ -248,7 +249,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
 
     rep = functools.partial(_power_mixed_replicate, spec=spec, fname=fname, l2c=l2c,
                             yname=yname, fam=fam, shift=shift)
-    seeds = [base + i for i in range(n_sims)]
+    seeds = replicate_seeds(base, n_sims)
     if workers == 1:
         results = _map_replicates(rep, seeds, None)
     else:

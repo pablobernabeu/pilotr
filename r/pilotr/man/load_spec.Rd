@@ -4,10 +4,14 @@
 \alias{load_spec}
 \title{Load a design specification from a JSON file}
 \usage{
-load_spec(path)
+load_spec(path, validate = TRUE)
 }
 \arguments{
 \item{path}{Path to a JSON design-specification file.}
+
+\item{validate}{Whether to validate the specification after reading it. \code{TRUE} (the default)
+applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}; \code{FALSE} skips validation, and
+any other value is passed to \code{validate_spec()} as its \code{strict} argument.}
 }
 \value{
 The specification as a nested list, with sub-lists left unsimplified so that the
@@ -15,6 +19,13 @@ structure round-trips exactly. Pass the result to \code{\link[=simulate_design]{
 }
 \description{
 Load a design specification from a JSON file
+}
+\details{
+The specification is validated by default, via \code{\link[=validate_spec]{validate_spec()}}, because several ways of
+getting one wrong produce plausible data rather than an error: a mistyped coefficient key
+resolves to no column and so silently sets that effect to zero, and a response parameter
+left over from another family is ignored. Validation also refuses a specification declaring a
+\code{spec_version} newer than this implementation understands, rather than reading it partially.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

@@ -1,0 +1,27 @@
+{
+  "note": [
+    "Per-case tolerance for the cross-language comparison, in units in the last place.",
+    "The default is 0: R and Python must agree bit for bit.",
+    "A non-zero entry is allowed only where the response family applies a transcendental to the",
+    "linear predictor. IEEE-754 requires correct rounding for +, -, *, / and sqrt, but not for",
+    "exp() or log(), and R for Windows (MinGW-w64) and CPython (UCRT) do not share a libm.",
+    "control_rt_as_gaussian.json is the control that pins this down: it is crossed_mixed_rt with",
+    "the family switched to gaussian, so it consumes an identical RNG stream and an identical",
+    "linear predictor. It agrees bit for bit, which leaves exp() as the only possible source of",
+    "the residual difference in the shifted_lognormal original.",
+    "Measured over 200,000 draws in the log-RT range, R and CPython exp() disagree on 0.44% of",
+    "arguments by up to 6 ulp, and log() on 0.12% by up to 1 ulp. The 8-ulp allowance leaves",
+    "headroom for a third platform's libm while staying far below any statistically meaningful",
+    "difference (~1.8e-15 relative). A logic error would show as a much larger gap, as a",
+    "differing row count, or as a differing non-numeric cell, all of which still fail.",
+    "stress_exgaussian is currently exact on this platform, but its value path applies log() to a",
+    "uniform draw, so it belongs to the same class as the two lognormal cases and is classified",
+    "with them rather than on the accident of one seed agreeing."
+  ],
+  "default_max_ulp": 0,
+  "cases": {
+    "crossed_mixed_rt.noround.txt": 8,
+    "reading_time_continuous.noround.txt": 8,
+    "stress_exgaussian.noround.txt": 8
+  }
+}
