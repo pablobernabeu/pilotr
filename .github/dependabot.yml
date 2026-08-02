@@ -10,6 +10,18 @@ updates:
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "ci"
+    ignore:
+      # actions/ai-inference v3 is not an upgrade of the version used here, it is a
+      # different product. v2 calls GitHub Models, which is free and authenticates with
+      # the built-in GITHUB_TOKEN, and that is the whole basis on which the triage step
+      # is documented as costing nothing. v3 drops GitHub Models entirely: it is
+      # Copilot-only, shells out to a Copilot CLI that GitHub-hosted runners do not
+      # carry, wants a COPILOT_GITHUB_TOKEN, and takes a different form of model id. A
+      # merge would therefore break the step, and break it quietly, because the step
+      # sets continue-on-error. Revisit deliberately if the triage ever moves to
+      # Copilot; until then a major bump here is noise.
+      - dependency-name: "actions/ai-inference"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "pip"
     directory: "/python"
