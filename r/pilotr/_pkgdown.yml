@@ -67,6 +67,67 @@ navbar:
       href: https://github.com/pablobernabeu/pilotr
       aria-label: GitHub
 
+# Grouped along the path a study takes: write a specification, simulate from it,
+# analyse the design, then emit the code and the seeds that make the run
+# reproducible. The Python twin's API reference uses the same group names in the
+# same order, so a name is found in the same place on either site.
+reference:
+- title: Design specifications
+  desc: Write, validate and load the portable JSON specification that everything else reads.
+  contents:
+  - build_spec
+  - validate_spec
+  - load_spec
+  - spec_json
+  - spec_from_model
+  - pilotr_example
+- title: Simulation
+  desc: Draw a data set from a specification, together with the model that specification implies.
+  contents:
+  - simulate_design
+  - model_data
+  - model_formula
+  - default_response_name
+- title: Power and design analysis
+  desc: Estimate power by simulation, at one sample size or across a range of them.
+  contents:
+  - power_design
+  - power_mixed
+  - power_curve_mixed
+  - print.pilotr_power
+- title: Precision and equivalence
+  desc: Size a study for the width of an interval rather than for a significance test.
+  contents:
+  - precision_design
+  - precision_curve
+- title: Calibration and sweeps
+  desc: Tune a specification towards a target, and vary one of its fields across a range.
+  contents:
+  - calibrate_response
+  - response_variance
+  - design_conditions
+  - sweep_spec
+- title: Generated analysis code
+  desc: Emit runnable, self-contained code for the analysis a specification implies.
+  contents:
+  - generate_r_script
+  - generate_design_analysis
+  - brms_bridge
+- title: Reproducibility
+  desc: The shared random-number stream that makes an R run and a Python run agree bit for bit.
+  contents:
+  - make_rng
+  - replicate_seeds
+  - as241
+- title: App
+  desc: The code-free interface to the same workflow.
+  contents:
+  - run_app
+- title: Package overview
+  desc: What the package does, and where to start.
+  contents:
+  - pilotr-package
+
 home:
   sidebar:
     # Slim the right sidebar: the licence is one British-spelled link (the

@@ -219,10 +219,34 @@ aside h2 {
 }
 .template-reference-index .section > h2 {
   margin-top: .2rem;
+  // The lead below is a subtitle to this title, so it sits just under it rather
+  // than a heading's usual gap away.
+  margin-bottom: .15rem;
   border-bottom: none;
   color: var(--brand-primary);
 }
 [data-bs-theme="dark"] .template-reference-index .section > h2 { color: var(--brand-teal-light); }
+// The lead under a group title is that group's subtitle, so it is set in a
+// softened version of the title's own colour rather than in body ink: near
+// enough to read as part of the heading, far enough not to compete with it.
+// color-mix follows a plain declaration of the muted grey, so a browser that
+// cannot compute the mix still gets a deliberate colour rather than none. The
+// accent is named per package, teal on most sites and violet on lexsync, so the
+// dark rule reaches it through a fallback chain.
+.template-reference-index .section-desc p {
+  margin-top: 0;
+  font-size: .95rem;
+  line-height: 1.5;
+  color: var(--brand-muted);
+  color: color-mix(in srgb, var(--brand-primary) 68%, var(--brand-muted));
+}
+[data-bs-theme="dark"] .template-reference-index .section-desc p {
+  color: color-mix(in srgb,
+    var(--brand-teal-light, var(--brand-violet-light)) 65%, var(--brand-muted));
+}
+// The lead belongs to the entries below it, so set it close to them rather than
+// a full paragraph away.
+.template-reference-index .section-desc p:last-child { margin-bottom: .35rem; }
 // pkgdown can emit a group as a heading section (with an empty dl) followed
 // by a headless section holding the functions; joined here so heading and
 // functions read as one card.
@@ -240,6 +264,10 @@ aside h2 {
   border-top: none;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+  // The card's 1.1rem top padding is meant for a card that opens with a
+  // heading. This half opens directly under one, so there the padding reads as
+  // a gap between a subtitle and the functions it introduces.
+  padding-top: .35rem;
 }
 .template-reference-index .section > dl:empty { display: none; }
 

@@ -81,6 +81,11 @@ plugins:
             show_signature_annotations: true
             separate_signature: true
             members_order: source
+            # api.md groups its objects under h2 sections, mirroring the R
+            # package's reference index. At mkdocstrings' default level the object
+            # headings would also be h2, flattening the table of contents into one
+            # list in which no object shows which group it belongs to.
+            heading_level: 3
 
 markdown_extensions:
   - admonition

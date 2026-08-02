@@ -5,7 +5,10 @@ A design specification is a single JSON object describing a data-generating proc
 Python package. Given the same spec and seed, every implementation must produce an
 identical data set, within the boundary set out under **Scope of the guarantee** below.
 
-The machine-readable form of this document is [`design.schema.json`](design.schema.json). Both
+The machine-readable form of this document is
+[`design.schema.json`](https://github.com/pablobernabeu/pilotr/blob/main/spec/design.schema.json).
+The link is absolute because this file is read both here in the repository and embedded in the
+documentation site, where a path relative to the repository would not resolve. Both
 implementations enforce it through `validate_spec()`, together with the cross-field rules JSON
 Schema cannot express.
 

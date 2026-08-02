@@ -1,7 +1,7 @@
 # Installable launcher for the no-code app. Each user runs it locally on their own machine.
 # Concurrency is therefore unbounded across users, and heavy power runs use the user's own cores.
 
-#' Launch the pilotr no-code app.
+#' Launch the pilotr no-code app
 #'
 #' Runs the bundled Shiny app locally. When the package is installed, the app calls the
 #' package's functions directly. Running locally gives each user a private R process, so

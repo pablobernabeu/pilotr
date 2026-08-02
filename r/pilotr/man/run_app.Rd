@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_app.R
 \name{run_app}
 \alias{run_app}
-\title{Launch the pilotr no-code app.}
+\title{Launch the pilotr no-code app}
 \usage{
 run_app(..., async = NULL)
 }
