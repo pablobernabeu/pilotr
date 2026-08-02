@@ -71,7 +71,7 @@ API reference. The full repository, including the R package and the no-code app,
 If pilotr contributes to published work, please cite it.
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (R and Python package version 0.2.1).
+> design specification* (R and Python package version 0.3.0).
 > https://doi.org/10.5281/zenodo.21266313
 
 The [About page](https://pablobernabeu.github.io/pilotr/py/about/) carries the same citation

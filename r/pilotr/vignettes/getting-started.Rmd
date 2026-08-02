@@ -101,6 +101,10 @@ cat(generate_r_script(spec))
 
 ## Where to go next
 
+The remaining guides pick up where this one leaves off, taking the same specification through
+each response family, through power and precision analysis, and out to the other interfaces
+that read it.
+
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,
   count, ordinal and proportion outcomes.
 - [Power and design analysis](power-analysis.html), covering simulation-based power with Type

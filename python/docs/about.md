@@ -5,17 +5,17 @@
 If you use pilotr in published work, please cite it:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (Version 0.2.1) [Computer software].
+> design specification* (R and Python package version 0.3.0).
 > https://doi.org/10.5281/zenodo.21266313
 
 ```bibtex
-@software{bernabeu2026pilotr,
-  author  = {Pablo Bernabeu},
-  title   = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},
-  year    = {2026},
-  version = {0.2.1},
-  doi     = {10.5281/zenodo.21266313},
-  url     = {https://doi.org/10.5281/zenodo.21266313}
+@Manual{pilotr,
+  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},
+  author = {Pablo Bernabeu},
+  year   = {2026},
+  note   = {R and Python package version 0.3.0},
+  doi    = {10.5281/zenodo.21266313},
+  url    = {https://doi.org/10.5281/zenodo.21266313},
 }
 ```
 

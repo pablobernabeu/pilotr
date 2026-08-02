@@ -29,14 +29,14 @@ theme:
       primary: black
       accent: amber
       toggle:
-        icon: material/brightness-7
+        icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
       accent: amber
       toggle:
-        icon: material/brightness-4
+        icon: material/weather-sunny
         name: Switch to light mode
   features:
     - navigation.tabs
@@ -55,6 +55,7 @@ extra_css:
 # matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
+  - Get started: getting-started.md
   # Guides ordered by workflow: simulation topics first, then power analysis,
   # then cross-language reproducibility and the spec format as reference topics.
   - Guides:
@@ -105,4 +106,4 @@ markdown_extensions:
 
 # The released version shown beside the title in the header (updated on release).
 extra:
-  version: "0.2.1"
+  version: "0.3.0"

@@ -36,15 +36,12 @@ design, simulate, inspect the data, estimate two-group Gaussian power and export
 
 Describe the design in the left panel: the sample sizes, the factor and its two levels, the
 fixed intercept and effect, a response family, and for crossed designs the random-effect
-standard deviations. Then read the tabs.
-
-- **Design spec**: the exact JSON specification, the portable source of truth.
-- **Data**: the simulated data set.
-- **Summary & plot**: group summaries and a plot.
-- **Power**: simulation-based two-group Gaussian power with the Type S and Type M errors,
-  plus a power curve over sample size.
-- **R script**: a self-contained, reproducible R script. The installed app can also verify it
-  by running it in a clean R session and confirming bit-for-bit reproduction.
+standard deviations. Then read the tabs. 'Design spec' holds the exact JSON specification, the
+portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
+summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
+and Type M errors, together with a power curve over sample size. 'R script' emits a
+self-contained, reproducible R script, which the installed app can also verify by running it in
+a clean R session and confirming bit-for-bit reproduction.
 
 Changing the response family resets the intercept and effect to sensible values for that
 family's scale, so a point-and-click design stays valid. The advanced 'paste a JSON spec' box

@@ -528,9 +528,20 @@
     var(--md-typeset-a-color) 68%, var(--md-default-fg-color--light));
 }
 /* On the dark theme the card lifts off the page on the same raised navy the
-   output blocks use. */
+   output blocks use. The title and its subtitle also have to name the accent
+   directly here: Material derives --md-typeset-a-color from the slate palette's
+   hue and overrides ours, so a rule written against that variable renders the
+   heading in Material's own mid-blue rather than the package's accent. */
 [data-md-color-scheme="slate"] .md-content:has(.doc-object) .md-typeset h2:not(.doc),
 [data-md-color-scheme="slate"] .md-content:has(.doc-object) .md-typeset h2:not(.doc) + p {
   background: var(--brand-ink-raised);
   border-color: rgba(255, 255, 255, .10);
+}
+[data-md-color-scheme="slate"] .md-content:has(.doc-object) .md-typeset h2:not(.doc) {
+  color: var(--brand-teal-light, var(--brand-violet-light));
+}
+[data-md-color-scheme="slate"] .md-content:has(.doc-object) .md-typeset h2:not(.doc) + p {
+  color: color-mix(in srgb,
+    var(--brand-teal-light, var(--brand-violet-light)) 68%,
+    var(--md-default-fg-color--light));
 }

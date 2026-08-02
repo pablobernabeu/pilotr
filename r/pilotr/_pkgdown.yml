@@ -67,6 +67,25 @@ navbar:
       href: https://github.com/pablobernabeu/pilotr
       aria-label: GitHub
 
+# Without this block the Articles index falls back to pkgdown's default heading
+# and an alphabetical list, which buries the workflow order the navbar menu sets
+# out and puts About among the guides. Get started and About each have their own
+# navbar entry, so an internal group keeps them off the index, as on the twin
+# sites.
+articles:
+- title: Guides
+  contents:
+  - response-families
+  - worked-examples
+  - power-analysis
+  - precision-rope
+  - cross-language
+  - the-no-code-app
+- title: internal
+  contents:
+  - getting-started
+  - articles/about
+
 # Grouped along the path a study takes: write a specification, simulate from it,
 # analyse the design, then emit the code and the seeds that make the run
 # reproducible. The Python twin's API reference uses the same group names in the

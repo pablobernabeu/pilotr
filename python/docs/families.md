@@ -1,6 +1,6 @@
 # Response families
 
-The same linear predictor can be mapped through any of seven response families. The family and
+The same linear predictor can be mapped through any of eight response families. The family and
 its parameters live in the spec's `response` block, and the response column is named by
 `response["name"]`.
 
@@ -9,14 +9,24 @@ its parameters live in the spec's `response` block, and the response column is n
 | Continuous | `gaussian` | identity | `sigma` |
 | Reaction time | `shifted_lognormal` | log | `sigma`, `shift` |
 | Positive continuous (e.g. reading time) | `lognormal` | log | `sigma` |
+| Reaction time, on the response scale | `exgaussian` | identity | `sigma`, `beta` |
 | Accuracy (0/1) | `bernoulli` | logit | none |
 | Counts | `poisson` | log | none |
 | Likert / ordered | `ordinal` | cumulative logit | `thresholds` |
 | Proportions in (0, 1) | `beta` | logit (mean) | `phi` (precision) |
 
-The fixed `effect` is always expressed on the scale of the linear predictor (the link scale):
-the identity scale for Gaussian, the log scale for reaction times and counts, and the logit
-scale for accuracy, ordinal and Beta.
+The fixed `effect` is always expressed on the scale of the linear predictor, the link scale.
+That is the identity scale for the Gaussian and ex-Gaussian families, the log scale for
+lognormal reaction times, reading times and counts, and the logit scale for accuracy, ordinal
+and Beta outcomes.
+
+The ex-Gaussian, added in 0.3, is a normal plus an exponential, mean-centred by subtracting the
+exponential's own mean so that the linear predictor stays the mean of the response. That is
+brms's `exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted
+to it agree on what the intercept means. A shifted lognormal is not a substitute, because
+`power_mixed` logs the response back and leaves a symmetric residual on the analysis scale. A
+specification using the ex-Gaussian has to declare `"spec_version": "0.3"`, since a 0.2
+implementation would read it differently.
 
 ## What the families look like
 

@@ -19,14 +19,17 @@ cat(sprintf(
 # clipboard API; the link is a self-contained data URI, so neither depends on a
 # static file being shipped alongside the site.
 ver <- as.character(utils::packageVersion("pilotr"))
+# @Manual with the version in `note`, matching the bibentry in inst/CITATION, so
+# that the entry offered here and the one citation("pilotr") returns are the same
+# reference rather than two entries of different types.
 bib <- paste(
-  "@software{bernabeu2026pilotr,",
-  "  author  = {Pablo Bernabeu},",
-  "  title   = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},",
-  "  year    = {2026},",
-  sprintf("  version = {%s},", ver),
-  "  doi     = {10.5281/zenodo.21266313},",
-  "  url     = {https://doi.org/10.5281/zenodo.21266313},",
+  "@Manual{pilotr,",
+  "  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},",
+  "  author = {Pablo Bernabeu},",
+  "  year   = {2026},",
+  sprintf("  note   = {R and Python package version %s},", ver),
+  "  doi    = {10.5281/zenodo.21266313},",
+  "  url    = {https://doi.org/10.5281/zenodo.21266313},",
   "}",
   sep = "\n"
 )

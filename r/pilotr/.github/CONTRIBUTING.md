@@ -1,3 +1,10 @@
+<!--
+This file is a copy. The original is .github/CONTRIBUTING.md at the repository
+root, and any edit belongs there first. pkgdown scans only the package
+directory, so without a copy here the R site would have no Community link to
+render, and the two have to be kept in step by hand.
+-->
+
 # Contributing to pilotr
 
 Thank you for considering a contribution. Issues and pull requests are both
@@ -27,7 +34,14 @@ pak::pak(c("devtools", "roxygen2", "testthat", "spelling"))
 devtools::document("r/pilotr")   # regenerate man/ and NAMESPACE after editing roxygen
 devtools::test("r/pilotr")       # run the test suite
 devtools::check("r/pilotr")      # a full R CMD check
+devtools::build_readme("r/pilotr")  # regenerate README.md after editing README.Rmd
 ```
+
+`r/pilotr/README.md` is generated from `README.Rmd` and is also the website's home
+page, so edit the `.Rmd` and knit it rather than editing the Markdown directly.
+The cross-language parity table in `r/pilotr/vignettes/parity-summary.csv` is
+likewise generated, by `python examples/parity_check.py --csv`, which needs both
+demos to have been run first.
 
 The Python package:
 

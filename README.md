@@ -255,7 +255,7 @@ python -m pytest python/tests -q
 If pilotr contributes to published work, please cite it.
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification* (R and Python package version 0.2.1). https://doi.org/10.5281/zenodo.21266313
+> specification* (R and Python package version 0.3.0). https://doi.org/10.5281/zenodo.21266313
 
 The About page of each documentation site carries the same reference with a BibTeX entry, for
 [the R package](https://pablobernabeu.github.io/pilotr/articles/about.html) and for
