@@ -22,7 +22,7 @@ process and is consumed identically by three interfaces, namely a no-code web ap
 this R package and a Python package. The specification is the unit of reproducibility. It is
 a complete, executable description rather than a screenshot of a graphical interface or a
 language-specific script. You can place it under version control, attach it to a
-preregistration, share it with a collaborator, and run it unchanged in R or Python to obtain
+preregistration, share it with a collaborator and run it unchanged in R or Python to obtain
 bit-identical data.
 
 This vignette walks through the core loop of describe, simulate, inspect and export. The
@@ -31,7 +31,7 @@ other vignettes, listed at the end, each go deeper into one part of the workflow
 ## Describe a design
 
 The specification is a small list serialised to JSON. You can write it by hand, point and
-click in the web application, or build it from a flat set of inputs with `build_spec()`. The
+click in the web application or build it from a flat set of inputs with `build_spec()`. The
 example below is a crossed psycholinguistic design. Subjects respond to items in a related or
 unrelated condition, with reaction time as the outcome, crossed by-subject and by-item random
 intercepts and slopes, and a small priming effect on the log scale.
@@ -78,7 +78,7 @@ The design is crossed, so every subject sees every item in both conditions
 ## Reproducible by construction
 
 pilotr ships a shared random-number generator, so the same specification and seed produce the
-same data every time. This holds in the current R session, in a fresh one, in Python, and on
+same data every time. This holds in the current R session, in a fresh one, in Python and on
 any machine.
 
 ```{r}
@@ -102,7 +102,7 @@ cat(generate_r_script(spec))
 ## Where to go next
 
 The remaining guides pick up where this one leaves off, taking the same specification through
-each response family, through power and precision analysis, and out to the other interfaces
+each response family, through power and precision analysis and out to the other interfaces
 that read it.
 
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,

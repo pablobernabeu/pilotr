@@ -4,20 +4,55 @@
 
 If you use pilotr in published work, please cite it:
 
-> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (R and Python package version 0.3.0).
-> https://doi.org/10.5281/zenodo.21266313
+````python exec="1"
+# The citation, the BibTeX entry and the downloadable .bib file are all built here
+# from one string, using the version the package itself reports, so none of them can
+# drift away from the code. This reaches none of the copies that sit where no code can
+# run, and those still have to be bumped by hand when a release is cut. They are the
+# 'extra.version' chip in mkdocs.yml, the 'version' field in CITATION.cff and the
+# citation block in each of the two READMEs.
+import pilotr
 
-```bibtex
-@Manual{pilotr,
-  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},
-  author = {Pablo Bernabeu},
-  year   = {2026},
-  note   = {R and Python package version 0.3.0},
-  doi    = {10.5281/zenodo.21266313},
-  url    = {https://doi.org/10.5281/zenodo.21266313},
-}
-```
+version = pilotr.__version__
+
+bibtex = (
+    "@Manual{pilotr,\n"
+    "  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},\n"
+    "  author = {Pablo Bernabeu},\n"
+    "  year   = {2026},\n"
+    f"  note   = {{R and Python package version {version}}},\n"
+    "  doi    = {10.5281/zenodo.21266313},\n"
+    "  url    = {https://doi.org/10.5281/zenodo.21266313},\n"
+    "}\n"
+)
+
+# docs/pilotr.bib is the file the download link below serves, and it is written from
+# the same string rather than maintained by hand. MkDocs renders the pages before it
+# copies the static files, so the copy that reaches the built site is this one. The
+# file is only rewritten when its contents have actually changed, because 'mkdocs
+# serve' watches the docs directory and an unconditional write would set off a fresh
+# rebuild after every pass. A build that rewrites it leaves a change to commit. The
+# read is deliberately unguarded, since MkDocs lists the static files before any page
+# runs, so a file created here would never be copied and the link would quietly 404.
+with open("docs/pilotr.bib", encoding="utf-8") as f:
+    on_disk = f.read()
+if on_disk != bibtex:
+    with open("docs/pilotr.bib", "w", encoding="utf-8") as f:
+        f.write(bibtex)
+
+print("> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable")
+print(f"> design specification* (R and Python package version {version}).")
+print("> https://doi.org/10.5281/zenodo.21266313")
+print()
+print("```bibtex")
+print(bibtex, end="")
+print("```")
+
+# The download link is left as ordinary page content below rather than printed from
+# here. MkDocs rewrites relative links only in the page's own Markdown, so a link
+# printed from executed code would keep the path as written and resolve against
+# about/ instead of the site root. It names no version, so it cannot drift.
+````
 
 [Download the BibTeX entry](pilotr.bib){ download="pilotr.bib" }
 

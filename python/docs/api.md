@@ -6,7 +6,7 @@ order, so a name is found in the same place on either site. Import every name
 here from the top-level package, for example `from pilotr import simulate,
 power`.
 
-The R package covers more ground: calibration, sweeps, the generated-analysis
+The R package covers more ground. Calibration, sweeps, the generated-analysis
 emitters and the no-code app have no Python counterpart yet, so the groups they
 occupy on that side do not appear below.
 

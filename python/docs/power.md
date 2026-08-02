@@ -94,7 +94,8 @@ spec_mixed = {
                  "sigma": 0.3, "shift": 200},
 }
 
-res = power_mixed(spec_mixed, n_sims=12)   # tiny for the docs; use >= 200 in practice
+# A tiny replicate count keeps the docs build fast. Use 200 or more in practice.
+res = power_mixed(spec_mixed, n_sims=12)
 print(table([{k: res[k] for k in (
     "power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m"
 )}]))
@@ -105,10 +106,10 @@ are common in small crossed designs, so this is a useful diagnostic in its own r
 the denominator of `power`, the significant proportion among the converged replicates.
 
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
-`true_effect`). One caveat: the statsmodels variance-component fit overstates random-slope
-variance, so the power estimate is conservative for random-slope designs. The R package's
-`lme4`-based `power_mixed` is the reference. Data generation is identical across the two
-languages, and the discrepancy is in the estimator alone.
+`true_effect`). There is one caveat. The statsmodels variance-component fit overstates
+random-slope variance, so the power estimate is conservative for random-slope designs. The R
+package's `lme4`-based `power_mixed` is the reference. Data generation is identical across the
+two languages, and the discrepancy is in the estimator alone.
 
 `power_mixed` runs pilotr's own simulation loop over the portable specification rather
 than wrapping an existing power package. It covers territory pioneered by

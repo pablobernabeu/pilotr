@@ -16,8 +16,8 @@ cat(sprintf(
 ```{r bibtex, echo = FALSE, results = "asis"}
 # Build the BibTeX entry from the installed version so it never drifts, then
 # render it with a copy button and a download link. The button uses the browser
-# clipboard API; the link is a self-contained data URI, so neither depends on a
-# static file being shipped alongside the site.
+# clipboard API and the link is a self-contained data URI, so neither depends on
+# a static file being shipped alongside the site.
 ver <- as.character(utils::packageVersion("pilotr"))
 # @Manual with the version in `note`, matching the bibentry in inst/CITATION, so
 # that the entry offered here and the one citation("pilotr") returns are the same

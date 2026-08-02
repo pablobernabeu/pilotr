@@ -110,8 +110,8 @@ for label, fam, ic, ef, nm, kw in [
 print(table(rows))
 ```
 
-An ordinal (Likert) design sets the category thresholds directly; the effect shifts mass across
-the categories. The category proportions by group:
+An ordinal (Likert) design sets the category thresholds directly. The effect shifts mass across
+the categories, as the category proportions by group show.
 
 ```python exec="true" source="material-block" session="fam"
 spec = {

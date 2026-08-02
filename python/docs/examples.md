@@ -1,15 +1,21 @@
 # Worked examples
 
-One ready-to-run specification per design family ships with the package. `pilotr_example()` lists them and returns the path to each for `load_spec()`, and the same JSON files drive the R package and the no-code app. Each is
-simulated below, showing the design it describes and the first rows of the data it produces. The
-specification format is documented on the [Specification](specification.md) page.
+One ready-to-run specification per design family ships with the package. `pilotr_example()`
+lists them and returns the path to each for `load_spec()`, and the same JSON files drive the R
+package and the no-code app. Each is simulated below, showing the design it describes and the
+first rows of the data it produces. The specification format is documented on the
+[Specification](specification.md) page.
 
 ```python exec="true" session="ex"
 import sys; sys.path.insert(0, "docs")
 from _exec import table
 ```
 
-```python exec="true" session="ex"
+<!-- The block is given an explicit id because markdown-exec otherwise numbers
+     executed blocks with a counter that runs across the whole site, so adding a
+     block to any earlier page renumbers the anchors on this one. Each example's
+     heading anchor is a link a reader might keep, so it is pinned here instead. -->
+```python exec="true" session="ex" id="example"
 from pilotr import simulate, load_spec, pilotr_example
 
 DESC = {
@@ -33,7 +39,7 @@ for name in pilotr_example():
     fam = spec["response"]["family"]
     d = simulate(spec)
     out.append(f"### {name}")
-    out.append(f"*{DESC.get(name, '')}* &mdash; `{fam}` family, {len(d)} rows.")
+    out.append(f"*{DESC.get(name, '')}* The `{fam}` family, {len(d)} rows.")
     out.append(table(d.head(4)))
     out.append("")
 print("\n".join(out))

@@ -1,7 +1,7 @@
 # Cross-language reproducibility
 
 The point of the shared specification is that one design produces the same data in R and in
-Python. The two implementations never call each other; they share a numerical contract.
+Python. The two implementations never call each other. What they share is a numerical contract.
 
 ## The shared generator
 
@@ -62,7 +62,8 @@ library(pilotr)
 write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 ```
 
-The two CSVs compare exactly, up to CSV number formatting. The repository's [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
+The two CSVs compare exactly, up to CSV number formatting. The repository's
+[`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
 runs this comparison across the worked example designs and reports the maximum difference:
 zero for every design with rounded responses, and below 1e-14 for the unrounded continuous
 design, where R's CSV writer prints 15 significant digits. The script's small tolerance

@@ -66,7 +66,7 @@ spec_c <- build_spec(list(
 ```
 
 ```{r, eval = FALSE}
-# tiny for the vignette; use >= 200 in practice
+# A tiny replicate count keeps the vignette fast. Use 200 or more in practice.
 pm <- power_mixed(spec_c, n_sims = 20)
 unlist(pm[c("power", "type_s", "type_m", "n_converged")])
 ```
@@ -91,7 +91,7 @@ wrapping an existing power package. It covers territory pioneered by
 [simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
 [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021). pilotr
 differs in being driven by the cross-language specification, in reporting Type S and Type M
-errors alongside power, and in built-in parallelisation.
+errors alongside power and in built-in parallelisation.
 
 ## A power curve
 
@@ -116,7 +116,7 @@ curve
 ```
 
 ```{r, fig.width = 6, fig.height = 3.6, dev.args = list(bg = "transparent")}
-# The transparent device canvas is what lets the page colour through: a ggplot
+# The transparent device canvas is what lets the page colour through. A ggplot
 # theme alone cannot do it, since the device paints white underneath. The
 # website's dark mode then inverts the figure's ink, so the axes and labels
 # follow the theme instead of sitting on an opaque matte.
@@ -136,10 +136,10 @@ ggplot(curve, aes(n_subject, power)) +
   labs(x = expression(italic(N) ~ "subjects"), y = "Power") +
   theme_minimal(base_size = 12) +
   # theme_minimal still paints a white plot.background over the transparent
-  # canvas, both surfaces have to be cleared for the page colour to reach the
-  # figure. The ink is left at its default: the website inverts the figure in
-  # dark mode, which turns the dark axis text light, whereas a fixed mid-grey
-  # would be inverted into a muddy tan.
+  # canvas, so both surfaces have to be cleared for the page colour to reach the
+  # figure. The ink is left at its default, because the website inverts the
+  # figure in dark mode, which turns the dark axis text light, whereas a fixed
+  # mid-grey would be inverted into a muddy tan.
   theme(plot.background  = element_rect(fill = NA, colour = NA),
         panel.background = element_rect(fill = NA, colour = NA),
         panel.grid       = element_line(colour = "grey80"))

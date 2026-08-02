@@ -9,6 +9,9 @@ authors:
     orcid: "https://orcid.org/0000-0003-1083-2460"
     email: pcbernabeu@gmail.com
 version: "0.3.0"
+# This is still 0.2.1's release date, because 0.3.0 has not been tagged yet. Set it to
+# the date 0.3.0 is tagged when the release is cut, along with the version above, which
+# nothing generates either.
 date-released: "2026-07-23"
 doi: "10.5281/zenodo.21266313"
 license: MIT

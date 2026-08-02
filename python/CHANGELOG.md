@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- The date is when the 0.3.0 work landed on main, not a release date: 0.3.0 has
+     not been tagged yet. Set it to the tag date when the release is cut, along with
+     date-released in CITATION.cff. -->
 ## [0.3.0] - 2026-08-01
 
 Two of the changes below alter numbers that earlier versions produced. Both are

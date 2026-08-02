@@ -53,9 +53,9 @@ fam_hist <- function(y, fill, title, xlab) {
     theme_minimal(base_size = 12) +
     # theme_minimal still paints a white plot.background over the transparent
     # device canvas, so both surfaces have to be cleared for the page colour to
-    # reach the figure. The ink stays at its default: the website inverts the
-    # figure in dark mode, which turns the dark axis text light of its own
-    # accord.
+    # reach the figure. The ink stays at its default, because the website
+    # inverts the figure in dark mode, which turns the dark axis text light of
+    # its own accord.
     theme(plot.background  = element_rect(fill = NA, colour = NA),
           panel.background = element_rect(fill = NA, colour = NA),
           panel.grid       = element_line(colour = "grey80"))
@@ -112,7 +112,7 @@ round(acc$by_group, 3)   # P(correct) by group
 
 ## Poisson (counts)
 
-Counts via a log link (e.g. number of fixations, errors, or events). An intercept of 1.5
+Counts via a log link (e.g. number of fixations, errors or events). An intercept of 1.5
 implies a base rate near `exp(1.5)`.
 
 ```{r}
