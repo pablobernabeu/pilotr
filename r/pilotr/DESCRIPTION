@@ -20,7 +20,7 @@ Description: Generative simulation of experimental and behavioural data sets fro
     the last place for families applying a transcendental function to the linear
     predictor, whose rounding the IEEE-754 standard does not fix.
 License: MIT + file LICENSE
-URL: https://pablobernabeu.github.io/pilotr/, https://github.com/pablobernabeu/pilotr
+URL: https://pablobernabeu.github.io/pilotr/r/, https://github.com/pablobernabeu/pilotr
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
 Imports: jsonlite, parallel, stats

@@ -31,7 +31,7 @@ neuroscience, linguistics, education and research methods, with hands-on experie
 behavioural experiments, EEG, corpus analysis, computational modelling and statistics. He
 develops open, reproducible research software in R and Python, and is a Fellow of the Software
 Sustainability Institute. pilotr and its
-[R twin](https://pablobernabeu.github.io/pilotr/) share one design specification, keeping a
+[R twin](https://pablobernabeu.github.io/pilotr/r/) share one design specification, keeping a
 simulation reproducible across both languages. His
 [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 

@@ -2,7 +2,7 @@
 
 This guide installs pilotr and simulates a first data set from a design specification. The
 specification is what everything else reads. The same JSON file drives the
-[R package](https://pablobernabeu.github.io/pilotr/), the
+[R package](https://pablobernabeu.github.io/pilotr/r/), the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
 the same file and seed all three produce bit-identical data.
 

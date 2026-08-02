@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pilotr documentation</title>
+  <link rel="icon" href="logo.svg">
+  <style>
+    :root {
+      --bg:#ffffff; --fg:#12324F; --lead:#444; --muted:#555; --link:#2C6FB0;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    /* The link colour is restated in the media query as well as on
+       html[data-theme="dark"]: without it a visitor whose system is dark but who
+       has never touched the toggle keeps the light blue, which sits at 2.4:1 on
+       the dark ground. */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#8FC4F0;
+        --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+        --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+      }
+    }
+    html[data-theme="light"] {
+      --bg:#ffffff; --fg:#12324F; --lead:#444; --muted:#555; --link:#2C6FB0;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    html[data-theme="dark"] {
+      --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#8FC4F0;
+      --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+      --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 46rem; margin: 3.5rem auto; padding: 0 1.25rem; line-height: 1.6;
+      background: var(--bg); color: var(--fg); transition: background .2s, color .2s;
+    }
+    h1 { font-size: 2rem; margin-bottom: .25rem; letter-spacing: -.5px; }
+    p.lead { color: var(--lead); margin-top: 0; font-size: 1.05rem; }
+    a { color: var(--link); }
+    .cards { display: flex; gap: 1.1rem; flex-wrap: wrap; margin-top: 2rem; }
+    a.card {
+      flex: 1 1 16rem; background: var(--card-bg); color: inherit; text-decoration: none;
+      border: 1px solid var(--card-border); border-top: 4px solid var(--accent);
+      border-radius: 12px; padding: 1.25rem 1.4rem; display: block;
+      transition: border-color .15s, transform .15s;
+    }
+    a.card:hover { border-color: var(--card-hover); transform: translateY(-2px); }
+    a.card.r { --accent: #276DC3; }
+    a.card.py { --accent: #3776AB; }
+    a.card.app { --accent: #2C6FB0; }
+    .card-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .45rem; }
+    .card-head svg { width: 30px; height: 30px; flex: 0 0 auto; }
+    .card-head h2 { margin: 0; font-size: 1.35rem; }
+    a.card span { color: var(--muted); font-size: .97rem; }
+    code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+    footer { margin-top: 2.5rem; color: var(--foot); font-size: .9rem; }
+    footer a { color: inherit; }
+    #themeToggle {
+      position: fixed; top: 1rem; right: 1rem; width: 2.3rem; height: 2.3rem; border-radius: 50%;
+      border: 1px solid var(--btn-border); background: var(--card-bg); color: var(--fg);
+      cursor: pointer; font-size: 1.1rem; line-height: 1;
+    }
+    .logo { float: right; margin: 0 0 1rem 1.5rem; width: 128px; }
+    @media (max-width: 480px) { .logo { width: 96px; } h1 { font-size: 1.7rem; } }
+    h2.section-h { margin: 2.8rem 0 .15rem; font-size: 1.35rem; letter-spacing: -.3px; clear: both; }
+    p.section-lead { color: var(--lead); margin-top: .25rem; }
+    p.note { color: var(--muted); font-size: .95rem; margin-top: 1.1rem; }
+  </style>
+</head>
+<body>
+  <button id="themeToggle" title="Toggle light and dark" aria-label="Toggle light and dark theme">&#9789;</button>
+  <img class="logo" src="logo.svg" alt="pilotr hex logo">
+  <h1>pilotr</h1>
+  <p class="lead">Pilot a study before you run it. Describe the design you plan to collect, with its
+  groups, conditions, sample sizes, effect sizes and outcome family, and pilotr generates the data
+  that design would produce, then estimates the power and the precision it would buy. Twin,
+  feature-parity packages read one portable JSON specification and draw from one random-number
+  stream, so a given specification and seed produce bit-identical data in either language.</p>
+  <div class="cards">
+    <a class="card r" href="r/index.html">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" fill="#276DC3" aria-hidden="true"><path d="M12 2.746c-6.627 0-12 3.599-12 8.037 0 3.897 4.144 7.144 9.64 7.88V16.26c-2.924-.915-4.925-2.755-4.925-4.877 0-3.035 4.084-5.494 9.12-5.494 5.038 0 8.757 1.683 8.757 5.494 0 1.976-.999 3.379-2.662 4.272.09.066.174.128.258.216.169.149.25.363.372.544 2.128-1.45 3.44-3.437 3.44-5.631 0-4.44-5.373-8.038-12-8.038zm-2.111 4.99v13.516l4.093-.002-.002-5.291h1.1c.225 0 .321.066.549.25.272.22.715.982.715.982l2.164 4.063 4.627-.002-2.864-4.826s-.086-.193-.265-.383a2.22 2.22 0 00-.582-.416c-.422-.214-1.149-.434-1.149-.434s3.578-.264 3.578-3.826c0-3.562-3.744-3.63-3.744-3.63zm4.127 2.93l2.478.002s1.149-.062 1.149 1.127c0 1.165-1.149 1.17-1.149 1.17h-2.478zm1.754 6.119c-.494.049-1.012.079-1.54.088v1.807a16.622 16.622 0 002.37-.473l-.471-.891s-.108-.183-.248-.394c-.039-.054-.08-.098-.111-.137z"/></svg>
+        <h2>R package</h2>
+      </div>
+      <span>Reference and guides (pkgdown). Not yet on CRAN, so install it from this repository with
+      <code>remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")</code>.</span>
+    </a>
+    <a class="card py" href="python/index.html">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" fill="#3776AB" aria-hidden="true"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg>
+        <h2>Python package</h2>
+      </div>
+      <span>Reference and guides (mkdocs). Install from PyPI with
+      <code>pip install pilotr</code>.</span>
+    </a>
+  </div>
+  <h2 class="section-h">Try it in your browser</h2>
+  <p class="section-lead">The same workflow without a line of code and without an installation. The app
+  runs the R package itself through <a href="https://docs.r-wasm.org/webr/latest/">webR</a>, entirely on
+  your machine, so no design and no data leave the browser. Build a specification with the controls, look
+  at the simulated data, estimate power over a range of sample sizes, and download the specification, the
+  data and the R script that reproduces the run.</p>
+  <div class="cards">
+    <a class="card app" href="app/">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2C6FB0" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="2.2" y="4.2" width="19.6" height="15.6" rx="2.2"/><path d="M2.2 8.6h19.6"/><path d="M10.4 11.7l4.9 2.75-4.9 2.75z"/><circle cx="5.2" cy="6.4" r=".85" fill="#2C6FB0" stroke="none"/></svg>
+        <h2>No-code app</h2>
+      </div>
+      <span>Design, simulate and run a power analysis by pointing and clicking, then export the
+      specification the R and Python packages read.</span>
+    </a>
+  </div>
+  <p class="note">The portable specification and the shared random-number contract are written up in
+  <a href="https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md">spec/SPEC.md</a>, which is what
+  the two packages and the app are all built against.</p>
+  <footer>Source: <a href="https://github.com/pablobernabeu/pilotr">github.com/pablobernabeu/pilotr</a></footer>
+  <script>
+    (function () {
+      var root = document.documentElement, btn = document.getElementById('themeToggle');
+      var saved = localStorage.getItem('pilotr-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      function isDark() {
+        var t = root.getAttribute('data-theme');
+        if (t) return t === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      function sync() { btn.innerHTML = isDark() ? '&#9728;' : '&#9789;'; }
+      btn.addEventListener('click', function () {
+        var next = isDark() ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('pilotr-theme', next);
+        sync();
+      });
+      sync();
+    })();
+  </script>
+</body>
+</html>

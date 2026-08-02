@@ -59,7 +59,7 @@ For a worked introduction, see
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://pablobernabeu.github.io/pilotr/}
+  \item \url{https://pablobernabeu.github.io/pilotr/r/}
   \item \url{https://github.com/pablobernabeu/pilotr}
   \item Report bugs at \url{https://github.com/pablobernabeu/pilotr/issues}
 }

@@ -1,7 +1,7 @@
 # API reference
 
 The public API, in the groups the [R package's reference
-index](https://pablobernabeu.github.io/pilotr/reference/) uses and in the same
+index](https://pablobernabeu.github.io/pilotr/r/reference/) uses and in the same
 order, so a name is found in the same place on either site. Import every name
 here from the top-level package, for example `from pilotr import simulate,
 power`.

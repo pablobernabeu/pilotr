@@ -27,7 +27,7 @@ gathering anything. A single specification drives three interchangeable interfac
 no-code web app, this R package and the Python package.
 
 This is the feature-parity twin of
-[the Python package](https://pablobernabeu.github.io/pilotr/py/) of the same name. The two share
+[the Python package](https://pablobernabeu.github.io/pilotr/python/) of the same name. The two share
 the design specification and the random-number generator, so the same specification and seed
 produce bit-identical data in either language. The R package additionally offers precision/ROPE
 design analysis, the `lme4` reference backend for mixed-effects power, the `brms` bridge and the
@@ -66,7 +66,7 @@ power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4)
 cat(generate_r_script(spec))      # a self-contained, reproducible script
 ```
 
-The [power article](https://pablobernabeu.github.io/pilotr/articles/power-analysis.html)
+The [power article](https://pablobernabeu.github.io/pilotr/r/articles/power-analysis.html)
 shows its output, alongside a power curve over sample size.
 
 ## Try it without installing
@@ -76,7 +76,7 @@ uploaded. It is available as a [no-code app](https://pablobernabeu.github.io/pil
 
 ## Learn more
 
-The [Get started article](https://pablobernabeu.github.io/pilotr/articles/getting-started.html)
+The [Get started article](https://pablobernabeu.github.io/pilotr/r/articles/getting-started.html)
 walks through the core loop of describe, simulate, inspect and export, and the other articles
 each go deeper into one part of the workflow. The full repository, including the specification
 format and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.
@@ -87,7 +87,7 @@ format and the no-code app, is at <https://github.com/pablobernabeu/pilotr>.
 citation("pilotr")
 ```
 
-The [About page](https://pablobernabeu.github.io/pilotr/articles/about.html) carries the same
+The [About page](https://pablobernabeu.github.io/pilotr/r/articles/about.html) carries the same
 citation with a BibTeX entry, and a short note on the developer. The repository also ships
 `CITATION.cff`, which is what GitHub's *Cite this repository* button reads.
 

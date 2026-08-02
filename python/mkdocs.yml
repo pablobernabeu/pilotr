@@ -1,6 +1,6 @@
 site_name: pilotr (Python)
 site_description: Simulate experimental and behavioural data from a portable design specification.
-site_url: https://pablobernabeu.github.io/pilotr/py/
+site_url: https://pablobernabeu.github.io/pilotr/python/
 repo_url: https://github.com/pablobernabeu/pilotr
 docs_dir: docs
 # The licence link is absolute: the copyright line renders on every page, and a
@@ -13,7 +13,7 @@ copyright: >-
   </span>
   Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a> ·
   Released under the
-  <a href="https://pablobernabeu.github.io/pilotr/py/licence/">MIT licence</a>
+  <a href="https://pablobernabeu.github.io/pilotr/python/licence/">MIT licence</a>
 
 theme:
   name: material

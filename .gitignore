@@ -23,6 +23,12 @@ r/pilotr/doc/
 r/pilotr/Meta/
 r/pilotr/docs/
 
+# The published website. The site workflow assembles the landing page, the two
+# documentation sites and the app into these two directories at the repository
+# root, so anyone reproducing the build locally ends up with them in the tree.
+/site/
+/app-stage/
+
 
 # Generated cross-language parity dumps; the harness is source, its output is not
 tools/parity/out/

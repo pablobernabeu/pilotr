@@ -1,8 +1,9 @@
-# Build and publish the project website: the pkgdown documentation site at the repo-root
-# Pages URL (https://pablobernabeu.github.io/pilotr/) and the serverless no-code app at
-# the /app/ sub-path. Both are deployed together to the gh-pages branch on every relevant
-# push to main (and on demand). Free, native GitHub Actions; the gh-pages push uses the
-# built-in GITHUB_TOKEN. Replaces the former manual deploy script.
+# Build and publish the project website. The site is a hub: a landing page at the
+# Pages root (https://pablobernabeu.github.io/pilotr/) pointing at the pkgdown
+# documentation under /r/, the mkdocs documentation under /python/ and the
+# serverless no-code app under /app/. Everything is staged into site/ and deployed
+# together to the gh-pages branch on every relevant push to main (and on demand).
+# Free, native GitHub Actions; the gh-pages push uses the built-in GITHUB_TOKEN.
 
 name: Website
 
@@ -16,6 +17,9 @@ on:
       - 'spec/**'
       - 'README.md'
       - '.github/workflows/site.yml'
+      # The landing page is the root of the published site, so an edit to it alone
+      # changes what visitors see and has to trigger a rebuild.
+      - '.github/landing.html'
   workflow_dispatch:
 
 permissions:
@@ -74,7 +78,12 @@ jobs:
             fi
           fi
 
-      - name: Build the no-code app into the site (/app)
+      - name: Stage pkgdown under site/r
+        run: |
+          mkdir -p site
+          cp -r r/pilotr/docs site/r
+
+      - name: Build the no-code app into site/app
         shell: Rscript {0}
         run: |
           stage <- "app-stage"
@@ -82,31 +91,93 @@ jobs:
           file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")),
                     stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
-          shinylive::export(stage, "r/pilotr/docs/app")
+          shinylive::export(stage, "site/app")
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - name: Build Python docs into the site (/py)
+      - name: Build mkdocs into site/python
         run: |
           set -e
           python -m pip install --quiet mkdocs-material "mkdocstrings[python]" \
             markdown-exec matplotlib scipy statsmodels pandas
-          cd python && python -m mkdocs build --strict --site-dir ../r/pilotr/docs/py
+          cd python && python -m mkdocs build --strict --site-dir ../site/python
+
+      - name: Write landing page
+        run: |
+          cp r/pilotr/man/figures/logo.svg site/logo.svg
+          cp .github/landing.html site/index.html
+
+      - name: Leave redirect stubs at the pre-hub URLs
+        # Until the site became a hub, the pkgdown pages were served from the root
+        # of the Pages site and the mkdocs pages from /py/. Every link, bookmark
+        # and search result recorded before that change points at a path that no
+        # longer holds a page. This walks the two staged trees and leaves a
+        # meta-refresh stub at each old path, pointing at the same document under
+        # its new prefix, so none of those references dead-ends. The rel=canonical
+        # tells a search engine which copy is the real one, so the ranking moves
+        # across rather than being split between two URLs.
+        #
+        # The step exists only for continuity and can be deleted once the old URLs
+        # have aged out of the search indexes and out of people's bookmarks.
+        run: |
+          set -e
+          SITE="https://pablobernabeu.github.io/pilotr"
+
+          write_stub () {
+            stub_path="$1"
+            target="$2"
+            mkdir -p "$(dirname "$stub_path")"
+            {
+              printf '<!doctype html>\n<html lang="en">\n<head>\n'
+              printf '<meta charset="utf-8">\n'
+              printf '<meta http-equiv="refresh" content="0; url=%s">\n' "$target"
+              printf '<link rel="canonical" href="%s">\n' "$target"
+              printf '<title>This page has moved</title>\n'
+              printf '</head>\n<body>\n'
+              printf '<p>This page has moved to <a href="%s">%s</a>.</p>\n' "$target" "$target"
+              printf '</body>\n</html>\n'
+            } > "$stub_path"
+          }
+
+          # The pkgdown pages: what was /pilotr/<path> is now /pilotr/r/<path>.
+          find site/r -name '*.html' | while read -r page; do
+            rel="${page#site/r/}"
+            case "$rel" in
+              # The root of the site now belongs to the landing page, and the three
+              # staged trees own their own prefixes, so a stub written at any of
+              # these paths would overwrite a page that is live in the new layout.
+              index.html|r/*|python/*|app/*|py/*) continue ;;
+              # A stub here would take every mistyped URL anywhere on the site,
+              # including under /python/ and /app/, to the R site's not-found page.
+              404.html) continue ;;
+            esac
+            write_stub "site/$rel" "$SITE/r/$rel"
+          done
+
+          # The mkdocs pages: what was /pilotr/py/<path> is now /pilotr/python/<path>.
+          # mkdocs publishes directory URLs, so the target drops a trailing
+          # index.html and reads as the canonical the real page declares for
+          # itself, rather than as a second spelling of it. Nothing can be
+          # overwritten here, because site/py holds nothing but these stubs.
+          find site/python -name '*.html' | while read -r page; do
+            rel="${page#site/python/}"
+            write_stub "site/py/$rel" "$SITE/python/${rel%index.html}"
+          done
 
       - name: Deploy to gh-pages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          touch r/pilotr/docs/.nojekyll
+          touch site/.nojekyll
           PUB="$(mktemp -d)"
-          cp -r r/pilotr/docs/. "$PUB"/
+          cp -r site/. "$PUB"/
           cd "$PUB"
           git init -q
           git checkout -q -b gh-pages
           git add -A
           git -c user.name="pilotr-site[bot]" -c user.email="deploy@users.noreply.github.com" \
-              commit -q -m "Deploy site (pkgdown + demo)"
+              commit -q -m "Deploy site (landing page, pkgdown, mkdocs and app)"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

@@ -1,4 +1,4 @@
-url: https://pablobernabeu.github.io/pilotr
+url: https://pablobernabeu.github.io/pilotr/r
 
 # The R package lives in a subdirectory of the monorepo (r/pilotr/), not at the
 # repository root. Left to auto-detect, pkgdown's per-file "Source: <path>"
@@ -181,10 +181,12 @@ footer:
     # The licence path is root-relative, unlike the home sidebar's above. pkgdown
     # renders the footer into every page without adjusting a relative href for the
     # page's depth, so a bare LICENSE.html resolves against the current directory
-    # and 404s everywhere below the root (articles/LICENSE.html and the like). An
-    # absolute URL does not help: pkgdown strips the configured site url back off
-    # and leaves the same bare filename. A leading slash is the one form that
-    # survives, and it is unambiguous from any depth. The sidebar keeps its
-    # relative href because it renders only on the home page, at the site root.
+    # and 404s everywhere below the top of the R site (articles/LICENSE.html and
+    # the like). An absolute URL does not help: pkgdown strips the configured site
+    # url back off and leaves the same bare filename. A leading slash is the one
+    # form that survives, and it is unambiguous from any depth. It has to spell out
+    # both the project prefix GitHub Pages serves this repository under and the /r
+    # segment the R site now occupies within the hub. The sidebar keeps its relative
+    # href because it renders only on the home page, at the top of the R site.
     legal: >
-      Released under the [MIT licence](/pilotr/LICENSE.html).
+      Released under the [MIT licence](/pilotr/r/LICENSE.html).

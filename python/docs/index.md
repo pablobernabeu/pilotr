@@ -2,7 +2,7 @@
 
 <p class="mrd-tagline">Simulate experimental and behavioural data from a portable JSON design specification.</p>
 
-This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/) of
+This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of
 the same name. The two share the design specification and the random-number generator, so the
 same specification and seed produce bit-identical data in either language.
 

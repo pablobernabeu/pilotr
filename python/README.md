@@ -11,7 +11,7 @@
 Python implementation of pilotr. It simulates experimental and behavioural data from a
 portable JSON design specification.
 
-This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/) of
+This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of
 the same name. The two share the design specification and the random-number generator, so the
 same specification and seed produce bit-identical data in either language. See the
 [project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code
@@ -61,7 +61,7 @@ uploaded. It is available as a [no-code app](https://pablobernabeu.github.io/pil
 
 ## Learn more
 
-The [Python documentation site](https://pablobernabeu.github.io/pilotr/py/) walks through the
+The [Python documentation site](https://pablobernabeu.github.io/pilotr/python/) walks through the
 quick start, the response families, power and design analysis, the specification format and the
 API reference. The full repository, including the R package and the no-code app, is at
 <https://github.com/pablobernabeu/pilotr>.
@@ -74,7 +74,7 @@ If pilotr contributes to published work, please cite it.
 > design specification* (R and Python package version 0.3.0).
 > https://doi.org/10.5281/zenodo.21266313
 
-The [About page](https://pablobernabeu.github.io/pilotr/py/about/) carries the same citation
+The [About page](https://pablobernabeu.github.io/pilotr/python/about/) carries the same citation
 with a BibTeX entry, and a short note on the developer. The repository also ships
 [`CITATION.cff`](https://github.com/pablobernabeu/pilotr/blob/main/CITATION.cff), which is what
 GitHub's *Cite this repository* button reads.

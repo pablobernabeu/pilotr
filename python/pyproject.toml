@@ -35,7 +35,7 @@ dev = ["scipy>=1.7", "statsmodels>=0.13", "pandas>=1.3", "pytest>=7"]
 [project.urls]
 Homepage = "https://pablobernabeu.github.io/pilotr/"
 Repository = "https://github.com/pablobernabeu/pilotr"
-Documentation = "https://pablobernabeu.github.io/pilotr/py/"
+Documentation = "https://pablobernabeu.github.io/pilotr/python/"
 Issues = "https://github.com/pablobernabeu/pilotr/issues"
 
 [tool.setuptools]

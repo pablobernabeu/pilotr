@@ -38,11 +38,12 @@ generative toolkit built around effect sizes, random structure and realistic res
 
 ## Documentation
 
-The R package's reference and articles live at <https://pablobernabeu.github.io/pilotr/>,
-including a guide to
-[the no-code app](https://pablobernabeu.github.io/pilotr/articles/the-no-code-app.html).
+Everything is published from one site, <https://pablobernabeu.github.io/pilotr/>, whose landing
+page points at the three parts. The R package's reference and articles live at
+<https://pablobernabeu.github.io/pilotr/r/>, including a guide to
+[the no-code app](https://pablobernabeu.github.io/pilotr/r/articles/the-no-code-app.html).
 The Python package's guides and API reference are at
-<https://pablobernabeu.github.io/pilotr/py/>. The no-code app itself can be tried in the
+<https://pablobernabeu.github.io/pilotr/python/>. The no-code app itself can be tried in the
 browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/app/>. The
 portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
 
@@ -135,7 +136,7 @@ the downloaded spec.
 Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
 # The published website is built by CI (.github/workflows/site.yml): the pkgdown docs at
-# https://pablobernabeu.github.io/pilotr/ and this demo at https://pablobernabeu.github.io/pilotr/app/
+# https://pablobernabeu.github.io/pilotr/r/ and this demo at https://pablobernabeu.github.io/pilotr/app/
 ```
 
 ## Running at scale (HPC / SLURM)
@@ -258,8 +259,8 @@ If pilotr contributes to published work, please cite it.
 > specification* (R and Python package version 0.3.0). https://doi.org/10.5281/zenodo.21266313
 
 The About page of each documentation site carries the same reference with a BibTeX entry, for
-[the R package](https://pablobernabeu.github.io/pilotr/articles/about.html) and for
-[the Python package](https://pablobernabeu.github.io/pilotr/py/about/). GitHub builds a
+[the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
+[the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
 ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*
 button.
 

@@ -26,7 +26,7 @@ interfaces, namely a no-code web app, this R package and the Python
 package.
 
 This is the feature-parity twin of [the Python
-package](https://pablobernabeu.github.io/pilotr/py/) of the same name.
+package](https://pablobernabeu.github.io/pilotr/python/) of the same name.
 The two share the design specification and the random-number generator,
 so the same specification and seed produce bit-identical data in either
 language. The R package additionally offers precision/ROPE design
@@ -75,7 +75,7 @@ cat(generate_r_script(spec))      # a self-contained, reproducible script
 ```
 
 The [power
-article](https://pablobernabeu.github.io/pilotr/articles/power-analysis.html)
+article](https://pablobernabeu.github.io/pilotr/r/articles/power-analysis.html)
 shows its output, alongside a power curve over sample size.
 
 ## Try it without installing
@@ -87,7 +87,7 @@ app](https://pablobernabeu.github.io/pilotr/app/).
 ## Learn more
 
 The [Get started
-article](https://pablobernabeu.github.io/pilotr/articles/getting-started.html)
+article](https://pablobernabeu.github.io/pilotr/r/articles/getting-started.html)
 walks through the core loop of describe, simulate, inspect and export,
 and the other articles each go deeper into one part of the workflow. The
 full repository, including the specification format and the no-code app,
@@ -100,7 +100,7 @@ citation("pilotr")
 ```
 
 The [About
-page](https://pablobernabeu.github.io/pilotr/articles/about.html) carries
+page](https://pablobernabeu.github.io/pilotr/r/articles/about.html) carries
 the same citation with a BibTeX entry, and a short note on the
 developer. The repository also ships `CITATION.cff`, which is what
 GitHub’s *Cite this repository* button reads.
