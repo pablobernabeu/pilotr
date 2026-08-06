@@ -12,7 +12,10 @@ if (!requireNamespace("shinylive", quietly = TRUE))
   install.packages("shinylive", repos = "https://cloud.r-project.org")
 
 unlink(stage, recursive = TRUE); dir.create(stage, recursive = TRUE, showWarnings = FALSE)
-file.copy(file.path(pkg_R, c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")), stage)
+# validate.R before spec_builder.R: build_spec() stamps each spec with
+# .SPEC_VERSION, which validate.R defines. This list must match the one in
+# .github/workflows/site.yml and app.R.
+file.copy(file.path(pkg_R, c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")), stage)
 file.copy(file.path(here, "app.R"), stage, overwrite = TRUE)
 
 cat("Exporting shinylive site (downloads webR assets on first run)...\n")
