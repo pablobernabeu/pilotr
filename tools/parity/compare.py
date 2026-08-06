@@ -167,7 +167,17 @@ def main() -> int:
         return 1 if failures else 0
 
     if golden:
-        drifted = [c for c, h in new_hashes.items() if golden.get(c) != h]
+        # A case with a non-zero ulp allowance applies exp() or log() to the
+        # linear predictor, and Windows (MinGW/UCRT) and Linux (glibc) do not
+        # share a libm, so its raw dump can never hash identically on both
+        # platforms: the same golden.json would fail on whichever platform did
+        # not record it. Those cases are gated by the R-versus-Python
+        # comparison above instead, which is the contract; the golden anchor
+        # is enforced only where the arithmetic is IEEE-754-exact and the dump
+        # therefore platform-stable.
+        stable = {c: h for c, h in new_hashes.items()
+                  if case_ulp.get(c, default_ulp) == 0}
+        drifted = [c for c, h in stable.items() if golden.get(c) != h]
         missing = [c for c in golden if c not in new_hashes]
         if drifted or missing:
             print("\ngolden-file drift:")
@@ -177,7 +187,9 @@ def main() -> int:
                 print("  %s: case disappeared" % c)
             failures += len(drifted) + len(missing)
         else:
-            print("\ngolden-file hashes match for all %d cases" % len(new_hashes))
+            print("\ngolden-file hashes match for all %d platform-stable cases"
+                  " (%d exp-link cases gated by the cross-language comparison alone)"
+                  % (len(stable), len(new_hashes) - len(stable)))
     else:
         print("\nno golden.json yet; create one with --update")
 
