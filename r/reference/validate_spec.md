@@ -1,0 +1,63 @@
+# Validate a design specification
+
+Check a design specification against the portable schema and against the
+cross-field rules the schema cannot express, and check that its declared
+`spec_version` is one this implementation understands. Called by
+[`load_spec()`](https://pablobernabeu.github.io/pilotr/r/reference/load_spec.md)
+by default.
+
+## Usage
+
+``` r
+validate_spec(spec, strict = TRUE)
+```
+
+## Arguments
+
+- spec:
+
+  A design specification (path or list).
+
+- strict:
+
+  Whether an unrecognised field is an error (the default) or a warning.
+  Set `FALSE` to load a specification carrying private annotations,
+  accepting that a misspelled field will then be ignored rather than
+  reported.
+
+## Value
+
+The specification, invisibly, so that the call can be chained.
+
+## Details
+
+Validation exists because several ways of getting a specification wrong
+produce plausible data rather than an error. A mistyped coefficient key
+resolves to no column and so silently sets that effect to zero, which
+generates exactly the data of a null design and reports success. A
+response parameter left over from another family is ignored. Neither is
+detectable in the output, which is why they are refused here.
+
+Version negotiation covers the other direction. A specification that
+uses a feature introduced in 0.3 is read differently by a 0.2
+implementation, so it must declare 0.3 or later; a specification
+declaring a version newer than this implementation is refused rather
+than partially understood. A specification with no `spec_version` is
+treated as 0.2, which is what every specification written before the
+field existed is.
+
+## Examples
+
+``` r
+spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
+  factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 20,
+  intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
+validate_spec(spec)
+
+# A mistyped coefficient key is refused rather than silently treated as a zero effect.
+bad <- spec
+bad$fixed$coefficients <- list(effct = 0.5)
+try(validate_spec(bad))
+#> Error : invalid design specification:
+#>   - fixed.coefficients 'effct' names 'effct', which is neither a contrast column nor a predictor; available columns are 'effect'. An unresolved key contributes zero, so this would silently drop the term
+```

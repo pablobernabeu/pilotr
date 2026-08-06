@@ -1,0 +1,1596 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Simulate experimental and behavioural data from a portable design specification.">
+      
+      
+      
+        <link rel="canonical" href="https://pablobernabeu.github.io/pilotr/python/specification/">
+      
+      
+        <link rel="prev" href="../cross-language/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Specification format - pilotr (Python)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_markdown_exec_pyodide.css">
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-pilotr-design-specification-v03" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="pilotr (Python)" class="md-header__button md-logo" aria-label="pilotr (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pilotr (Python)
+          </span>
+          <small class="mrd-version" title="Released version">0.3.0</small>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Specification format
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- App link (added: not part of upstream header.html) -->
+    <a href="https://pablobernabeu.github.io/pilotr/app/" title="Open the no-code app" class="md-header__button" data-md-component="app-link">
+      App
+    </a>
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pablobernabeu/pilotr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+    
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Get started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../families/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="pilotr (Python)" class="md-nav__button md-logo" aria-label="pilotr (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    pilotr (Python)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pablobernabeu/pilotr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Get started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Response families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../power/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power and design analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cross-language/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-language reproducibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specification format
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specification format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level fields
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Top-level fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#factors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Factors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#continuous-predictors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Continuous predictors
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Continuous predictors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reliability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reliability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-effects-per-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random effects (per unit)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-grouping-factors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional grouping factors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response families
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accumulation-order-identical-across-all-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accumulation order (identical across all implementations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rng-contract-identical-across-all-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RNG contract (identical across all implementations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-of-the-guarantee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope of the guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level fields
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Top-level fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#factors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Factors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#continuous-predictors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Continuous predictors
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Continuous predictors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reliability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reliability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-effects-per-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random effects (per unit)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-grouping-factors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional grouping factors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response families
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accumulation-order-identical-across-all-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accumulation order (identical across all implementations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rng-contract-identical-across-all-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RNG contract (identical across all implementations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-of-the-guarantee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope of the guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-pilotr-design-specification-v03">The <code>pilotr</code> design specification (v0.3)<a class="headerlink" href="#the-pilotr-design-specification-v03" title="Permanent link">&para;</a></h1>
+<p>A design specification is a single JSON object describing a data-generating process
+(DGP) for an experiment. It is the contract shared by the web application, the R package, and the
+Python package. Given the same spec and seed, every implementation must produce an
+identical data set, within the boundary set out under <strong>Scope of the guarantee</strong> below.</p>
+<p>The machine-readable form of this document is
+<a href="https://github.com/pablobernabeu/pilotr/blob/main/spec/design.schema.json"><code>design.schema.json</code></a>.
+The link is absolute because this file is read both here in the repository and embedded in the
+documentation site, where a path relative to the repository would not resolve. Both
+implementations enforce it through <code>validate_spec()</code>, together with the cross-field rules JSON
+Schema cannot express.</p>
+<h2 id="versioning">Versioning<a class="headerlink" href="#versioning" title="Permanent link">&para;</a></h2>
+<p><code>spec_version</code> is a <code>"major.minor"</code> string. A specification without it is a 0.2 specification,
+which is what every specification written before the field existed is.</p>
+<p>A specification that uses a feature introduced in 0.3 must declare <code>"0.3"</code> or later. This is not
+bookkeeping: a 0.2 implementation reads such a specification differently and generates different
+data while reporting success, which is the worst failure mode available to a reproducibility tool.
+The 0.3 features are observation-level predictors, <code>dist</code>, <code>reliability</code>, the <code>exgaussian</code> family,
+the <code>correlated</code> flag, and interaction random slopes. An implementation from 0.3 onwards refuses a
+specification declaring a version newer than it understands, rather than reading part of it.</p>
+<h2 id="top-level-fields">Top-level fields<a class="headerlink" href="#top-level-fields" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spec_version</code></td>
+<td>string</td>
+<td>Specification version, <code>"major.minor"</code>. Absent means 0.2.</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Human label for the design.</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>integer</td>
+<td>Master seed (see RNG contract below).</td>
+</tr>
+<tr>
+<td><code>units</code></td>
+<td>object</td>
+<td>Sampling units, e.g. <code>{"subject": {"n": 30}, "item": {"n": 24}}</code>. <code>item</code> is optional. Add <code>per_subject</code> to <code>item</code> (e.g. <code>{"n": 40, "per_subject": 12}</code>) for partial crossing, in which each subject sees a random subset of items.</td>
+</tr>
+<tr>
+<td><code>factors</code></td>
+<td>array</td>
+<td>Experimental factors (categorical; see below).</td>
+</tr>
+<tr>
+<td><code>predictors</code></td>
+<td>array</td>
+<td>Optional continuous predictors (see below).</td>
+</tr>
+<tr>
+<td><code>fixed</code></td>
+<td>object</td>
+<td>Fixed effects: <code>intercept</code> + <code>coefficients</code> (map column → β). A coefficient key may be a single column or an <code>"a:b"</code> interaction (the product of columns a and b).</td>
+</tr>
+<tr>
+<td><code>random</code></td>
+<td>object</td>
+<td>Random-effect structure by unit (<code>subject</code>, <code>item</code>). Empty <code>{}</code> ⇒ no random effects.</td>
+</tr>
+<tr>
+<td><code>response</code></td>
+<td>object</td>
+<td>Outcome family + parameters (see below).</td>
+</tr>
+</tbody>
+</table>
+<p>A coefficient or slope key that names no existing column contributes zero, which silently removes
+the term rather than failing. <code>validate_spec()</code> therefore refuses such a key: a design whose focal
+effect is misspelled generates exactly the data of a null design and reports success.</p>
+<h3 id="factors">Factors<a class="headerlink" href="#factors" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;condition&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;levels&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;related&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;unrelated&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;contrasts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;cond&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">-0.5</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;vary_within&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;item&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><code>contrasts</code> maps one or more contrast-column names to a numeric value per level
+  (length = number of levels). Fixed coefficients and random slopes are keyed by these
+  contrast-column names. This follows the convention used in <code>lme4</code> and in DeBruine and
+  Barr (2021), where effects are coefficients on contrast-coded predictors.</li>
+<li><code>vary_within</code>: the factor is crossed <em>within</em> the listed units (a within-unit factor),
+  expanding each unit combination into one row per level.</li>
+<li><code>between</code>: <code>"subject"</code> or <code>"item"</code>. The factor partitions that unit into equal blocks
+  in level order (a between-unit factor that does not expand rows).</li>
+</ul>
+<h3 id="continuous-predictors">Continuous predictors<a class="headerlink" href="#continuous-predictors" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;predictors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SyntaxPC&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;varies_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;item&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mean&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;age&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;varies_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subject&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mean&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>Each continuous predictor draws one value per unit and assigns it to all of that unit's rows. The
+predictor name is a column usable in fixed <code>coefficients</code> (as a main effect or in an <code>"a:b"</code>
+interaction) and in random-effect <code>slopes</code> (e.g. a by-subject random slope on an item-level
+predictor, as in <code>(1 + SyntaxPC | subject)</code>). The defaults are <code>mean</code> 0 and <code>sd</code> 1.</p>
+<p><code>varies_by</code> is one of <code>"subject"</code>, <code>"item"</code> or <code>"observation"</code>. The last of these, new in 0.3,
+draws one value per row, which is what a predictor varying trial by trial needs. Before 0.3 any
+value other than <code>"subject"</code> was read as item-level, so a predictor declared to vary by <code>"trial"</code>
+was silently given one value per item; it is now validated against the three names that exist.</p>
+<p><code>dist</code> (new in 0.3) selects the distribution, either <code>"normal"</code>, which uses <code>mean</code> and <code>sd</code>, or
+<code>"uniform"</code>, which uses <code>min</code> and <code>max</code>. A uniform draw consumes exactly as much of the random
+stream as a normal one, since a normal is produced by transforming a single uniform, so switching
+between them does not move the stream.</p>
+<h4 id="reliability">Reliability<a class="headerlink" href="#reliability" title="Permanent link">&para;</a></h4>
+<p><code>reliability</code> (new in 0.3) simulates a predictor measured with error:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;z_reading&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;varies_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subject&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;reliability&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>The <strong>latent</strong> value drives the linear predictor and any random slope keyed on the predictor, while
+the <strong>observed</strong>, contaminated value is what appears in the returned data, which is what an analyst
+would actually have measured. Writing <code>ρ</code> for the reliability and using the predictor's population
+mean and standard deviation,</p>
+<div class="language-text highlight"><pre><span></span><code>observed = mean + (true − mean + sd·sqrt((1 − ρ)/ρ)·z) · sqrt(ρ)
+</code></pre></div>
+<p>so the observed variable has the same variance as the latent one and correlates <code>sqrt(ρ)</code> with it.
+Reliability in the classical sense is that squared correlation, which is why the field is <code>ρ</code>.</p>
+<p>The attenuation is <code>sqrt(ρ)</code> rather than the <code>ρ</code> of the textbook regression-dilution result because
+both variables are placed on the same variance here; standardising the observed variable back to
+the latent one's variance absorbs the <code>1/sqrt(ρ)</code> factor that result carries.</p>
+<p>The moments used are the <strong>population</strong> ones, not the sample mean and standard deviation of the
+values drawn. R's <code>mean()</code> and <code>sd()</code> accumulate in long double and Python's do not, so
+standardising against the sample would reintroduce a cross-language divergence.</p>
+<p>One further normal is drawn per value, and only when <code>reliability</code> is present and below 1, so a
+specification that does not use it keeps the original stream. No comparable package models
+unreliable predictors, and cross-level interactions are where unreliability bites hardest.</p>
+<h3 id="random-effects-per-unit">Random effects (per unit)<a class="headerlink" href="#random-effects-per-unit" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;subject&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;intercept_sd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.12</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;slopes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;cond&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.04</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;correlations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;intercept,cond&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The random-effect column order is <code>["intercept", &lt;slopes in listed order&gt;]</code>. A
+covariance matrix <code>Σ = D · R · D</code> is formed from the SDs <code>D</code> and the correlation matrix <code>R</code>,
+which has a unit diagonal and off-diagonals taken from <code>correlations</code>, keyed <code>"a,b"</code> (a tilde
+separator, <code>"a~b"</code>, is also accepted). Each element is computed as <code>(sd_i · sd_j) · r_ij</code>; the
+bracketing is part of the contract, because floating-point multiplication is not associative and
+the alternative grouping lands on a different double for some inputs. Per unit, a vector
+<code>b = L z</code> is drawn, where <code>L</code> is the lower Cholesky factor of <code>Σ</code> and <code>z</code> are iid standard
+normals. The unit's contribution to a row's linear predictor is
+<code>b[intercept] + Σ_k b[slope_k] · (design value of slope_k for that row)</code>.</p>
+<p>Slope keys follow exactly the same rule as fixed coefficients: a contrast column, a continuous
+predictor, or an <code>"a:b"</code> interaction between them. Before 0.3 an interaction slope was accepted,
+sized into the covariance, drawn from the stream, and then silently discarded, so the emitted
+analysis model contained a term the generative process did not, which inflates power in the
+direction Barr et al. (2013) warn about.</p>
+<p><code>Σ</code> must be positive definite. One that is not is an error naming the grouping factor and the
+random-effect column at which the factorisation failed. Clamping the failing pivot at zero and
+continuing, as earlier versions did, produced random effects whose standard deviations were several
+times the requested ones without reporting anything. A standard deviation of exactly zero is a
+different matter and remains valid, since it is how a term is held fixed while the rest of the
+structure is kept intact.</p>
+<p><code>correlated</code> (new in 0.3) says whether a group's random effects are correlated, defaulting to
+whether <code>correlations</code> is supplied. It decides whether an emitted <code>lmer</code> or <code>brms</code> formula uses a
+single or a double bar. Earlier versions always emitted a single bar and an LKJ prior, so a design
+whose slopes were uncorrelated by construction was nonetheless analysed as though a correlation were
+there to estimate. Setting <code>correlated</code> to <code>false</code> while also supplying <code>correlations</code> is
+contradictory and is refused.</p>
+<h3 id="additional-grouping-factors">Additional grouping factors<a class="headerlink" href="#additional-grouping-factors" title="Permanent link">&para;</a></h3>
+<p>Any <code>random</code> entry whose name is not <code>subject</code> or <code>item</code> is an extra grouping factor. It
+adds <code>over</code> (the unit it groups, either <code>"subject"</code> or <code>"item"</code>) and <code>n</code> (the number of groups).
+The units are assigned to groups in equal blocks. For example, subjects nested in clusters:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;site&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;over&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subject&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;n&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;intercept_sd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;slopes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Each group draws a random-effect vector (intercept + any slopes) applied to all rows of the
+units in that group, and the simulated data gains a column with the group id. Useful for
+hierarchical designs (e.g. participants within sites, schools, or languages).</p>
+<h3 id="response-families">Response families<a class="headerlink" href="#response-families" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th><code>family</code></th>
+<th>Parameters</th>
+<th>Generation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gaussian</code></td>
+<td><code>sigma</code></td>
+<td><code>y = η + σ·z</code></td>
+</tr>
+<tr>
+<td><code>shifted_lognormal</code></td>
+<td><code>sigma</code>, <code>shift</code></td>
+<td><code>y = shift + exp(η + σ·z)</code> (reaction times)</td>
+</tr>
+<tr>
+<td><code>lognormal</code></td>
+<td><code>sigma</code></td>
+<td><code>y = exp(η + σ·z)</code> (positive outcomes, e.g. reading time per word)</td>
+</tr>
+<tr>
+<td><code>exgaussian</code></td>
+<td><code>sigma</code>, <code>beta</code></td>
+<td><code>y = η + σ·z − β·(log(u) + 1)</code> (reaction times; new in 0.3)</td>
+</tr>
+<tr>
+<td><code>bernoulli</code></td>
+<td>—</td>
+<td><code>p = invlogit(η)</code>, <code>y = 1[u &lt; p]</code> (accuracy; logit link)</td>
+</tr>
+<tr>
+<td><code>poisson</code></td>
+<td>—</td>
+<td><code>λ = exp(η)</code>, <code>y =</code> inverse-CDF Poisson (counts; log link)</td>
+</tr>
+<tr>
+<td><code>ordinal</code></td>
+<td><code>thresholds</code> (K−1 cut-points)</td>
+<td>cumulative-logit: <code>P(Y≤k) = invlogit(θ_k − η)</code> (Likert)</td>
+</tr>
+<tr>
+<td><code>beta</code></td>
+<td><code>phi</code> (precision)</td>
+<td><code>μ = invlogit(η)</code>, <code>y ~ Beta(μ·φ, (1−μ)·φ)</code> (proportions in (0,1))</td>
+</tr>
+</tbody>
+</table>
+<p>The ex-Gaussian is a normal plus an exponential, mean-centred by subtracting the exponential's own
+mean, so that <code>η</code> remains the mean of the response. That is brms's <code>exgaussian(mu, sigma, beta)</code>
+parameterisation, in which <code>mu</code> is the mean, so a specification and the model fitted to it agree on
+what the intercept means. <code>−log(u)</code> is a unit exponential, hence the two draws per row. A shifted
+lognormal is not a substitute, because <code>model_data()</code> logs the response back and leaves a symmetric
+residual on the analysis scale.</p>
+<p><code>η</code> (the linear predictor for a row) = <code>intercept + Σ β_key · value(key)</code>, where a key is a
+contrast column, a continuous predictor, or an <code>"a:b"</code> interaction (the product of the named
+columns), <code>+</code> subject random part <code>+</code> item random part <code>+</code> the random parts of any additional
+grouping factors. <code>name</code> sets the output column name. An optional <code>round</code> sets the decimal
+rounding of the response, and applies only to the families whose outcome is continuous, the others
+being integers already.</p>
+<h2 id="accumulation-order-identical-across-all-implementations">Accumulation order (identical across all implementations)<a class="headerlink" href="#accumulation-order-identical-across-all-implementations" title="Permanent link">&para;</a></h2>
+<p>Floating-point addition is not associative, so <code>(a + b) + c</code> and <code>a + (b + c)</code> can land on different
+doubles. Summing the terms of <code>η</code> in a different order therefore produces a different result, and a
+guarantee of identical data has to fix the order as firmly as it fixes the draw order. Measured over
+200,000 rows at realistic coefficient magnitudes, two orderings that differ only in their bracketing
+disagreed on 63.8% of rows.</p>
+<p><code>η</code> accumulates as a strict left fold, one term at a time, in this order:</p>
+<ol>
+<li><code>η ← intercept</code></li>
+<li>for each fixed coefficient, in the order the <code>coefficients</code> object lists them:
+   <code>η ← η + β_key · value(key)</code></li>
+<li>if the subject group exists: <code>η ← η + b[intercept]</code>, then for each subject slope in listed
+   order, <code>η ← η + b[slope_k] · value(slope_k)</code></li>
+<li>the same for the item group, if it exists</li>
+<li>the same for each additional grouping factor, in the order the <code>random</code> entries are listed</li>
+</ol>
+<p>An interaction value is itself a left fold: <code>v ← 1</code>, then <code>v ← v · value(part)</code> for each part of the
+key in written order.</p>
+<p>Neither language's built-in summation may be used for any of this. Base R's <code>sum()</code> accumulates in
+80-bit long double on x86, and CPython's <code>sum()</code> has applied Neumaier compensation to floats since
+version 3.12. Both are more accurate than a plain double fold, but they are more accurate in
+different ways, so an inner product of three terms or more can land on different doubles in the two
+ports. Every inner product, including those inside the Cholesky factorisation and the matrix-vector
+product, is written as an explicit double fold.</p>
+<p>For the same reason, integer powers are written as repeated multiplication rather than with <code>^</code> or
+<code>**</code>. R special-cases small integer exponents while Python calls the library <code>pow()</code>; measured over
+200,000 draws in the Gamma sampler's range, the two disagreed on a third of inputs by up to 6 ulp,
+and because that value decides a rejection step, the disagreement changed how many draws were
+consumed.</p>
+<h2 id="rng-contract-identical-across-all-implementations">RNG contract (identical across all implementations)<a class="headerlink" href="#rng-contract-identical-across-all-implementations" title="Permanent link">&para;</a></h2>
+<p><strong>Uniform generator.</strong> L'Ecuyer (1988) combined LCG:</p>
+<div class="language-text highlight"><pre><span></span><code>s1 ← (40014 · s1) mod 2147483563
+s2 ← (40692 · s2) mod 2147483399
+d  ← s1 − s2 ;  if d &lt; 1 then d ← d + 2147483562
+u  ← d / 2147483563            # u ∈ (0, 1)
+</code></pre></div>
+<p>All products stay below 2^53, so the arithmetic is exact in IEEE-754 doubles and in
+Python integers alike. The seeding rule is <code>s1 ← 1 + (|seed| mod 2147483562)</code> and
+<code>s2 ← 1 + ((40692 · s1) mod 2147483398)</code>, after which 10 warm-up draws are discarded.</p>
+<p><strong>Normal deviates.</strong> Wichura (1988) Algorithm AS 241 applied to <code>u</code>, the algorithm R's
+<code>qnorm</code> uses. Deviates therefore agree to full double precision.</p>
+<p><strong>Draw order (must be identical everywhere):</strong></p>
+<ol>
+<li>If <code>units.item.per_subject</code> is set (partial crossing): for each subject <code>s = 1..S</code>, in
+   row-build order, sample that subject's item subset by a partial Fisher–Yates shuffle,
+   consuming one uniform per sampled item (<code>per_subject</code> uniforms per subject). These are
+   the first RNG draws. (Skipped entirely under full crossing, so fully crossed specs keep
+   the original stream.)</li>
+<li>For each continuous predictor (in listed order): for each of its units <code>u = 1..N</code>, draw one
+   deviate, <code>N(mean, sd)</code> by default or <code>Uniform(min, max)</code> when <code>dist</code> is <code>"uniform"</code>, and then,
+   only when <code>reliability</code> is present and below 1, one further standard normal for that value's
+   measurement error. <code>N</code> is the number of subjects, of items, or of rows, according to
+   <code>varies_by</code>. (Skipped entirely when there is no <code>predictors</code> block, so factor-only specs keep
+   the original stream. A uniform costs the same one draw as a normal, and a <code>reliability</code> of 1 or
+   absent costs nothing, so neither moves the stream either.)</li>
+<li>For each subject <code>s = 1..S</code>: draw <code>q_subject</code> standard normals (intercept, then each
+   slope in listed order); set <code>b_subject[s] = L_subject · z</code>.</li>
+<li>For each item <code>t = 1..I</code> (if items exist): draw <code>q_item</code> standard normals; set
+   <code>b_item[t] = L_item · z</code>.</li>
+<li>For each additional grouping factor (in the order the <code>random</code> entries are listed): for
+   each group <code>g = 0..K−1</code>, draw <code>q_group</code> standard normals; set <code>b_group[g] = L_group · z</code>.</li>
+<li>Iterate observations in <strong>canonical row order</strong> and draw the response. Most families
+   consume exactly one deviate per row (normal for gaussian/lognormal/shifted_lognormal;
+   uniform for bernoulli/poisson/ordinal). The ex-Gaussian consumes exactly two, a normal then a
+   uniform, in that order. The beta family instead consumes a variable,
+   data-dependent number of draws per row: two Gamma variates through the Marsaglia–Tsang
+   rejection sampler, each consuming normal–uniform pairs until acceptance (with one extra
+   uniform per Gamma variate whose shape is below 1).</li>
+</ol>
+<p><strong>Extending the draw order.</strong> A new feature must consume <strong>zero</strong> draws when it is not used, so
+that every specification written before it stays bit-identical. Each of the 0.3 additions is built
+that way: an observation-level predictor only appears when declared, a uniform draw costs the same
+as the normal it replaces, a <code>reliability</code> of 1 or absent draws nothing, and a family branch is
+reached only when that family is selected.</p>
+<p><strong>Replicate seeds.</strong> The power and precision loops derive their per-replicate seeds from the
+specification's seed by drawing from the shared generator, skipping any duplicate, rather than by
+adding the replicate index. Consecutive seeds are not independent streams here: seeding sets <code>s1</code> to
+<code>1 + (seed mod 2147483562)</code> and <code>s2</code> from <code>s1</code>, with only ten warm-up draws discarded, so the first
+draw of replicate <code>i</code> correlated 0.95 with that of replicate <code>i + 1</code> under the old rule. An
+arithmetic scramble does not help, since the seeding rule is linear in the seed. This changed every
+number pilotr produced before 0.3.</p>
+<h2 id="scope-of-the-guarantee">Scope of the guarantee<a class="headerlink" href="#scope-of-the-guarantee" title="Permanent link">&para;</a></h2>
+<p>Identical data means bit-identical, and holds exactly for:</p>
+<ul>
+<li>the <code>gaussian</code> family, and any design whose response path applies no transcendental function to
+  the linear predictor;</li>
+<li><strong>any</strong> family when <code>response.round</code> is set, since rounding quantises away a last-bit difference.</li>
+</ul>
+<p>For <code>lognormal</code>, <code>shifted_lognormal</code>, <code>exgaussian</code>, <code>bernoulli</code>, <code>poisson</code>, <code>ordinal</code> and <code>beta</code>
+without <code>round</code>, results may differ in the last unit in the last place. IEEE-754 requires correct
+rounding for addition, subtraction, multiplication, division and square root, but <strong>not</strong> for
+<code>exp()</code> or <code>log()</code>, and the R and Python builds on a given platform need not share a maths library.
+Measured over 200,000 arguments in the log-reaction-time range, R and CPython <code>exp()</code> disagreed on
+0.44% of them by up to 6 ulp, and <code>log()</code> on 0.12% by up to 1 ulp.</p>
+<p>This is demonstrable rather than assumed. Taking a shifted-lognormal design and switching only its
+family to <code>gaussian</code>, so that the seed, the random-effect structure, the linear predictor and the
+entire draw sequence are unchanged, gives bit-identical output in both languages, while the
+lognormal original differs in a handful of rows. <code>exp()</code> is the only remaining difference.</p>
+<p>For the discrete families the practical consequence is different in kind. A last-bit difference in
+<code>exp()</code> usually changes nothing, because the outcome is an integer decided by a comparison; but when
+the comparison sits exactly on a threshold, the outcome moves by a whole category. This is rare and
+it is not impossible, so a design analysis that has to be reproducible to the last observation should
+either set <code>round</code> or stay with <code>gaussian</code>.</p>
+<p>The stricter guarantee within one language is unconditional: the same implementation, specification
+and seed always produce the same data.</p>
+<p><strong>Canonical row order:</strong> nested loops, outermost first,
+<code>for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
+listed order, levels in listed order): emit row</code>. Between-unit factors assign a level to
+each unit by equal blocks in level order and do not expand rows.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
+  <em>Communications of the ACM, 31</em>(6), 742–751. https://doi.org/10.1145/62959.62969</li>
+<li>Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal
+  distribution. <em>Applied Statistics, 37</em>(3), 477–484. https://doi.org/10.2307/2347330</li>
+<li>DeBruine, L. M., &amp; Barr, D. J. (2021). Understanding mixed-effects models through data
+  simulation. <em>Advances in Methods and Practices in Psychological Science, 4</em>(1).
+  https://doi.org/10.1177/2515245920965119</li>
+<li>Barr, D. J., Levy, R., Scheepers, C., &amp; Tily, H. J. (2013). Random effects structure for
+  confirmatory hypothesis testing: Keep it maximal. <em>Journal of Memory and Language, 68</em>(3),
+  255–278. https://doi.org/10.1016/j.jml.2012.11.001</li>
+<li>Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H., &amp; Bates, D. (2017). Balancing Type I error
+  and power in linear mixed models. <em>Journal of Memory and Language, 94</em>, 305–315.
+  https://doi.org/10.1016/j.jml.2017.01.001</li>
+<li>Neumaier, A. (1974). Rundungsfehleranalyse einiger Verfahren zur Summation endlicher Summen.
+  <em>Zeitschrift für Angewandte Mathematik und Mechanik, 54</em>(1), 39–51.
+  https://doi.org/10.1002/zamm.19740540106</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../cross-language/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Cross-language reproducibility">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Cross-language reproducibility
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../api/" class="md-footer__link md-footer__link--next" aria-label="Next: API reference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                API reference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <span class="mrd-footer-badges"> <a href="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml"><img src="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg" alt="python-tests"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a> </span> Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a> · Released under the <a href="https://pablobernabeu.github.io/pilotr/python/licence/">MIT licence</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.3.0"}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../assets/_markdown_exec_pyodide.js"></script>
+      
+    
+  </body>
+</html>

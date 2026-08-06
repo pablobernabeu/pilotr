@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- The hub's own not-found page. GitHub Pages serves the 404.html at the root
+       of the published site for any URL that matches no file, wherever on the
+       site the miss happened, so every link and image here is absolute: a
+       relative link would resolve against the missing URL's directory and break.
+       The variables, the toggle and the look are those of landing.html, and
+       site.yml stages this file at the site root beside the landing page. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Page not found &middot; pilotr</title>
+  <link rel="icon" href="https://pablobernabeu.github.io/pilotr/logo.svg">
+  <style>
+    :root {
+      --bg:#ffffff; --fg:#12324F; --lead:#444; --muted:#555; --link:#2C6FB0;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    /* The link colour is restated in the media query as well as on
+       html[data-theme="dark"]: without it a visitor whose system is dark but who
+       has never touched the toggle keeps the light blue, which sits at 2.4:1 on
+       the dark ground. */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#8FC4F0;
+        --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+        --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+      }
+    }
+    html[data-theme="light"] {
+      --bg:#ffffff; --fg:#12324F; --lead:#444; --muted:#555; --link:#2C6FB0;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    html[data-theme="dark"] {
+      --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#8FC4F0;
+      --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+      --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 46rem; margin: 3.5rem auto; padding: 0 1.25rem; line-height: 1.6;
+      background: var(--bg); color: var(--fg); transition: background .2s, color .2s;
+    }
+    h1 { font-size: 2rem; margin-bottom: .25rem; letter-spacing: -.5px; }
+    p.lead { color: var(--lead); margin-top: 0; font-size: 1.05rem; }
+    a { color: var(--link); }
+    .cards { display: flex; gap: 1.1rem; flex-wrap: wrap; margin-top: 2rem; }
+    a.card {
+      flex: 1 1 12rem; background: var(--card-bg); color: inherit; text-decoration: none;
+      border: 1px solid var(--card-border); border-top: 4px solid var(--accent);
+      border-radius: 12px; padding: 1.25rem 1.4rem; display: block;
+      transition: border-color .15s, transform .15s;
+    }
+    a.card:hover { border-color: var(--card-hover); transform: translateY(-2px); }
+    a.card.r { --accent: #276DC3; }
+    a.card.py { --accent: #3776AB; }
+    a.card.app { --accent: #2C6FB0; }
+    a.card h2 { margin: 0 0 .45rem; font-size: 1.2rem; }
+    a.card span { color: var(--muted); font-size: .97rem; }
+    footer { margin-top: 2.5rem; color: var(--foot); font-size: .9rem; }
+    footer a { color: inherit; }
+    #themeToggle {
+      position: fixed; top: 1rem; right: 1rem; width: 2.3rem; height: 2.3rem; border-radius: 50%;
+      border: 1px solid var(--btn-border); background: var(--card-bg); color: var(--fg);
+      cursor: pointer; font-size: 1.1rem; line-height: 1;
+    }
+    .logo { float: right; margin: 0 0 1rem 1.5rem; width: 128px; }
+    @media (max-width: 480px) { .logo { width: 96px; } h1 { font-size: 1.7rem; } }
+  </style>
+</head>
+<body>
+  <button id="themeToggle" title="Toggle light and dark" aria-label="Toggle light and dark theme">&#9789;</button>
+  <img class="logo" src="https://pablobernabeu.github.io/pilotr/logo.svg" alt="pilotr hex logo">
+  <h1>Page not found</h1>
+  <p class="lead">There is no page at this address. It may have moved, or the link that brought you
+  here may be out of date. The <a href="https://pablobernabeu.github.io/pilotr/">landing page</a>
+  points at everything the pilotr site holds, and the three parts are one click below.</p>
+  <div class="cards">
+    <a class="card r" href="https://pablobernabeu.github.io/pilotr/r/">
+      <h2>R package</h2>
+      <span>Reference and guides (pkgdown).</span>
+    </a>
+    <a class="card py" href="https://pablobernabeu.github.io/pilotr/python/">
+      <h2>Python package</h2>
+      <span>Reference and guides (mkdocs).</span>
+    </a>
+    <a class="card app" href="https://pablobernabeu.github.io/pilotr/app/">
+      <h2>No-code app</h2>
+      <span>Design, simulate and run a power analysis in the browser.</span>
+    </a>
+  </div>
+  <footer>Source: <a href="https://github.com/pablobernabeu/pilotr">github.com/pablobernabeu/pilotr</a></footer>
+  <script>
+    (function () {
+      var root = document.documentElement, btn = document.getElementById('themeToggle');
+      var saved = localStorage.getItem('pilotr-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      function isDark() {
+        var t = root.getAttribute('data-theme');
+        if (t) return t === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      function sync() { btn.innerHTML = isDark() ? '&#9728;' : '&#9789;'; }
+      btn.addEventListener('click', function () {
+        var next = isDark() ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('pilotr-theme', next);
+        sync();
+      });
+      sync();
+    })();
+  </script>
+</body>
+</html>
