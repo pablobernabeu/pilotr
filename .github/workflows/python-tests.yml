@@ -5,11 +5,20 @@ on:
     branches: [main, master]
     paths:
       - 'python/**'
+      # The parity job below simulates from the R sources and the shared
+      # specification format as well as from the Python ones, so a change to
+      # either of those has to run this workflow too.
+      - 'r/pilotr/R/**'
+      - 'spec/**'
+      - 'tools/parity/**'
       - '.github/workflows/python-tests.yml'
   pull_request:
     branches: [main, master]
     paths:
       - 'python/**'
+      - 'r/pilotr/R/**'
+      - 'spec/**'
+      - 'tools/parity/**'
       - '.github/workflows/python-tests.yml'
   workflow_dispatch:
 
@@ -34,9 +43,72 @@ jobs:
 
       - name: Install with the power extra
         run: |
-          python -m pip install --upgrade pip pytest
+          python -m pip install --upgrade pip pytest pytest-cov
           pip install -e "./python[power]"
 
       - name: Run the test suite
         working-directory: python
-        run: python -m pytest
+        run: python -m pytest --cov=pilotr --cov-report=term --cov-report=json
+
+      - name: Write the coverage percentage to the run summary
+        # coverage.json is the machine-readable twin of the terminal report the
+        # step above already printed. Reading the percentage from it here puts
+        # one headline figure on the run's summary page, so nobody has to dig
+        # through the pytest log to learn it. No external service is involved.
+        working-directory: python
+        run: |
+          python - <<'EOF'
+          import json, os
+          pct = round(json.load(open("coverage.json"))["totals"]["percent_covered"], 1)
+          print("Test coverage: %s%%" % pct)
+          path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if path:
+              with open(path, "a") as f:
+                  f.write("## Python test coverage: **%s%%**\n" % pct)
+          EOF
+
+  # The README's headline claim is that one specification and seed produce the
+  # same data in both languages, bit for bit except for a documented ulp
+  # tolerance where an unrounded family applies exp() or log(). tools/parity/
+  # holds the harness that proves it: run_r.R and run_py.py simulate every
+  # shipped and adversarial case from the local sources of each half, and
+  # compare.py diffs the dumps byte for byte against tolerance.json and checks
+  # the R dumps against golden.json. Running it here means the claim cannot rot
+  # unnoticed. One platform suffices, because each half is deterministic within
+  # itself and the cross-language comparison is the whole point.
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      # run_r.R sources r/pilotr/R/*.R directly rather than an installed copy,
+      # so the R side needs only the package's hard dependencies (jsonlite;
+      # parallel and stats ship with R).
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: r/pilotr
+          dependencies: '"hard"'
+
+      # run_py.py puts python/ on sys.path itself, so the harness always reads
+      # the local sources. The generative core is dependency-free today; the
+      # editable install is here so that any dependency it later grows is
+      # installed rather than surfacing as a misleading import failure.
+      - name: Install the Python package
+        run: pip install -e ./python
+
+      - name: Simulate every case from the R sources
+        run: Rscript tools/parity/run_r.R
+
+      - name: Simulate every case from the Python sources
+        run: python tools/parity/run_py.py
+
+      - name: Compare the dumps against tolerance.json and golden.json
+        run: python tools/parity/compare.py

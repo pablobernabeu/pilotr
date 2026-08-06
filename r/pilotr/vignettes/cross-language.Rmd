@@ -35,7 +35,9 @@ partial crossing) are derived from those two through a documented, identical con
 order.
 
 As a result, given the same specification and seed, the R and Python implementations
-produce bit-identical data sets. The specification, rather than the implementation, serves
+produce identical data sets: bit for bit for rounded and Gaussian responses, and within a few
+units in the last place where an unrounded family applies `exp()` or `log()`, as the parity
+check below quantifies. The specification, rather than the implementation, serves
 as the source of truth.
 
 ## Determinism in R

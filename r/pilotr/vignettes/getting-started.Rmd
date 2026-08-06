@@ -23,7 +23,9 @@ this R package and a Python package. The specification is the unit of reproducib
 a complete, executable description rather than a screenshot of a graphical interface or a
 language-specific script. You can place it under version control, attach it to a
 preregistration, share it with a collaborator and run it unchanged in R or Python to obtain
-bit-identical data.
+identical data, bit for bit apart from a documented tolerance of a few units in the last place
+where an unrounded response family applies `exp()` or `log()` to the linear predictor (the
+cross-language vignette quantifies this).
 
 This vignette walks through the core loop of describe, simulate, inspect and export. The
 other vignettes, listed at the end, each go deeper into one part of the workflow.

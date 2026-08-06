@@ -13,6 +13,14 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Read-only at the workflow level: the build job only checks out and builds, and
+# without this line it would inherit whatever the repository default happens to
+# be. The publish job re-declares the one elevation it needs, the OIDC id-token,
+# at the job level, and a job-level block replaces this one entirely rather than
+# adding to it.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

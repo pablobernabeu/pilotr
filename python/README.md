@@ -13,7 +13,9 @@ portable JSON design specification.
 
 This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of
 the same name. The two share the design specification and the random-number generator, so the
-same specification and seed produce bit-identical data in either language. See the
+same specification and seed produce identical data in either language, bit for bit apart from a
+documented tolerance of a few units in the last place where an unrounded response family applies
+`exp()` or `log()` to the linear predictor. See the
 [project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code
 app, the R package and the specification format).
 

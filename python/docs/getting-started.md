@@ -4,7 +4,9 @@ This guide installs pilotr and simulates a first data set from a design specific
 specification is what everything else reads. The same JSON file drives the
 [R package](https://pablobernabeu.github.io/pilotr/r/), the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
-the same file and seed all three produce bit-identical data.
+the same file and seed all three produce identical data, bit for bit apart from a documented
+tolerance of a few units in the last place where an unrounded response family applies `exp()`
+or `log()` to the linear predictor.
 
 ## Install
 

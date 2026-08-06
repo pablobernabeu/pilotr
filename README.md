@@ -84,6 +84,14 @@ No single existing tool spans these capabilities, and the Python-implementation 
 apart from pilotr. SDV learns from real data, pyDOE3 builds design matrices, Faker produces
 placeholder values and the statsmodels power module covers analytic classical tests only.
 
+The last row deserves its exact scope, which CI enforces through the parity harness in
+[`tools/parity/`](tools/parity). All eight shipped example designs reproduce bit for bit across
+the two languages as shipped. With rounding removed, six of the eight still do, and the two whose
+response family applies `exp()` to the linear predictor agree to within a few units in the last
+place, a tolerance measured and documented in
+[`tools/parity/tolerance.json`](tools/parity/tolerance.json). IEEE-754 fixes the rounding of
+arithmetic but not of `exp()` and `log()`, and the two languages need not share a maths library.
+
 ## Repository layout
 
 ```
@@ -171,8 +179,12 @@ integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241 inverse-CD
 behind R's `qnorm()`, so they agree to full double precision. Everything else (Cholesky factors
 for correlated random effects, and inverse-CDF draws for the Poisson, Bernoulli and ordinal
 families) derives from those two in a documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)). The same
-specification and seed therefore yield identical data in R and Python, and the generator is
-auditable and free of external dependencies.
+specification and seed therefore yield identical data in R and Python. That holds bit for bit
+for the Gaussian family, for any design that applies no transcendental function to the linear
+predictor and for any family with `response.round` set, and to within a few units in the last
+place for the unrounded `exp()`/`log()` families, whose rounding IEEE-754 leaves to the maths
+library ([`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the measured
+rates). The generator is auditable and free of external dependencies.
 
 ## Quick start
 
@@ -242,7 +254,8 @@ Rscript r/pilotr/examples/equivalence_simstudy.R
 python -m pytest python/tests -q
 ```
 
-> A note on R and Python coverage. Data generation is bit-identical across languages, and both
+> A note on R and Python coverage. Data generation is bit-identical across languages (exactly,
+> or within the documented ulp tolerance for the unrounded `exp()`/`log()` families), and both
 > ecosystems run crossed mixed-effects power from the same spec. The LMM estimators, however,
 > differ. R (`lme4`/`lmerTest`, REML, correlated random effects) is the reference. Python
 > (`statsmodels` MixedLM, crossed variance components) overstates random-slope variance, so it is

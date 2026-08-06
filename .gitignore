@@ -5,6 +5,10 @@ build/
 __pycache__/
 *.pyc
 .pytest_cache/
+# pytest's --cov flags write these wherever the suite runs, and CI now always
+# passes them, so a local run should not leave them staged for a commit
+.coverage
+coverage.json
 *.egg-info/
 dist/
 .venv/

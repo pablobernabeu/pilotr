@@ -26,12 +26,14 @@ interfaces, namely a no-code web app, this R package and the Python
 package.
 
 This is the feature-parity twin of [the Python
-package](https://pablobernabeu.github.io/pilotr/python/) of the same name.
-The two share the design specification and the random-number generator,
-so the same specification and seed produce bit-identical data in either
-language. The R package additionally offers precision/ROPE design
-analysis, the `lme4` reference backend for mixed-effects power, the
-`brms` bridge and the app launcher.
+package](https://pablobernabeu.github.io/pilotr/python/) of the same
+name. The two share the design specification and the random-number
+generator, so the same specification and seed produce identical data in
+either language, bit for bit apart from a documented tolerance of a few
+units in the last place where an unrounded response family applies
+`exp()` or `log()` to the linear predictor. The R package additionally
+offers precision/ROPE design analysis, the `lme4` reference backend for
+mixed-effects power, the `brms` bridge and the app launcher.
 
 ## Installation
 
@@ -100,8 +102,8 @@ citation("pilotr")
 ```
 
 The [About
-page](https://pablobernabeu.github.io/pilotr/r/articles/about.html) carries
-the same citation with a BibTeX entry, and a short note on the
+page](https://pablobernabeu.github.io/pilotr/r/articles/about.html)
+carries the same citation with a BibTeX entry, and a short note on the
 developer. The repository also ships `CITATION.cff`, which is what
 GitHub’s *Cite this repository* button reads.
 

@@ -18,8 +18,10 @@ on:
       - 'README.md'
       - '.github/workflows/site.yml'
       # The landing page is the root of the published site, so an edit to it alone
-      # changes what visitors see and has to trigger a rebuild.
+      # changes what visitors see and has to trigger a rebuild. The not-found page
+      # is staged beside it and earns its place here for the same reason.
       - '.github/landing.html'
+      - '.github/404.html'
   workflow_dispatch:
 
 permissions:
@@ -105,9 +107,14 @@ jobs:
           cd python && python -m mkdocs build --strict --site-dir ../site/python
 
       - name: Write landing page
+        # The not-found page is staged alongside. GitHub Pages serves the root
+        # 404.html for every URL that matches no file, so without this file a
+        # miss anywhere on the site fell through to GitHub's generic 404, which
+        # offers a visitor no way back in.
         run: |
           cp r/pilotr/man/figures/logo.svg site/logo.svg
           cp .github/landing.html site/index.html
+          cp .github/404.html site/404.html
 
       - name: Leave redirect stubs at the pre-hub URLs
         # Until the site became a hub, the pkgdown pages were served from the root
@@ -151,6 +158,9 @@ jobs:
               index.html|r/*|python/*|app/*|py/*) continue ;;
               # A stub here would take every mistyped URL anywhere on the site,
               # including under /python/ and /app/, to the R site's not-found page.
+              # The root 404.html is now the hub's own not-found page, staged from
+              # .github/404.html by the landing-page step above, so this skip also
+              # protects that file from being overwritten.
               404.html) continue ;;
             esac
             write_stub "site/$rel" "$SITE/r/$rel"

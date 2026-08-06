@@ -4,7 +4,9 @@
 
 This is the feature-parity twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of
 the same name. The two share the design specification and the random-number generator, so the
-same specification and seed produce bit-identical data in either language.
+same specification and seed produce identical data in either language, bit for bit apart from a
+documented tolerance of a few units in the last place where an unrounded response family applies
+`exp()` or `log()` to the linear predictor.
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Try the no-code app](https://pablobernabeu.github.io/pilotr/app/){ .md-button }

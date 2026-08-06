@@ -207,9 +207,17 @@ server <- function(input, output, session) {
   current_spec <- reactive({
     txt <- input$spec_json_in
     if (!is.null(txt) && nzchar(trimws(txt))) {                 # advanced override
-      parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = TRUE,
-                          simplifyDataFrame = FALSE, simplifyMatrix = FALSE), error = function(e) NULL)
-      if (!is.null(parsed) && !is.null(parsed$response)) return(parsed)
+      # As in the lite app, route the paste through load_spec() (staged in a temp file) rather
+      # than a bare fromJSON, so a pasted spec faces the same validation as a loaded one.
+      # Several of the ways a spec can be wrong produce plausible data rather than an error
+      # (a mistyped coefficient key resolves to no column and silently generates null-effect
+      # data), which is exactly what 0.3.0's validation refuses. validate() surfaces the
+      # message in every output that reads the spec.
+      spec <- tryCatch({
+        tf <- tempfile(fileext = ".json"); writeLines(txt, tf); load_spec(tf)
+      }, error = function(e) e)
+      if (inherits(spec, "error")) validate(need(FALSE, conditionMessage(spec)))
+      return(spec)
     }
     build_spec(list(
       name = input$name, seed = input$seed, n_subject = input$n_subject,

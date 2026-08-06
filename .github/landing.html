@@ -78,7 +78,9 @@
   groups, conditions, sample sizes, effect sizes and outcome family, and pilotr generates the data
   that design would produce, then estimates the power and the precision it would buy. Twin,
   feature-parity packages read one portable JSON specification and draw from one random-number
-  stream, so a given specification and seed produce bit-identical data in either language.</p>
+  stream, so a given specification and seed produce the same data in either language, bit for bit
+  apart from a documented tolerance of a few units in the last place where an unrounded response
+  family applies exp() to the linear predictor.</p>
   <div class="cards">
     <a class="card r" href="r/index.html">
       <div class="card-head">
