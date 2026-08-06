@@ -19,7 +19,9 @@ if (!exists("simulate_design", mode = "function")) {
     }
     if (required) stop("cannot find ", rel); invisible(FALSE)
   }
-  for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")) .src(f)
+  # validate.R before spec_builder.R: build_spec() stamps each spec with
+  # .SPEC_VERSION, which validate.R defines.
+  for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")) .src(f)
   .src("power_mixed.R", required = FALSE)  # mixed-effects power if available
   ENGINE_FILES <- .resolved
 }

@@ -4,7 +4,10 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R"))
+# validate.R comes before spec_builder.R because build_spec() stamps each spec
+# with .SPEC_VERSION, which validate.R defines. Omitting it is what silently
+# broke this gate for four days after the 0.3.0 engine work.
+for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R"))
   source(file.path(here, "..", "R", f))
 
 ok <- TRUE

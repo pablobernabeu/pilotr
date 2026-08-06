@@ -11,7 +11,10 @@
 library(shiny)
 library(bslib)
 library(ggplot2)
-for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "spec_builder.R")) source(f)
+# validate.R must precede spec_builder.R: build_spec() stamps each spec with
+# .SPEC_VERSION, which validate.R defines. Its omission broke the deployed app
+# after the 0.3.0 engine work.
+for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")) source(f)
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
 
