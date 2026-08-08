@@ -76,7 +76,12 @@ data = simulate("design.json")
 ```
 
 The repository includes a parity check that simulates the worked example designs in both
-languages and reports the maximum absolute difference per design.
+languages and reports the maximum absolute difference per design. This is the CSV-level check,
+read at the precision a written file carries and with a tolerance of 1e-6. The stricter one is
+the harness under `tools/parity/`, which dumps every value at 17 significant digits, accounts
+for each differing cell in units in the last place against a recorded allowance, and runs as a
+gate in continuous integration. The table below is the readable summary; that harness is what
+the bit-identical claim actually rests on.
 
 ```{r, echo = FALSE}
 # Output of python/examples/parity_check.py --csv, precomputed and shipped with

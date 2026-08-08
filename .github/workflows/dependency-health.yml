@@ -57,7 +57,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
+        # The same cells as python-tests.yml. This is the job that installs unpinned, so leaving
+        # it behind the pinned matrix would mean the newest interpreter never met the newest
+        # dependencies, which is the pairing this workflow exists to watch.
+        python-version: ["3.9", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

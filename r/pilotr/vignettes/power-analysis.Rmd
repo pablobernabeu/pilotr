@@ -151,8 +151,8 @@ power estimate over its converged replicates widened to a 95% envelope.
 ## Parallel execution
 
 Every power and precision analysis in pilotr takes a `workers` argument that spreads the
-Monte Carlo replicates across local cores. Each replicate seeds the shared cross-language
-RNG from its own index, so the results are identical to a serial run whatever the worker
+Monte Carlo replicates across local cores. Each replicate takes its own seed from
+`replicate_seeds()`, so the results are identical to a serial run whatever the worker
 count, and parallelisation costs nothing in reproducibility. The mixed-model fits dominate
 the running time, which makes the speed-up close to linear in the number of cores. In a
 sweep the worker pool is created once and reused across all sample sizes.

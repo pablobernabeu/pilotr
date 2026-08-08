@@ -1,3 +1,41 @@
+# pilotr (development version)
+
+* **A true effect of exactly zero returned `Inf`, and the package recommends that input.**
+  `design_conditions()` deliberately produces a null condition so a run can show how often
+  it declares something when there is nothing to find. Putting it through `power_design()`
+  returned `type_m = Inf`, straight into the app's display, while Type S silently
+  degenerated to "the estimate is positive" because `true_effect > 0` is `FALSE` at zero.
+  The Python twin raised `ZeroDivisionError` on the same input. Type S and Type M are now
+  `NA` when the true effect is zero or unknown, in both engines — the guard `power_mixed()`
+  already carried, applied to the other three sites.
+* **`response_variance()` reported a total that was not the sum of its parts.** An
+  undefined fixed component was laundered into zero while the result kept calling itself
+  the sum. A single-row design now reports a fixed component of 0 and an honest total.
+* **The declared minimum R version is now stated.** `Depends: R (>= 4.0.0)` — 4.0.0 is the
+  release whose `round()` the cross-language claim assumes, so the floor is load-bearing
+  rather than conventional. A new CI job checks the declared Suggests floors, which the
+  matrix (release, devel, oldrel-1) sat well above and so never exercised.
+* **The Bayesian design-analysis record carries the rule that produced it** — the decision
+  thresholds, the convergence gate, a specification fingerprint and the package version —
+  and the aggregator refuses to pool replicates that disagree on any of them.
+* **The HPC precision-array job was broken and stale.** It hand-listed the engine files and
+  omitted `validate.R`, so it died on its first real line; it also used the indexed seed
+  rule abandoned at 0.3, which correlates consecutive replicates and understates the job's
+  own Monte Carlo error. It now sources the package wholesale, as the parity harness does,
+  and uses the package's own replicate seeds, `qnorm(0.975)` and error reporting.
+* Four small divergences between the two engines are closed: a non-whole seed truncates
+  identically, a whole `spec_version` reads the same however written, a non-object unit is
+  reported rather than crashing with a base error, and the message text of each is now
+  character-for-character identical across the twins.
+
+* **A test that the packaged example specifications match the repository's own.**
+  `spec/examples/*.json` is canonical and both packages carry a mirror so an installed
+  copy can reach it, but nothing enforced the mirror. A load-and-simulate test cannot: a
+  stale packaged copy still loads and simulates perfectly well, it simply describes a
+  different design from the one the repository documents. The new `test-examples.R`
+  compares the bytes, and is twinned with the Python suite's `test_examples.py`. It skips
+  when the package is checked in isolation from the repository.
+
 # pilotr 0.3.0
 
 ## Read this first

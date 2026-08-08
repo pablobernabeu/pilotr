@@ -13,12 +13,15 @@
 #'   slowly still. At least 200 replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
-#'   The default of 1 runs serially. Because every replicate seeds the shared RNG from its
-#'   own index, any worker count returns results identical to a serial run.
+#'   The default of 1 runs serially. Because every replicate takes its own seed from
+#'   [replicate_seeds()], any worker count returns results identical to a serial run.
 #' @return A list with elements `n_sims`, `alpha`, `power`, `n_significant`,
 #'   `true_effect`, `mean_estimate`, `type_s` (sign-error rate among significant
 #'   replicates), and `type_m` (mean exaggeration ratio among significant
-#'   replicates).
+#'   replicates). Both design-analysis quantities are `NaN` when no replicate reached
+#'   significance and when the true effect is zero, as in the null condition
+#'   [design_conditions()] produces: neither is defined without a true value to
+#'   compare against, and Type M divides by it.
 #' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
@@ -53,12 +56,17 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   est <- vapply(res, `[[`, numeric(1), 1L)
   pv  <- vapply(res, `[[`, numeric(1), 2L)
   sig <- which(pv < alpha)
+  # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
+  # stay NaN when the true effect is zero rather than reporting an infinity and a sign-error rate
+  # that has quietly become "the estimate is positive". Same rule as power_mixed(), and the null
+  # condition design_conditions() recommends is exactly this case.
+  usable <- length(sig) > 0L && !is.na(true_effect) && true_effect != 0
   list(
     n_sims = n_sims, alpha = alpha,
     power = length(sig) / n_sims, n_significant = length(sig),
     true_effect = true_effect, mean_estimate = mean(est),
-    type_s = if (length(sig)) mean((est[sig] > 0) != (true_effect > 0)) else NaN,
-    type_m = if (length(sig)) mean(abs(est[sig]) / abs(true_effect)) else NaN
+    type_s = if (usable) mean((est[sig] > 0) != (true_effect > 0)) else NaN,
+    type_m = if (usable) mean(abs(est[sig]) / abs(true_effect)) else NaN
   )
 }
 

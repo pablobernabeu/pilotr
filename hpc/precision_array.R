@@ -9,7 +9,11 @@
 
 suppressWarnings(suppressMessages({
   TK <- path.expand(Sys.getenv("TOOLKIT", "~/pilotr_toolkit/toolkit"))
-  for (f in c("core.R", "simulate.R", "autoformula.R")) source(file.path(TK, "r/pilotr/R", f))
+  # Source the whole package rather than a hand-listed subset, as tools/parity/run_r.R does, so
+  # that a new engine file cannot leave this job silently running against a stale definition.
+  # The list this replaced had already lost validate.R, which load_spec() needs.
+  src <- file.path(TK, "r", "pilotr", "R")
+  for (f in sort(list.files(src, pattern = "\\.R$", full.names = TRUE))) source(f)
   library(lme4); library(parallel)
 }))
 
@@ -26,10 +30,15 @@ N <- grid[task + 1L]
 spec$units$subject$n <- N
 form  <- model_formula(spec)
 focal <- c(SyntaxPC = 0.10, cond_age = 0.02)       # meaningful (outside ROPE) + negligible (inside)
-base  <- spec$seed
+# The package's own seed rule, not an arithmetic one. Consecutive seeds are not independent
+# streams in this generator, so `base + (i - 1)` left neighbouring replicates correlated at 0.95
+# and understated the job's Monte Carlo error; see ?replicate_seeds.
+seeds <- replicate_seeds(spec$seed, n_sims)
 
+# mclapply forks, so the workers inherit the definitions sourced above. A PSOCK cluster (what
+# precision_design(workers = ) builds) would not, because pilotr is not installed on the cluster.
 one_sim <- function(i) {
-  s <- spec; s$seed <- base + (i - 1)          # same indexed-seed rule as the package
+  s <- spec; s$seed <- seeds[i]
   d <- model_data(spec, simulate_design(s))
   fit <- tryCatch(lme4::lmer(form, d, control = lme4::lmerControl(calc.derivs = FALSE)),
                   error = function(e) NULL)
@@ -44,11 +53,13 @@ nc <- length(res)
 agg <- do.call(rbind, lapply(names(focal), function(f) {
   est <- vapply(res, function(r) r["est", f], numeric(1))
   se  <- vapply(res, function(r) r["se",  f], numeric(1))
-  lo <- est - 1.96 * se; hi <- est + 1.96 * se
+  lo <- est - .Z95 * se; hi <- est + .Z95 * se     # the package's qnorm(0.975), not a rounded 1.96
+  # Both decision probabilities are proportions over nc replicates, so each is reported with its
+  # Monte Carlo standard error and Wilson interval, as precision_design() has done since 0.3.
+  ro <- .rate_with_error(sum(lo > rope | hi < -rope), nc, "p_meaningful")
+  ri <- .rate_with_error(sum(lo > -rope & hi < rope), nc, "p_equivalent")
   data.frame(n_subject = N, param = f, true = focal[[f]],
-             mean_ci_width = mean(hi - lo),
-             p_meaningful = mean(lo > rope | hi < -rope),
-             p_equivalent = mean(lo > -rope & hi < rope),
+             mean_ci_width = mean(hi - lo), ro, ri,
              n_converged = nc, n_sims = n_sims)
 }))
 out <- file.path(outdir, sprintf("precision_N%03d.csv", N))

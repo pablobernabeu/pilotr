@@ -1,10 +1,10 @@
 """Spec parsing and the generative simulation engine.
 
 The model is a linear predictor with user-specified fixed effect sizes, covering categorical
-contrasts and continuous predictors as well as their interactions. To this it adds crossed by-subject and
-by-item random intercepts and slopes (on contrasts or continuous predictors), and passes the
-result through a link and a response family. The RNG draw order follows spec/SPEC.md, namely
-per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
+contrasts and continuous predictors as well as their interactions. To this it adds crossed
+by-subject and by-item random intercepts and slopes (on contrasts or continuous predictors), and
+passes the result through a link and a response family. The RNG draw order follows spec/SPEC.md,
+namely per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
 effects -> item random effects -> extra grouping-factor random effects -> per-row response
 draws (one deviate per row, except the beta family's rejection sampler, which consumes a
 variable number). Specs without partial crossing or a `predictors` block keep the original
@@ -81,7 +81,7 @@ def load_spec(path, validate=True):
     dict
         The parsed specification, ready for `simulate` or `power`.
     """
-    with open(path, "r") as f:
+    with open(path) as f:
         spec = json.load(f)
     if validate is not False:
         validate_spec(spec, strict=validate is True)
@@ -189,7 +189,7 @@ def simulate(spec, validate=True) -> Dataset:
 
     S = spec["units"]["subject"]["n"]
     has_item = "item" in spec["units"]
-    I = spec["units"]["item"]["n"] if has_item else 1
+    I = spec["units"]["item"]["n"] if has_item else 1  # noqa: E741  S and I as in simulate.R
 
     factors = spec.get("factors", [])
     predictors = spec.get("predictors", [])
@@ -376,7 +376,7 @@ def simulate(spec, validate=True) -> Dataset:
         out = {"subject": r["subject"]}
         if has_item:
             out["item"] = r["item"]
-        for gname, (over, cols, group_of) in group_meta.items():
+        for gname, (over, _cols, group_of) in group_meta.items():
             out[gname] = group_of[r[over]] + 1
         out.update(r["labels"])
         # The observed (contaminated) value goes into the data; the latent one, in cv, drove eta.

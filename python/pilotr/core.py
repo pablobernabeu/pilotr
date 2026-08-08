@@ -62,7 +62,7 @@ class RNG:
         return [self.normal() for _ in range(k)]
 
 
-def replicate_seeds(base, n: int) -> list[float]:
+def replicate_seeds(base, n: int) -> list[int]:
     """The seeds pilotr's replicate loops give to their replicates, from a specification's seed.
 
     Until 0.3 the rule was ``base + i``. Consecutive seeds are not independent streams in this
@@ -87,7 +87,7 @@ def replicate_seeds(base, n: int) -> list[float]:
 
     Returns
     -------
-    list of float
+    list of int
         `n` distinct seeds.
     """
     rng = RNG(base)

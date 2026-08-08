@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
@@ -37,6 +38,31 @@ Homepage = "https://pablobernabeu.github.io/pilotr/"
 Repository = "https://github.com/pablobernabeu/pilotr"
 Documentation = "https://pablobernabeu.github.io/pilotr/python/"
 Issues = "https://github.com/pablobernabeu/pilotr/issues"
+
+[tool.ruff]
+line-length = 100
+# The declared floor, so that ruff never proposes syntax the oldest supported interpreter cannot
+# run. Without it the zip(strict=) and PEP 604 union rules fire on code that has to work on 3.9.
+target-version = "py39"
+
+[tool.ruff.lint]
+# An explicit set rather than ruff's default, so that a ruff release cannot silently widen what
+# CI enforces. E/W pycodestyle, F pyflakes, I import order, B bugbear, UP pyupgrade.
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    # Percent formatting is deliberate here, not legacy. Every user-facing message in this package
+    # has a byte-identical twin built with paste0() or sprintf() in the R half, and the two are
+    # checked against each other; mechanically rewriting them as f-strings is the change most
+    # likely to move that text without anyone noticing.
+    "UP031",
+    # Compact stdlib import lines (import copy, functools, math) mirror the R sources they port.
+    "E401",
+    # Import order and placement. Both fire on structure that is deliberate: E401 above keeps the
+    # compact stdlib lines that isort would split, and the examples and tests must run from a
+    # checkout, so they insert the package directory on sys.path before importing pilotr.
+    "I001",
+    "E402",
+]
 
 [tool.setuptools]
 packages = ["pilotr"]

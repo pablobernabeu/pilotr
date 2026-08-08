@@ -105,6 +105,9 @@ pilotr/  (repo root)
     inst/app/      the no-code Shiny app, bundled in the package (pilotr::run_app())
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
   hpc/           SLURM array job for large precision sweeps on a cluster
+  tools/parity/  cross-language parity harness: the CI gate behind the bit-identical claim
+    tolerance.json   the per-case ulp allowance, and why any case is granted one
+    golden.json      hashes of the R dumps, so the two halves cannot drift together
   docs/
     mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
 ```

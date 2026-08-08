@@ -1,8 +1,7 @@
-# Internal helpers for parallelising the Monte Carlo replicate loops. Every replicate
-# seeds the shared cross-language RNG from its own index (base seed + index), so the
-# results are identical whether the replicates run serially or on a PSOCK cluster, and
-# whatever the worker count. The helpers therefore only distribute work; they never
-# touch the random-number state.
+# Internal helpers for parallelising the Monte Carlo replicate loops. Every replicate takes its
+# own seed from replicate_seeds(), so the results are identical whether the replicates run
+# serially or on a PSOCK cluster, and whatever the worker count. The helpers therefore only
+# distribute work; they never touch the random-number state.
 
 # Validate the `workers` argument: a single positive whole number.
 .check_workers <- function(workers) {

@@ -121,9 +121,9 @@ Type S and Type M errors alongside power and in built-in parallelisation.
 ## Parallel execution
 
 Every analysis on this page takes a `workers` argument that spreads the Monte Carlo
-replicates across local processes with `concurrent.futures`. Each replicate seeds the
-shared cross-language RNG from its own index, so the results are identical to a serial
-run whatever the worker count, and parallelisation costs nothing in reproducibility. The
+replicates across local processes with `concurrent.futures`. Each replicate takes its own
+seed from `replicate_seeds()`, so the results are identical to a serial run whatever the
+worker count, and parallelisation costs nothing in reproducibility. The
 model fits dominate the running time, which makes the speed-up close to linear in the
 number of processes. `power_curve` starts one process pool and reuses it across the whole
 sweep.

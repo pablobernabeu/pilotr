@@ -1,5 +1,5 @@
-# Parallel execution must reproduce the serial stream exactly. Every replicate seeds the
-# shared RNG from its own index, so the worker count can change only the wall-clock time,
+# Parallel execution must reproduce the serial stream exactly. Every replicate takes its own
+# seed from replicate_seeds(), so the worker count can change only the wall-clock time,
 # never a number. Cluster tests are skipped on CRAN to respect its two-core limit and to
 # avoid PSOCK flakiness on the check farms.
 

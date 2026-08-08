@@ -9,7 +9,6 @@ no-code app, so a design authored once runs unchanged across all three.
 from __future__ import annotations
 
 from importlib import resources
-from typing import Optional, Union
 
 
 def _examples_dir():
@@ -24,7 +23,7 @@ def _available() -> list[str]:
     )
 
 
-def pilotr_example(name: Optional[str] = None) -> Union[list[str], str]:
+def pilotr_example(name: str | None = None) -> list[str] | str:
     """List the bundled example specifications, or return the path to one.
 
     pilotr ships one ready-to-run specification per design family, as JSON. These

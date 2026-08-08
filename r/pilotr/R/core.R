@@ -23,7 +23,10 @@
 #' @export
 make_rng <- function(seed) {
   e <- new.env(parent = emptyenv())
-  seed <- abs(round(as.numeric(seed)))
+  # Truncated, not rounded, to match `int(abs(seed))` in the Python twin. validate_spec refuses a
+  # non-whole seed, so this only closes the validate = FALSE path the replicate loops use, where
+  # rounding would have handed the two engines different data from one specification.
+  seed <- abs(trunc(as.numeric(seed)))
   e$s1 <- 1 + (seed %% (.M1 - 1))
   e$s2 <- 1 + ((.A2 * e$s1) %% (.M2 - 1))
   unif <- function() {

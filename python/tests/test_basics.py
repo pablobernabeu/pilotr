@@ -4,12 +4,12 @@ Covers the three things a methods-package reviewer checks first: the RNG is
 deterministic, the inverse-normal is numerically correct, and the engine recovers the
 ground-truth parameters it was given.
 """
-import os, sys, statistics, math
+import os, re, sys, statistics, math
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 
-from pilotr import RNG, as241, simulate, load_spec
+from pilotr import RNG, as241, replicate_seeds, simulate, load_spec, validate_spec
 
 SPEC = os.path.join(os.path.dirname(__file__), "..", "..", "spec", "examples")
 
@@ -18,7 +18,8 @@ def test_rng_is_deterministic():
     a = [RNG(123).uniform() for _ in range(1)]
     b = RNG(123).uniform()
     assert a[0] == b
-    stream = RNG(7); xs = [stream.uniform() for _ in range(1000)]
+    stream = RNG(7)
+    xs = [stream.uniform() for _ in range(1000)]
     assert all(0.0 < x < 1.0 for x in xs)
     assert len(set(xs)) == len(xs)  # no immediate repeats
 
@@ -89,6 +90,76 @@ def test_per_subject_must_lie_between_1_and_n_items():
     spec["units"]["item"]["per_subject"] = 0
     with pytest.raises(ValueError, match="at least 1"):
         simulate(spec)
+
+
+# One specification file is run through both engines, so the same mistake has to be reported the
+# same way by both. Each message below is byte-identical to the R twin's.
+def test_a_whole_version_is_read_the_same_however_it_was_written():
+    # R renders the JSON number 1.0 as "1", Python as "1.0". Neither engine may call it malformed.
+    for declared in (1.0, 1, "1"):
+        s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+        s["spec_version"] = declared
+        with pytest.raises(ValueError,
+                           match=re.escape("declares spec_version 1.0, which is newer")):
+            validate_spec(s)
+
+
+def test_a_non_object_unit_is_reported_rather_than_crashing():
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["units"]["subject"] = 5
+    with pytest.raises(ValueError, match=re.escape("'units.subject' must be an object")):
+        validate_spec(s)
+    # An empty object is a missing n, not a wrong shape, which is what the twin says too.
+    s["units"]["subject"] = {}
+    with pytest.raises(ValueError, match=re.escape("'units.subject.n' must be a whole number")):
+        validate_spec(s)
+
+
+def test_a_non_whole_seed_truncates_as_in_the_r_twin():
+    # Reachable only outside validation, the fast path the replicate loops use.
+    assert RNG(2.7).uniform() == RNG(2).uniform()
+    assert RNG(3.5).uniform() == RNG(3).uniform()
+    assert RNG(-2.7).uniform() == RNG(2).uniform()
+
+
+def test_replicate_seeds_are_whole_numbers():
+    # The annotation says list[int]; math.floor() + 1 has to keep it true.
+    assert all(isinstance(s, int) for s in replicate_seeds(90210, 5))
+
+
+def test_zero_true_effect_leaves_type_s_and_type_m_undefined():
+    # A null condition (every effect zero) is a recommended input, not a hypothetical one, and
+    # dividing by it used to raise ZeroDivisionError. The R twin returns NaN for the same spec.
+    pytest.importorskip("scipy")
+    from pilotr import power
+
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["fixed"]["coefficients"]["grp"] = 0.0
+    r = power(s, n_sims=100)
+    assert r["true_effect"] == 0
+    assert math.isnan(r["type_s"])
+    assert math.isnan(r["type_m"])
+    assert 0.0 <= r["power"] <= 1.0  # power itself is still reported
+
+
+def test_power_mixed_also_refuses_to_divide_by_a_zero_true_effect():
+    pytest.importorskip("statsmodels")
+    pytest.importorskip("pandas")
+    from pilotr import power_mixed
+
+    spec = {
+        "name": "null", "seed": 3,
+        "units": {"subject": {"n": 10}, "item": {"n": 6}},
+        "factors": [{"name": "cond", "levels": ["a", "b"],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+        "fixed": {"intercept": 6, "coefficients": {"cond": 0.0}},
+        "random": {"subject": {"intercept_sd": 0.12}, "item": {"intercept_sd": 0.08}},
+        "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
+    }
+    r = power_mixed(spec, n_sims=4)
+    assert r["n_converged"] > 0  # so the NaNs below are the guard, not a failed fit
+    assert math.isnan(r["type_s"])
+    assert math.isnan(r["type_m"])
 
 
 def test_additional_grouping_column_present():

@@ -193,7 +193,12 @@ response_variance <- function(spec) {
   spec <- .as_spec(spec)
   groups <- names(spec$random)
 
-  out <- list(fixed = stats::var(.eta_draw(.zero_random(spec))))
+  # stats::var() of a single value is NA, but a one-row design (validate_spec permits n = 1) has no
+  # across-row variation rather than an unknown amount of it. Reporting 0 keeps `total` the sum of
+  # the parts it is documented to be, and leaves calibrate_response() with a total it can solve
+  # against instead of one that quietly dropped a term.
+  eta_fixed <- .eta_draw(.zero_random(spec))
+  out <- list(fixed = if (length(eta_fixed) > 1L) stats::var(eta_fixed) else 0)
 
   # One simulation per distinct slope column, shared across the grouping factors that use it.
   slope_keys <- unique(unlist(lapply(groups, function(g) names(spec$random[[g]]$slopes))))
@@ -213,7 +218,10 @@ response_variance <- function(spec) {
   # The full linear predictor, needed only by the families whose residual depends on the mean.
   eta <- if (identical(.residual_kind(spec$response$family), "eta")) .eta_draw(spec) else NULL
   out$residual <- .residual_variance(spec$response, eta)
-  out$total <- sum(vapply(out, function(v) if (is.na(v)) 0 else v, numeric(1)))
+  # A plain sum, with nothing silenced. validate_spec() admits only the families
+  # .residual_variance() covers, so a missing component would be a fault worth surfacing rather
+  # than one worth counting as zero and still calling the result the sum.
+  out$total <- sum(vapply(out, identity, numeric(1)))
   out
 }
 

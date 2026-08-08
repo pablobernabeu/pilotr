@@ -167,17 +167,27 @@ def main() -> int:
         return 1 if failures else 0
 
     if golden:
-        # A case with a non-zero ulp allowance applies exp() or log() to the
-        # linear predictor, and Windows (MinGW/UCRT) and Linux (glibc) do not
-        # share a libm, so its raw dump can never hash identically on both
-        # platforms: the same golden.json would fail on whichever platform did
-        # not record it. Those cases are gated by the R-versus-Python
-        # comparison above instead, which is the contract; the golden anchor
-        # is enforced only where the arithmetic is IEEE-754-exact and the dump
-        # therefore platform-stable.
-        stable = {c: h for c, h in new_hashes.items()
-                  if case_ulp.get(c, default_ulp) == 0}
-        drifted = [c for c, h in stable.items() if golden.get(c) != h]
+        # The anchor covers exactly the cases the cross-language comparison
+        # requires to agree bit for bit, that is, those with an ulp allowance of
+        # zero. A case with a non-zero allowance is excluded because it cannot
+        # be anchored at all: it applies exp() or log() to the linear predictor,
+        # and Windows (MinGW/UCRT) and Linux (glibc) do not share a libm, so the
+        # same golden.json would fail on whichever platform did not record it.
+        # Those cases are gated by the R-versus-Python comparison above instead,
+        # which is the contract.
+        #
+        # A zero allowance is not the same thing as IEEE-754-exact arithmetic,
+        # and the difference matters when reading a green run. The beta, Poisson
+        # and ordinal cases reach their values through exp(), log() or pow(),
+        # yet they carry no allowance and so are anchored, because they have
+        # hashed identically on every platform in the matrix so far. That is a
+        # criterion happening to be satisfied rather than one being enforced. If
+        # a third platform's libm breaks one of them, the fix is to give that
+        # case an allowance in tolerance.json, which drops it from the anchor
+        # here, not to relax the anchor itself.
+        anchored = {c: h for c, h in new_hashes.items()
+                    if case_ulp.get(c, default_ulp) == 0}
+        drifted = [c for c, h in anchored.items() if golden.get(c) != h]
         missing = [c for c in golden if c not in new_hashes]
         if drifted or missing:
             print("\ngolden-file drift:")
@@ -187,9 +197,10 @@ def main() -> int:
                 print("  %s: case disappeared" % c)
             failures += len(drifted) + len(missing)
         else:
-            print("\ngolden-file hashes match for all %d platform-stable cases"
-                  " (%d exp-link cases gated by the cross-language comparison alone)"
-                  % (len(stable), len(new_hashes) - len(stable)))
+            print("\ngolden-file hashes match for all %d anchored cases"
+                  " (%d cases carry an ulp allowance and are gated by the"
+                  " cross-language comparison alone)"
+                  % (len(anchored), len(new_hashes) - len(anchored)))
     else:
         print("\nno golden.json yet; create one with --update")
 

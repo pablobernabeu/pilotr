@@ -42,8 +42,8 @@
   unique(found)
 }
 
-# Not `%||%`: base R gained that operator in 4.4.0, and pilotr declares no minimum R version,
-# so defining it here would shadow the base version on new R and be the only definition on old R.
+# Not `%||%`: base R gained that operator in 4.4.0, above the 4.0.0 pilotr declares, so defining
+# it here would shadow the base version on new R and be the only definition on old R.
 .orelse <- function(a, b) if (is.null(a)) b else a
 
 # Resolve a specification argument to a validated list. Every public entry point calls this
@@ -59,9 +59,14 @@
 .is_scalar_number <- function(x) is.numeric(x) && length(x) == 1L && !is.na(x) && is.finite(x)
 .is_whole <- function(x) .is_scalar_number(x) && x == round(x)
 
+# A version arrives as whatever JSON produced. A single part is read as a whole version, so "1"
+# and the JSON number 1.0 both mean 1.0. The padding is what keeps the two engines agreeing about
+# the same file: R renders the number 1.0 as "1" and Python as "1.0", so without it one
+# implementation called the specification malformed while the other read it as version 1.
 .parse_version <- function(v) {
   s <- if (is.numeric(v)) format(v, digits = 15) else as.character(v)
   parts <- suppressWarnings(as.integer(strsplit(s, ".", fixed = TRUE)[[1]]))
+  if (length(parts) == 1L) parts <- c(parts, 0L)
   if (length(parts) < 2L || anyNA(parts[1:2])) return(NULL)
   parts[1:2]
 }
@@ -136,14 +141,17 @@ validate_spec <- function(spec, strict = TRUE) {
   if (is.null(dv)) {
     bad("spec_version '", declared, "' is not of the form 'major.minor'")
   } else {
+    # The version as pilotr read it, rather than as it was written, so that the two engines report
+    # the same thing about a JSON number they render differently.
+    shown <- paste0(dv[1], ".", dv[2])
     if (dv[1] > sv[1] || (dv[1] == sv[1] && dv[2] > sv[2]))
-      bad("this specification declares spec_version ", declared,
+      bad("this specification declares spec_version ", shown,
           ", which is newer than the ", .SPEC_VERSION,
           " this version of pilotr understands; please upgrade pilotr")
     used <- .spec_0_3_features(spec)
     if (length(used) && (dv[1] == 0L && dv[2] < 3L))
       bad("this specification uses ", paste(used, collapse = ", "),
-          ", which requires spec_version \"0.3\", but declares ", declared,
+          ", which requires spec_version \"0.3\", but declares ", shown,
           "; a 0.2 implementation would read it differently and silently generate different data")
   }
 
@@ -170,6 +178,11 @@ validate_spec <- function(spec, strict = TRUE) {
       has_item <- !is.null(u$item)
       for (nm in intersect(names(u), c("subject", "item"))) {
         un <- u[[nm]]
+        # Only the list test, not the names() test used elsewhere for an object: an empty JSON
+        # object arrives as an unnamed empty list, and the twin reports the missing n for it
+        # rather than the wrong shape. Without this guard `un$n` below threw the base error
+        # "$ operator is invalid for atomic vectors" where Python said what was wrong.
+        if (!is.list(un)) { bad("'units.", nm, "' must be an object"); next }
         for (k in setdiff(names(un), c("n", "per_subject")))
           unknown("unknown field 'units.", nm, ".", k, "'")
         if (!.is_whole(un$n) || un$n < 1) bad("'units.", nm, ".n' must be a whole number of at least 1")

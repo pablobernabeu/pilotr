@@ -42,8 +42,8 @@ about \code{sqrt(p * (1 - p) / n_sims)} and move in coarse steps when \code{n_si
 least 200 replicates are advisable for real planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
-The default of 1 runs serially. Because every replicate seeds the shared RNG from its
-own index, any worker count returns results identical to a serial run.}
+The default of 1 runs serially. Because every replicate takes its own seed from
+\code{\link[=replicate_seeds]{replicate_seeds()}}, any worker count returns results identical to a serial run.}
 }
 \value{
 A data frame with one row per focal effect and columns \code{param}, \code{true},

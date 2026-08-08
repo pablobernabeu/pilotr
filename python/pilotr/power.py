@@ -20,7 +20,7 @@ functions are module-level so that they pickle under the Windows spawn start met
 """
 
 from __future__ import annotations
-import copy, functools, statistics
+import copy, functools, math, statistics
 from .simulate import simulate, load_spec
 from .core import replicate_seeds
 
@@ -81,7 +81,9 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     -------
     dict
         Keys: `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
-        `type_s`, `type_m`.
+        `type_s`, `type_m`. Both design-analysis quantities are `nan` when no replicate
+        reached significance and when the true effect is zero, as in a null condition:
+        neither is defined without a true value to compare against, and Type M divides by it.
 
     Raises
     ------
@@ -109,7 +111,8 @@ def _power_impl(spec, n_sims, alpha, executor):
     if isinstance(spec, str):
         spec = load_spec(spec)
     if spec["response"]["family"] != "gaussian":
-        raise NotImplementedError("The power backend currently handles only the gaussian two-group design.")
+        raise NotImplementedError(
+            "The power backend currently handles only the gaussian two-group design.")
 
     between = [f for f in spec["factors"] if f.get("between")]
     if len(between) != 1 or len(between[0]["levels"]) != 2:
@@ -130,7 +133,11 @@ def _power_impl(spec, n_sims, alpha, executor):
 
     sig = [i for i, p in enumerate(pvals) if p < alpha]
     power_val = len(sig) / n_sims
-    if sig:
+    # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
+    # stay nan when the true effect is zero rather than dividing by zero and reporting a sign-error
+    # rate that has quietly become "the estimate is positive". Same rule as power_mixed(), and the
+    # null condition the sweep documentation recommends is exactly this case.
+    if sig and not math.isnan(true_effect) and true_effect != 0:
         type_s = sum(1 for i in sig if (estimates[i] > 0) != (true_effect > 0)) / len(sig)
         type_m = statistics.mean(abs(estimates[i]) / abs(true_effect) for i in sig)
     else:
@@ -157,7 +164,8 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
     s["seed"] = seed
     df = pd.DataFrame(simulate(s).rows)
     df["cc"] = df[fname].map(l2c)
-    df["yv"] = [math.log(v - shift) for v in df[yname]] if fam == "shifted_lognormal" else list(df[yname])
+    df["yv"] = ([math.log(v - shift) for v in df[yname]]
+                if fam == "shifted_lognormal" else list(df[yname]))
     df["grp"] = 1
     try:
         with warnings.catch_warnings():
@@ -213,7 +221,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         Keys: `backend` (the estimator used), `n_sims`, `n_converged` (how many replicates
         the model fit), `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
         `type_s`, `type_m`. `power` is the proportion of significant results among the
-        `n_converged` converged replicates, not among `n_sims`.
+        `n_converged` converged replicates, not among `n_sims`. `type_s` and `type_m` are
+        `nan` when no replicate reached significance and when the true effect is zero.
 
     Raises
     ------
@@ -237,7 +246,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         raise ValueError("power_mixed() requires a crossed design with an item unit.")
     within = [f for f in spec["factors"] if f.get("vary_within")]
     if len(within) != 1:
-        raise NotImplementedError("The Python power_mixed backend expects exactly one within factor.")
+        raise NotImplementedError(
+            "The Python power_mixed backend expects exactly one within factor.")
     f = within[0]
     fname = f["name"]
     col, vals = next(iter(f["contrasts"].items()))
@@ -260,14 +270,18 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     pv = [r[1] for r in results if r is not None]
 
     sig = [i for i, p in enumerate(pv) if p < alpha]
+    # See _power_impl: a zero true effect leaves both design-analysis quantities undefined.
+    usable = bool(sig) and not math.isnan(beta) and beta != 0
     return {
         "backend": "statsmodels MixedLM (crossed variance components, REML)",
         "n_sims": n_sims, "n_converged": len(pv), "alpha": alpha,
         "power": len(sig) / len(pv) if pv else float("nan"),
         "n_significant": len(sig), "true_effect": beta,
         "mean_estimate": statistics.mean(est) if est else float("nan"),
-        "type_s": (sum(1 for i in sig if (est[i] > 0) != (beta > 0)) / len(sig)) if sig else float("nan"),
-        "type_m": statistics.mean(abs(est[i]) / abs(beta) for i in sig) if sig else float("nan"),
+        "type_s": (sum(1 for i in sig if (est[i] > 0) != (beta > 0)) / len(sig))
+                  if usable else float("nan"),
+        "type_m": statistics.mean(abs(est[i]) / abs(beta) for i in sig)
+                  if usable else float("nan"),
     }
 
 

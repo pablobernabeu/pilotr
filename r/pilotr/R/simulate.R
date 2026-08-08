@@ -359,6 +359,10 @@ simulate_design <- function(spec, validate = TRUE) {
       beta              = { mu <- .inv_logit(eta); phi <- if (is.null(resp$phi)) 10 else resp$phi
                             .beta_draw(rng, mu * phi, (1 - mu) * phi) },
       stop("unknown family: ", family))
+    # Native round(), which the package's headline claim of exactly identical data for a rounded
+    # family runs through. R's algorithm for a non-zero number of digits changed in 4.0.0, and
+    # the current one agrees with CPython's on every probe measured; that is why DESCRIPTION
+    # declares R (>= 4.0.0) rather than leaving the floor open.
     if (!is.null(ndp) && family %in% .rounding_families) val <- round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item

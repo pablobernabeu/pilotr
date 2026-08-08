@@ -42,6 +42,36 @@ test_that("power_design returns Type S / Type M and a plausible power", {
   expect_equal(r$true_effect, 5)
 })
 
+# design_conditions() recommends a condition in which every effect is zero, so this input is not
+# hypothetical. Dividing by it used to report type_m = Inf and a type_s that had degenerated into
+# the proportion of positive estimates.
+test_that("a zero true effect leaves Type S and Type M undefined rather than infinite", {
+  spec <- gaussian_between()
+  spec$fixed$coefficients[[1]] <- 0
+  r <- power_design(spec, n_sims = 100)
+  expect_equal(r$true_effect, 0)
+  expect_true(is.nan(r$type_s))
+  expect_true(is.nan(r$type_m))
+  expect_false(is.infinite(r$type_m))
+  expect_gte(r$power, 0); expect_lte(r$power, 1)   # power itself is still reported
+})
+
+test_that("power_mixed also refuses to divide by a zero true effect", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  spec <- build_spec(list(name = "null", seed = 1, design_kind = "within",
+                          include_items = FALSE, n_subject = 40,
+                          factor_name = "cond", lev1 = "a", lev2 = "b",
+                          intercept = 6, effect = 0, subj_int_sd = 0.12,
+                          subj_slope_sd = 0, subj_corr = 0,
+                          family = "gaussian", resp_name = "", sigma = 0.3))
+  out <- power_mixed(spec, n_sims = 4)
+  expect_true(out$n_returned > 0L)          # so the NAs below are the guard, not a failed fit
+  expect_true(all(is.na(out$type_s)))
+  expect_true(all(is.na(out$type_m)))
+  expect_false(any(is.infinite(out$type_m)))
+})
+
 test_that("default_response_name covers every family", {
   expect_equal(default_response_name("gaussian"), "score")
   expect_equal(default_response_name("lognormal"), "RT")
@@ -200,6 +230,35 @@ test_that("a non-positive-definite random-effect covariance is an error", {
   expect_error(simulate_design(spec), "not positive definite")
 })
 
+# One specification file is run through both engines, so the same mistake has to be reported the
+# same way by both. Each message below is byte-identical to the Python twin's.
+test_that("a whole version is read the same however it was written", {
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  newer <- "declares spec_version 1.0, which is newer"
+  # R renders the JSON number 1.0 as "1", Python as "1.0". Neither engine may call it malformed.
+  spec$spec_version <- 1.0
+  expect_error(validate_spec(spec), newer, fixed = TRUE)
+  spec$spec_version <- "1"
+  expect_error(validate_spec(spec), newer, fixed = TRUE)
+})
+
+test_that("a non-object unit is reported rather than crashing", {
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$units$subject <- 5
+  expect_error(validate_spec(spec), "'units.subject' must be an object", fixed = TRUE)
+  # An empty object is a missing n, not a wrong shape, which is what the twin says too.
+  spec$units$subject <- list()
+  expect_error(validate_spec(spec), "'units.subject.n' must be a whole number", fixed = TRUE)
+})
+
+test_that("a non-whole seed truncates, as int(abs(seed)) does in the twin", {
+  # Reachable only through validate = FALSE, the fast path the replicate loops use. Rounding here
+  # handed the two engines different data from one specification.
+  expect_identical(make_rng(2.7)$uniform(), make_rng(2)$uniform())
+  expect_identical(make_rng(3.5)$uniform(), make_rng(3)$uniform())
+  expect_identical(make_rng(-2.7)$uniform(), make_rng(2)$uniform())
+})
+
 test_that("replicate seeds are distinct and reproducible", {
   s <- replicate_seeds(90210, 500)
   expect_length(unique(s), 500)
@@ -275,4 +334,28 @@ test_that("pilotr_example lists the bundled specs and resolves each to a file", 
 test_that("pilotr_example rejects unknown or malformed names", {
   expect_error(pilotr_example("no_such_example"), "Unknown example")
   expect_error(pilotr_example(c("a", "b")), "single example name")
+})
+
+# validate_spec permits n = 1, and stats::var() of one value is NA. The total used to count that
+# NA as zero and still call itself the sum of the parts.
+test_that("total is the sum of the parts for a single-row design", {
+  spec <- build_spec(list(name = "one", seed = 1, design_kind = "between",
+                          factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 1,
+                          intercept = 0, effect = 0.5, family = "gaussian",
+                          resp_name = "", sigma = 1))
+  spec$random <- list(subject = list(intercept_sd = 0.2))
+  v <- response_variance(spec)
+  expect_false(is.na(v$fixed))
+  expect_identical(v$fixed, 0)            # one row has no across-row variation
+  expect_equal(v$total, sum(unlist(v[setdiff(names(v), "total")])))
+  # And the total is now something calibrate_response() can solve against.
+  expect_equal(response_variance(calibrate_response(spec, 2))$total, 2)
+})
+
+test_that("total is the sum of the parts for every shipped example", {
+  for (nm in pilotr_example()) {
+    v <- response_variance(pilotr_example(nm))
+    expect_equal(v$total, sum(unlist(v[setdiff(names(v), "total")])),
+                 info = nm)
+  }
 })

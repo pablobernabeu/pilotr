@@ -23,6 +23,7 @@ License: MIT + file LICENSE
 URL: https://pablobernabeu.github.io/pilotr/r/, https://github.com/pablobernabeu/pilotr
 BugReports: https://github.com/pablobernabeu/pilotr/issues
 Encoding: UTF-8
+Depends: R (>= 4.0.0)
 Imports: jsonlite, parallel, stats
 Suggests: shiny, future, promises, ggplot2 (>= 3.4.0), lme4, lmerTest, callr, knitr,
     rmarkdown, testthat (>= 3.0.0)

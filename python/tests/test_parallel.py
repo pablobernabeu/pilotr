@@ -1,6 +1,6 @@
-"""Parallel execution must reproduce the serial stream exactly. Every replicate seeds
-the shared cross-language RNG from its own index, so the worker count can change only
-the wall-clock time, never a number.
+"""Parallel execution must reproduce the serial stream exactly. Every replicate takes its
+own seed from replicate_seeds(), so the worker count can change only the wall-clock time,
+never a number.
 """
 import math, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

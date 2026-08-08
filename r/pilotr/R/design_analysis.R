@@ -144,6 +144,23 @@
     sprintf("focal_true <- %s   # NA where the true value was not supplied",
             .da_named_num(f$true)),
     "",
+    "# ---- run identity ----",
+    "",
+    "# Every verdict below is a function of the rule, the gate and the specification, and a results",
+    "# directory pools whatever was written into it. The identity therefore travels with every row,",
+    "# so that two array runs with different ROPEs cannot be combined into one table with nothing to",
+    "# tell them apart. The package version is recorded too, because the generative core changed",
+    "# numerically at 0.3, so the same specification and seed do not give the same data across it.",
+    "spec_fingerprint <- local({",
+    "  f <- tempfile()",
+    "  on.exit(unlink(f), add = TRUE)",
+    '  con <- file(f, open = "wb")      # binary, so the digest does not depend on the platform',
+    '  writeLines(pilotr::spec_json(spec), con, sep = "\\n")',
+    "  close(con)",
+    "  unname(tools::md5sum(f))",
+    "})",
+    'pilotr_version <- as.character(utils::packageVersion("pilotr"))',
+    "",
     "# ---- replicate index ----",
     "",
     "# The replicate seeds come from pilotr's own rule rather than from index arithmetic on the",
@@ -257,7 +274,11 @@
     '             lower = itv[["lower"]], upper = itv[["upper"]],',
     "             bf_effect = bf_effect, bf_null = bf_null,",
     "             max_rhat = obs_rhat, p_divergent = obs_divergent,",
-    "             verdict = verdict, stringsAsFactors = FALSE)",
+    "             verdict = verdict,",
+    "             bf_threshold = bf_threshold, rope = rope, ci_mass = ci_mass,",
+    "             max_rhat_limit = max_rhat, max_divergent_limit = max_divergent,",
+    "             spec_fingerprint = spec_fingerprint, pilotr_version = pilotr_version,",
+    "             stringsAsFactors = FALSE)",
     "})",
     "",
     "# ---- summary ----",
@@ -344,7 +365,28 @@
     "                    full.names = TRUE)",
     'if (!length(files)) stop("no per-replicate RDS files under ", outdir, call. = FALSE)',
     "",
-    "reps <- do.call(rbind, lapply(files, readRDS))",
+    "# A results directory is a pool of whatever was written into it, and every verdict is a",
+    "# function of the rule, the gate and the specification. Combining two array runs that differed",
+    "# in any of those produces one table with nothing to tell them apart, so the run identity each",
+    "# replicate carries is checked before anything is bound together. Give each run its own",
+    "# directory; pooling across rules is a decision to make deliberately, not by globbing.",
+    "parts <- lapply(files, readRDS)",
+    "if (length(unique(lapply(parts, names))) > 1L)",
+    '  stop("the per-replicate files under ", outdir, " do not share a column set, so they were ",',
+    '       "written by different versions of this script. Aggregate each run on its own.",',
+    "       call. = FALSE)",
+    "reps <- do.call(rbind, parts)",
+    "",
+    'run_cols <- c("bf_threshold", "rope", "ci_mass", "max_rhat_limit", "max_divergent_limit",',
+    '              "spec_fingerprint", "pilotr_version")',
+    "mixed <- run_cols[vapply(run_cols, function(k) length(unique(reps[[k]])) > 1L, logical(1))]",
+    "if (length(mixed))",
+    '  stop("the per-replicate files under ", outdir, " come from more than one run: ",',
+    '       paste(vapply(mixed, function(k) sprintf("%s takes the values %s", k,',
+    '         paste(sort(unique(as.character(reps[[k]]))), collapse = ", ")), character(1)),',
+    '         collapse = "; "),',
+    '       ". Aggregate each run on its own.", call. = FALSE)',
+    "",
     'write.csv(reps, file.path(outdir, "design_analysis_replicates.csv"), row.names = FALSE)',
     "",
     "# One row per focal effect, carrying the columns of a single replicate's table plus the",
@@ -364,6 +406,10 @@
     '  p_supported    = share(r$verdict, "supported"),',
     '  p_null         = share(r$verdict, "null"),',
     '  p_inconclusive = share(r$verdict, "inconclusive"),',
+    "  # Constant across the rows by the check above, so the summary says which rule produced it.",
+    "  bf_threshold = r$bf_threshold[1], rope = r$rope[1], ci_mass = r$ci_mass[1],",
+    "  max_rhat_limit = r$max_rhat_limit[1], max_divergent_limit = r$max_divergent_limit[1],",
+    "  spec_fingerprint = r$spec_fingerprint[1], pilotr_version = r$pilotr_version[1],",
     "  stringsAsFactors = FALSE)))",
     "row.names(agg) <- NULL",
     "print(agg, digits = 3)",
@@ -411,6 +457,14 @@
 #' threshold means the same thing whatever the run length. When either limit is exceeded the
 #' emitted script reports `NA` for every verdict and prints why, since a conclusion from a fit
 #' that has not converged carries the authority of a number without the sampling behind it.
+#'
+#' A verdict is a function of the whole rule, the whole gate and the specification, so each
+#' replicate's record carries all of them: `bf_threshold`, `rope`, `ci_mass`, `max_rhat_limit`,
+#' `max_divergent_limit`, an MD5 fingerprint of the canonical specification JSON, and the pilotr
+#' version that produced the data. A results directory collects whatever was written into it, and
+#' the emitted aggregator globs it, so without those columns two array runs under different
+#' regions of practical equivalence would combine into one table with nothing to tell them apart.
+#' The aggregator stops when they disagree rather than pooling them.
 #'
 #' @param spec A design specification (path or list).
 #' @param focal A character vector of focal coefficient names, or a named numeric vector mapping

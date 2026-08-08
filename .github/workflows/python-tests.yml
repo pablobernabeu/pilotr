@@ -20,6 +20,12 @@ on:
       - 'spec/**'
       - 'tools/parity/**'
       - '.github/workflows/python-tests.yml'
+  # Dependencies and interpreters move when this repository does not, and the
+  # paths filters above mean a quiet month sees no run at all. A weekly run
+  # turns an upstream break into a dated red badge rather than a surprise on
+  # the next push. Schedules ignore paths filters, so this covers everything.
+  schedule:
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 name: python-tests
@@ -27,12 +33,32 @@ name: python-tests
 permissions: read-all
 
 jobs:
+  # The R half is held to R CMD check on six OS and version cells. Nothing held the Python half
+  # to any standard, although its sources already carried noqa markers from a linter that had
+  # stopped being run. The rule set is pinned in python/pyproject.toml rather than given here, so
+  # that a ruff release cannot silently widen or narrow what CI enforces.
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install ruff
+        run: python -m pip install --upgrade pip ruff
+      - name: Lint the Python sources
+        run: ruff check python
+
   pytest:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.12', '3.13']
+        # The floor, then the current releases. 3.10 and 3.11 are left out
+        # deliberately: the core is pure Python, so the interesting cells are
+        # the oldest supported interpreter and the newest.
+        python-version: ['3.9', '3.12', '3.13', '3.14']
 
     steps:
       - uses: actions/checkout@v7
@@ -66,6 +92,67 @@ jobs:
               with open(path, "a") as f:
                   f.write("## Python test coverage: **%s%%**\n" % pct)
           EOF
+
+  # The matrix above installs the package editable from the checkout, where the
+  # example specifications are reachable from the repository root whether or not
+  # the wheel carries them. pilotr_example() reads the PACKAGED copy, so this
+  # job is the only thing that can catch the mirror going missing from the
+  # distribution: install the wheel into a bare environment, leave the
+  # repository, and load an example from there.
+  wheel:
+    name: Installed wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build the distributions
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build ./python
+      - name: Install the wheel outside the checkout and load a packaged example
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/wheel-venv/bin/pip" install python/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-venv/bin/python" - <<'PY'
+          import json, os
+          import pilotr
+          print("pilotr", getattr(pilotr, "__version__", "unknown"))
+          # The example specs are mirrored into the package from spec/examples/;
+          # an editable install would find the repository copy even if the wheel
+          # shipped none of them. List them, then resolve and parse one, so a
+          # truncated mirror fails here rather than in a user's session.
+          names = pilotr.pilotr_example()
+          assert names, "pilotr_example() listed no examples from the installed wheel"
+          path = pilotr.pilotr_example(names[0])
+          assert os.path.exists(path), path
+          with open(path, encoding="utf-8") as fh:
+              json.load(fh)
+          print("packaged examples:", names)
+          PY
+
+  # The floors in the extras are a promise to anyone resolving against an older
+  # stack, and nothing tested them. A failure here means a floor needs raising
+  # to what actually works, not that the job is too strict.
+  minimum-versions:
+    name: Declared minimum dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.9'
+      - name: Install the declared floors, then the package without resolution
+        run: |
+          python -m pip install --upgrade pip
+          pip install "scipy==1.7.*" "statsmodels==0.13.*" "pandas==1.3.*" "pytest==7.*"
+          pip install -e ./python --no-deps
+      - name: Run the test suite
+        working-directory: python
+        run: python -m pytest -q
 
   # The README's headline claim is that one specification and seed produce the
   # same data in both languages, bit for bit except for a documented ulp

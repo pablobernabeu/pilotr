@@ -87,6 +87,14 @@ older 1.1, and divergent transitions are counted as a share of post-warmup draws
 threshold means the same thing whatever the run length. When either limit is exceeded the
 emitted script reports \code{NA} for every verdict and prints why, since a conclusion from a fit
 that has not converged carries the authority of a number without the sampling behind it.
+
+A verdict is a function of the whole rule, the whole gate and the specification, so each
+replicate's record carries all of them: \code{bf_threshold}, \code{rope}, \code{ci_mass}, \code{max_rhat_limit},
+\code{max_divergent_limit}, an MD5 fingerprint of the canonical specification JSON, and the pilotr
+version that produced the data. A results directory collects whatever was written into it, and
+the emitted aggregator globs it, so without those columns two array runs under different
+regions of practical equivalence would combine into one table with nothing to tell them apart.
+The aggregator stops when they disagree rather than pooling them.
 }
 \examples{
 # Emitting the script needs neither brms nor Stan, which is what lets it work in the

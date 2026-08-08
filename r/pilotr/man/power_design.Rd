@@ -17,14 +17,17 @@ slowly still. At least 200 replicates are advisable for study planning.}
 \item{alpha}{Two-sided significance level.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
-The default of 1 runs serially. Because every replicate seeds the shared RNG from its
-own index, any worker count returns results identical to a serial run.}
+The default of 1 runs serially. Because every replicate takes its own seed from
+\code{\link[=replicate_seeds]{replicate_seeds()}}, any worker count returns results identical to a serial run.}
 }
 \value{
 A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{n_significant},
 \code{true_effect}, \code{mean_estimate}, \code{type_s} (sign-error rate among significant
 replicates), and \code{type_m} (mean exaggeration ratio among significant
-replicates).
+replicates). Both design-analysis quantities are \code{NaN} when no replicate reached
+significance and when the true effect is zero, as in the null condition
+\code{\link[=design_conditions]{design_conditions()}} produces: neither is defined without a true value to
+compare against, and Type M divides by it.
 }
 \description{
 Estimate power by repeatedly simulating from the specification and applying a two-sample

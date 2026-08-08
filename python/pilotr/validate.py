@@ -64,7 +64,16 @@ def _is_whole(x) -> bool:
 
 
 def _parse_version(v):
+    """Read a version as a (major, minor) pair, or None when it is not one.
+
+    A version arrives as whatever JSON produced. A single part is read as a whole version, so
+    "1" and the JSON number 1.0 both mean 1.0. The padding is what keeps the two engines agreeing
+    about the same file: R renders the number 1.0 as "1" and Python as "1.0", so without it one
+    implementation called the specification malformed while the other read it as version 1.
+    """
     parts = str(v).split(".")
+    if len(parts) == 1:
+        parts.append("0")
     if len(parts) < 2:
         return None
     try:
@@ -145,14 +154,17 @@ def validate_spec(spec, strict: bool = True):
     if dv is None:
         bad("spec_version '%s' is not of the form 'major.minor'" % declared)
     else:
+        # The version as pilotr read it, rather than as it was written, so that the two engines
+        # report the same thing about a JSON number they render differently.
+        shown = "%d.%d" % dv
         if dv > sv:
             bad("this specification declares spec_version %s, which is newer than the %s this "
-                "version of pilotr understands; please upgrade pilotr" % (declared, SPEC_VERSION))
+                "version of pilotr understands; please upgrade pilotr" % (shown, SPEC_VERSION))
         used = _features_0_3(spec)
         if used and dv < (0, 3):
             bad('this specification uses %s, which requires spec_version "0.3", but declares %s; '
                 "a 0.2 implementation would read it differently and silently generate different "
-                "data" % (", ".join(used), declared))
+                "data" % (", ".join(used), shown))
 
     # ---- top level ----
     for k in spec:
@@ -239,7 +251,7 @@ def validate_spec(spec, strict: bool = True):
                     # A single string is accepted where an array belongs. pilotr's own spec_json()
                     # emitted that form before 0.3, because a blanket auto_unbox collapsed every
                     # one-element array, so refusing it would mean refusing files pilotr itself
-                    # wrote. The reading is unambiguous and both engines already treat the two alike.
+                    # wrote. The reading is unambiguous and both engines already treat them alike.
                     if isinstance(vw, str):
                         vw = [vw]
                     if not isinstance(vw, list) or not vw:

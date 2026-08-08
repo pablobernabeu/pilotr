@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A true effect of exactly zero broke both engines, and the package recommends that
+  input.** `design_conditions()` deliberately produces a null condition so a run can show
+  how often it declares something when there is nothing to find; feeding it through
+  `power()` raised `ZeroDivisionError` in Python and returned `Inf` in R, with Type S
+  quietly degenerating to "the estimate is positive". Type S and Type M are now
+  undefined when the true effect is zero or unknown, in both engines — the guard the
+  mixed-effects path already carried, applied to the other three sites.
+- **`response_variance()` laundered an undefined fixed component into zero** while still
+  calling the result the sum of its parts. A single-row design now reports a fixed
+  component of 0 and a total that really is the sum.
+- **Four small twin divergences closed**: a non-whole seed now truncates identically in
+  both engines, a whole `spec_version` is read the same however it was written, a
+  non-object unit is reported rather than crashing R with a base error, and
+  `replicate_seeds()` is annotated as returning integers. Message text is now
+  character-for-character identical across the two engines in each case.
+
+### Changed
+- **The Bayesian design-analysis record carries the rule that produced it** — the decision
+  thresholds, the convergence gate, a fingerprint of the specification and the pilotr
+  version — and the aggregator refuses to pool replicates that disagree on any of them.
+  Two array runs with different ROPEs previously aggregated into one table with nothing
+  to tell them apart.
+- **The parity harness describes its golden anchor accurately.** It claimed to anchor the
+  IEEE-754-exact cases; it actually anchors every case with a zero ulp allowance, which
+  is not the same set.
+
+### Added
+- **A test that the packaged example specifications match the repository's own.**
+  `spec/examples/*.json` is canonical and both packages carry a mirror so an
+  installed copy can reach it, but nothing enforced the mirror. The existing test
+  could not: a stale packaged copy still loads and simulates perfectly well, it
+  simply describes a different design from the one the repository documents. The
+  new test compares the bytes, and is twinned with `test-examples.R`.
+- **CI tests what users install, not only the checkout.** The matrix gains Python
+  3.14. A new job installs the built wheel into a bare environment outside the
+  repository and calls `pilotr_example()` there, then resolves and parses one
+  specification: that is the only check that can catch the example mirror going
+  missing from the distribution, since an editable install finds the repository
+  copy regardless. A second new job installs the declared minimum dependency
+  versions of the extras. A weekly schedule runs the suite when nobody has
+  pushed; the workflow's paths filters mean a quiet month otherwise sees no run
+  at all.
+
 <!-- The date is when the 0.3.0 work landed on main, not a release date: 0.3.0 has
      not been tagged yet. Set it to the tag date when the release is cut, along with
      date-released in CITATION.cff. -->
