@@ -2,10 +2,8 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-source(file.path(here, "..", "R", "core.R"))
-source(file.path(here, "..", "R", "simulate.R"))
-source(file.path(here, "..", "R", "parallel.R"))
-source(file.path(here, "..", "R", "power_mixed.R"))
+source(file.path(here, "..", "tools", "engine.R"))
+load_pilotr_engine(pilotr_engine_dir(here))
 
 spec <- file.path(here, "..", "..", "..", "spec", "examples", "crossed_mixed_rt.json")
 n_sims <- 100

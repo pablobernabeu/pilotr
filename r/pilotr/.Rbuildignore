@@ -1,6 +1,7 @@
 ^LICENSE\.md$
 ^README\.Rmd$
 ^examples$
+^tools$
 ^_pkgdown\.yml$
 ^pkgdown$
 ^vignettes/articles$

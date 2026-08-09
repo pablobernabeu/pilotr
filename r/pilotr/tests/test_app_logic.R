@@ -4,11 +4,8 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-# validate.R comes before spec_builder.R because build_spec() stamps each spec
-# with .SPEC_VERSION, which validate.R defines. Omitting it is what silently
-# broke this gate for four days after the 0.3.0 engine work.
-for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R"))
-  source(file.path(here, "..", "R", f))
+source(file.path(here, "..", "tools", "engine.R"))
+load_pilotr_engine(pilotr_engine_dir(here))
 
 ok <- TRUE
 check <- function(cond, msg) { cat(if (cond) "  [PASS] " else "  [FAIL] ", msg, "\n", sep = ""); ok <<- ok && cond }

@@ -7,8 +7,8 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-for (f in c("core.R", "simulate.R", "autoformula.R", "parallel.R", "precision.R", "brms_bridge.R"))
-  source(file.path(here, "..", "R", f))
+source(file.path(here, "..", "tools", "engine.R"))
+load_pilotr_engine(pilotr_engine_dir(here))
 suppressPackageStartupMessages(library(lme4))
 spec <- load_spec(file.path(here, "..", "..", "..", "spec", "examples", "reading_time_continuous.json"))
 

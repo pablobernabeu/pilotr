@@ -12,18 +12,19 @@ library(ggplot2)
 # only source when the functions are not already present.)
 ENGINE_FILES <- NULL   # resolved source paths (dev) so the verifier can rebuild in a clean R session
 if (!exists("simulate_design", mode = "function")) {
-  .resolved <- character(0)
-  .src <- function(rel, required = TRUE) {
-    for (b in c("../../R", "../R", "R", ".")) {
-      p <- file.path(b, rel); if (file.exists(p)) { source(p); .resolved <<- c(.resolved, normalizePath(p)); return(invisible(TRUE)) }
-    }
-    if (required) stop("cannot find ", rel); invisible(FALSE)
-  }
-  # validate.R before spec_builder.R: build_spec() stamps each spec with
-  # .SPEC_VERSION, which validate.R defines.
-  for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")) .src(f)
-  .src("power_mixed.R", required = FALSE)  # mixed-effects power if available
-  ENGINE_FILES <- .resolved
+  # Load the whole engine directory rather than naming its files. The list this
+  # replaced had to track R/ by hand, and when validate.R arrived with 0.3.0 it
+  # did not: .SPEC_VERSION went undefined and every Simulate click failed. Each
+  # file in R/ only defines functions and constants, so order does not matter.
+  # "." last, for a layout that stages the engine beside the app; app.R and the
+  # roxygen sentinel are dropped so that case cannot source this file into itself.
+  .dir <- Find(dir.exists, c("../../R", "../R", "R", "."))
+  if (is.null(.dir)) stop("cannot find the pilotr engine sources")
+  .files <- sort(list.files(.dir, pattern = "[.][Rr]$", full.names = TRUE))
+  .files <- .files[!basename(.files) %in% c("pilotr-package.R", "app.R")]
+  if (!length(.files)) stop("no pilotr engine sources in ", .dir)
+  for (f in .files) source(f)
+  ENGINE_FILES <- normalizePath(.files)
 }
 
 MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))

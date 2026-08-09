@@ -5,7 +5,8 @@
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-for (f in c("core.R", "simulate.R")) source(file.path(here, "..", "R", f))
+source(file.path(here, "..", "tools", "engine.R"))
+load_pilotr_engine(pilotr_engine_dir(here))
 suppressPackageStartupMessages(library(simstudy))
 SPEC <- file.path(here, "..", "..", "..", "spec", "examples")
 N <- 20000

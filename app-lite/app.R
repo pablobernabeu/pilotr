@@ -11,10 +11,16 @@
 library(shiny)
 library(bslib)
 library(ggplot2)
-# validate.R must precede spec_builder.R: build_spec() stamps each spec with
-# .SPEC_VERSION, which validate.R defines. Its omission broke the deployed app
-# after the 0.3.0 engine work.
-for (f in c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")) source(f)
+# Load whatever engine files were staged beside this app rather than naming them.
+# This file used to carry its own copy of the staging list, and the two drifted:
+# validate.R defines .SPEC_VERSION, which build_spec() stamps onto every spec, and
+# the omission shipped a deployed app whose every Simulate click failed. Reading
+# the directory leaves the staging step in build_shinylive.R as the only list.
+local({
+  staged <- setdiff(sort(list.files(".", pattern = "[.][Rr]$")), "app.R")
+  if (!length(staged)) stop("No engine sources were staged beside app.R.")
+  for (f in staged) source(f)
+})
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
 

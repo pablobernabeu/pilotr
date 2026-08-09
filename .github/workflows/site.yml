@@ -90,8 +90,14 @@ jobs:
         run: |
           stage <- "app-stage"
           dir.create(stage, showWarnings = FALSE)
-          file.copy(file.path("r/pilotr/R", c("core.R", "simulate.R", "parallel.R", "power.R", "validate.R", "spec_builder.R")),
-                    stage, overwrite = TRUE)
+          # app-lite/engine-files.txt is the single place the browser build's engine
+          # subset is named; app.R loads whatever ends up staged beside it. Naming it
+          # here as well is what let the deployed app ship without validate.R.
+          engine <- readLines("app-lite/engine-files.txt")
+          engine <- trimws(sub("#.*$", "", engine))
+          engine <- engine[nzchar(engine)]
+          stopifnot(all(file.exists(file.path("r/pilotr/R", engine))))
+          file.copy(file.path("r/pilotr/R", engine), stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
           shinylive::export(stage, "site/app")
 

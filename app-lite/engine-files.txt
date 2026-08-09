@@ -1,0 +1,20 @@
+# Engine sources staged into the serverless (shinylive / webR) build, one filename
+# per line, resolved against r/pilotr/R. Blank lines and #-comments are ignored.
+#
+# This is the ONE place the browser build's engine subset is named. It used to be
+# named in three: build_shinylive.R, .github/workflows/site.yml and app-lite/app.R,
+# each carrying a comment telling the next person to keep them in step. They went
+# out of step anyway when validate.R arrived with 0.3.0, and the deployed app
+# shipped with .SPEC_VERSION undefined, so every Simulate click failed. app.R now
+# loads whatever was staged beside it, and both staging paths read this file.
+#
+# The browser build deliberately carries a subset, not all of R/: the full engine
+# is roughly three times this size and the rest of it (mixed-effects power, the
+# brms bridge, the sweep and precision machinery) needs packages webR does not
+# carry. Crossed mixed-effects power is left to the installed package.
+core.R
+simulate.R
+parallel.R
+power.R
+validate.R
+spec_builder.R
