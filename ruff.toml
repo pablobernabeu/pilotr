@@ -1,0 +1,24 @@
+# Ruff settings for the parts of this repository outside python/, which in
+# practice means tools/parity: the cross-language harness that decides whether
+# the R and Python halves agree. It was linted by nothing.
+#
+# Ruff resolves configuration by walking up from each file, so python/ finds
+# python/pyproject.toml and tools/ found nothing above it and fell back to
+# whatever ruff currently defaults to. That is not a standard but a moving
+# target: ruff 0.16 widened its defaults and turned a sibling package's green CI
+# red without a line of that package changing. Extending the real settings
+# rather than restating them keeps one source of truth, including the py39
+# target that stops ruff proposing syntax the declared floor cannot run.
+extend = "python/pyproject.toml"
+
+[lint.per-file-ignores]
+# UP031 would rewrite the harness's %-formatting as f-strings. Not here.
+# `_cell()` renders every numeric cell with "%.17g", which is the primitive the
+# whole parity guarantee rests on, and run_r.R renders its side with
+# sprintf("%.17g", ...) two lines away. The two halves are deliberately written
+# to look alike, so that a reader can see they agree rather than take it on
+# trust, and run_py.py self-checks that the format round-trips before emitting
+# anything. Modernising one side would spend that correspondence to gain
+# nothing. The reporting strings in compare.py and validate_cross.py stay in the
+# same style for consistency with it.
+"tools/parity/*.py" = ["UP031"]

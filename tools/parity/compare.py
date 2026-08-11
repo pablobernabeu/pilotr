@@ -192,7 +192,8 @@ def main() -> int:
         if drifted or missing:
             print("\ngolden-file drift:")
             for c in drifted:
-                print("  %s: expected %s, got %s" % (c, (golden.get(c) or "absent")[:16], new_hashes[c][:16]))
+                print("  %s: expected %s, got %s"
+                      % (c, (golden.get(c) or "absent")[:16], new_hashes[c][:16]))
             for c in missing:
                 print("  %s: case disappeared" % c)
             failures += len(drifted) + len(missing)

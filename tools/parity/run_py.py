@@ -49,7 +49,8 @@ def _dump(ds, path: str) -> None:
 
 def main() -> None:
     _check_formatter()
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "tools", "parity", "out", "py")
+    default_out = os.path.join(ROOT, "tools", "parity", "out", "py")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
 
     # Two sources. spec/examples/ is what ships, and must never change silently.
