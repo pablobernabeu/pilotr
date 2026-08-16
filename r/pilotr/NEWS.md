@@ -61,6 +61,16 @@
   compares the bytes, and is twinned with the Python suite's `test_examples.py`. It skips
   when the package is checked in isolation from the repository.
 
+* **A test that `print.pilotr_power()` keeps its whole output on one stream.** A header
+  written with `message()` or through cli would land on the message stream while the table
+  beneath it went to standard output, which knitr collects separately and renders as two
+  boxes for one printed object. The method already used `cat()` throughout;
+  `test-print.R` now holds it there.
+* Every vignette now turns console colour off and fixes the console width while it
+  renders. pkgdown passes the calling terminal's colour support into its build
+  subprocess, so a coloured message or error would otherwise reach the reader as escape
+  sequences in the middle of the text.
+
 # pilotr 0.3.0
 
 ## Read this first
