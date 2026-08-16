@@ -32,13 +32,27 @@ TOLERANCE = os.path.join(ROOT, "tools", "parity", "tolerance.json")
 MAX_REPORTED = 5      # differing cells shown per case, so a systematic fault stays readable
 
 
-def _tolerances() -> tuple[int, dict[str, int]]:
-    """Per-case ulp allowance. See tolerance.json for why any case is allowed a non-zero one."""
+def _tolerances() -> tuple[int, dict[str, int], set[str]]:
+    """Per-case ulp allowance, and the transcendental classification that decides which
+    cases the golden anchor may pin. See tolerance.json for why each entry is what it is.
+    """
     if not os.path.exists(TOLERANCE):
-        return 0, {}
+        return 0, {}, set()
     with open(TOLERANCE) as f:
         cfg = json.load(f)
-    return int(cfg.get("default_max_ulp", 0)), dict(cfg.get("cases", {}))
+    default_ulp = int(cfg.get("default_max_ulp", 0))
+    case_ulp = dict(cfg.get("cases", {}))
+    transcendental = set(cfg.get("transcendental", []))
+    # A case that needs an ulp allowance needs it because a libm function shaped its bytes,
+    # so leaving it out of the transcendental list would re-admit it to the golden anchor.
+    unclassified = [c for c, ulp in case_ulp.items() if ulp and c not in transcendental]
+    if unclassified:
+        raise SystemExit("tolerance.json is inconsistent: %s carr%s an ulp allowance but "
+                         "%s not classified transcendental"
+                         % (", ".join(sorted(unclassified)),
+                            "ies" if len(unclassified) == 1 else "y",
+                            "is" if len(unclassified) == 1 else "are"))
+    return default_ulp, case_ulp, transcendental
 
 
 def _ulps(a: float, b: float) -> float:
@@ -130,7 +144,7 @@ def main() -> int:
         with open(GOLDEN) as f:
             golden = json.load(f)["hashes"]
 
-    default_ulp, case_ulp = _tolerances()
+    default_ulp, case_ulp, transcendental = _tolerances()
     failures, new_hashes = 0, {}
     print("%-42s %-10s %s" % ("case", "parity", "detail"))
     print("-" * 96)
@@ -157,38 +171,44 @@ def main() -> int:
         if n_fail:
             failures += 1
 
+    # The anchor covers exactly the cases whose bytes are IEEE-754-exact
+    # arithmetic: the Gaussian cases, which apply no transcendental to anything
+    # that reaches the dump. A case classified transcendental in tolerance.json
+    # is excluded because it cannot be anchored at all: its values pass through
+    # exp(), log() or pow(), whose rounding IEEE-754 leaves to the maths
+    # library, and Windows (MinGW/UCRT) and Linux (glibc) do not share a libm,
+    # so the same golden.json could fail on whichever platform did not record
+    # it. That some of those cases (beta, Poisson, ordinal, and the rounded
+    # dumps of the exp families) have hashed identically on every platform
+    # measured so far is an accident of the platforms measured, not a
+    # guarantee, which is why the classification is by construction rather
+    # than by observed agreement. The transcendental cases are gated by the
+    # R-versus-Python comparison above instead, which is the contract, at an
+    # allowance of zero ulp unless tolerance.json grants one.
+    anchored = {c: h for c, h in new_hashes.items() if c not in transcendental}
+
     if update:
         with open(GOLDEN, "w") as f:
-            json.dump({"note": "SHA-256 of the R dumps in tools/parity/out/r; "
-                               "regenerate with `python tools/parity/compare.py --update`",
-                       "hashes": new_hashes}, f, indent=2, sort_keys=True)
+            json.dump({"note": "SHA-256 of the IEEE-exact (non-transcendental) R dumps in "
+                               "tools/parity/out/r; regenerate with "
+                               "`python tools/parity/compare.py --update`",
+                       "hashes": anchored}, f, indent=2, sort_keys=True)
             f.write("\n")
-        print("\ngolden.json updated (%d cases)" % len(new_hashes))
+        print("\ngolden.json updated (%d anchored cases; %d transcendental cases are "
+              "gated by the cross-language comparison alone)"
+              % (len(anchored), len(new_hashes) - len(anchored)))
         return 1 if failures else 0
 
     if golden:
-        # The anchor covers exactly the cases the cross-language comparison
-        # requires to agree bit for bit, that is, those with an ulp allowance of
-        # zero. A case with a non-zero allowance is excluded because it cannot
-        # be anchored at all: it applies exp() or log() to the linear predictor,
-        # and Windows (MinGW/UCRT) and Linux (glibc) do not share a libm, so the
-        # same golden.json would fail on whichever platform did not record it.
-        # Those cases are gated by the R-versus-Python comparison above instead,
-        # which is the contract.
-        #
-        # A zero allowance is not the same thing as IEEE-754-exact arithmetic,
-        # and the difference matters when reading a green run. The beta, Poisson
-        # and ordinal cases reach their values through exp(), log() or pow(),
-        # yet they carry no allowance and so are anchored, because they have
-        # hashed identically on every platform in the matrix so far. That is a
-        # criterion happening to be satisfied rather than one being enforced. If
-        # a third platform's libm breaks one of them, the fix is to give that
-        # case an allowance in tolerance.json, which drops it from the anchor
-        # here, not to relax the anchor itself.
-        anchored = {c: h for c, h in new_hashes.items()
-                    if case_ulp.get(c, default_ulp) == 0}
         drifted = [c for c, h in anchored.items() if golden.get(c) != h]
-        missing = [c for c in golden if c not in new_hashes]
+        unanchorable = sorted(c for c in golden if c in transcendental)
+        if unanchorable:
+            # A stale golden.json from before the classification, or a case reclassified
+            # without regenerating: either way the file pins bytes the rule says it must not.
+            print("\ngolden.json anchors transcendental case(s): %s; regenerate it with "
+                  "`python tools/parity/compare.py --update`" % ", ".join(unanchorable))
+            failures += 1
+        missing = [c for c in golden if c not in new_hashes and c not in transcendental]
         if drifted or missing:
             print("\ngolden-file drift:")
             for c in drifted:
@@ -199,7 +219,7 @@ def main() -> int:
             failures += len(drifted) + len(missing)
         else:
             print("\ngolden-file hashes match for all %d anchored cases"
-                  " (%d cases carry an ulp allowance and are gated by the"
+                  " (%d cases are classified transcendental and are gated by the"
                   " cross-language comparison alone)"
                   % (len(anchored), len(new_hashes) - len(anchored)))
     else:

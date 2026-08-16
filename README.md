@@ -106,8 +106,8 @@ pilotr/  (repo root)
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
   hpc/           SLURM array job for large precision sweeps on a cluster
   tools/parity/  cross-language parity harness: the CI gate behind the bit-identical claim
-    tolerance.json   the per-case ulp allowance, and why any case is granted one
-    golden.json      hashes of the R dumps, so the two halves cannot drift together
+    tolerance.json   the per-case ulp allowance, and which cases pass through exp() or log()
+    golden.json      hashes of the IEEE-exact R dumps, so the two halves cannot drift together
   docs/
     mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
 ```
@@ -202,7 +202,7 @@ confirms that the two languages produce identical data.
 ```bash
 python python/examples/run_demo.py         # Python
 Rscript r/pilotr/examples/run_demo.R       # R, bit-for-bit the same
-python python/examples/parity_check.py     # max abs diff = 0
+python python/examples/parity_check.py     # identical to write precision (see the cross-language vignette)
 ```
 
 Realistic response families have a demo of their own, covering ordinal (Likert) outcomes and

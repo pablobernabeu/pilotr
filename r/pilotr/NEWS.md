@@ -1,5 +1,30 @@
 # pilotr (development version)
 
+* **A Poisson mean beyond the sampler's reach was returned as the iteration cap.** The
+  inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
+  mean passes about 746 — a poisson intercept of 7 already implies a mean of exp(7),
+  about 1097 — after which every simulated count came back as the cap of 1000000 while
+  reporting success. Both engines now refuse such a mean, naming `exp(eta)` and the
+  offending value, with message text character-for-character identical across the twins.
+  Feasible means are untouched and the parity dumps are unchanged.
+* **`generate_design_analysis(file = )` wrote the script through a text-mode
+  connection.** On Windows the file arrived with CRLF line endings, which turns the
+  SLURM part's first line into a `#!/bin/bash\r` shebang no cluster can execute, and on
+  every platform it carried a doubled trailing newline. The script now reaches the disk
+  byte for byte as returned, and the app's script and specification downloads write
+  through the same binary path.
+* **The emitted SLURM wrapper could only run for its author.** It hard-coded the
+  author's cluster account and project paths, so any other user's submission failed at
+  the scheduler while the surrounding instructions told them to save the parts under
+  their own names. The wrapper now carries two placeholders marked `EDIT` — the
+  `--account` directive and a writable `PROJECT_DIR` — and it invokes the
+  `design_analysis.R` saved next to it rather than a path on the author's cluster.
+* `precision_design()` documents all sixteen of its columns. The Monte Carlo standard
+  errors and Wilson interval bounds were returned but missing from the reference page.
+* `spec_from_model()` gains test coverage: the recovered specification's units,
+  `between`/`vary_within` placement, interaction keys read back off product columns,
+  and random-effect estimates are checked against the design that generated the pilot
+  data, alongside the refusal paths for models the function cannot read.
 * **A true effect of exactly zero returned `Inf`, and the package recommends that input.**
   `design_conditions()` deliberately produces a null condition so a run can show how often
   it declares something when there is nothing to find. Putting it through `power_design()`

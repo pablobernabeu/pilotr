@@ -297,29 +297,39 @@
   )
 }
 
-# The SLURM array wrapper, one replicate per task. Conventions follow the toolkit's existing
-# hpc/precision_array.slurm so that the two jobs are submitted and debugged the same way.
+# The SLURM array wrapper, one replicate per task. It has to run under any user's account
+# on any cluster, so the two site-specific values, the account to charge and a writable
+# project directory, are emitted as marked placeholders for the user to fill in, and the
+# analysis script is invoked from wherever the parts were saved rather than from a fixed
+# path. The account stays an #SBATCH directive because the scheduler reads directives
+# before the shell runs, so a directive cannot take its value from a shell variable.
 .da_slurm_lines <- function(spec) {
   c(
     "#!/bin/bash",
     "# =============================================================================",
-    "# Oxford ARC SLURM array job: Bayesian design analysis for the pilotr design",
+    "# SLURM array job: Bayesian design analysis for the pilotr design",
     sprintf("# '%s'.", spec$name),
     "#",
     "# One array task per replicate. Each task simulates its own data set, fits the brms",
-    "# model across its cores, and writes one RDS to the project results dir, which",
-    "# aggregate_design_analysis.R then combines. Modelled on the toolkit's",
-    "# precision_array.slurm.",
+    "# model across its cores, and writes one RDS to $PROJECT_DIR/results, which",
+    "# aggregate_design_analysis.R then combines.",
     "#",
-    "# The R library has to carry pilotr, brms and a working Stan backend, installed once",
-    "# via scripts/bootstrap_rlib.sh. Nothing here compiles Stan on the fly, and a task",
-    "# that has to build the model from scratch will spend most of its wall time on it.",
+    "# The R library at $PROJECT_DIR/Rlib has to carry pilotr, brms and a working Stan",
+    "# backend, installed once. Nothing here compiles Stan on the fly, and a task that",
+    "# has to build the model from scratch will spend most of its wall time on it.",
     "#",
-    "# Submit (after bootstrapping the R library once):",
+    "# Submit from the directory the three parts were saved into, so that this wrapper",
+    "# finds design_analysis.R beside itself:",
     "#   sbatch design_analysis.slurm                                    # 100 replicates",
     "#   sbatch --array=1 --partition=devel design_analysis.slurm        # smoke test",
     "# =============================================================================",
-    "#SBATCH --account=educ-intract",
+    "# ---- EDIT THESE two values before submitting --------------------------------",
+    "# 1. The account (allocation) the scheduler charges. The scheduler reads #SBATCH",
+    "#    directives before the shell runs, so this one cannot come from a variable.",
+    "#SBATCH --account=EDIT_ME_ACCOUNT",
+    "# 2. PROJECT_DIR, just after the directives below: a directory you can write to,",
+    "#    holding the R library at Rlib/.",
+    "# -----------------------------------------------------------------------------",
     "#SBATCH --job-name=pilotr_bda",
     "#SBATCH --array=1-100               # one replicate per task",
     "#SBATCH --partition=short           # short <=12h",
@@ -328,24 +338,29 @@
     "#SBATCH --cpus-per-task=4           # one core per brms chain",
     "#SBATCH --mem=16G",
     "#SBATCH --time=04:00:00",
-    "#SBATCH --output=/data/educ-intract/educ1242/pilotr_toolkit/logs/%x_%A_%a.out",
-    "#SBATCH --error=/data/educ-intract/educ1242/pilotr_toolkit/logs/%x_%A_%a.err",
     "",
     "set -uo pipefail",
     "conda deactivate 2>/dev/null || true",
     "module purge 2>/dev/null || true",
-    "module load R/4.5.2-gfbf-2025b",
+    "module load R    # or the versioned R module your cluster names",
     "",
-    "PD=/data/educ-intract/educ1242/pilotr_toolkit",
-    "export R_LIBS=$PD/Rlib:${R_LIBS:-}        # pilotr, brms and the Stan backend live here",
-    "export PILOTR_OUTDIR=$PD/results/design_analysis",
+    "PROJECT_DIR=$HOME/pilotr_toolkit    # EDIT THIS: writable, holds Rlib/ (see above)",
+    "",
+    "# The analysis script is the one saved next to this wrapper. sbatch runs a spooled",
+    "# copy of the wrapper, so $0 does not name the saved location; SLURM_SUBMIT_DIR is",
+    "# the directory sbatch was invoked from, which the submit instructions above pin to",
+    "# the directory holding the parts. $0 covers running the wrapper directly.",
+    'SCRIPT_DIR=${SLURM_SUBMIT_DIR:-$(cd "$(dirname "$0")" && pwd)}',
+    "",
+    'export R_LIBS=$PROJECT_DIR/Rlib:${R_LIBS:-}   # pilotr, brms and the Stan backend',
+    "export PILOTR_OUTDIR=$PROJECT_DIR/results/design_analysis",
     "export PILOTR_REP=$SLURM_ARRAY_TASK_ID",
-    "export OMP_NUM_THREADS=1                  # one thread per chain, the chains parallelise",
-    'mkdir -p "$PILOTR_OUTDIR" "$PD/logs" "$PD/tmp"',
-    "export TMPDIR=$PD/tmp",
+    "export OMP_NUM_THREADS=1                      # one thread per chain, the chains parallelise",
+    'mkdir -p "$PILOTR_OUTDIR" "$PROJECT_DIR/tmp"',
+    "export TMPDIR=$PROJECT_DIR/tmp",
     "",
     'echo "Host $(hostname) | replicate $SLURM_ARRAY_TASK_ID | cpus ${SLURM_CPUS_PER_TASK} | $(date)"',
-    'Rscript "$HOME/pilotr_toolkit/scripts/design_analysis.R"',
+    'Rscript "$SCRIPT_DIR/design_analysis.R"',
     'echo "Exit $? | $(date)"'
   )
 }
@@ -486,11 +501,17 @@
 #'   array wrapper that runs one replicate per task and an aggregator that combines the
 #'   per-task results. The three parts are separated by `# ===== FILE n of 3` banners and are
 #'   meant to be split into three files, since the middle part is shell and so is not valid R.
-#' @param file Optional path. When given, the script is also written there with
-#'   [writeLines()] and returned invisibly.
+#'   The wrapper is written for a generic SLURM cluster and carries two placeholders, marked
+#'   `EDIT` in its header, that must be filled in before submission: the `#SBATCH --account`
+#'   directive and the writable `PROJECT_DIR`. It runs the `design_analysis.R` saved next to
+#'   it, so submit from the directory the parts were saved into.
+#' @param file Optional path. When given, the script is also written there, byte for byte
+#'   with LF line endings and a single trailing newline on every platform, and returned
+#'   invisibly.
 #' @return A length-one character string holding the emitted script, invisibly when `file` is
 #'   given. For `array = "slurm"` the string holds three banner-separated parts, an R analysis
-#'   script, a bash array wrapper, and an R aggregator.
+#'   script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
+#'   emitted, since its `--account` and `PROJECT_DIR` placeholders must be filled in first.
 #' @references Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
 #'   American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}
 #'
@@ -565,7 +586,13 @@ generate_design_analysis <- function(spec, focal,
 
   out <- paste0(paste(lines, collapse = "\n"), "\n")
   if (!is.null(file)) {
-    writeLines(out, file)
+    # Binary, so the script reaches the disk exactly as returned: LF line endings and a
+    # single trailing newline on every platform. Text-mode writeLines() writes CRLF on
+    # Windows, which turns the slurm part's first line into "#!/bin/bash\r", a shebang no
+    # cluster can execute, and it appends a newline to a string that already ends in one.
+    con <- file(file, open = "wb")
+    on.exit(close(con), add = TRUE)
+    writeLines(out, con, sep = "")
     return(invisible(out))
   }
   out

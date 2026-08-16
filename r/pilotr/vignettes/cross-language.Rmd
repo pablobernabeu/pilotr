@@ -96,13 +96,17 @@ knitr::kable(read.csv("parity-summary.csv",
 
 The difference is exactly zero for every design whose responses are rounded, and about
 5e-15 for the unrounded continuous design, where R's CSV writer prints 15 significant
-digits. That residual is a number-formatting artefact of the comparison rather than a
-divergence between the generators, and it is what the check's 1e-6 tolerance is there to
-absorb. There are no categorical mismatches anywhere. The uniform stream is exact by
-construction, since every intermediate product stays below $2^{53}$, and the full pipeline has
-been observed bit-identical across the platforms tested. The parity check can be rerun on any
-new platform, so a design verified on a laptop can be confirmed on an HPC node before a large
-run.
+digits. At that precision the residual cannot be told apart from the writer's own rounding,
+and it is what the check's 1e-6 tolerance is there to absorb. The stricter harness dumps 17
+digits and resolves what is really there: a handful of cells apart by a few units in the last
+place, from `exp()`, whose rounding IEEE-754 does not fix. There are no categorical mismatches
+anywhere. The uniform stream is exact by construction, since every intermediate product stays
+below $2^{53}$, and the harness pins every path built from IEEE-exact arithmetic alone to a
+recorded hash in `tools/parity/golden.json`. The cases whose values pass through `exp()` or
+`log()` are deliberately left unpinned, because those last bits belong to the maths library
+rather than to the specification; the cross-language comparison still gates them on every run.
+The parity check can be rerun on any new platform, so a design verified on a laptop can be
+confirmed on an HPC node before a large run.
 
 ## Why this matters
 

@@ -1,10 +1,12 @@
 {
   "note": [
-    "Per-case tolerance for the cross-language comparison, in units in the last place.",
-    "The default is 0: R and Python must agree bit for bit.",
-    "A non-zero entry is allowed only where the response family applies a transcendental to the",
-    "linear predictor. IEEE-754 requires correct rounding for +, -, *, / and sqrt, but not for",
-    "exp() or log(), and R for Windows (MinGW-w64) and CPython (UCRT) do not share a libm.",
+    "Per-case configuration for the cross-language comparison and the golden-hash anchor.",
+    "",
+    "'cases' gives per-case tolerances in units in the last place. The default is 0: R and",
+    "Python must agree bit for bit. A non-zero entry is allowed only where the response family",
+    "applies a transcendental to the linear predictor. IEEE-754 requires correct rounding for",
+    "+, -, *, / and sqrt, but not for exp() or log(), and R for Windows (MinGW-w64) and CPython",
+    "(UCRT) do not share a libm.",
     "control_rt_as_gaussian.json is the control that pins this down: it is crossed_mixed_rt with",
     "the family switched to gaussian, so it consumes an identical RNG stream and an identical",
     "linear predictor. It agrees bit for bit, which leaves exp() as the only possible source of",
@@ -16,12 +18,35 @@
     "differing row count, or as a differing non-numeric cell, all of which still fail.",
     "stress_exgaussian is currently exact on this platform, but its value path applies log() to a",
     "uniform draw, so it belongs to the same class as the two lognormal cases and is classified",
-    "with them rather than on the accident of one seed agreeing."
+    "with them rather than on the accident of one seed agreeing.",
+    "",
+    "'transcendental' lists every dump whose bytes pass through exp(), log() or pow() on the way",
+    "to the file, whether or not the case currently hashes identically across platforms. Those",
+    "bytes are libm-specific, so the cases are excluded from the golden-hash anchor, which by",
+    "the repository's rule pins only IEEE-exact arithmetic; their cross-language comparison on",
+    "the CI platform (at the ulp allowance above, 0 by default) still gates them. The rounded",
+    ".asis dumps of the exp-family cases are listed too: rounding has quantised the libm",
+    "differences away on every platform measured so far, but the digits being rounded are still",
+    "libm-specific, so anchoring them would pin an accident rather than a guarantee."
   ],
   "default_max_ulp": 0,
   "cases": {
     "crossed_mixed_rt.noround.txt": 8,
     "reading_time_continuous.noround.txt": 8,
     "stress_exgaussian.noround.txt": 8
-  }
+  },
+  "transcendental": [
+    "beta_proportion.asis.txt",
+    "beta_proportion.noround.txt",
+    "crossed_mixed_rt.asis.txt",
+    "crossed_mixed_rt.noround.txt",
+    "ordinal_likert_between.asis.txt",
+    "ordinal_likert_between.noround.txt",
+    "poisson_counts_between.asis.txt",
+    "poisson_counts_between.noround.txt",
+    "reading_time_continuous.asis.txt",
+    "reading_time_continuous.noround.txt",
+    "stress_exgaussian.asis.txt",
+    "stress_exgaussian.noround.txt"
+  ]
 }

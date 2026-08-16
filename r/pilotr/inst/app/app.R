@@ -283,9 +283,19 @@ server <- function(input, output, session) {
     "d = simulate(\"design.json\")   # download the spec from the first tab\n",
     "d.to_csv(\"data.csv\")"))
 
+  # Text downloads go through a binary connection so they carry LF endings and a single
+  # trailing newline on every platform; text-mode writeLines() writes CRLF on Windows and
+  # appends a second newline to text that already ends in one.
+  write_text_download <- function(text, file) {
+    con <- base::file(file, open = "wb")
+    on.exit(close(con), add = TRUE)
+    if (!endsWith(text, "\n")) text <- paste0(text, "\n")
+    writeLines(text, con, sep = "")
+  }
+
   output$dl_rscript <- downloadHandler(
     filename = function() paste0(input$name, ".R"),
-    content = function(file) writeLines(generate_r_script(current_spec()), file))
+    content = function(file) write_text_download(generate_r_script(current_spec()), file))
 
   # ---- Verify: run the exported design in a clean R subprocess and compare ----
   verify_result <- reactiveVal(NULL)
@@ -397,7 +407,7 @@ server <- function(input, output, session) {
 
   output$dl_spec <- downloadHandler(
     filename = function() paste0(input$name, ".json"),
-    content = function(file) writeLines(spec_json(current_spec()), file))
+    content = function(file) write_text_download(spec_json(current_spec()), file))
   output$dl_data <- downloadHandler(
     filename = function() paste0(input$name, "_seed", input$seed, ".csv"),
     content = function(file) write.csv(simulate_design(current_spec()), file, row.names = FALSE))

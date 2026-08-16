@@ -47,9 +47,13 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 }
 \value{
 A data frame with one row per focal effect and columns \code{param}, \code{true},
-\code{mean_ci_width}, \code{p_meaningful}, \code{p_equivalent}, \code{n_attempted}, \code{n_returned},
-\code{n_converged}, \code{n_singular}, and \code{n_warning}. The interval behind
-\code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
+\code{mean_ci_width}, \code{p_meaningful}, \code{p_meaningful_mcse}, \code{p_meaningful_lo},
+\code{p_meaningful_hi}, \code{p_equivalent}, \code{p_equivalent_mcse}, \code{p_equivalent_lo},
+\code{p_equivalent_hi}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular}, and
+\code{n_warning}. Each decision proportion is reported with its Monte Carlo standard
+error (\verb{*_mcse}) and Wilson interval bounds (\verb{*_lo}, \verb{*_hi}), because a proportion
+over a finite number of replicates is an estimate rather than a fact. The interval
+behind \code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
 Details.
 
 The decision proportions are taken over \code{n_returned}, the replicates that

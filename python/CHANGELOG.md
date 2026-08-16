@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **A Poisson mean beyond the sampler's reach was returned as the iteration cap.** The
+  inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
+  mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7),
+  about 1097), after which every simulated count came back as 1000000 while reporting
+  success. Both engines now refuse such a mean, naming `exp(eta)` and the offending
+  value, with message text character-for-character identical across the twins; a linear
+  predictor large enough to overflow `math.exp` itself folds into the same refusal
+  instead of surfacing as `OverflowError`. Feasible means are untouched and the parity
+  dumps are unchanged.
 - **A true effect of exactly zero broke both engines, and the package recommends that
   input.** `design_conditions()` deliberately produces a null condition so a run can show
   how often it declares something when there is nothing to find; feeding it through
@@ -15,9 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quietly degenerating to "the estimate is positive". Type S and Type M are now
   undefined when the true effect is zero or unknown, in both engines — the guard the
   mixed-effects path already carried, applied to the other three sites.
-- **`response_variance()` laundered an undefined fixed component into zero** while still
-  calling the result the sum of its parts. A single-row design now reports a fixed
-  component of 0 and a total that really is the sum.
 - **Four small twin divergences closed**: a non-whole seed now truncates identically in
   both engines, a whole `spec_version` is read the same however it was written, a
   non-object unit is reported rather than crashing R with a base error, and
@@ -30,9 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version — and the aggregator refuses to pool replicates that disagree on any of them.
   Two array runs with different ROPEs previously aggregated into one table with nothing
   to tell them apart.
-- **The parity harness describes its golden anchor accurately.** It claimed to anchor the
-  IEEE-754-exact cases; it actually anchors every case with a zero ulp allowance, which
-  is not the same set.
+- **The parity harness anchors only the IEEE-754-exact cases.** The golden anchor's
+  criterion was "zero ulp allowance", which admitted cases whose bytes pass through
+  `exp()`, `log()` or `pow()` whenever the platforms measured so far happened to agree
+  on them. `tolerance.json` now classifies those cases as transcendental explicitly:
+  they stay gated by the cross-language comparison, at zero ulp unless an allowance is
+  recorded, and `golden.json` pins only the Gaussian cases. The validator cross-check
+  (`tools/parity/validate_cross.py`) also runs in CI now, and its default `Rscript` is
+  the one on `PATH` rather than a path on the author's machine.
 
 ### Added
 - **A test that the packaged example specifications match the repository's own.**

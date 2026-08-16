@@ -238,15 +238,34 @@ def inv_logit(x: float) -> float:
     return e / (1.0 + e)
 
 
+def _stop_poisson_mean(lam: float):
+    """Refuse a mean the inverse-CDF walk cannot serve. exp(-lam) underflows to exactly
+    zero near lam = 746, after which every term of the cumulative sum is zero and the walk
+    would return its iteration cap as though it were a drawn count (a poisson intercept of
+    7 implies lam = exp(7), about 1097, already past that point); a huge but representable
+    mean exhausts the cap the same way. Both twins raise this text byte for byte; Python
+    renders an infinite value as "inf" where R prints "Inf", hence the normalisation.
+    """
+    raise ValueError(
+        "the poisson mean exp(eta) = %s is too large for the inverse-CDF sampler: the "
+        "cumulative distribution cannot reach the drawn uniform, so no count can be drawn. "
+        "Lower the poisson intercept or coefficients until the implied mean is simulable."
+        % ("Inf" if math.isinf(lam) else "%g" % lam))
+
+
 def poisson_inv(lam: float, u: float) -> int:
     """Inverse-CDF Poisson draw from a uniform u."""
     p = math.exp(-lam)
+    if p == 0.0:
+        _stop_poisson_mean(lam)
     cum = p
     k = 0
     while u > cum and k < 1_000_000:
         k += 1
         p *= lam / k
         cum += p
+    if u > cum:
+        _stop_poisson_mean(lam)
     return k
 
 

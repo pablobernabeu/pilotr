@@ -433,13 +433,23 @@ server <- function(input, output, session) {
       theme_minimal(base_size = 14)
   })
 
+  # Text downloads go through a binary connection so they carry LF endings and a single
+  # trailing newline on every platform; text-mode writeLines() writes CRLF on Windows and
+  # appends a second newline to text that already ends in one.
+  write_text_download <- function(text, file) {
+    con <- base::file(file, open = "wb")
+    on.exit(close(con), add = TRUE)
+    if (!endsWith(text, "\n")) text <- paste0(text, "\n")
+    writeLines(text, con, sep = "")
+  }
+
   # ---- reproducible R script ----
   output$rscript <- renderText(generate_r_script(spec_req()))
   output$dl_script <- downloadHandler(
     function() paste0(current_spec()$name %||% "design", ".R"),
     content = function(file) {
       s <- current_spec()
-      writeLines(if (is.null(s)) "# Invalid specification. Please correct the pasted JSON." else generate_r_script(s), file)
+      write_text_download(if (is.null(s)) "# Invalid specification. Please correct the pasted JSON." else generate_r_script(s), file)
     })
 
   # ---- downloads (degrade gracefully on an invalid pasted spec) ----
@@ -447,7 +457,7 @@ server <- function(input, output, session) {
     function() paste0(current_spec()$name %||% "design", ".json"),
     content = function(file) {
       s <- current_spec()
-      writeLines(if (is.null(s)) "{}" else spec_json(s), file)
+      write_text_download(if (is.null(s)) "{}" else spec_json(s), file)
     })
   output$dl_data <- downloadHandler(
     function() paste0(current_spec()$name %||% "design", ".csv"),

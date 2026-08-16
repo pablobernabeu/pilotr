@@ -362,7 +362,14 @@ def simulate(spec, validate=True) -> Dataset:
         elif family == "bernoulli":
             y = 1 if rng.uniform() < inv_logit(eta) else 0
         elif family == "poisson":
-            y = poisson_inv(math.exp(eta), rng.uniform())
+            # math.exp raises OverflowError past about eta = 710 where R's exp() returns
+            # Inf; the refusal has to be poisson_inv's, shared byte for byte with the R
+            # twin, so the overflow becomes the infinite mean it stands for.
+            try:
+                lam = math.exp(eta)
+            except OverflowError:
+                lam = math.inf
+            y = poisson_inv(lam, rng.uniform())
         elif family == "ordinal":
             y = ordinal_inv(eta, thresholds, rng.uniform())
         elif family == "beta":

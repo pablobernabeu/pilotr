@@ -24,7 +24,9 @@ sys.path.insert(0, os.path.join(ROOT, "python"))
 
 from pilotr.validate import validate_spec  # noqa: E402
 
-RSCRIPT = os.environ.get("PILOTR_RSCRIPT", r"C:\Program Files\R\R-4.6.1\bin\x64\Rscript.exe")
+# The interpreter on PATH by default, so the script runs anywhere R is installed (CI
+# included); PILOTR_RSCRIPT overrides it for a machine whose Rscript lives elsewhere.
+RSCRIPT = os.environ.get("PILOTR_RSCRIPT", "Rscript")
 
 
 def base_spec():

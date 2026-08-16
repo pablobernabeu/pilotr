@@ -99,6 +99,25 @@ test_that("each response family simulates a column on the expected scale", {
   expect_true(all(prop > 0) && all(prop < 1))
 })
 
+# The refusal is byte-identical to the Python twin's, which normalises its "inf" to R's
+# "Inf" when the linear predictor overflows exp().
+test_that("a poisson mean past the sampler's reach is an error, not the iteration cap", {
+  pois <- function(intercept) build_spec(list(
+    name = "p", seed = 1, n_subject = 4, design_kind = "between",
+    factor_name = "group", lev1 = "a", lev2 = "b", intercept = intercept,
+    effect = 0, family = "poisson", resp_name = ""))
+  # An intercept of 7 implies a mean of exp(7), about 1097, where exp(-mean) underflows to
+  # zero; every count then used to come back as the sampler's 1e6 iteration cap.
+  expect_error(
+    simulate_design(pois(7)),
+    "the poisson mean exp(eta) = 1096.63 is too large for the inverse-CDF sampler: the cumulative distribution cannot reach the drawn uniform, so no count can be drawn. Lower the poisson intercept or coefficients until the implied mean is simulable.",
+    fixed = TRUE)
+  expect_error(simulate_design(pois(800)), "exp(eta) = Inf", fixed = TRUE)
+  # Feasible means are untouched: the shipped poisson example still draws real counts.
+  d <- simulate_design(load_spec(pilotr_example("poisson_counts_between")))
+  expect_true(all(d$count >= 0) && all(d$count < 1e6))
+})
+
 test_that("build_spec carries sigma through for the lognormal family", {
   spec <- build_spec(list(name = "ln", seed = 1, design_kind = "between",
                           factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,

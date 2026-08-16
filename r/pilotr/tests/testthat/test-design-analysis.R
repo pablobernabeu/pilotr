@@ -33,6 +33,34 @@ test_that("both emitted R parts are valid R", {
   expect_true(any(grepl("^#SBATCH --array", p$slurm)))
 })
 
+# The wrapper has to be submittable by any user on any SLURM cluster once its two marked
+# placeholders are filled in. It previously hard-coded the author's account and cluster
+# paths, so no other user's submission could run.
+test_that("the slurm wrapper carries placeholders, not the author's cluster", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  p <- da_parts(generate_design_analysis(spec, focal = c(cond = 0.05), array = "slurm"))
+  s <- paste(p$slurm, collapse = "\n")
+  expect_false(grepl("educ-intract", s, fixed = TRUE))
+  expect_false(grepl("educ1242", s, fixed = TRUE))
+  expect_true(grepl("EDIT THESE", s, fixed = TRUE))
+  expect_true(any(grepl("^#SBATCH --account=EDIT_ME_ACCOUNT$", p$slurm)))
+  expect_true(any(grepl("^PROJECT_DIR=", p$slurm)))
+  # The wrapper runs the analysis script saved next to it, not a path fixed at emission.
+  expect_true(grepl('"$SCRIPT_DIR/design_analysis.R"', s, fixed = TRUE))
+  expect_false(grepl("$HOME/pilotr_toolkit/scripts", s, fixed = TRUE))
+})
+
+test_that("a script written to `file` is LF-only with a single trailing newline", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  f <- tempfile(fileext = ".R"); on.exit(unlink(f))
+  out <- generate_design_analysis(spec, focal = c(cond = 0.05), array = "slurm", file = f)
+  bytes <- readBin(f, "raw", n = file.size(f) + 16L)
+  expect_false(any(bytes == as.raw(0x0D)))            # no CR on any platform
+  expect_identical(rawToChar(bytes), out)             # on disk exactly as returned
+  expect_true(endsWith(out, "\n"))
+  expect_false(endsWith(out, "\n\n"))
+})
+
 # The verdict is a pure function of the rule, the gate and the specification, so a record that
 # carries only the verdict cannot be told apart from one produced under a different ROPE.
 test_that("the emitted record carries the rule, the gate, the spec and the version", {

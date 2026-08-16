@@ -92,6 +92,34 @@ def test_per_subject_must_lie_between_1_and_n_items():
         simulate(spec)
 
 
+def test_a_poisson_mean_past_the_sampler_is_an_error_not_the_iteration_cap():
+    # The refusal is byte-identical to the R twin's; Python's "inf" is normalised to R's
+    # "Inf" when the linear predictor overflows exp(). An intercept of 7 implies a mean of
+    # exp(7), about 1097, where exp(-mean) underflows to zero; every count then used to
+    # come back as the sampler's 1e6 iteration cap.
+    spec = {
+        "name": "p", "seed": 1,
+        "units": {"subject": {"n": 4}},
+        "factors": [{"name": "group", "levels": ["a", "b"],
+                     "contrasts": {"grp": [-0.5, 0.5]}, "between": "subject"}],
+        "fixed": {"intercept": 7, "coefficients": {"grp": 0.0}},
+        "random": {},
+        "response": {"family": "poisson", "name": "count"},
+    }
+    with pytest.raises(ValueError, match=re.escape(
+            "the poisson mean exp(eta) = 1096.63 is too large for the inverse-CDF "
+            "sampler: the cumulative distribution cannot reach the drawn uniform, so no "
+            "count can be drawn. Lower the poisson intercept or coefficients until the "
+            "implied mean is simulable.")):
+        simulate(spec)
+    spec["fixed"]["intercept"] = 800  # overflows math.exp itself; R's exp() returns Inf
+    with pytest.raises(ValueError, match=re.escape("exp(eta) = Inf")):
+        simulate(spec)
+    # Feasible means are untouched: the shipped poisson example still draws real counts.
+    d = simulate(os.path.join(SPEC, "poisson_counts_between.json"))
+    assert all(0 <= r["count"] < 1_000_000 for r in d.rows)
+
+
 # One specification file is run through both engines, so the same mistake has to be reported the
 # same way by both. Each message below is byte-identical to the R twin's.
 def test_a_whole_version_is_read_the_same_however_it_was_written():

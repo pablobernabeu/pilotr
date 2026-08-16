@@ -1,11 +1,20 @@
 # Headless test of the app's functional core (no Shiny UI): GUI inputs -> portable spec ->
 # JSON round-trip -> simulate + power. Confirms the no-code front-end drives the same engine
 # as the R and Python packages.
+#
+# The engine is loaded exactly as the deployed browser build loads it: the subset of R/
+# named in app-lite/engine-files.txt, and nothing else. Sourcing all of R/ here would keep
+# this test green while a subset file grew a dependency on a file outside the subset, a
+# break that then surfaces only in the deployed app.
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
-source(file.path(here, "..", "tools", "engine.R"))
-load_pilotr_engine(pilotr_engine_dir(here))
+manifest <- file.path(here, "..", "..", "..", "app-lite", "engine-files.txt")
+engine <- trimws(sub("#.*$", "", readLines(manifest)))
+engine <- engine[nzchar(engine)]
+paths <- file.path(here, "..", "R", engine)
+stopifnot(length(paths) > 0, all(file.exists(paths)))
+for (f in paths) source(f)
 
 ok <- TRUE
 check <- function(cond, msg) { cat(if (cond) "  [PASS] " else "  [FAIL] ", msg, "\n", sep = ""); ok <<- ok && cond }

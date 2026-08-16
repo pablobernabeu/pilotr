@@ -66,8 +66,13 @@ The two CSVs compare exactly, up to CSV number formatting. The repository's
 [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
 runs this comparison across the worked example designs and reports the maximum difference:
 zero for every design with rounded responses, and below 1e-14 for the unrounded continuous
-design, where R's CSV writer prints 15 significant digits. The script's small tolerance
-(1e-6) absorbs that number formatting only, never a divergence in the generators.
+design, where R's CSV writer prints 15 significant digits. At that precision the residual
+cannot be told apart from the writer's own rounding, and the script's small tolerance (1e-6)
+is there to absorb it. The stricter harness under `tools/parity/` dumps 17 digits and resolves
+what is really there: a handful of cells apart by a few units in the last place, from `exp()`,
+whose rounding IEEE-754 does not fix. That harness pins every path built from IEEE-exact
+arithmetic alone to a recorded hash, and deliberately leaves the `exp()` and `log()` cases
+unpinned, since those last bits belong to the maths library rather than to the specification.
 
 A simulated crossed design has one row per subject-by-item observation. The first rows of the
 worked crossed reaction-time example look like this (the same rows the R package produces):

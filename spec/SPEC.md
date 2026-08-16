@@ -190,6 +190,14 @@ what the intercept means. `−log(u)` is a unit exponential, hence the two draws
 lognormal is not a substitute, because `model_data()` logs the response back and leaves a symmetric
 residual on the analysis scale.
 
+The Poisson mean has an upper bound, and it is the same in every implementation. The inverse-CDF
+walk starts from `exp(−λ)`, which underflows to exactly zero once `λ` passes about 746, and from
+there the cumulative distribution can never reach the drawn uniform, so no count exists to return.
+Both implementations refuse such a mean with the same message rather than returning the walk's
+iteration cap as though it were a draw. In practice this caps the linear predictor of a `poisson`
+response at roughly 6.6, a mean count near 750, which is well above the rates count outcomes are
+normally specified at.
+
 `η` (the linear predictor for a row) = `intercept + Σ β_key · value(key)`, where a key is a
 contrast column, a continuous predictor, or an `"a:b"` interaction (the product of the named
 columns), `+` subject random part `+` item random part `+` the random parts of any additional

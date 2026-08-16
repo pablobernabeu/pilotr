@@ -43,9 +43,13 @@
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
 #' @return A data frame with one row per focal effect and columns `param`, `true`,
-#'   `mean_ci_width`, `p_meaningful`, `p_equivalent`, `n_attempted`, `n_returned`,
-#'   `n_converged`, `n_singular`, and `n_warning`. The interval behind
-#'   `mean_ci_width` and the ROPE decisions is the Wald approximation described in
+#'   `mean_ci_width`, `p_meaningful`, `p_meaningful_mcse`, `p_meaningful_lo`,
+#'   `p_meaningful_hi`, `p_equivalent`, `p_equivalent_mcse`, `p_equivalent_lo`,
+#'   `p_equivalent_hi`, `n_attempted`, `n_returned`, `n_converged`, `n_singular`, and
+#'   `n_warning`. Each decision proportion is reported with its Monte Carlo standard
+#'   error (`*_mcse`) and Wilson interval bounds (`*_lo`, `*_hi`), because a proportion
+#'   over a finite number of replicates is an estimate rather than a fact. The interval
+#'   behind `mean_ci_width` and the ROPE decisions is the Wald approximation described in
 #'   Details.
 #'
 #'   The decision proportions are taken over `n_returned`, the replicates that
@@ -114,8 +118,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
   coef_names <- NULL
   for (r in res) if (isTRUE(r$fitted)) { coef_names <- r$coef_names; break }
 
-  seen <- setNames(integer(length(fnames)), fnames)
-  blank <- setNames(rep(NA_real_, length(fnames)), fnames)
+  seen <- stats::setNames(integer(length(fnames)), fnames)
+  blank <- stats::setNames(rep(NA_real_, length(fnames)), fnames)
   width <- blank; p_out <- blank; out_mcse <- blank; out_lo <- blank; out_hi <- blank
   p_ins <- blank; ins_mcse <- blank; ins_lo <- blank; ins_hi <- blank
 
