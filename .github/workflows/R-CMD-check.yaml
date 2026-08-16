@@ -46,21 +46,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: r/pilotr
           extra-packages: any::rcmdcheck
           needs: check
 
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/check-r-package@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: r/pilotr
           upload-snapshots: true
@@ -79,13 +79,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           use-public-rspm: true
 
       # Everything without a declared floor, resolved normally, so that the step below is the only
       # thing pinning a version and a failure points at the floor rather than at the resolution.
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: r/pilotr
           dependencies: '"hard"'
@@ -105,9 +105,99 @@ jobs:
 
       # Vignettes are skipped so that knitr and rmarkdown, which carry no declared floor, cannot
       # decide the outcome of a job about floors.
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/check-r-package@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: r/pilotr
           upload-snapshots: false
           args: 'c("--no-manual", "--ignore-vignettes")'
           build_args: 'c("--no-manual", "--no-build-vignettes")'
+
+  # roxygen2 generates NAMESPACE from the @export tags, and a stale one drops exports without
+  # anything noticing: testthat runs inside the package namespace, where an unexported function is
+  # still reachable, so the suite cannot tell a dropped export from a kept one. Regenerating and
+  # diffing is the only check that can. It sits outside the matrix above because one platform
+  # answers the question, and a matrix cell going red would read as a platform problem rather than
+  # as a file that needs regenerating.
+  #
+  # NAMESPACE only, deliberately. Rd formatting shifts between roxygen2 releases, so gating man/
+  # would redden this job for reasons unconnected to the change under test. site.yml regenerates Rd
+  # for the docs build with roclets = "rd" and leaves NAMESPACE to this job.
+  namespace:
+    name: Committed NAMESPACE is current
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          use-public-rspm: true
+
+      # The package's dependencies are needed because roxygen loads it to read the tags. roxygen2
+      # itself is pinned so that one of its releases cannot turn this job red with no source change;
+      # raise this pin and the version DESCRIPTION records in the same commit.
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          working-directory: r/pilotr
+          extra-packages: cran::roxygen2@8.0.0
+
+      # Two roxygen2 versions can disagree about NAMESPACE, and the diff below would then be a
+      # version difference wearing the clothes of stale source. Say which of the two it is.
+      - name: Confirm the installed roxygen2 is the one DESCRIPTION was written with
+        shell: Rscript {0}
+        run: |
+          installed <- as.character(utils::packageVersion("roxygen2"))
+          desc <- read.dcf("r/pilotr/DESCRIPTION")
+          # roxygen2 8 records itself in Config/roxygen2/version, earlier releases in RoxygenNote.
+          # Consult them in the order roxygen2 itself does.
+          field <- intersect(c("Config/roxygen2/version", "RoxygenNote"), colnames(desc))[1]
+          cat("roxygen2 installed:", installed, "\n")
+          if (is.na(field)) {
+            cat("r/pilotr/DESCRIPTION records no roxygen2 version, so there is nothing to compare.\n")
+          } else {
+            # read.dcf yields a named vector, and a stray name would fail identical().
+            recorded <- trimws(unname(desc[1, field]))
+            cat("r/pilotr/DESCRIPTION records", field, "=", recorded, "\n")
+            if (!identical(installed, recorded)) {
+              stop("Installed roxygen2 ", installed, " is not the ", recorded, " that ",
+                   "r/pilotr/DESCRIPTION was written with, so a NAMESPACE difference here would ",
+                   "say nothing about whether the file and the tags agree. Bring the pin in ",
+                   ".github/workflows/R-CMD-check.yaml and the version in DESCRIPTION back into ",
+                   "line.", call. = FALSE)
+            }
+          }
+
+      # Handed a NAMESPACE without that header, roxygenise() leaves the file alone and still exits
+      # 0, which would leave this job green over an arbitrarily stale file. That is how the exports
+      # went missing here in the first place, so the header is checked rather than assumed.
+      - name: Confirm NAMESPACE carries the roxygen2 header
+        shell: Rscript {0}
+        run: |
+          first <- readLines("r/pilotr/NAMESPACE", n = 1, warn = FALSE)
+          if (length(first) == 0 || !grepl("^# Generated by roxygen2", first)) {
+            stop("r/pilotr/NAMESPACE does not begin with the roxygen2 header, so roxygenise() will ",
+                 "skip it and this job would pass over a file it never regenerated. Delete ",
+                 "r/pilotr/NAMESPACE, run devtools::document(\"r/pilotr\"), and check the exports in ",
+                 "the regenerated file against the ones the deleted file declared.", call. = FALSE)
+          }
+          cat("Header present:", first, "\n")
+
+      - name: Regenerate NAMESPACE from the roxygen comments
+        shell: Rscript {0}
+        run: roxygen2::roxygenise("r/pilotr", roclets = "namespace")
+
+      - name: Fail if the committed NAMESPACE no longer matches the tags
+        run: |
+          if git diff --exit-code -- r/pilotr/NAMESPACE; then
+            echo 'r/pilotr/NAMESPACE is current.'
+          else
+            echo '::error file=r/pilotr/NAMESPACE::Stale NAMESPACE. Run devtools::document("r/pilotr") and commit r/pilotr/NAMESPACE.'
+            echo ''
+            echo 'r/pilotr/NAMESPACE disagrees with the @export tags in r/pilotr/R/.'
+            echo 'In the diff above, - lines stand in the committed file with no tag producing them,'
+            echo 'and + lines are produced by the tags but missing from the committed file.'
+            echo 'Run devtools::document("r/pilotr"), as .github/CONTRIBUTING.md sets out, then commit'
+            echo 'the regenerated r/pilotr/NAMESPACE.'
+            exit 1
+          fi
