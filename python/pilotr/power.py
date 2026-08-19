@@ -308,7 +308,13 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
     Returns
     -------
     list of dict
-        One dict per grid point, with keys `n_subject`, `power`, `type_m`.
+        One dict per grid point, with keys `n_subject`, `power`, `type_m`, `n_sims` and
+        `n_significant`. The two counts are what `solve_curve` weights the curve by, since a
+        power estimate over 1000 replicates should count for more than one over 50.
+
+    See Also
+    --------
+    solve_curve, target_n : solve this curve for the sample size that meets a target power.
     """
     workers = _check_workers(workers)
     if isinstance(spec, str):
@@ -320,7 +326,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
             s = copy.deepcopy(spec)
             s["units"]["subject"]["n"] = n
             r = _power_impl(s, n_sims, alpha, executor)
-            out.append({"n_subject": n, "power": r["power"], "type_m": r["type_m"]})
+            out.append({"n_subject": n, "power": r["power"], "type_m": r["type_m"],
+                        "n_sims": r["n_sims"], "n_significant": r["n_significant"]})
         return out
 
     if workers == 1:

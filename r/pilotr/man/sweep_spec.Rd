@@ -23,7 +23,8 @@ sweep_spec(spec, path, values, fn, ..., .name = NULL)
 }
 \value{
 A data frame binding the results, with the swept value as the leading column. When the
-swept values are not scalars, that column holds the grid index instead.
+swept values are not scalars, that column holds the grid index instead. \code{\link[=solve_curve]{solve_curve()}}
+reads that leading column, so a sweep goes straight into a solve.
 }
 \description{
 Vary a single field of a specification across a set of values, run an analysis at each, and bind
@@ -66,6 +67,7 @@ if (requireNamespace("lme4", quietly = TRUE) &&
 }
 }
 \seealso{
-\code{\link[=design_conditions]{design_conditions()}} to build effect-size grids, and \code{\link[=power_mixed]{power_mixed()}} and
-\code{\link[=precision_design]{precision_design()}} for the analyses usually swept.
+\code{\link[=design_conditions]{design_conditions()}} to build effect-size grids, \code{\link[=power_mixed]{power_mixed()}} and
+\code{\link[=precision_design]{precision_design()}} for the analyses usually swept, and \code{\link[=solve_curve]{solve_curve()}} to solve the
+resulting curve for the swept value that meets a target.
 }

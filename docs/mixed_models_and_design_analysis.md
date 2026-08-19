@@ -41,9 +41,13 @@ planning.
    same spec runs in R and Python.
 2. Plan *N* by precision. `precision_curve(spec, focal, subject_ns, rope = 0.05)` sweeps the
    sample size and reports, per focal effect, P(meaningful) and P(equivalent) along with the
-   expected CI width, so you can read off the minimum analysable *N* for a determinate ROPE
-   decision.
-3. Confirm in `brms`. `brms_bridge(spec)` emits the confirmatory model (family, fixed/random
+   expected CI width.
+3. Solve the curve. `solve_curve(curve, target = 0.90)` fits the decision probability against
+   the sample size and inverts the fit, returning the minimum analysable *N* for a determinate
+   ROPE decision together with a confidence interval on it. `target_n(curve)` is the same thing
+   for a power curve against a target power. Neither extrapolates: a curve that does not reach
+   the target within the sizes swept is refused rather than extended.
+4. Confirm in `brms`. `brms_bridge(spec)` emits the confirmatory model (family, fixed/random
    formula and weakly-informative priors). Simulate one dataset, fit it in `brms` and check
    recovery, prior-predictive behaviour and the HDI-vs-ROPE decision before collecting data.
 

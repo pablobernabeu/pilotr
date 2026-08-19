@@ -33,9 +33,14 @@ focal <- c(SyntaxPC = 0.10, cond_age = 0.02)   # meaningful (outside ROPE) and n
 cat("\n=== Precision-based design analysis: sweep number of subjects (ROPE |beta| < 0.05) ===\n")
 curve <- precision_curve(spec, focal, subject_ns = c(20, 40, 60), rope = 0.05, n_sims = 30)
 print(curve, digits = 3)
-hit <- curve[curve$param == "SyntaxPC" & curve$p_meaningful >= 0.80, "n_subject"]
-cat(if (length(hit)) sprintf("  -> SyntaxPC (true 0.10) reaches P(meaningful) >= 0.80 by %d subjects.\n", min(hit))
-    else "  -> extend the grid: P(meaningful) >= 0.80 for SyntaxPC not yet reached.\n")
+# The smallest simulated size meeting the target is a property of where the grid points fall.
+# solve_curve() fits the whole curve and inverts the fit, and refuses rather than extrapolate
+# when the grid does not reach the target, which is the message worth printing when it does not.
+solved <- tryCatch(solve_curve(curve, target = 0.80, effect = "SyntaxPC"),
+                   error = function(e) conditionMessage(e))
+cat(if (is.character(solved)) paste0("  -> ", solved, "\n")
+    else sprintf("  -> SyntaxPC (true 0.10) reaches P(meaningful) >= 0.80 at %.0f subjects (95%% interval %.0f to %.0f).\n",
+                 solved$value, solved$lo, solved$hi))
 
 # ---- (3) Bridge to the confirmatory Bayesian fit ----
 cat("\n=== brms bridge (confirmatory Bayesian model from the same spec) ===\n")

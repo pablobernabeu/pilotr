@@ -1,8 +1,13 @@
 # Precision-based design analysis against a Region of Practical Equivalence (ROPE), together
-# with an N-sweep to find the minimum analysable sample size. This is a fast frequentist
-# analogue of a Bayesian HDI-versus-ROPE design analysis. Across Monte Carlo replicates we
-# record, for each focal fixed effect, the 95% CI and whether it falls determinately outside
-# the ROPE (a practically meaningful effect) or entirely inside it (practical equivalence).
+# with an N-sweep over sample size. This is a fast frequentist analogue of a Bayesian
+# HDI-versus-ROPE design analysis. Across Monte Carlo replicates we record, for each focal
+# fixed effect, the 95% CI and whether it falls determinately outside the ROPE (a practically
+# meaningful effect) or entirely inside it (practical equivalence).
+#
+# The sweep reports the decision probability at each sample size. Turning that into the minimum
+# analysable N is solve_curve()'s job, not the reader's: at the replicate counts these functions
+# are usually run at, neighbouring points are not significantly different, so a crossing judged
+# by eye carries an uncertainty nobody has written down.
 
 #' Precision and ROPE design analysis at a fixed sample size
 #'
@@ -160,16 +165,21 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 
 #' Precision and ROPE curve over sample size
 #'
-#' Sweep the number of subjects and report the ROPE decision probabilities at each size, to
-#' identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
-#' with a target probability (for example 0.90). Calls
-#' [precision_design()] and so requires the `lme4` package.
+#' Sweep the number of subjects and report the ROPE decision probabilities at each size. Pass the
+#' result to [solve_curve()] for the minimum analysable \emph{N} at which a focal effect reaches a
+#' determinate decision with a target probability, such as 0.90, together with an interval on it.
+#' Calls [precision_design()] and so requires the `lme4` package.
 #'
 #' @details
 #' A thin wrapper around [sweep_spec()] over `units$subject$n`, kept because a sample-size curve is
 #' the sweep users want most often. For any other axis, call [sweep_spec()] directly; effect size is
 #' the axis a design analysis most often needs next, and [design_conditions()] builds the
 #' coefficient overrides for it.
+#'
+#' Reading the crossing off the returned curve, or off a plot of it, is what [solve_curve()]
+#' replaces. At the replicate counts these runs are usually given, neighbouring points on the
+#' curve are not significantly different from one another, so a sample size judged by eye is a
+#' point estimate with an unstated and often wide uncertainty behind it.
 #'
 #' @param spec A design specification (path or list).
 #' @param focal The focal effects, as in [precision_design()]. `NULL` uses every coefficient in the
@@ -195,7 +205,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   column to the columns returned by [precision_design()], including the Monte Carlo standard
 #'   errors, the Wilson interval bounds, and the `n_returned`, `n_converged`, `n_singular` and
 #'   `n_warning` fit counts.
-#' @seealso [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
+#' @seealso [solve_curve()] to solve the returned curve for a target decision probability,
+#'   [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE)) {

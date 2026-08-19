@@ -117,12 +117,36 @@ prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
 ```
 
 As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
-decision more reliably. Reading the sweep for the smallest *N* that meets a target of
-'`p_meaningful` ≥ 0.90' puts this design at around 220 subjects. That is a
-more informative criterion than power against a point null, because it asks whether the study
-can distinguish the effect from a negligible one rather than merely from zero. Each estimate
-rests on 200 replicates, all of which converged, so its Monte Carlo standard error is at most
-about 0.035, which the figure below shows as a band.
+decision more reliably. That is a more informative criterion than power against a point null,
+because it asks whether the study can distinguish the effect from a negligible one rather than
+merely from zero. Each estimate rests on 200 replicates, all of which converged, so its Monte
+Carlo standard error is at most about 0.035, which the figure below shows as a band.
+
+Scanning the table for the smallest simulated *N* that meets a target of
+'`p_meaningful` ≥ 0.90' puts this design at 220 subjects, but that answer is a property of
+where the grid points happen to fall rather than of the design. `solve_curve()` fits the
+decision probability against the sample size and inverts the fit, using all eight points rather
+than the two either side of the target.
+
+```{r}
+solved <- solve_curve(prc, target = 0.9)
+unlist(solved[c("value", "lo", "hi", "dispersion")])
+```
+
+So the sweep read by eye asks for some thirty-five subjects more than the fitted crossing does,
+and 220 sits outside the interval altogether. The fit is a binomial probit regression weighted
+by the replicates behind each point, and the interval is the delta-method interval that
+`MASS::dose.p()` computes for a fitted `glm`. It is the interval, rather than the point alone,
+that is worth reading: with 200 replicates per point this design needs somewhere between about
+165 and 207 subjects to reach a determinate ROPE decision nine times in ten, and a
+preregistration quoting a single figure would be claiming more than the simulation supports.
+
+The reported `dispersion` above 1 is part of that width. It says the eight points scatter about
+the fitted curve rather more than their replicate counts alone would explain, so the interval
+has been widened to match, which is the heterogeneity factor of classical probit analysis doing
+its work. Nothing is extrapolated either: a curve that never reaches the target within the sizes
+swept is refused, with the range it did cover, rather than extended past the last point
+simulated.
 
 `p_equivalent` stays at 0 throughout, and correctly so. The true effect of 0.05 lies outside
 the ROPE by construction, so no interval should ever land entirely inside it. The column earns
@@ -146,9 +170,18 @@ long$panel <- factor(long$panel, levels = panels)
 # 0.90 is the target decision probability. 0.06 is the width at which a CI
 # centred on the true effect just clears the ROPE, that is 2 * (0.05 - 0.02).
 refs <- data.frame(panel = factor(panels, levels = panels), ref = c(0.90, 0.06))
+# The solved sample size and its interval, drawn only on the decision panel,
+# since the width panel is on a different scale and answers a different question.
+solve_band <- data.frame(panel = factor(panels[1], levels = panels),
+                         lo = solved$lo, hi = solved$hi, at = solved$value)
 
 ggplot(long, aes(n_subject, y)) +
   geom_hline(data = refs, aes(yintercept = ref), linetype = 2,
+             colour = "grey60") +
+  geom_rect(data = solve_band, inherit.aes = FALSE,
+            aes(xmin = lo, xmax = hi, ymin = -Inf, ymax = Inf),
+            fill = "grey60", alpha = .15) +
+  geom_vline(data = solve_band, aes(xintercept = at), linetype = 2,
              colour = "grey60") +
   geom_ribbon(aes(ymin = lo, ymax = hi), alpha = .15, fill = "#2C6FB0",
               na.rm = TRUE) +
@@ -166,13 +199,13 @@ ggplot(long, aes(n_subject, y)) +
         strip.background = element_rect(fill = NA, colour = NA))
 ```
 
-The two panels answer the same question from either side. On the left, the dashed line marks
-the 0.90 target the sweep is read against. On the right it marks a width of 0.06, which is
-where a confidence interval centred on the true effect just clears a ROPE of 0.02, since the
-interval has to keep its lower limit above the ROPE and so must be narrower than
-2 × (0.05 − 0.02). Width falls below that line well before the decision probability reaches
-0.90, because an interval centred exactly on the true effect is the best case and sampling
-variation moves the centre about.
+The two panels answer the same question from either side. On the left, the horizontal dashed
+line marks the 0.90 target, and the vertical band the sample size solved against it. On the
+right the dashed line marks a width of 0.06, which is where a confidence interval centred on
+the true effect just clears a ROPE of 0.02, since the interval has to keep its lower limit
+above the ROPE and so must be narrower than 2 × (0.05 − 0.02). Width falls below that line
+well before the decision probability reaches 0.90, because an interval centred exactly on the
+true effect is the best case and sampling variation moves the centre about.
 
 ## See also
 

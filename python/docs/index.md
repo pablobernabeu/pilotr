@@ -30,7 +30,8 @@ that the two languages agree.
 - [Response families](families.md): Gaussian, lognormal, reaction times, accuracy, counts,
   ordinal, Beta and the ex-Gaussian.
 - [Worked examples](examples.md): one ready-to-run design per family.
-- [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`.
+- [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`, with
+  `solve_curve` and `target_n` for the sample size a curve implies.
 - [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
   in R and Python.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.

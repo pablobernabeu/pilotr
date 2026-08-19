@@ -216,10 +216,10 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 
 #' Power curve over sample size for a mixed-effects design
 #'
-#' Sweep the number of subjects and compute mixed-effects power at each, to locate where power
-#' crosses a target. A thin wrapper around [sweep_spec()] over `units$subject$n`, kept because a
-#' sample-size curve is the sweep users want most often. Requires the `lme4` and `lmerTest`
-#' packages.
+#' Sweep the number of subjects and compute mixed-effects power at each. Pass the result to
+#' [target_n()] for the sample size at which power crosses a target, with an interval on it. A
+#' thin wrapper around [sweep_spec()] over `units$subject$n`, kept because a sample-size curve is
+#' the sweep users want most often. Requires the `lme4` and `lmerTest` packages.
 #'
 #' @details
 #' Like [power_mixed()], this runs pilotr's own simulation loop over the portable design
@@ -231,6 +231,10 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' For any axis other than sample size, call [sweep_spec()] directly. Effect size is the axis a
 #' design analysis most often needs after sample size, and [design_conditions()] builds the
 #' coefficient overrides for it.
+#'
+#' The curve is the input to [target_n()], which is where the sample size a preregistration
+#' quotes should come from. Reading the crossing off a plot instead judges points whose Monte
+#' Carlo intervals overlap, and reports the answer without the interval that goes with it.
 #'
 #' @param spec A design specification (path or list).
 #' @param subject_ns A numeric vector of subject counts to evaluate.
@@ -269,7 +273,8 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   power_curve_mixed(spec, subject_ns = c(12, 18), n_sims = 8)
 #' }
 #' }
-#' @seealso [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
+#' @seealso [target_n()] to solve the returned curve for a sample size, [sweep_spec()] for any
+#'   other axis, and [design_conditions()] for effect-size grids.
 #' @export
 power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha = 0.05,
                               workers = 1) {

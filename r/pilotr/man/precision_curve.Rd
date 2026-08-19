@@ -51,16 +51,21 @@ errors, the Wilson interval bounds, and the \code{n_returned}, \code{n_converged
 \code{n_warning} fit counts.
 }
 \description{
-Sweep the number of subjects and report the ROPE decision probabilities at each size, to
-identify the minimum analysable \emph{N} at which a focal effect reaches a determinate decision
-with a target probability (for example 0.90). Calls
-\code{\link[=precision_design]{precision_design()}} and so requires the \code{lme4} package.
+Sweep the number of subjects and report the ROPE decision probabilities at each size. Pass the
+result to \code{\link[=solve_curve]{solve_curve()}} for the minimum analysable \emph{N} at which a focal effect reaches a
+determinate decision with a target probability, such as 0.90, together with an interval on it.
+Calls \code{\link[=precision_design]{precision_design()}} and so requires the \code{lme4} package.
 }
 \details{
 A thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a sample-size curve is
 the sweep users want most often. For any other axis, call \code{\link[=sweep_spec]{sweep_spec()}} directly; effect size is
 the axis a design analysis most often needs next, and \code{\link[=design_conditions]{design_conditions()}} builds the
 coefficient overrides for it.
+
+Reading the crossing off the returned curve, or off a plot of it, is what \code{\link[=solve_curve]{solve_curve()}}
+replaces. At the replicate counts these runs are usually given, neighbouring points on the
+curve are not significantly different from one another, so a sample size judged by eye is a
+point estimate with an unstated and often wide uncertainty behind it.
 }
 \examples{
 \donttest{
@@ -78,5 +83,6 @@ if (requireNamespace("lme4", quietly = TRUE)) {
 }
 }
 \seealso{
+\code{\link[=solve_curve]{solve_curve()}} to solve the returned curve for a target decision probability,
 \code{\link[=sweep_spec]{sweep_spec()}} for any other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

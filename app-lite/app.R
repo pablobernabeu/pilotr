@@ -405,9 +405,20 @@ server <- function(input, output, session) {
     pw   <- vapply(grid, function(n) {
       s <- spec; s$units$subject$n <- as.integer(n); power_design(s, n_sims = ns)$power
     }, numeric(1))
-    power_out(sprintf("Power curve at n_sims = %d per point. N subjects = %s.",
-                      ns, paste(grid, collapse = ", ")))
-    power_plot(list(grid = grid, pw = pw))
+    # A dashed target line leaves the reader to judge the crossing. target_n() estimates
+    # it instead, and reports its refusal when the curve does not settle the question,
+    # which is more use than a number the sweep cannot support.
+    solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = ns),
+                                target = 0.8),
+                       error = function(e) conditionMessage(e))
+    power_out(paste0(
+      sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
+              ns, paste(grid, collapse = ", ")),
+      if (is.character(solved)) paste0("Target power 0.80: ", solved)
+      else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
+                   solved$n, solved$n_lo, solved$n_hi)))
+    power_plot(list(grid = grid, pw = pw,
+                    solved = if (is.character(solved)) NULL else solved))
   })
 
   # The script above shows "Computing…" the instant a power button is clicked. Clearing it
@@ -422,10 +433,16 @@ server <- function(input, output, session) {
   output$power_plot <- renderPlot({
     pc <- power_plot(); if (is.null(pc)) return(NULL)
     df <- data.frame(n = pc$grid, power = pc$pw)
-    ggplot(df, aes(n, power)) +
+    p <- ggplot(df, aes(n, power)) +
       geom_hline(yintercept = 0.8, linetype = 2, colour = "#888888") +
       annotate("text", x = min(df$n), y = 0.8, label = "0.80 target",
-               hjust = 0, vjust = -0.6, colour = "#888888", size = 3.6) +
+               hjust = 0, vjust = -0.6, colour = "#888888", size = 3.6)
+    if (!is.null(pc$solved))
+      p <- p +
+        annotate("rect", xmin = pc$solved$lo, xmax = pc$solved$hi,
+                 ymin = -Inf, ymax = Inf, fill = "#888888", alpha = .15) +
+        geom_vline(xintercept = pc$solved$value, linetype = 2, colour = "#888888")
+    p +
       geom_line(colour = PALETTE[1], linewidth = 0.9) +
       geom_point(colour = PALETTE[1], size = 3) +
       scale_y_continuous(limits = c(0, 1)) +

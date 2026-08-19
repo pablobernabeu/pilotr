@@ -108,11 +108,14 @@ reference:
   - model_formula
   - default_response_name
 - title: Power and design analysis
-  desc: Estimate power by simulation, at one sample size or across a range of them.
+  desc: Estimate power by simulation, at one sample size or across a range of them, and solve
+    the resulting curve for the value that meets a target.
   contents:
   - power_design
   - power_mixed
   - power_curve_mixed
+  - solve_curve
+  - target_n
   - print.pilotr_power
 - title: Precision and equivalence
   desc: Size a study for the width of an interval rather than for a significance test.

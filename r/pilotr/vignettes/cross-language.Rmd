@@ -114,6 +114,20 @@ rather than to the specification; the cross-language comparison still gates them
 The parity check can be rerun on any new platform, so a design verified on a laptop can be
 confirmed on an HPC node before a large run.
 
+## The analysis layer
+
+Everything above concerns the data the generator produces. `solve_curve()` sits a layer above
+it, taking a curve that has already been simulated and fitting a model to it, and it is held to
+a different standard on purpose. Its fit calls `exp()` and the normal distribution function at
+every iteration, so the two engines cannot be asked to land on the same bits, and a recorded
+hash would pin whichever maths library happened to record it. What they are asked for instead is agreement far closer
+than any reading of the result could depend on. The script `tools/parity/solve_cross.py` puts
+the same fixed curves through both engines and compares the solved value, its interval, the
+fitted coefficients and the text of every refusal. The largest relative difference measured over
+those cases is 5.0e-15, against an allowance of 1e-9, which on a solved sample size of 220
+subjects is two ten-millionths of a subject. Every refusal message is identical
+character for character.
+
 ## Why this matters
 
 Because the specification is the source of truth and the generator is shared, a design can be

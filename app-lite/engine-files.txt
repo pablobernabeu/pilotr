@@ -12,9 +12,14 @@
 # is roughly three times this size and the rest of it (mixed-effects power, the
 # brms bridge, the sweep and precision machinery) needs packages webR does not
 # carry. Crossed mixed-effects power is left to the installed package.
+#
+# solve_curve.R is in the subset because the app draws a power curve against a
+# target line, and reporting where the curve meets it is the point of drawing it.
+# The file needs nothing beyond base R and core.R.
 core.R
 simulate.R
 parallel.R
 power.R
+solve_curve.R
 validate.R
 spec_builder.R

@@ -69,7 +69,8 @@ cat(generate_r_script(spec))      # a self-contained, reproducible script
 ```
 
 The [power article](https://pablobernabeu.github.io/pilotr/r/articles/power-analysis.html)
-shows its output, alongside a power curve over sample size.
+shows its output, alongside a power curve over sample size and `target_n()`, which solves that
+curve for the sample size a target power needs and reports an interval on it.
 
 ## Try it without installing
 

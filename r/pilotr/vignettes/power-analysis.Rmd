@@ -101,7 +101,7 @@ errors alongside power and in built-in parallelisation.
 
 ## A power curve
 
-The following sweep over the number of subjects shows where power crosses a target.
+The following sweep over the number of subjects reports power at each size.
 
 ```{r, eval = FALSE}
 curve <- power_curve_mixed(
@@ -121,6 +121,32 @@ curve <- read.csv("power-curve-cache.csv")
 curve
 ```
 
+## The sample size the curve implies
+
+The curve is a means to an end. What the analysis is run for is the sample size at which
+power reaches the target, and that is the number a preregistration quotes. Reading it off the
+table or the plot judges points whose Monte Carlo intervals overlap, and yields a bare figure
+with no interval attached to it. `target_n()` fits the curve and inverts the fit, so the
+crossing is estimated rather than eyeballed and arrives with the uncertainty a simulated curve
+carries.
+
+```{r}
+solved <- target_n(curve, target = 0.8)
+unlist(solved[c("n", "n_lo", "n_hi")])
+```
+
+Fifty replicates per point is few, and the interval says so. The fit is a binomial regression
+of power on the square root of the sample size, weighted by the replicates behind each point,
+and the interval is the delta-method interval that `MASS::dose.p()` computes for a fitted
+`glm`. Nothing is extrapolated: a curve that never reaches the target within the sizes swept
+is refused, with the range it did cover, rather than extended past the last point simulated.
+
+For a curve swept over something other than sample size, `solve_curve()` is the general form,
+with `transform = "identity"` where the axis is an effect size rather than a count of units.
+
+Plotting the curve and the solved size together shows what the solve has done, since the
+vertical band is the reading the horizontal dashed line invites.
+
 ```{r, fig.width = 6, fig.height = 3.6, dev.args = list(bg = "transparent")}
 # The transparent device canvas is what lets the page colour through. A ggplot
 # theme alone cannot do it, since the device paints white underneath. The
@@ -133,6 +159,11 @@ library(ggplot2)
 curve$se <- sqrt(curve$power * (1 - curve$power) / curve$n_converged)
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
+  # The solved sample size and its interval. The dashed horizontal line
+  # marks the target; the band marks where the curve reaches it.
+  annotate("rect", xmin = solved$lo, xmax = solved$hi, ymin = -Inf, ymax = Inf,
+           fill = "grey60", alpha = .15) +
+  geom_vline(xintercept = solved$value, linetype = 2, colour = "grey60") +
   geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se),
                   ymax = pmin(1, power + 1.96 * se)),
               alpha = .15, fill = "#2C6FB0") +
@@ -151,8 +182,9 @@ ggplot(curve, aes(n_subject, power)) +
         panel.grid       = element_line(colour = "grey80"))
 ```
 
-The shaded band shows the Monte Carlo interval, the binomial standard error of each
-power estimate over its converged replicates widened to a 95% envelope.
+The shaded horizontal band shows the Monte Carlo interval, the binomial standard error of each
+power estimate over its converged replicates widened to a 95% envelope. The vertical band is
+the solved sample size and its own interval.
 
 ## Parallel execution
 

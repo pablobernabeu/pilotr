@@ -39,10 +39,10 @@ counts. \code{n_singular} typically falls as the sample size rises, so reading i
 shows where the model becomes supportable.
 }
 \description{
-Sweep the number of subjects and compute mixed-effects power at each, to locate where power
-crosses a target. A thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a
-sample-size curve is the sweep users want most often. Requires the \code{lme4} and \code{lmerTest}
-packages.
+Sweep the number of subjects and compute mixed-effects power at each. Pass the result to
+\code{\link[=target_n]{target_n()}} for the sample size at which power crosses a target, with an interval on it. A
+thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a sample-size curve is
+the sweep users want most often. Requires the \code{lme4} and \code{lmerTest} packages.
 }
 \details{
 Like \code{\link[=power_mixed]{power_mixed()}}, this runs pilotr's own simulation loop over the portable design
@@ -54,6 +54,10 @@ specification, in reporting Type S and Type M errors, and in built-in parallelis
 For any axis other than sample size, call \code{\link[=sweep_spec]{sweep_spec()}} directly. Effect size is the axis a
 design analysis most often needs after sample size, and \code{\link[=design_conditions]{design_conditions()}} builds the
 coefficient overrides for it.
+
+The curve is the input to \code{\link[=target_n]{target_n()}}, which is where the sample size a preregistration
+quotes should come from. Reading the crossing off a plot instead judges points whose Monte
+Carlo intervals overlap, and reports the answer without the interval that goes with it.
 }
 \examples{
 \donttest{
@@ -80,5 +84,6 @@ linear mixed models: An open introduction and tutorial in R. \emph{Behavior Rese
 Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
 }
 \seealso{
-\code{\link[=sweep_spec]{sweep_spec()}} for any other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
+\code{\link[=target_n]{target_n()}} to solve the returned curve for a sample size, \code{\link[=sweep_spec]{sweep_spec()}} for any
+other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

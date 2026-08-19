@@ -35,13 +35,18 @@ information an analysis needs.
 
 ## Power and design analysis
 
-Estimate power by simulation, at one sample size or across a range of them.
+Estimate power by simulation, at one sample size or across a range of them, and
+solve the resulting curve for the value that meets a target.
 
 ::: pilotr.power.power
 
 ::: pilotr.power.power_curve
 
 ::: pilotr.power.power_mixed
+
+::: pilotr.solve.solve_curve
+
+::: pilotr.solve.target_n
 
 ## Reproducibility
 

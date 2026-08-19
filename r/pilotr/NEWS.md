@@ -1,5 +1,35 @@
 # pilotr (development version)
 
+* `solve_curve()` and `target_n()` solve a simulated design curve for the value that
+  meets a target. The package computed the whole curve and then handed back the last and
+  most load-bearing step, the number that goes into a preregistration, at replicate counts
+  where neighbouring points are not significantly different. The plots drew a dashed line
+  at 0.80 and left the reader to judge the crossing by eye. `target_n()` now takes the
+  data frame `power_curve_mixed()` already returns and reports the sample size at which
+  power reaches the target, with a confidence interval on it, rounded up to whole subjects.
+  `solve_curve()` is the general form and reads `precision_curve()` and `sweep_spec()`
+  output through the same column names, on any axis the sweep varied.
+
+  The fit is a binomial probit regression of the decision rate against the swept value,
+  weighted by the replicates behind each point and inverted by the delta method that
+  `MASS::dose.p()` applies to a fitted `glm`. The probit is not arbitrary: under the normal
+  approximation to a two-group comparison the probit of power is linear in the square root
+  of the sample size. Checked against `stats::power.t.test()` over 36 combinations of
+  effect size, target power and grid shape, at 400 replicates a point, the solved sample
+  size sat within 2.9% of the analytic answer on average and 6.9% at worst, against 3.4%
+  and 8.9% for a logit fitted the same way.
+  `tools/calibration/solve_curve_calibration.R` runs that comparison and writes every
+  figure quoted for it to a file beside itself. Where the two-parameter model does not
+  describe the curve, the interval is widened by the heterogeneity factor of probit
+  analysis, reported as `dispersion`, since a curve the model fits badly should not report
+  the narrow interval its replicate counts alone imply.
+
+  Nothing extrapolates. A curve that does not reach the target within the sizes it swept is
+  refused, with the range it did cover, and so is a fit that solves past the end of the
+  sweep, a curve with no trend to invert, and a slope that cannot be told from zero. The
+  app reports the solved size beside the curve it draws, and prints the refusal when the
+  sweep does not settle the question.
+
 * **A Poisson mean beyond the sampler's reach was returned as the iteration cap.** The
   inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
   mean passes about 746 — a poisson intercept of 7 already implies a mean of exp(7),

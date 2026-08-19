@@ -74,6 +74,18 @@ whose rounding IEEE-754 does not fix. That harness pins every path built from IE
 arithmetic alone to a recorded hash, and deliberately leaves the `exp()` and `log()` cases
 unpinned, since those last bits belong to the maths library rather than to the specification.
 
+`solve_curve` sits a layer above the generator, taking a curve that has already been simulated
+and fitting a model to it, and it is held to a different standard on purpose. Its fit calls
+`exp` and the normal distribution function at every iteration, so the two engines cannot be
+asked to land on the same bits, and a recorded hash would pin whichever maths library happened
+to record it. What they are asked
+for instead is agreement far closer than any reading of the result could depend on. The script
+`tools/parity/solve_cross.py` puts the same fixed curves through both engines and compares the
+solved value, its interval, the fitted coefficients and the text of every refusal. The largest
+relative difference measured over those cases is 5.0e-15, against an allowance of 1e-9, which on
+a solved sample size of 220 subjects is two ten-millionths of a subject. Every refusal message is
+identical character for character.
+
 A simulated crossed design has one row per subject-by-item observation. The first rows of the
 worked crossed reaction-time example look like this (the same rows the R package produces):
 

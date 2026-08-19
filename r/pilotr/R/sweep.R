@@ -63,7 +63,8 @@
 #' @param .name Name for the column recording the swept value. Defaults to the last element of
 #'   `path`.
 #' @return A data frame binding the results, with the swept value as the leading column. When the
-#'   swept values are not scalars, that column holds the grid index instead.
+#'   swept values are not scalars, that column holds the grid index instead. [solve_curve()]
+#'   reads that leading column, so a sweep goes straight into a solve.
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE) &&
@@ -83,8 +84,9 @@
 #'              design_conditions(effect = c(0, 0.03, 0.06)), power_mixed, n_sims = 8)
 #' }
 #' }
-#' @seealso [design_conditions()] to build effect-size grids, and [power_mixed()] and
-#'   [precision_design()] for the analyses usually swept.
+#' @seealso [design_conditions()] to build effect-size grids, [power_mixed()] and
+#'   [precision_design()] for the analyses usually swept, and [solve_curve()] to solve the
+#'   resulting curve for the swept value that meets a target.
 #' @export
 sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
   spec <- .as_spec(spec)

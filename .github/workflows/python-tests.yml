@@ -210,3 +210,11 @@ jobs:
       # any disagreement over its battery of valid and invalid specifications.
       - name: Cross-check the two validators on the shared battery
         run: python tools/parity/validate_cross.py
+
+      # solve_curve() sits outside the dump harness because its fit calls exp() and
+      # log(), whose rounding no standard fixes and whose implementations the two
+      # languages do not share, so a golden hash over it would pin one platform's
+      # maths library. It is gated by a relative-difference comparison instead,
+      # together with the text of every refusal it can raise.
+      - name: Cross-check the two curve solvers
+        run: python tools/parity/solve_cross.py

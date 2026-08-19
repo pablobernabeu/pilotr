@@ -39,15 +39,15 @@ unbiased. This is the statistical-significance filter that design analysis is me
 
 ## Power over sample size
 
-`power_curve` sweeps the number of subjects so you can read off where power crosses a target:
+`power_curve` sweeps the number of subjects and reports power at each:
 
 ```python exec="true" source="material-block" html="true" session="pow"
 import matplotlib.pyplot as plt
 from math import sqrt
-from pilotr import power_curve
+from pilotr import power_curve, target_n
 
 n_sims = 200
-curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128], n_sims=n_sims)
+curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128, 160, 192], n_sims=n_sims)
 ns = [p["n_subject"] for p in curve]
 pw = [p["power"] for p in curve]
 # Each power estimate is a proportion over n_sims replicates, so it carries a
@@ -56,8 +56,12 @@ se = [sqrt(p * (1 - p) / n_sims) for p in pw]
 lo = [max(0, p - 1.96 * s) for p, s in zip(pw, se)]
 hi = [min(1, p + 1.96 * s) for p, s in zip(pw, se)]
 
+solved = target_n(curve, target=0.8)
+
 fig, ax = plt.subplots(figsize=(6, 3.4))
 ax.axhline(0.8, ls="--", color="grey")
+ax.axvspan(solved["lo"], solved["hi"], color="grey", alpha=0.12)
+ax.axvline(solved["value"], ls="--", color="grey")
 ax.fill_between(ns, lo, hi, color=BLUE, alpha=0.15)
 ax.plot(ns, pw, "-o", color=BLUE)
 ax.set_ylim(0, 1)
@@ -66,8 +70,36 @@ ax.set_ylabel("Power")
 print(show(fig))
 ```
 
-The shaded band shows the Monte Carlo interval, the binomial standard error of each
-power estimate over the `n_sims` replicates widened to a 95% envelope.
+The shaded horizontal band shows the Monte Carlo interval, the binomial standard error of
+each power estimate over the `n_sims` replicates widened to a 95% envelope. The vertical
+band is the answer the curve was run for.
+
+## The sample size the curve implies
+
+The point of a power curve is the sample size at which power reaches the target, and that is
+the number a preregistration quotes. Judging the crossing by eye gives a bare figure over
+points whose Monte Carlo intervals overlap. `target_n` fits the curve and inverts the fit, so
+the crossing arrives with the uncertainty that a simulated curve carries.
+
+```python exec="true" source="material-block" session="pow"
+solved = target_n(curve, target=0.8)
+print(table([{"target": solved["target"], "n": solved["n"],
+              "n_lo": solved["n_lo"], "n_hi": solved["n_hi"]}]))
+```
+
+This design has a closed-form answer to check against. With an effect of 5 and a residual
+standard deviation of 10, `power.t.test` in R puts 0.80 power at 127.5 subjects in total, which
+falls inside the interval above. The interval spans some twenty subjects, the honest report at
+200 replicates a point, and raising `n_sims` narrows it.
+
+Nothing is extrapolated. A curve that never reaches the target within the sizes swept is
+refused, with the range it did cover, rather than extended past the last point simulated. Had
+the sweep above stopped at 128 subjects, where power was still short of 0.80, that is what
+would have happened.
+
+`solve_curve` is the general form. It takes any curve with a decision rate against a swept
+value, so an effect-size sweep or a sweep over items is solved the same way, with
+`transform="identity"` where the axis is not a sample size.
 
 ## Crossed mixed-effects power
 
