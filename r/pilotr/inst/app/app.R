@@ -28,6 +28,19 @@ if (!exists("simulate_design", mode = "function")) {
 }
 
 MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))
+N_SIMS_DEFAULT <- 1000L   # the value the Simulations box starts at
+N_SIMS_MIN     <- 100L    # the smallest count the box accepts
+
+# The replicate count to run, read from the Simulations box and clamped to the app's range.
+# A cleared box arrives as NA and a pasted word arrives as NA with a warning, and clamping NA
+# leaves NA: min(max(NA, 100), 5000) is NA, and power_design() then stops with "vector size
+# cannot be NA", which tells the user nothing about the box they emptied. The fallback is the
+# value the box started at, which is the count they would have run anyway.
+.n_sims_input <- function(v) {
+  v <- suppressWarnings(as.integer(v))
+  if (length(v) != 1L || is.na(v)) N_SIMS_DEFAULT else min(max(v, N_SIMS_MIN), MAX_SIMS)
+}
+
 # Async only when running as the installed package with future+promises (workers reload the
 # package). From source / serverless this is FALSE and power runs synchronously.
 .async_ok <- isNamespaceLoaded("pilotr") &&
@@ -77,8 +90,10 @@ guide_tab <- tabPanel(
     tags$h5("Power and design analysis"),
     tags$p("The in-app backend estimates power for the two-group Gaussian design, reports the ",
            "Type S and Type M errors of Gelman and Carlin (2014), and draws a power curve over ",
-           "sample size. Crossed mixed-effects power (via lme4) and precision/ROPE design ",
-           "analysis run in the installed package; the specification you build here drives all ",
+           "sample size. It then solves that curve for the sample size at which power reaches ",
+           "0.80 and reports a confidence interval on it. The heavier analyses stay with the ",
+           "packages themselves: crossed mixed-effects power (via lme4) in R and in Python, and ",
+           "precision/ROPE design analysis in R. The specification you build here drives all ",
            "three interfaces."),
     tags$p(
       tags$a(href = "https://pablobernabeu.github.io/pilotr/", target = "_blank", "Documentation"), " · ",
@@ -169,7 +184,8 @@ ui <- fluidPage(
         tabPanel("Power & design analysis",
           p("Simulation-based power with Type S / Type M (Gelman & Carlin, 2014), for the ",
             "two-group Gaussian design."),
-          numericInput("n_sims", "Simulations (capped in-app)", 1000, min = 100, max = MAX_SIMS, step = 100),
+          numericInput("n_sims", "Simulations (capped in-app)", N_SIMS_DEFAULT,
+                       min = N_SIMS_MIN, max = MAX_SIMS, step = 100),
           div(class = "mb-3",
               actionButton("run_power", "Run power analysis", class = "btn-primary"), " ",
               actionButton("run_curve", "Power curve over N")),
@@ -348,7 +364,7 @@ server <- function(input, output, session) {
     power_curve_data(NULL)
     spec <- current_spec()
     if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); return() }
-    n <- min(max(as.integer(input$n_sims), 100L), MAX_SIMS)
+    n <- .n_sims_input(input$n_sims)
     if (.async_ok) {
       power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
       p <- promises::future_promise({ pilotr::power_design(spec, n_sims = n) }, seed = TRUE)
@@ -363,7 +379,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_curve, {
     spec <- current_spec()
     if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); power_curve_data(NULL); return() }
-    n <- min(max(as.integer(input$n_sims), 100L), MAX_SIMS)
+    n <- .n_sims_input(input$n_sims)
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
     withProgress(message = "Computing the power curve...", value = 0.3, {

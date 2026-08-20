@@ -27,7 +27,7 @@
   lo <- centre - half; hi <- centre + half
   # At p = 0 and p = 1 the two terms cancel exactly in algebra but not in floating point, which
   # leaves a bound like 2.8e-17 where the answer is plainly 0. The endpoints are exact there, so
-  # they are set rather than computed.
+  # they are set by hand.
   if (p <= 0) lo <- 0
   if (p >= 1) hi <- 1
   c(max(0, lo), min(1, hi))

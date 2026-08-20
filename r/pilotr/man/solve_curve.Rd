@@ -47,10 +47,10 @@ bounds), \code{level}, \code{target}, \code{se} (the delta-method standard error
 scale on which the interval is symmetric), \code{dispersion} (the heterogeneity factor applied,
 1 where the model fits), \code{x} and \code{y} (the columns used), \code{transform}, \code{intercept} and \code{slope}
 (the fitted coefficients), \code{n_points} (the number of curve points the fit used), and \code{x_min}
-and \code{x_max} (the swept range). A bound falling outside that range is not an error but a
-message: the sweep was too narrow to pin the value down, and should be widened. A
-\code{dispersion} well above 1 says the curve is not the shape the model assumes, so the solve
-deserves a wider grid or more replicates rather than trust.
+and \code{x_max} (the swept range). A bound is allowed to fall outside that range. When one does,
+the sweep was too narrow to pin the value down and should be widened. A \code{dispersion} well
+above 1 says the curve is not the shape the model assumes, so the solve deserves a wider grid
+or more replicates before it deserves any trust.
 }
 \description{
 Take the curve a sweep has already produced, fit the decision rate against the swept value,
@@ -76,8 +76,8 @@ sample size fell within 2.9\% of the analytic answer on average, against 3.4\% f
 fitted the same way.
 
 The interval is the delta-method interval of \code{MASS::dose.p()}, computed on the scale named by
-\code{transform} and mapped back, so it is symmetric on that scale rather than on the natural one.
-That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
+\code{transform} and mapped back, so it is symmetric on that scale and asymmetric on the natural
+one. That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
 far more sample size than the same change lower down. Where the two-parameter model does not
 describe the curve, the interval is widened by the heterogeneity factor of probit analysis,
 Pearson's chi-square over its degrees of freedom (Finney, 1971), reported as \code{dispersion}. It
@@ -85,7 +85,7 @@ is floored at 1, so a well-fitting curve is left alone and a badly-fitting one c
 narrower interval than its own residuals justify.
 
 The default \code{transform} of \code{"sqrt"} suits a sample-size axis, where a rate rises with the
-square root of the sample size rather than with the sample size itself. Sweep something else,
+square root of the sample size. Sweep something else,
 an effect size or a random-effect standard deviation, and \code{"identity"} is usually right.
 
 Nothing here extrapolates. A curve whose rates do not straddle the target is refused, with the

@@ -68,8 +68,8 @@ machine and in the Python twin. Point `load_spec()` at your own
 `design.json` to simulate a design of your own.
 
 Power and design analysis run from the same object. The call below is
-not evaluated here because it needs `lme4`, a suggested rather than a
-required dependency, and a few hundred model fits.
+not evaluated here because it needs a few hundred model fits and `lme4`,
+which the package suggests without requiring.
 
 ``` r
 power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4)

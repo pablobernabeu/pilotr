@@ -134,9 +134,10 @@ def _power_impl(spec, n_sims, alpha, executor):
     sig = [i for i, p in enumerate(pvals) if p < alpha]
     power_val = len(sig) / n_sims
     # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
-    # stay nan when the true effect is zero rather than dividing by zero and reporting a sign-error
-    # rate that has quietly become "the estimate is positive". Same rule as power_mixed(), and the
-    # null condition the sweep documentation recommends is exactly this case.
+    # stay nan when the true effect is zero. The alternative was a division by zero, alongside a
+    # sign-error rate that had quietly become "the estimate is positive". Same rule as
+    # power_mixed(), and the null condition the sweep documentation recommends is exactly this
+    # case.
     if sig and not math.isnan(true_effect) and true_effect != 0:
         type_s = sum(1 for i in sig if (estimates[i] > 0) != (true_effect > 0)) / len(sig)
         type_m = statistics.mean(abs(estimates[i]) / abs(true_effect) for i in sig)

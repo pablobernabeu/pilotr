@@ -27,7 +27,7 @@ power reaches \code{target}, rounded up to a whole number of units alongside the
 }
 \details{
 Everything \code{\link[=solve_curve]{solve_curve()}} does applies here, including its refusals: a curve that never
-reaches the target within the sizes it swept is refused rather than extrapolated, and the
+reaches the target within the sizes it swept is refused outright, and the
 reported interval can extend past the largest size simulated, which means the sweep was too
 narrow to settle the question.
 

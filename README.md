@@ -15,14 +15,14 @@
 
 ## Why pilotr
 
-Most planning tools ask for one effect size and return one power figure. A real study is richer
+Most planning tools ask for one effect size and return one power figure. A study has more in it
 than that. It has groups and conditions, crossed by-subject and by-item variation, and outcomes
 that are rarely Gaussian, such as reaction times, accuracy, counts and Likert ratings. pilotr
 lets you describe that whole design and then generates the data the design would produce.
 Before collecting anything, you can see how often the planned analysis would detect the effect
 and, when an estimate does reach significance, how far it would be exaggerated (a Type M error)
-or take the wrong sign (a Type S error). In short, it turns a design on paper into evidence
-about whether the design is worth running.
+or take the wrong sign (a Type S error). It turns a design on paper into evidence about whether
+the design is worth running.
 
 ## How it works
 
@@ -86,7 +86,7 @@ placeholder values and the statsmodels power module covers analytic classical te
 
 The last row deserves its exact scope, which CI enforces through the parity harness in
 [`tools/parity/`](tools/parity). All eight shipped example designs reproduce bit for bit across
-the two languages as shipped. With rounding removed, six of the eight still do, and the two whose
+the two languages. With rounding removed, six of the eight still do, and the two whose
 response family applies `exp()` to the linear predictor agree to within a few units in the last
 place, a tolerance measured and documented in
 [`tools/parity/tolerance.json`](tools/parity/tolerance.json). IEEE-754 fixes the rounding of
@@ -218,7 +218,8 @@ Three R scripts cover this ground. The first runs crossed mixed-effects power th
 and `lmerTest`. The second validates the generative model by fitting a maximal `lmer` model and
 checking that it recovers the specified parameters. The third covers continuous predictors,
 interactions and continuous random slopes, together with a precision-based ROPE design analysis,
-an N-sweep and a brms bridge (documented in
+an N-sweep, the solve that turns such a curve into a sample size with a confidence interval on
+it (`solve_curve()`, or `target_n()` for a power curve), and a brms bridge (documented in
 [`docs/mixed_models_and_design_analysis.md`](docs/mixed_models_and_design_analysis.md)).
 
 ```bash

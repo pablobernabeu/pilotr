@@ -7,10 +7,11 @@
 #'
 #' @details
 #' The specification is validated by default, via [validate_spec()], because several ways of
-#' getting one wrong produce plausible data rather than an error: a mistyped coefficient key
+#' getting one wrong produce plausible data and no error at all: a mistyped coefficient key
 #' resolves to no column and so silently sets that effect to zero, and a response parameter
 #' left over from another family is ignored. Validation also refuses a specification declaring a
-#' `spec_version` newer than this implementation understands, rather than reading it partially.
+#' `spec_version` newer than this implementation understands, and never reads such a file in
+#' part.
 #'
 #' @param path Path to a JSON design-specification file.
 #' @param validate Whether to validate the specification after reading it. `TRUE` (the default)
@@ -53,7 +54,8 @@ load_spec <- function(path, validate = TRUE) {
 
 # Returns the columns and the lower-Cholesky factor L for one unit's random-effect covariance.
 # `label` names the grouping factor, so that a covariance which is not positive definite can be
-# reported against the entry the user wrote rather than as an anonymous matrix failure.
+# reported against the entry the user wrote, where it used to appear as an anonymous matrix
+# failure.
 .ranef <- function(u, label = NULL) {
   slope_names <- names(u$slopes)
   cols <- c("intercept", slope_names)
@@ -94,7 +96,7 @@ load_spec <- function(path, validate = TRUE) {
 # The bar to use for a grouping factor in an emitted lmer or brms formula.
 #
 # A double bar only where there is a slope to decorrelate. lme4 expands `(1 || g)` into
-# `(1 | g) + (0 + | g)`, which is a syntax error rather than a model, so a group carrying only
+# `(1 | g) + (0 + | g)`, which lme4 rejects as a syntax error, so a group carrying only
 # an intercept has to use a single bar. Nothing is lost: with one term there is no correlation
 # to estimate either way.
 .re_bar <- function(u) if (length(u$slopes) > 0L && !.re_correlated(u)) "||" else "|"
@@ -105,15 +107,15 @@ load_spec <- function(path, validate = TRUE) {
 #
 # The observed variable then has the same variance as the latent one and correlates sqrt(rho)
 # with it. Reliability in the classical sense is that squared correlation, which is why the field
-# is rho rather than the correlation itself.
+# is rho, and the correlation itself is its square root.
 #
-# The attenuation is sqrt(rho), not the rho of the textbook regression-dilution result, because
-# both variables are put on the same variance here; standardising the observed variable back to
+# The attenuation is sqrt(rho), where the textbook regression-dilution result gives rho, because
+# both variables are put on the same variance here. Standardising the observed variable back to
 # the latent one's variance absorbs the 1 / sqrt(rho) factor that result carries.
 #
-# Population moments, not the sample mean and standard deviation of the values actually drawn.
-# R's mean() and sd() accumulate in long double and Python's do not, so standardising against
-# the sample would reintroduce exactly the cross-language divergence this release removes.
+# The moments used are the population ones. R's mean() and sd() accumulate in long double and
+# Python's do not, so standardising against the sample mean and standard deviation of the values
+# drawn would reintroduce exactly the cross-language divergence this release removes.
 .attenuate <- function(latent, pmean, psd, rho, z) {
   pmean + (latent - pmean + psd * sqrt((1 - rho) / rho) * z) * sqrt(rho)
 }
@@ -217,9 +219,9 @@ simulate_design <- function(spec, validate = TRUE) {
   # ---- continuous predictors ----
   # One draw per unit for a subject- or item-level predictor, and one per row for an
   # observation-level one. The rows are already enumerated by this point, so the third case is
-  # another branch of the same dispatch rather than a restructuring. Before 0.3 `varies_by` was
+  # one more branch of the same dispatch, and no restructuring. Before 0.3 `varies_by` was
   # read as "subject or else item", so a predictor declared to vary by "trial" was silently
-  # given one value per item; it is now validated against the three names that exist.
+  # given one value per item. It is now validated against the three names that exist.
   #
   # `dist` chooses the draw. A normal consumes one uniform through the inverse CDF and a uniform
   # consumes one directly, so the two cost the same number of draws and switching between them
@@ -227,9 +229,8 @@ simulate_design <- function(spec, validate = TRUE) {
   #
   # `reliability` draws one further normal per value, and only when it is present and below one,
   # so a specification that does not use it keeps the original stream. The latent value drives
-  # the linear predictor and any random slope keyed on the predictor, while the contaminated
-  # observed value is what goes into the returned data, which is what an analyst would actually
-  # have measured.
+  # the linear predictor and any random slope keyed on the predictor, while the returned data
+  # carries the contaminated observed value, which is what an analyst would have measured.
   n_rows <- length(rows)
   pred_latent <- list(); pred_observed <- list(); pred_unit <- list()
   for (p in predictors) {
@@ -362,7 +363,7 @@ simulate_design <- function(spec, validate = TRUE) {
     # Native round(), which the package's headline claim of exactly identical data for a rounded
     # family runs through. R's algorithm for a non-zero number of digits changed in 4.0.0, and
     # the current one agrees with CPython's on every probe measured; that is why DESCRIPTION
-    # declares R (>= 4.0.0) rather than leaving the floor open.
+    # declares R (>= 4.0.0), and states a floor at all.
     if (!is.null(ndp) && family %in% .rounding_families) val <- round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item

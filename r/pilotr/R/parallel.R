@@ -41,10 +41,10 @@
 #' Drawing the seeds from the shared generator does work. Successive outputs of the combined
 #' generator are what that generator exists to make look independent, so the seeds inherit it: the
 #' same measurement gives -0.02, and a Ljung-Box test over the resulting replicate means moves from
-#' p below 0.0001 to p of 0.94. The whole vector costs `n` draws computed once rather than any work
-#' per replicate. Duplicates are skipped, so no two replicates are handed the same seed and
-#' silently produce identical data, and the skipping is deterministic, so the R and 'Python'
-#' implementations still agree.
+#' p below 0.0001 to p of 0.94. The whole vector costs `n` draws, computed once for the loop.
+#' Duplicates are skipped, so no two replicates are handed the same seed and silently produce
+#' identical data, and the skipping is deterministic, so the R and 'Python' implementations
+#' still agree.
 #'
 #' This changed every number pilotr produced before 0.3, and the first replicate no longer uses the
 #' specification's own seed. Both are deliberate; pin an earlier version to reproduce earlier

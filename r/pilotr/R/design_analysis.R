@@ -1,4 +1,4 @@
-# Bayesian design analysis, emitted as a script rather than run in place.
+# Bayesian design analysis, emitted as a script for the user to run.
 #
 # Nothing in this file fits a model, draws from a posterior, or touches Stan. The whole file is
 # string templating, so it works with brms absent, which is what keeps a Bayesian design
@@ -12,8 +12,8 @@
 # compiler.
 
 # Fill in and check one of the settings lists (`rule`, `gate`). A missing element takes its
-# default rather than NULL, so that rule = list(bf = 3) means the default rule with a stricter
-# threshold instead of a rule with no ROPE and no interval mass.
+# default, so that rule = list(bf = 3) means the default rule with a stricter threshold. Taking
+# NULL instead would leave a rule with no ROPE and no interval mass.
 .da_settings <- function(x, defaults, what) {
   if (!is.list(x) || (length(x) && is.null(names(x))))
     stop("`", what, "` must be a named list", call. = FALSE)
@@ -32,9 +32,9 @@
 # Resolve `focal` to coefficient names and their true values.
 #
 # A character vector names the effects and leaves the true values unknown, while a named
-# numeric vector supplies both. The distinction is drawn on the type rather than on whether
-# names are present, so that a character vector which happens to carry names is still read as
-# names of effects rather than as a mapping.
+# numeric vector supplies both. The type decides which it is, and the presence of names does
+# not, so that a character vector which happens to carry names is still read as a list of effect
+# names.
 .da_focal <- function(focal, spec) {
   if (!length(focal) || !(is.character(focal) || is.numeric(focal)))
     stop("`focal` must be a character vector of coefficient names, or a named numeric vector ",
@@ -122,9 +122,9 @@
     "",
     "# ---- design ----",
     "",
-    "# The specification is embedded at full precision rather than read from a file, so",
-    "# that the script reproduces the design on its own and a coefficient the user typed",
-    "# as 0.3 is still exactly 0.3 here.",
+    "# The specification is embedded at full precision, so that the script reproduces the",
+    "# design on its own, with no file to read, and a coefficient the user typed as 0.3 is",
+    "# still exactly 0.3 here.",
     paste0("spec <- ", .r_literal(spec)),
     "",
     "# ---- decision rule ----",
@@ -133,7 +133,7 @@
     "# interval clear of the ROPE, gives a verdict of 'supported'. Evidence for the null",
     "# above it, with the interval inside the ROPE, gives 'null'. rope is a half-width on",
     "# the scale of the model's coefficients, which for the lognormal families is the log",
-    "# scale, so it is a proportional difference rather than one in milliseconds.",
+    "# scale, so it bounds a proportional difference, with no milliseconds involved.",
     sprintf("bf_threshold  <- %s", .num_literal(rule$bf)),
     sprintf("rope          <- %s", .num_literal(rule$rope)),
     sprintf("ci_mass       <- %s", .num_literal(rule$ci)),
@@ -163,10 +163,10 @@
     "",
     "# ---- replicate index ----",
     "",
-    "# The replicate seeds come from pilotr's own rule rather than from index arithmetic on the",
-    "# specification's seed. Consecutive seeds are not independent streams in this generator, so",
-    "# from 0.3 the package derives the whole set of replicate seeds from the specification's seed",
-    "# and takes the index-th one. Using the same rule here means replicate 7 on the cluster is the",
+    "# The replicate seeds come from pilotr's own rule. Index arithmetic on the specification's",
+    "# seed will not do, because consecutive seeds are not independent streams in this generator,",
+    "# so from 0.3 the package derives the whole set of replicate seeds from that seed and takes",
+    "# the index-th one. Using the same rule here means replicate 7 on the cluster is the",
     "# same data set as replicate 7 in power_mixed(), and one task can be reproduced on a laptop.",
     'rep_id <- suppressWarnings(as.integer(Sys.getenv("PILOTR_REP", "1")))',
     "if (is.na(rep_id) || rep_id < 1L) rep_id <- 1L",
@@ -180,7 +180,7 @@
     "",
     "# ---- fit ----",
     "",
-    '# sample_prior = "yes" is load-bearing rather than decorative. The Savage-Dickey ratio',
+    '# sample_prior = "yes" is what makes the Bayes factor computable. The Savage-Dickey ratio',
     "# is a ratio of prior to posterior density at zero, so without prior draws the",
     "# denominator cannot be read off and hypothesis() has nothing to divide by. It follows",
     "# that the prior carries the Bayes factor: widening it moves the factor towards the",
@@ -204,7 +204,7 @@
     "# Checked before any verdict is formed. A conclusion drawn from a fit that has not",
     "# converged is worse than no conclusion, because it carries the authority of a number",
     "# without the sampling behind it. R-hat here is the rank-normalised version of Vehtari",
-    "# et al. (2021), which is why the limit is near 1.01 rather than the older 1.1, and",
+    "# et al. (2021), which is why the limit is near 1.01 where the older one was 1.1, and",
     "# divergent transitions are counted as a share of post-warmup draws, since a handful in",
     "# a long run means something different from a handful in a short one.",
     "draws <- brms::as_draws_df(fit)",
@@ -263,7 +263,7 @@
     "  # Both criteria have to agree before the design analysis commits either way, and the",
     "  # third answer stays available when they do not (Kruschke, 2018). isTRUE() guards the",
     "  # comparisons, so a Bayes factor that came back NA leaves the verdict inconclusive",
-    "  # rather than propagating a missing value into it.",
+    "  # and no missing value propagates into it.",
     "  verdict <- if (!gate_ok) NA_character_",
     '    else if (isTRUE(bf_effect > bf_threshold) && outside) "supported"',
     '    else if (isTRUE(bf_null   > bf_threshold) && inside)  "null"',
@@ -300,8 +300,8 @@
 # The SLURM array wrapper, one replicate per task. It has to run under any user's account
 # on any cluster, so the two site-specific values, the account to charge and a writable
 # project directory, are emitted as marked placeholders for the user to fill in, and the
-# analysis script is invoked from wherever the parts were saved rather than from a fixed
-# path. The account stays an #SBATCH directive because the scheduler reads directives
+# analysis script is invoked from wherever the parts were saved, with no fixed path anywhere
+# in it. The account stays an #SBATCH directive because the scheduler reads directives
 # before the shell runs, so a directive cannot take its value from a shell variable.
 .da_slurm_lines <- function(spec) {
   c(
@@ -442,8 +442,8 @@
 #' here, so the function needs neither `brms` nor Stan installed.
 #'
 #' @details
-#' The function emits a script rather than running the analysis, for two reasons that both come
-#' down to where a Stan model can be built. The no-code application ships as a webR build that
+#' The function emits a script for the user to run, for two reasons that both come down to
+#' where a Stan model can be built. The no-code application ships as a webR build that
 #' runs entirely in the browser, and Stan compiles C++ at fit time, so a Bayesian fit cannot run
 #' there at all. A function that produced its analysis only when `brms` was present would then be
 #' missing from the build most users meet first. The second reason is maintenance. Depending on
@@ -467,8 +467,8 @@
 #' moves the factor towards the null.
 #'
 #' The convergence gate is checked before any verdict is formed. R-hat is the rank-normalised
-#' version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate rather than the
-#' older 1.1, and divergent transitions are counted as a share of post-warmup draws so that the
+#' version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate where the older
+#' one was 1.1, and divergent transitions are counted as a share of post-warmup draws so that the
 #' threshold means the same thing whatever the run length. When either limit is exceeded the
 #' emitted script reports `NA` for every verdict and prints why, since a conclusion from a fit
 #' that has not converged carries the authority of a number without the sampling behind it.
@@ -479,14 +479,14 @@
 #' version that produced the data. A results directory collects whatever was written into it, and
 #' the emitted aggregator globs it, so without those columns two array runs under different
 #' regions of practical equivalence would combine into one table with nothing to tell them apart.
-#' The aggregator stops when they disagree rather than pooling them.
+#' The aggregator stops when they disagree, and pools nothing.
 #'
 #' @param spec A design specification (path or list).
 #' @param focal A character vector of focal coefficient names, or a named numeric vector mapping
 #'   those names to their true values. The names are the coefficients of the emitted model, so an
 #'   interaction is written `a:b` as in the specification, not `a_b` as in the `lme4` formula
 #'   from [model_formula()]. A name that is not a fixed coefficient of the design is reported as
-#'   a warning here rather than left to fail inside the script.
+#'   a warning here, well before the emitted script would fail on it.
 #' @param rule The decision rule, a named list with elements `bf` (the Bayes-factor threshold,
 #'   applied in both directions), `rope` (the half-width of the region of practical equivalence,
 #'   on the scale of the model's coefficients) and `ci` (the mass of the highest-density

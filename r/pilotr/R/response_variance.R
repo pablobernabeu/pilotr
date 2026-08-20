@@ -5,8 +5,8 @@
 # is only meaningful once the total variance of the outcome is known, which for a crossed design
 # with several random-effect terms is not something a user can read off the specification.
 #
-# The decomposition is computed from the realised design rather than derived algebraically. An
-# algebraic version would need the variance of every contrast column and predictor, and the
+# The decomposition is computed from the realised design. An algebraic version would need the
+# variance of every contrast column and predictor, and the
 # covariance of every interaction, under assumptions about independence and about how between-unit
 # factors divide the units. Those assumptions fail in exactly the awkward cases, such as a
 # partially crossed design or an unbalanced between-unit split, so the components are measured on
@@ -28,9 +28,9 @@
 # Set every random-effect standard deviation to zero while keeping every key in place.
 #
 # Keeping the keys matters: the number of normal deviates drawn is set by how many random-effect
-# columns a grouping factor has, not by their magnitudes, so zeroing the standard deviations
-# leaves the RNG stream untouched and changes only the contribution to eta. Removing the keys
-# instead would shorten the stream and shift everything downstream, which would make the
+# columns a grouping factor has, and their magnitudes do not enter, so zeroing the standard
+# deviations leaves the RNG stream untouched and changes only the contribution to eta. Removing
+# the keys would shorten the stream and shift everything downstream, which would make the
 # components incomparable.
 .zero_random <- function(spec, keep = character(0)) {
   for (g in names(spec$random)) {
@@ -47,8 +47,8 @@
 # Recovered by making that column the only thing in the linear predictor: no intercept, a single
 # coefficient of one, and every random-effect standard deviation zeroed. Neither coefficients nor
 # standard deviations are drawn from the RNG, so this leaves the stream exactly where the real run
-# has it, and the values returned are the ones that run will use, including the latent rather than
-# the observed value of a predictor measured with error.
+# has it, and the values returned are the ones that run will use, including the latent value of
+# a predictor measured with error, in place of its observed value.
 .design_column <- function(spec, key) {
   s <- .zero_random(spec)
   s$fixed$intercept <- 0
@@ -75,8 +75,8 @@
 
 # The variance the response family adds on top of eta, on the scale eta lives on.
 #
-# Every family has one, so `total` is a complete decomposition for all eight rather than for the
-# four that carry an explicit `sigma`. What differs is the scale it is expressed on. For the
+# Every family has one, so `total` is a complete decomposition for all eight families, including
+# the four with no explicit `sigma`. What differs is the scale it is expressed on. For the
 # lognormal families it is the log of the response, which is also the scale the auto-derived
 # analysis model works on. For the link families it is the latent scale on which the linear
 # predictor lives, which is the scale a coefficient, and therefore a region of practical
@@ -84,8 +84,8 @@
 # intraclass correlation and R-squared of a generalised mixed model (Nakagawa, Johnson and
 # Schielzeth, 2017).
 #
-# Three of the four link cases are exact for pilotr's own generative process rather than borrowed
-# conventions:
+# Three of the four link cases are derived from pilotr's own generative process, and are exact
+# for it:
 #
 #   bernoulli and ordinal  A row is drawn as 1[u < invlogit(eta)], equivalently logit(u) < eta, so
 #                          the latent error is logit(u) with u uniform, which is a standard
@@ -101,7 +101,7 @@
 # link. The three agree closely once the mean exceeds about 5 and diverge sharply below it, where
 # a log-scale variance is barely a meaningful quantity: at a mean of 0.5 the trigamma form gives
 # 4.93 against 1.10 for the lognormal approximation. For a design dominated by rare counts, read
-# the Poisson residual as an order of magnitude rather than a figure.
+# the Poisson residual as an order of magnitude and no more.
 #
 # `eta` is the per-row linear predictor, needed only by the two families whose residual depends on
 # the mean.
@@ -115,8 +115,8 @@
     # The latent logistic error of the threshold comparison.
     bernoulli         = pi^2 / 3,
     ordinal           = pi^2 / 3,
-    # Averaged over the realised design rather than evaluated at the mean, which keeps it
-    # consistent with how the fixed and random components are computed.
+    # Averaged over the realised design, which keeps it consistent with how the fixed and
+    # random components are computed. Evaluating at the mean would not.
     poisson           = mean(trigamma(exp(eta))),
     beta              = {
       phi <- if (is.null(resp$phi)) 10 else resp$phi
@@ -143,7 +143,7 @@
 #' Each grouping factor's component is the average over rows of `x' Sigma x`, where `Sigma` is the
 #' covariance the specification asks for and `x` collects that row's values of the intercept and
 #' each random-slope column. This is exact for the realised design: it averages over the
-#' random-effect distribution analytically rather than drawing from it, which matters because
+#' random-effect distribution analytically, which matters because drawing from it and
 #' estimating a variance from the drawn effects of, say, 30 subjects carries a sampling error of
 #' around a quarter of the component itself, far too much to calibrate a region of practical
 #' equivalence against.
@@ -159,8 +159,8 @@
 #' compute the intraclass correlation and R-squared of a generalised mixed model (Nakagawa, Johnson
 #' and Schielzeth, 2017).
 #'
-#' Three of those four are exact for the process pilotr actually simulates rather than borrowed
-#' conventions. A `bernoulli` row is drawn as `1[u < invlogit(eta)]`, equivalently `logit(u) < eta`,
+#' Three of those four are derived from the process pilotr simulates and are exact for it. A
+#' `bernoulli` row is drawn as `1[u < invlogit(eta)]`, equivalently `logit(u) < eta`,
 #' so the latent error is a standard logistic variate of variance `pi^2 / 3`, and `ordinal` compares
 #' the same uniform against cumulative thresholds and inherits it. For `beta`, `logit(Y)` has
 #' variance `trigamma(a) + trigamma(b)` exactly.
@@ -194,9 +194,10 @@ response_variance <- function(spec) {
   groups <- names(spec$random)
 
   # stats::var() of a single value is NA, but a one-row design (validate_spec permits n = 1) has no
-  # across-row variation rather than an unknown amount of it. Reporting 0 keeps `total` the sum of
-  # the parts it is documented to be, and leaves calibrate_response() with a total it can solve
-  # against instead of one that quietly dropped a term.
+  # across-row variation at all, which is a different thing from an unknown amount of it.
+  # Reporting 0 keeps `total` the sum of the parts it is documented to be, and leaves
+  # calibrate_response() with a total it can solve against, where a quietly dropped term would
+  # leave it with one it cannot.
   eta_fixed <- .eta_draw(.zero_random(spec))
   out <- list(fixed = if (length(eta_fixed) > 1L) stats::var(eta_fixed) else 0)
 
@@ -260,7 +261,7 @@ response_variance <- function(spec) {
   }
 
   # kind == "eta": total(k) = k^2 * structural + residual(k * eta), increasing in k, so bracket and
-  # solve. The residual is recomputed from the scaled eta rather than from a fresh simulation.
+  # solve. The residual is recomputed from the scaled eta, with no fresh simulation.
   eta1 <- .eta_draw(spec)
   total_at <- function(k) k * k * structural + .residual_variance(spec$response, k * eta1)
   lo <- total_at(0)

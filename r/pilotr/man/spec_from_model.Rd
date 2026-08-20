@@ -55,7 +55,7 @@ Read a design specification off a linear mixed model already fitted with \code{l
 \code{lmerTest::lmer()}. The fixed effects, the random-effect standard deviations and
 correlations, and the residual standard deviation are taken from the fit, and the numbers of
 subjects and items may be raised at the same time, so that a pilot study or a published model
-becomes the starting point of a power analysis rather than a set of numbers to invent.
+becomes the starting point of a power analysis, with no numbers left to invent.
 Requires the \code{lme4} package.
 }
 \details{
@@ -99,24 +99,25 @@ Interactions need one further step. lme4 writes the interaction of two model-fra
 \code{a:b}, which is already the specification's convention, but \code{\link[=model_data]{model_data()}} gives an
 interaction its own product column named \code{a_b}, so a specification built from a fit of
 pilotr's own modelling data would otherwise acquire a spurious independent term. Such a column
-is recognised by checking the product identity in the data rather than by reading its name,
-which both avoids mistaking a column called \code{z_freq} for an interaction and settles where to
+is recognised by checking the product identity in the data, which both avoids mistaking a
+column called \code{z_freq} for an interaction and settles where to
 split a name with several underscores. A recognised product column is reported and re-keyed to
 \code{a:b}, and it contributes no factor or predictor of its own.
 
 Grouping factors named \code{subject} and \code{item} are used as they stand. Otherwise the one with the
-most levels becomes \code{subject}, the largest remaining factor that genuinely crosses it becomes
+most levels becomes \code{subject}, the largest remaining factor that is crossed with it becomes
 \code{item}, and every other grouping factor becomes an extra \code{random} entry with the \code{over} and
 \code{n} fields that pilotr's additional grouping factors take, \code{over} being decided by which unit
 the factor partitions. Any renaming is reported by a message and recorded in the
 \code{group_mapping} attribute of the result. When each subject saw only some of the items, the
 item unit gains a \code{per_subject} count, so that the recovered design keeps the partial crossing
-of the original rather than silently becoming fully crossed.
+of the original.
 
 A boundary-singular pilot fit is carried across as it stands, which means a variance estimated
 at zero or a correlation estimated at exactly plus or minus one. Those are faithful readings
-of the fit rather than defects, but they are also the sign that the random-effect structure was
-richer than the pilot could support, and a power analysis resting on them will inherit that
+of the fit, and no kind of defect, but they are also the sign that the random-effect
+structure was richer than the pilot could support, and a power analysis resting on them will
+inherit that
 (Bates et al., 2015). Widening the design, or simplifying the structure before refitting, is
 the remedy.
 }

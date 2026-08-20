@@ -25,6 +25,21 @@ testServer(app = app_dir, {
   check(grepl("Power", po), "power analysis output rendered")
   cat("  power output:\n", gsub("\n", "\n    ", po), "\n")
 
+  # A cleared Simulations box arrives as NA. Clamping it left NA, and power_design() then
+  # stopped with "vector size cannot be NA", which says nothing about the emptied box. The
+  # count now falls back to the value the box starts at, 1000.
+  session$setInputs(n_sims = NA_integer_, run_power = 2)
+  po_na <- output$power_out
+  check(grepl("Power", po_na), "a cleared Simulations box still runs a power analysis")
+  check(grepl("Simulations *: *1000", po_na),
+        "a cleared Simulations box falls back to the box's own default of 1000")
+
+  # The same for a value outside the app's range: clamped, never passed through.
+  session$setInputs(n_sims = 5L, run_power = 3)
+  check(grepl("Simulations *: *100\\b", output$power_out),
+        "a count below the minimum is clamped to 100")
+  session$setInputs(n_sims = 300, run_power = 4)
+
   # advanced: paste a continuous-predictor spec (continuous predictors + interactions) to override
   spec_txt <- paste(readLines(file.path(here, "..", "..", "..", "spec", "examples",
                                         "reading_time_continuous.json")), collapse = "\n")

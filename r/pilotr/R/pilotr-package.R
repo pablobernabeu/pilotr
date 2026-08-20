@@ -2,7 +2,7 @@
 # ?pilotr landing topic, taking the title, description, author and useful links from
 # DESCRIPTION, so only the orientation below is written by hand. The topic is
 # deliberately not marked @keywords internal: pkgdown's default reference index drops
-# internal topics, and this overview is meant to head that index rather than hide from it.
+# internal topics, and this overview is meant to head that index.
 
 #' @description
 #' Generative simulation of experimental and behavioural data sets from a

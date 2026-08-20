@@ -73,10 +73,10 @@
   out[order(-vapply(out, length, integer(1)))]
 }
 
-# The component columns of `cn` if it really is an interaction product column, and NULL if not.
+# The component columns of `cn` if it is an interaction product column, and NULL if not.
 #
-# The test is the product identity in the data, not the name, because a column genuinely called
-# "z_freq" is a name with an underscore in it rather than an interaction between "z" and "freq".
+# The test is the product identity in the data, because a column called "z_freq" may be nothing
+# more than a name with an underscore in it, with no "z" and "freq" behind it.
 # Verifying the arithmetic also settles the ambiguity of where to split, and it costs one pass
 # over a column. The tolerance is relative, since the product of two standardised predictors is
 # not reproduced to the last bit by a second multiplication.
@@ -134,8 +134,8 @@
   if (length(const)) list(between = const[[1]]) else list(vary_within = names(unit_group))
 }
 
-# One value of `v` per level of `g`, for a unit-level variable whose moments are wanted per unit
-# rather than per row. Averaging over rows would weight a unit by how many rows it contributed,
+# One value of `v` per level of `g`, for a unit-level variable whose moments are wanted per
+# unit. Averaging over rows would weight a unit by how many rows it contributed,
 # which distorts the mean and the standard deviation of an unbalanced design.
 .unit_values <- function(v, g) {
   vals <- vapply(split(v, g), function(x) if (length(x)) x[[1L]] else NA_real_, numeric(1))
@@ -173,8 +173,8 @@
 #
 # A `||` term splits one grouping factor across several VarCorr blocks, named "g", "g.1" and so
 # on, and the split is exactly the statement that those terms were not allowed to correlate.
-# Merging the blocks and setting `correlated = FALSE` records that, rather than losing it and
-# letting a later model_formula() re-estimate a correlation the fit deliberately fixed at zero.
+# Merging the blocks and setting `correlated = FALSE` records that. Losing it would let a later
+# model_formula() re-estimate a correlation the fit deliberately fixed at zero.
 # A correlation is read only from a single undivided block, where one was actually estimated.
 .random_entry <- function(vc, blocks, products) {
   sds <- numeric(0)
@@ -194,7 +194,7 @@
     }
   }
   # A random-effect term absent from the fit, which is what `(0 + x | g)` produces, becomes a
-  # standard deviation of zero rather than a missing field, since `intercept_sd` is required and
+  # standard deviation of zero, since `intercept_sd` is required and
   # zero is how a specification holds a term at no variance while keeping the structure intact.
   entry <- list(intercept_sd = if ("intercept" %in% names(sds)) sds[["intercept"]] else 0)
   slope_names <- setdiff(names(sds), "intercept")
@@ -210,8 +210,8 @@
 # A lmer fit is Gaussian on the scale it was fitted on, so that is the default. A user who fitted
 # log reaction times will want one of the lognormal families instead, and those carry parameters
 # that a Gaussian fit knows nothing about, which is why `family` also accepts a list supplying
-# them. Anything still missing is named in the error rather than filled in with a guess, because
-# a fabricated shift or precision would change the simulated data without saying so.
+# them. Anything still missing is named in the error, because a guessed shift or precision would
+# change the simulated data without saying so.
 .model_response <- function(fit, family, ndp, yname) {
   extra <- list()
   if (is.list(family)) {
@@ -251,7 +251,7 @@
 #' `lmerTest::lmer()`. The fixed effects, the random-effect standard deviations and
 #' correlations, and the residual standard deviation are taken from the fit, and the numbers of
 #' subjects and items may be raised at the same time, so that a pilot study or a published model
-#' becomes the starting point of a power analysis rather than a set of numbers to invent.
+#' becomes the starting point of a power analysis, with no numbers left to invent.
 #' Requires the `lme4` package.
 #'
 #' @details
@@ -295,24 +295,25 @@
 #' `a:b`, which is already the specification's convention, but [model_data()] gives an
 #' interaction its own product column named `a_b`, so a specification built from a fit of
 #' pilotr's own modelling data would otherwise acquire a spurious independent term. Such a column
-#' is recognised by checking the product identity in the data rather than by reading its name,
-#' which both avoids mistaking a column called `z_freq` for an interaction and settles where to
+#' is recognised by checking the product identity in the data, which both avoids mistaking a
+#' column called `z_freq` for an interaction and settles where to
 #' split a name with several underscores. A recognised product column is reported and re-keyed to
 #' `a:b`, and it contributes no factor or predictor of its own.
 #'
 #' Grouping factors named `subject` and `item` are used as they stand. Otherwise the one with the
-#' most levels becomes `subject`, the largest remaining factor that genuinely crosses it becomes
+#' most levels becomes `subject`, the largest remaining factor that is crossed with it becomes
 #' `item`, and every other grouping factor becomes an extra `random` entry with the `over` and
 #' `n` fields that pilotr's additional grouping factors take, `over` being decided by which unit
 #' the factor partitions. Any renaming is reported by a message and recorded in the
 #' `group_mapping` attribute of the result. When each subject saw only some of the items, the
 #' item unit gains a `per_subject` count, so that the recovered design keeps the partial crossing
-#' of the original rather than silently becoming fully crossed.
+#' of the original.
 #'
 #' A boundary-singular pilot fit is carried across as it stands, which means a variance estimated
 #' at zero or a correlation estimated at exactly plus or minus one. Those are faithful readings
-#' of the fit rather than defects, but they are also the sign that the random-effect structure was
-#' richer than the pilot could support, and a power analysis resting on them will inherit that
+#' of the fit, and no kind of defect, but they are also the sign that the random-effect
+#' structure was richer than the pilot could support, and a power analysis resting on them will
+#' inherit that
 #' (Bates et al., 2015). Widening the design, or simplifying the structure before refitting, is
 #' the remedy.
 #'

@@ -36,7 +36,8 @@ simulations use all of your local cores.
 The other way needs nothing installed. A serverless build runs entirely in the browser
 through WebAssembly, with no server and nothing uploaded. Try it at the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/). It covers the light path: build a
-design, simulate, inspect the data, estimate two-group Gaussian power and export.
+design, simulate, inspect the data, estimate two-group Gaussian power with the sample size its
+curve solves to, and export.
 
 ## What the app does
 
@@ -45,9 +46,10 @@ fixed intercept and effect, a response family, and for crossed designs the rando
 standard deviations. Then read the tabs. 'Design spec' holds the exact JSON specification, the
 portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
 summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
-and Type M errors, together with a power curve over sample size. 'R script' emits a
-self-contained, reproducible R script, which the installed app can also verify by running it in
-a clean R session and confirming bit-for-bit reproduction.
+and Type M errors, together with a power curve over sample size and the sample size at which
+that curve reaches 0.80, with a confidence interval on it. 'R script' emits a self-contained,
+reproducible R script, which the installed app can also verify by running it in a clean R
+session and confirming bit-for-bit reproduction.
 
 Changing the response family resets the intercept and effect to sensible values for that
 family's scale, so a point-and-click design stays valid. The advanced 'paste a JSON spec' box
@@ -58,7 +60,7 @@ interactions and nesting.
 
 The app does not own the design. The specification does. Download the specification (`.json`)
 or the data (`.csv`), and run the specification unchanged in R with `simulate_design()` or in
-Python with `pilotr.simulate()` for identical data. Crossed mixed-effects power runs in the
-installed packages rather than in the browser (in R via `lme4`, the reference backend), and
-precision/ROPE design analysis runs in the R package. Whichever interface you use, the
-specification you build in the app drives all three.
+Python with `pilotr.simulate()` for identical data. The heavier analyses stay with the installed
+packages: crossed mixed-effects power in R, through `lme4` as the reference backend, and in
+Python, and precision/ROPE design analysis in R. Whichever interface you use, the specification
+you build in the app drives all three.

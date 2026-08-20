@@ -1,27 +1,27 @@
 # Calibration of solve_curve() against an analytic answer.
 #
-# solve_curve() defends two design choices with measured figures: a probit link rather than a
-# logit, and the delta-method interval rather than Fieller's. This script is where those figures
-# come from, so that nothing quoted in the documentation rests on a run nobody can repeat. It
-# builds power curves for two-group Gaussian designs, the one case stats::power.t.test() answers
-# in closed form, solves each curve with the package's own solve_curve(), and compares the solved
-# sample size with the analytic one.
+# solve_curve() defends two design choices with measured figures: it fits a probit link where a
+# logit was the obvious alternative, and it reports the delta-method interval where Fieller's
+# was. This script is where those figures come from, so that nothing quoted in the documentation
+# rests on a run nobody can repeat. It builds power curves for two-group Gaussian designs, the
+# one case stats::power.t.test() answers in closed form, solves each curve with the package's own
+# solve_curve(), and compares the solved sample size with the analytic one.
 #
 # The experiment is three grid shapes by four effect sizes by three target powers: 36 checks over
-# 12 curves. Grid points are placed by the analytic power they carry rather than at fixed sample
-# sizes, because the size a design needs varies by a factor of four across the effect sizes swept,
-# and one fixed grid would straddle the target for some of them and extrapolate for the rest. The
-# three shapes differ in what they span. "tight" sits close around the targets, "coarse" is four
-# widely spaced points, and "tall" reaches a power of 0.995, which is the region where a probit and
-# a logit disagree most, since only the probit is linear there in the square root of the size.
+# 12 curves. Grid points are placed by the analytic power they carry, because the size a design
+# needs varies by a factor of four across the effect sizes swept, and one fixed grid of sample
+# sizes would straddle the target for some of them and extrapolate for the rest. The three shapes
+# differ in what they span. "tight" sits close around the targets, "coarse" is four widely spaced
+# points, and "tall" reaches a power of 0.995, which is the region where a probit and a logit
+# disagree most, since only the probit is linear there in the square root of the size.
 #
 # The curves come from sweep_spec() over power_design(), the path a user takes, so the fit sees
 # exactly the data frame the package produces, including the replicate counts that weight it. The
 # probit solve is solve_curve() itself and the probit fit behind Fieller's interval is the
-# package's own .solve_irls(), so the comparison measures what ships rather than a copy of it. The
-# logit arm is written out here, since the package has no logit to call: it is the same iteratively
-# reweighted fit, the same delta method and the same heterogeneity factor, differing only in the
-# link, which is what makes the two arms comparable.
+# package's own .solve_irls(), so the comparison measures the code that ships. The logit arm is
+# written out here, since the package has no logit to call: it is the same iteratively reweighted
+# fit, the same delta method and the same heterogeneity factor, differing only in the link, which
+# is what makes the two arms comparable.
 #
 # Every specification carries its own seed, so a rerun on the same machine reproduces the artefact
 # byte for byte. Results are written to solve_curve_calibration.txt beside this file, with LF
@@ -33,7 +33,8 @@
 # simulation. The figures quoted in solve_curve.R and in the changelogs are the ones this default
 # produces, and they are meaningless without it: the error of a solved size is dominated by Monte
 # Carlo noise and falls with the square root of the replicate count. A larger count is a different
-# experiment, so raise it to study the solver, not to restate the documentation.
+# experiment, so raise it to study the solver. The figures the documentation quotes belong to the
+# default.
 
 args <- commandArgs(trailingOnly = TRUE)
 here <- dirname(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1]))
@@ -47,8 +48,8 @@ out_path <- if (length(args) >= 2) args[2] else file.path(here, "solve_curve_cal
 seed_base <- if (length(args) >= 3) as.integer(args[3]) else 20260819L
 if (is.na(seed_base)) stop("`seed` must be an integer.", call. = FALSE)
 
-# Source the whole package rather than a hand-listed subset, so a new file cannot leave this
-# harness measuring a stale definition. The same rule as tools/parity/run_r.R.
+# Source the whole package, so that a hand-listed subset cannot leave this harness measuring a
+# stale definition once a new file arrives. The same rule as tools/parity/run_r.R.
 src <- file.path(root, "r", "pilotr", "R")
 for (f in sort(list.files(src, pattern = "[.]R$", full.names = TRUE))) source(f)
 
@@ -56,8 +57,8 @@ EFFECTS <- c(0.5, 0.65, 0.8, 1.0)
 TARGETS <- c(0.7, 0.8, 0.9)
 # Grid shapes, given as the analytic power each point should carry. Every shape spans all three
 # targets with a margin at both ends, because a curve whose simulated rates do not straddle the
-# target is refused rather than extrapolated, and a run that measured refusals would measure the
-# grid rather than the link.
+# target is refused, and a run that counted refusals would be measuring the grid, when the link
+# is what is under test.
 GRIDS <- list(
   tight  = c(0.55, 0.68, 0.79, 0.88, 0.95),
   coarse = c(0.30, 0.55, 0.78, 0.95),
@@ -77,8 +78,8 @@ ALPHA <- 0.05
   pmax(6, 2 * round(vapply(powers, function(p) .analytic_n(d, p), numeric(1)) / 2))
 
 # The logit arm. Iteratively reweighted least squares for the binomial logit model with prior
-# weights `m`, mirroring .solve_irls() line for line apart from the link, so that any difference
-# between the arms is the link and not the fitting.
+# weights `m`, mirroring .solve_irls() line for line apart from the link, so that the link is the
+# only thing that differs between the arms.
 .logit_irls <- function(u, y, m) {
   p0 <- (m * y + 0.5) / (m + 1)
   eta <- log(p0 / (1 - p0))
@@ -143,8 +144,8 @@ ALPHA <- 0.05
        u_lo = u_lo, u_hi = u_hi)
 }
 
-# The logit arm and Fieller's interval are written here rather than taken from the package, so
-# they are checked before anything is measured with them. A comparison arm that is quietly wrong
+# The logit arm and Fieller's interval have no counterpart in the package, so they are written
+# here, and checked before anything is measured with them. A comparison arm that is quietly wrong
 # would make the shipped choice look good for the wrong reason.
 .self_check <- function() {
   u <- sqrt(c(20, 40, 60, 80, 100))
@@ -178,7 +179,7 @@ ALPHA <- 0.05
 }
 .self_check()
 
-# Column-aligned rendering, since the artefact exists to be read rather than parsed.
+# Column-aligned rendering, since the artefact exists to be read by a person.
 .render <- function(rows, header) {
   m <- rbind(header, do.call(rbind, rows))
   w <- apply(nchar(m), 2, max)

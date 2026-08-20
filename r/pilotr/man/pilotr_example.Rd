@@ -9,7 +9,7 @@ pilotr_example(name = NULL)
 \arguments{
 \item{name}{The base name of an example, with or without the \code{.json}
 extension, for example \code{"between_2group_gaussian"}. When \code{NULL} (the
-default), the available example names are returned instead of a path.}
+default), the available example names are returned in place of a path.}
 }
 \value{
 When \code{name} is \code{NULL}, a character vector of the available example

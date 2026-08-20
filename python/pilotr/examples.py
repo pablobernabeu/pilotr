@@ -34,7 +34,7 @@ def pilotr_example(name: str | None = None) -> list[str] | str:
     name : str, optional
         The base name of an example, with or without the ``.json`` extension, for
         example ``"between_2group_gaussian"``. When ``None`` (the default), the
-        available example names are returned instead of a path.
+        available example names are returned in place of a path.
 
     Returns
     -------

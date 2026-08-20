@@ -29,7 +29,7 @@ or about whether the predictors are independent.
 Each grouping factor's component is the average over rows of \verb{x' Sigma x}, where \code{Sigma} is the
 covariance the specification asks for and \code{x} collects that row's values of the intercept and
 each random-slope column. This is exact for the realised design: it averages over the
-random-effect distribution analytically rather than drawing from it, which matters because
+random-effect distribution analytically, which matters because drawing from it and
 estimating a variance from the drawn effects of, say, 30 subjects carries a sampling error of
 around a quarter of the component itself, far too much to calibrate a region of practical
 equivalence against.
@@ -45,8 +45,8 @@ latent scale behind the link, so the residual is the distribution-specific varia
 compute the intraclass correlation and R-squared of a generalised mixed model (Nakagawa, Johnson
 and Schielzeth, 2017).
 
-Three of those four are exact for the process pilotr actually simulates rather than borrowed
-conventions. A \code{bernoulli} row is drawn as \code{1[u < invlogit(eta)]}, equivalently \code{logit(u) < eta},
+Three of those four are derived from the process pilotr simulates and are exact for it. A
+\code{bernoulli} row is drawn as \code{1[u < invlogit(eta)]}, equivalently \code{logit(u) < eta},
 so the latent error is a standard logistic variate of variance \code{pi^2 / 3}, and \code{ordinal} compares
 the same uniform against cumulative thresholds and inherits it. For \code{beta}, \code{logit(Y)} has
 variance \code{trigamma(a) + trigamma(b)} exactly.

@@ -6,7 +6,7 @@
 # pilotr is aimed at, because a maximal crossed random-effects structure is singular in a large
 # share of replicates at realistic sample sizes (Bates et al., 2015; Matuschek et al., 2017).
 #
-# Singular and warning fits are still used rather than discarded. Their fixed-effect estimates
+# Singular and warning fits still count towards the result. Their fixed-effect estimates
 # stay interpretable, and dropping them would bias the result, since singularity is not
 # independent of the variance estimates that produce it: excluding those replicates would
 # preferentially remove the ones with small estimated random-effect variance, and so overstate
@@ -18,7 +18,7 @@
 # strict `converged` flag that is TRUE only when there were neither.
 .fit_lmer <- function(formula, data, test = FALSE) {
   msgs <- character(0)
-  # The fitter's own error message is kept rather than discarded. A model that lme4 refuses
+  # The fitter's own error message is kept and passed on. A model that lme4 refuses
   # outright, most often because the random-effects structure is unidentifiable at that sample
   # size, otherwise produced a result of NA with nothing to explain it, which leaves the user with
   # no way to tell an impossible model from an unlucky one.
@@ -57,7 +57,7 @@
 #
 # power_mixed() and precision_design() ran separate loops that differed only in how they reduced
 # the fit, and power_mixed()'s loop additionally hard-coded its own formula and data preparation
-# rather than deriving them from the specification. One loop serves both, so a fix to the fitting
+# instead of deriving them from the specification. One loop serves both, so a fix to the fitting
 # or the convergence accounting reaches both at once.
 #
 # Kept at top level so that only the arguments travel to PSOCK workers.
@@ -86,7 +86,7 @@
     s_e[fn] <- se[[fn]]
     # lmerTest's Satterthwaite column is the p-value the power functions test against. When the
     # cheaper fitter was used, or the column is missing, the p-value stays NA and the caller
-    # reports the effect as untested rather than assuming anything about it.
+    # reports the effect as untested, and assumes nothing about it.
     if (!is.null(co) && fn %in% rownames(co) && "Pr(>|t|)" %in% colnames(co))
       pv[fn] <- co[fn, "Pr(>|t|)"]
   }
@@ -97,7 +97,7 @@
 # The focal coefficient names for a specification, in the naming the auto-derived model uses.
 #
 # A specification's interaction keys are written "a:b", while model_data() materialises them as
-# columns named "a_b", so the focal names have to follow the columns rather than the keys.
+# columns named "a_b", so the focal names have to follow the columns.
 .default_focal <- function(spec) {
   vapply(names(spec$fixed$coefficients), .us, character(1), USE.NAMES = FALSE)
 }
@@ -120,7 +120,7 @@
 #
 # Every rate is then NA, which on its own gives the user nothing to act on. The usual cause is a
 # random-effects structure the design cannot identify, and lme4 says so clearly, so its message is
-# the most useful thing to pass on. A warning rather than an error, so that one impossible grid
+# the most useful thing to pass on. It is raised as a warning, so that one impossible grid
 # point does not abort a whole sweep.
 .warn_no_fits <- function(res, n_returned, formula) {
   if (n_returned > 0L) return(invisible(NULL))

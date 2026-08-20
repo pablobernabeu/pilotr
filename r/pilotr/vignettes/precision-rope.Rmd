@@ -94,7 +94,7 @@ the expected precision.
 
 The same ROPE has to be carried into the sweep. Leaving `rope` at its default would compare
 the interval against a region as wide as the effect itself, and the decision probability would
-then fall with *N* rather than rise.
+then fall away as *N* grew, which is backwards.
 
 ```{r, eval = FALSE}
 prc <- precision_curve(spec_c, focal = c(effect = 0.05),
@@ -118,35 +118,35 @@ prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
 
 As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
 decision more reliably. That is a more informative criterion than power against a point null,
-because it asks whether the study can distinguish the effect from a negligible one rather than
-merely from zero. Each estimate rests on 200 replicates, all of which converged, so its Monte
-Carlo standard error is at most about 0.035, which the figure below shows as a band.
+because it asks whether the study can distinguish the effect from a negligible one, where power
+asks only whether it can be distinguished from zero. Each estimate rests on 200 replicates, all
+of which converged, so its Monte Carlo standard error is at most about 0.035, which the figure
+below shows as a band.
 
 Scanning the table for the smallest simulated *N* that meets a target of
-'`p_meaningful` ≥ 0.90' puts this design at 220 subjects, but that answer is a property of
-where the grid points happen to fall rather than of the design. `solve_curve()` fits the
-decision probability against the sample size and inverts the fit, using all eight points rather
-than the two either side of the target.
+'`p_meaningful` ≥ 0.90' puts this design at 220 subjects, but that answer is a property of where
+the grid points happen to fall. `solve_curve()` fits the decision probability against the sample
+size and inverts the fit, so all eight points inform the answer, where scanning the table uses
+only the two either side of the target.
 
 ```{r}
 solved <- solve_curve(prc, target = 0.9)
 unlist(solved[c("value", "lo", "hi", "dispersion")])
 ```
 
-So the sweep read by eye asks for some thirty-five subjects more than the fitted crossing does,
-and 220 sits outside the interval altogether. The fit is a binomial probit regression weighted
-by the replicates behind each point, and the interval is the delta-method interval that
-`MASS::dose.p()` computes for a fitted `glm`. It is the interval, rather than the point alone,
-that is worth reading: with 200 replicates per point this design needs somewhere between about
-165 and 207 subjects to reach a determinate ROPE decision nine times in ten, and a
-preregistration quoting a single figure would be claiming more than the simulation supports.
+The sweep read by eye therefore asks for some thirty-five subjects more than the fitted crossing
+does, and 220 sits outside the interval altogether. The fit is a binomial probit regression
+weighted by the replicates behind each point, and the interval is the delta-method interval that
+`MASS::dose.p()` computes for a fitted `glm`. The interval matters more here than the point it
+surrounds: with 200 replicates per point this design needs somewhere between about 165 and 207
+subjects to reach a determinate ROPE decision nine times in ten, and a preregistration quoting
+a single figure would be claiming more than the simulation supports.
 
 The reported `dispersion` above 1 is part of that width. It says the eight points scatter about
 the fitted curve rather more than their replicate counts alone would explain, so the interval
 has been widened to match, which is the heterogeneity factor of classical probit analysis doing
 its work. Nothing is extrapolated either: a curve that never reaches the target within the sizes
-swept is refused, with the range it did cover, rather than extended past the last point
-simulated.
+swept is refused, and the refusal reports the range the sweep did cover.
 
 `p_equivalent` stays at 0 throughout, and correctly so. The true effect of 0.05 lies outside
 the ROPE by construction, so no interval should ever land entirely inside it. The column earns

@@ -14,7 +14,7 @@
 #'
 #' @param name The base name of an example, with or without the `.json`
 #'   extension, for example `"between_2group_gaussian"`. When `NULL` (the
-#'   default), the available example names are returned instead of a path.
+#'   default), the available example names are returned in place of a path.
 #' @return When `name` is `NULL`, a character vector of the available example
 #'   names. Otherwise, the full path to that example's JSON file, ready to pass
 #'   to [load_spec()].

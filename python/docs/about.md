@@ -9,8 +9,8 @@ If you use pilotr in published work, please cite it:
 # from one string, using the version the package itself reports, so none of them can
 # drift away from the code. This reaches none of the copies that sit where no code can
 # run, and those still have to be bumped by hand when a release is cut. They are the
-# 'extra.version' chip in mkdocs.yml, the 'version' field in CITATION.cff and the
-# citation block in each of the two READMEs.
+# 'extra.version' chip in mkdocs.yml, the 'version' field in CITATION.cff, and the
+# citation block in the repository README and in the Python package's README.
 import pilotr
 
 version = pilotr.__version__
@@ -27,7 +27,7 @@ bibtex = (
 )
 
 # docs/pilotr.bib is the file the download link below serves, and it is written from
-# the same string rather than maintained by hand. MkDocs renders the pages before it
+# the same string, so nobody has to maintain it by hand. MkDocs renders the pages before it
 # copies the static files, so the copy that reaches the built site is this one. The
 # file is only rewritten when its contents have actually changed, because 'mkdocs
 # serve' watches the docs directory and an unconditional write would set off a fresh
@@ -48,10 +48,10 @@ print("```bibtex")
 print(bibtex, end="")
 print("```")
 
-# The download link is left as ordinary page content below rather than printed from
-# here. MkDocs rewrites relative links only in the page's own Markdown, so a link
-# printed from executed code would keep the path as written and resolve against
-# about/ instead of the site root. It names no version, so it cannot drift.
+# The download link is left as ordinary page content below, outside this block. MkDocs
+# rewrites relative links only in the page's own Markdown, so a link printed from
+# executed code would keep the path as written, resolving against about/ when it should
+# resolve against the site root. It names no version, so it cannot drift.
 ````
 
 [Download the BibTeX entry](pilotr.bib){ download="pilotr.bib" }

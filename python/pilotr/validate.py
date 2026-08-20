@@ -5,14 +5,14 @@ schema has shipped at spec/design.schema.json since 0.1, and no code path consul
 specification with a misspelled field loaded silently and kept the misspelling.
 
 That matters more than a typo usually would, because several of the ways a specification can be
-wrong produce plausible data rather than an error:
+wrong produce plausible data and no error at all:
 
 * A mistyped coefficient key resolves to no column, so that effect is silently set to zero. A
-  spec whose focal effect is named "cnod" instead of "cond" generates exactly the data of a null
+  spec whose focal effect is spelled "cnod" for "cond" generates exactly the data of a null
   design, and reports success.
 * ``varies_by`` took anything other than "subject" as item-level, so a per-trial predictor was
   silently given one value per item.
-* A response parameter belonging to another family is ignored rather than refused.
+* A response parameter belonging to another family is silently ignored.
 
 It also matters for version negotiation. Once 0.3 features exist, a 0.3 specification opened by a
 0.2 implementation, an un-upgraded twin, or a cached browser build produces different and wrong
@@ -29,8 +29,8 @@ import math
 SPEC_VERSION = "0.3"
 
 # Response families and the parameters each one uses. Anything else supplied under `response` is
-# refused rather than ignored, because a leftover parameter from another family is usually a
-# half-finished edit and silently dropping it hides the mistake.
+# refused, because a leftover parameter from another family is usually a half-finished edit and
+# silently dropping it would hide the mistake.
 FAMILY_PARAMS = {
     "gaussian": ("sigma",),
     "lognormal": ("sigma",),
@@ -122,7 +122,7 @@ def validate_spec(spec, strict: bool = True):
     strict : bool
         Whether an unrecognised field is an error (the default) or a warning. Pass ``False`` to
         load a specification carrying private annotations, accepting that a misspelled field
-        will then be ignored rather than reported.
+        will then be ignored in silence.
 
     Returns
     -------
@@ -154,8 +154,8 @@ def validate_spec(spec, strict: bool = True):
     if dv is None:
         bad("spec_version '%s' is not of the form 'major.minor'" % declared)
     else:
-        # The version as pilotr read it, rather than as it was written, so that the two engines
-        # report the same thing about a JSON number they render differently.
+        # The version as pilotr read it, so that the two engines report the same thing about a
+        # JSON number they render differently.
         shown = "%d.%d" % dv
         if dv > sv:
             bad("this specification declares spec_version %s, which is newer than the %s this "

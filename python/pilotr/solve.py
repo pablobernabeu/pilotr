@@ -11,22 +11,22 @@ The model is a binomial regression of the rate on the swept value, weighted by t
 count behind each point, with a probit link. The link is not a convenience. A power curve is a
 normal tail probability, and under the normal approximation to a two-group comparison the
 probit of power is exactly linear in the square root of the sample size, so this
-parameterisation estimates two coefficients of a curve the design analysis already implies
-rather than bending a general sigmoid to fit.
+parameterisation estimates two coefficients of a curve the design analysis already implies,
+where a general sigmoid would have to be bent to fit.
 
-The choice was checked rather than assumed, by ``tools/calibration/solve_curve_calibration.R``,
-which produces every figure quoted here and writes them to a file beside itself. Against R's
-``stats::power.t.test``, over twelve combinations of effect size and target power on each of three
-grid shapes at 400 replicates a point, the probit solved to a mean absolute error of 2.75%, 2.18%
+The choice was checked, by ``tools/calibration/solve_curve_calibration.R``, which produces every
+figure quoted here and writes them to a file beside itself. Against R's ``stats::power.t.test``,
+over twelve combinations of effect size and target power on each of three grid shapes at 400
+replicates a point, the probit solved to a mean absolute error of 2.75%, 2.18%
 and 3.70%, the logit to 3.27%, 2.54% and 4.28%. The two separate most clearly on the grid that
 sweeps the widest range: reaching a power of 0.995, the logit's Pearson chi-square per degree of
 freedom rose to 1.65 against 1.15 for the probit, and its intervals covered the analytic answer
 nine times in twelve where the probit covered twelve. The margin is not large, because at this
 replicate count most of what separates a solved size from the analytic one is Monte Carlo noise in
-the curve rather than the link fitted to it. Rerun at the seed base 77000, which the calibration
-script takes as its third argument, and the probit still leads on the tight grid and by more on
-the tall one, while the coarse grid swaps: four widely spaced points do not tell the two links
-apart.
+the curve, and only a little of it is the link fitted to that curve. Rerun at the seed base
+77000, which the calibration script takes as its third argument, and the probit still leads on
+the tight grid and by more on the tall one, while the coarse grid swaps: four widely spaced
+points do not tell the two links apart.
 
 The inversion and its interval are the delta method that R's ``MASS::dose.p`` applies to a
 fitted glm: the solved point on the fitted scale is ``(link(target) - intercept) / slope``, and
@@ -52,7 +52,7 @@ ever widens the interval. Without it, a curve the model fits badly still reports
 interval its replicate counts alone imply, which is the overconfidence this function exists to
 remove.
 
-The regression is written out rather than handed to a fitting library, because the R twin has
+The regression is written out here, with no call to a fitting library, because the R twin has
 to reproduce it and because the package's core carries no numerical dependency. With an
 intercept and one slope the weighted normal equations are a two-by-two solve in closed form,
 small enough to mirror line for line, and the reductions are spelled out as loops for the
@@ -60,14 +60,13 @@ reason core.py gives: base R's ``sum`` and CPython's ``sum`` are each more accur
 plain double fold, and in different ways.
 
 Extrapolation is the one thing these functions must not do. A curve that does not reach the
-target within the range it swept is refused rather than extended, and a fit that solves
-outside that range is refused as well.
+target within the range it swept is refused, and so is a fit that solves outside that range.
 
 Agreement with the R twin is checked by ``tools/parity/solve_cross.py``, at a relative
-tolerance rather than bit for bit. The fit calls ``exp`` and the normal distribution function
-at every iteration, and IEEE-754 fixes the rounding of neither, so the two languages' maths
-libraries put the last bits in different places even though the arithmetic between them is
-written to be identical.
+tolerance, where the generative core is held bit for bit. The fit calls ``exp`` and the normal
+distribution function at every iteration, and IEEE-754 fixes the rounding of neither, so the
+two languages' maths libraries put the last bits in different places even though the arithmetic
+between them is written to be identical.
 """
 
 from __future__ import annotations
@@ -84,17 +83,17 @@ _EFFECT_COLUMNS = ("effect", "param")
 _TRANSFORMS = ("sqrt", "identity", "log")
 _MAXIT = 100
 _TOL = 1e-11
-# 1 / sqrt(2 * pi). The normal density is written out with it rather than taken from a library,
-# so that the R twin evaluates the same expression and the only difference left between the two
-# is the rounding of exp().
+# 1 / sqrt(2 * pi). The normal density is written out with it, with no call to a library, so
+# that the R twin evaluates the same expression and the only difference left between the two is
+# the rounding of exp().
 _INV_SQRT_2PI = 0.3989422804014327
 
 
 def _phi(x: float) -> float:
     """Standard normal CDF, the inverse of the probit link. R's twin calls stats::pnorm(); the
     two agree to a relative difference of about 1e-16 over the range a fit visits, which is why
-    solve_curve() is held to a relative tolerance rather than to the bit-for-bit standard the
-    generative core meets."""
+    solve_curve() is held to a relative tolerance, where the generative core meets a bit-for-bit
+    standard."""
     return 0.5 * math.erfc(-x / math.sqrt(2.0))
 
 
@@ -160,7 +159,8 @@ def _irls(u, y, m):
         dmu = [math.exp(-0.5 * e * e) * _INV_SQRT_2PI for e in eta]
         v = [p * (1 - p) for p in mu]
         # A fitted rate pinned at zero or one has neither a variance to divide by nor a
-        # derivative, so the point carries no weight at that step rather than an infinity.
+        # derivative, so the point carries no weight at that step, and no infinity enters the
+        # sum.
         w = [m[i] * dmu[i] * dmu[i] / v[i] if v[i] > 0 and dmu[i] > 0 else 0.0
              for i in range(len(mu))]
         z = [eta[i] + (y[i] - mu[i]) / dmu[i] if dmu[i] > 0 else eta[i] for i in range(len(mu))]
@@ -246,7 +246,7 @@ def _rows(curve, effect):
 
 def _numeric(curve, name, keep, what):
     """One column as a list of floats, refusing a column that is not numeric. A missing entry
-    becomes a nan rather than a refusal, because that is what it is: the R twin reads the same
+    becomes a nan, because that is what it is: the R twin reads the same
     absence as NA and drops the point for want of a rate, and a curve carried across the two
     languages as JSON arrives with its NAs written as nulls. What the refusal is for is a
     column of the wrong kind, a label or a string, which no amount of dropping would rescue."""
@@ -301,8 +301,8 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     average, against 3.4% for a logit fitted the same way.
 
     The interval is the delta-method interval of R's `MASS::dose.p`, computed on the scale
-    named by `transform` and mapped back, so it is symmetric on that scale rather than on the
-    natural one. That asymmetry is the honest shape: at the top of a power curve a given
+    named by `transform` and mapped back, so it is symmetric on that scale and asymmetric on
+    the natural one. That asymmetry is the honest shape: at the top of a power curve a given
     change in rate costs far more sample size than the same change lower down. Where the
     two-parameter model does not describe the curve, the interval is widened by the
     heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
@@ -311,9 +311,8 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     residuals justify.
 
     The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
-    square root of the sample size rather than with the sample size itself. Sweep something
-    else, an effect size or a random-effect standard deviation, and `"identity"` is usually
-    right.
+    square root of the sample size. Sweep something else, an effect size or a random-effect
+    standard deviation, and `"identity"` is usually right.
 
     Nothing here extrapolates. A curve whose rates do not straddle the target is refused,
     with the range it did cover reported, and so is a fit that solves outside the swept
@@ -366,11 +365,11 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
         scale on which the interval is symmetric), `dispersion` (the heterogeneity factor
         applied, 1 where the model fits), `x` and `y` (the columns used), `transform`,
         `intercept` and `slope` (the fitted coefficients), `n_points` (the number of curve
-        points the fit used), and `x_min` and `x_max` (the swept range). A bound falling
-        outside that range is not an error but a message: the sweep was too narrow to pin the
-        value down, and should be widened. A `dispersion` well above 1 says the curve is not
-        the shape the model assumes, so the solve deserves a wider grid or more replicates
-        rather than trust.
+        points the fit used), and `x_min` and `x_max` (the swept range). A bound is allowed to
+        fall outside that range. When one does, the sweep was too narrow to pin the value down
+        and should be widened. A `dispersion` well above 1 says the curve is not the shape the
+        model assumes, so the solve deserves a wider grid or more replicates before it
+        deserves any trust.
 
     Raises
     ------
@@ -488,7 +487,7 @@ def target_n(curve, target=0.8, **kwargs):
     solution.
 
     Everything `solve_curve` does applies here, including its refusals: a curve that never
-    reaches the target within the sizes it swept is refused rather than extrapolated, and the
+    reaches the target within the sizes it swept is refused outright, and the
     reported interval can extend past the largest size simulated, which means the sweep was
     too narrow to settle the question.
 

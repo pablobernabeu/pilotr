@@ -56,6 +56,8 @@ se = [sqrt(p * (1 - p) / n_sims) for p in pw]
 lo = [max(0, p - 1.96 * s) for p, s in zip(pw, se)]
 hi = [min(1, p + 1.96 * s) for p, s in zip(pw, se)]
 
+# The sample size the curve solves to, drawn as a vertical band. The next
+# section explains the call.
 solved = target_n(curve, target=0.8)
 
 fig, ax = plt.subplots(figsize=(6, 3.4))
@@ -70,9 +72,9 @@ ax.set_ylabel("Power")
 print(show(fig))
 ```
 
-The shaded horizontal band shows the Monte Carlo interval, the binomial standard error of
-each power estimate over the `n_sims` replicates widened to a 95% envelope. The vertical
-band is the answer the curve was run for.
+The shaded horizontal band along the curve is the Monte Carlo interval, the binomial standard
+error of each power estimate over the `n_sims` replicates widened to a 95% envelope. The
+vertical band is the solved sample size, with its own interval.
 
 ## The sample size the curve implies
 
@@ -93,13 +95,12 @@ falls inside the interval above. The interval spans some twenty subjects, the ho
 200 replicates a point, and raising `n_sims` narrows it.
 
 Nothing is extrapolated. A curve that never reaches the target within the sizes swept is
-refused, with the range it did cover, rather than extended past the last point simulated. Had
-the sweep above stopped at 128 subjects, where power was still short of 0.80, that is what
-would have happened.
+refused, and the refusal reports the range the sweep did cover. Had the sweep above stopped at
+128 subjects, where power was still short of 0.80, that is what would have happened.
 
 `solve_curve` is the general form. It takes any curve with a decision rate against a swept
 value, so an effect-size sweep or a sweep over items is solved the same way, with
-`transform="identity"` where the axis is not a sample size.
+`transform="identity"` for an effect-size axis.
 
 ## Crossed mixed-effects power
 
@@ -126,7 +127,7 @@ spec_mixed = {
                  "sigma": 0.3, "shift": 200},
 }
 
-# A tiny replicate count keeps the docs build fast. Use 200 or more in practice.
+# A tiny replicate count keeps the docs build fast. Use 200 or more for real planning.
 res = power_mixed(spec_mixed, n_sims=12)
 print(table([{k: res[k] for k in (
     "power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m"
@@ -138,13 +139,13 @@ are common in small crossed designs, so this is a useful diagnostic in its own r
 the denominator of `power`, the significant proportion among the converged replicates.
 
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
-`true_effect`). There is one caveat. The statsmodels variance-component fit overstates
-random-slope variance, so the power estimate is conservative for random-slope designs. The R
-package's `lme4`-based `power_mixed` is the reference. Data generation is identical across the
+`true_effect`). The statsmodels variance-component fit overstates random-slope variance, so
+the power estimate is conservative for random-slope designs, and the R package's `lme4`-based
+`power_mixed` is the reference for them. Data generation is identical across the
 two languages, and the discrepancy is in the estimator alone.
 
-`power_mixed` runs pilotr's own simulation loop over the portable specification rather
-than wrapping an existing power package. It covers territory pioneered by
+`power_mixed` carries its own simulation loop over the portable specification, with no other
+power package underneath it. It covers territory pioneered by
 [simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
 [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021).
 pilotr differs in being driven by the portable cross-language specification, in reporting

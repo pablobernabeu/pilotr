@@ -21,7 +21,7 @@ generate_design_analysis(
 those names to their true values. The names are the coefficients of the emitted model, so an
 interaction is written \code{a:b} as in the specification, not \code{a_b} as in the \code{lme4} formula
 from \code{\link[=model_formula]{model_formula()}}. A name that is not a fixed coefficient of the design is reported as
-a warning here rather than left to fail inside the script.}
+a warning here, well before the emitted script would fail on it.}
 
 \item{rule}{The decision rule, a named list with elements \code{bf} (the Bayes-factor threshold,
 applied in both directions), \code{rope} (the half-width of the region of practical equivalence,
@@ -63,8 +63,8 @@ of practical equivalence. The script is returned as a character string and nothi
 here, so the function needs neither \code{brms} nor Stan installed.
 }
 \details{
-The function emits a script rather than running the analysis, for two reasons that both come
-down to where a Stan model can be built. The no-code application ships as a webR build that
+The function emits a script for the user to run, for two reasons that both come down to
+where a Stan model can be built. The no-code application ships as a webR build that
 runs entirely in the browser, and Stan compiles C++ at fit time, so a Bayesian fit cannot run
 there at all. A function that produced its analysis only when \code{brms} was present would then be
 missing from the build most users meet first. The second reason is maintenance. Depending on
@@ -88,8 +88,8 @@ about the prior that \code{\link[=brms_bridge]{brms_bridge()}} supplies as much 
 moves the factor towards the null.
 
 The convergence gate is checked before any verdict is formed. R-hat is the rank-normalised
-version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate rather than the
-older 1.1, and divergent transitions are counted as a share of post-warmup draws so that the
+version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate where the older
+one was 1.1, and divergent transitions are counted as a share of post-warmup draws so that the
 threshold means the same thing whatever the run length. When either limit is exceeded the
 emitted script reports \code{NA} for every verdict and prints why, since a conclusion from a fit
 that has not converged carries the authority of a number without the sampling behind it.
@@ -100,7 +100,7 @@ replicate's record carries all of them: \code{bf_threshold}, \code{rope}, \code{
 version that produced the data. A results directory collects whatever was written into it, and
 the emitted aggregator globs it, so without those columns two array runs under different
 regions of practical equivalence would combine into one table with nothing to tell them apart.
-The aggregator stops when they disagree rather than pooling them.
+The aggregator stops when they disagree, and pools nothing.
 }
 \examples{
 # Emitting the script needs neither brms nor Stan, which is what lets it work in the

@@ -43,8 +43,8 @@ order.
 As a result, given the same specification and seed, the R and Python implementations
 produce identical data sets: bit for bit for rounded and Gaussian responses, and within a few
 units in the last place where an unrounded family applies `exp()` or `log()`, as the parity
-check below quantifies. The specification, rather than the implementation, serves
-as the source of truth.
+check below quantifies. The specification is the source of truth, and every implementation
+answers to it.
 
 ## Determinism in R
 
@@ -86,8 +86,8 @@ languages and reports the maximum absolute difference per design. This is the CS
 read at the precision a written file carries and with a tolerance of 1e-6. The stricter one is
 the harness under `tools/parity/`, which dumps every value at 17 significant digits, accounts
 for each differing cell in units in the last place against a recorded allowance, and runs as a
-gate in continuous integration. The table below is the readable summary; that harness is what
-the bit-identical claim actually rests on.
+gate in continuous integration. The table below is the readable summary, and that harness is
+what the bit-identical claim rests on.
 
 ```{r, echo = FALSE}
 # Output of python/examples/parity_check.py --csv, precomputed and shipped with
@@ -109,9 +109,9 @@ place, from `exp()`, whose rounding IEEE-754 does not fix. There are no categori
 anywhere. The uniform stream is exact by construction, since every intermediate product stays
 below $2^{53}$, and the harness pins every path built from IEEE-exact arithmetic alone to a
 recorded hash in `tools/parity/golden.json`. The cases whose values pass through `exp()` or
-`log()` are deliberately left unpinned, because those last bits belong to the maths library
-rather than to the specification; the cross-language comparison still gates them on every run.
-The parity check can be rerun on any new platform, so a design verified on a laptop can be
+`log()` are deliberately left unpinned, because those last bits belong to the maths library and
+so are not the specification's to fix. The cross-language comparison still gates them on every
+run. The parity check can be rerun on any new platform, so a design verified on a laptop can be
 confirmed on an HPC node before a large run.
 
 ## The analysis layer
@@ -120,13 +120,13 @@ Everything above concerns the data the generator produces. `solve_curve()` sits 
 it, taking a curve that has already been simulated and fitting a model to it, and it is held to
 a different standard on purpose. Its fit calls `exp()` and the normal distribution function at
 every iteration, so the two engines cannot be asked to land on the same bits, and a recorded
-hash would pin whichever maths library happened to record it. What they are asked for instead is agreement far closer
-than any reading of the result could depend on. The script `tools/parity/solve_cross.py` puts
-the same fixed curves through both engines and compares the solved value, its interval, the
-fitted coefficients and the text of every refusal. The largest relative difference measured over
-those cases is 5.0e-15, against an allowance of 1e-9, which on a solved sample size of 220
-subjects is two ten-millionths of a subject. Every refusal message is identical
-character for character.
+hash would pin whichever maths library happened to record it. What they are asked for is
+agreement far closer than any reading of the result could depend on. The script
+`tools/parity/solve_cross.py` puts the same fixed curves through both engines and compares the
+solved value, its interval, the fitted coefficients and the text of every refusal. The largest
+relative difference measured over those cases is 5.0e-15, against an allowance of 1e-9. On a
+solved sample size of 220 subjects that allowance comes to two ten-millionths of a subject.
+Every refusal message is identical character for character.
 
 ## Why this matters
 

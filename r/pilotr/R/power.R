@@ -57,9 +57,9 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   pv  <- vapply(res, `[[`, numeric(1), 2L)
   sig <- which(pv < alpha)
   # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
-  # stay NaN when the true effect is zero rather than reporting an infinity and a sign-error rate
-  # that has quietly become "the estimate is positive". Same rule as power_mixed(), and the null
-  # condition design_conditions() recommends is exactly this case.
+  # stay NaN when the true effect is zero. The alternative was an infinity, alongside a
+  # sign-error rate that had quietly become "the estimate is positive". Same rule as
+  # power_mixed(), and the null condition design_conditions() recommends is exactly this case.
   usable <- length(sig) > 0L && !is.na(true_effect) && true_effect != 0
   list(
     n_sims = n_sims, alpha = alpha,
@@ -70,8 +70,8 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   )
 }
 
-# One Monte Carlo replicate of the two-group analysis. Kept at top level (rather than as
-# a closure) so that only the arguments travel to PSOCK workers. Returns c(estimate, p).
+# One Monte Carlo replicate of the two-group analysis. Kept at top level, out of a closure, so
+# that only the arguments travel to PSOCK workers. Returns c(estimate, p).
 .power_design_rep <- function(i, spec, seeds, yname, fname, lev0, lev1) {
   s <- spec; s$seed <- seeds[i]                # same seeds as the Python port
   d <- simulate_design(s, validate = FALSE)

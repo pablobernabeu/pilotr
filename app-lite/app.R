@@ -3,10 +3,10 @@
 # Runs entirely in the browser via WebAssembly, with no server and no limit on the number
 # of concurrent users. It covers design building (point-and-click, or pasting a spec),
 # simulation, summaries and plots, two-group Gaussian simulation-based power (a point
-# estimate and a power curve), a reproducible R script, and spec/data download. Crossed
-# mixed-effects power (lme4) is provided by the installed pilotr package rather than this
-# browser build. The engine and spec-builder files are staged next to this app by
-# build_shinylive.R.
+# estimate, a power curve and the sample size that curve solves to), a reproducible R
+# script, and spec/data download. The installed package keeps what the browser cannot
+# carry: crossed mixed-effects power through lme4, and precision/ROPE design analysis.
+# The engine and spec-builder files are staged next to this app by build_shinylive.R.
 
 library(shiny)
 library(bslib)
@@ -26,6 +26,16 @@ local({
 
 DOCS <- "https://pablobernabeu.github.io/pilotr/"
 GH   <- "https://github.com/pablobernabeu/pilotr"
+
+# The Simulations box: its starting value, and the range a typed value is clamped to. The
+# starting value doubles as the fallback for a cleared or unreadable box, so the two cannot
+# drift apart.
+N_SIMS_DEFAULT <- 300L
+N_SIMS_MIN     <- 100L
+N_SIMS_MAX     <- 3000L
+# The in-browser sweep runs one power analysis per grid point, so it takes the lower of the
+# requested count and this, to stay responsive.
+N_SIMS_CURVE   <- 200L
 
 # Favicon embedded as a data URI so the serverless build stays self-contained (no separate asset).
 FAVICON <- "data:image/png;base64,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"
@@ -88,8 +98,9 @@ guide <- card(
     tags$p(tags$b("pilotr"), " simulates experimental and behavioural data from a portable ",
            "design specification. This browser version runs entirely on your device, with no ",
            "server and nothing uploaded. It covers the light path. You can build a design, ",
-           "simulate data, inspect it, estimate two-group Gaussian power and export a ",
-           "reproducible script or the specification itself."),
+           "simulate data and inspect it, estimate two-group Gaussian power together with ",
+           "the sample size its curve solves to, and export a reproducible script or the ",
+           "specification itself."),
     tags$ol(
       tags$li("Describe the design in the left panel. This includes the sample sizes, the ",
               "factor and its two levels, the fixed intercept and effect, and a response ",
@@ -123,11 +134,10 @@ guide <- card(
            "partial crossing. The example buttons there illustrate the format."),
     tags$div(
       class = "alert alert-info", role = "alert",
-      tags$b("This is the lite build. "),
-      "Crossed mixed-effects power analysis (via ", tags$code("lme4"),
-      ") and precision/ROPE design analysis run in the installed ", tags$b("pilotr"),
-      " R and Python packages rather than in the browser. The specification you build here ",
-      "drives all three."
+      "This is the lite build, so the heavier analyses stay with the installed packages: ",
+      "crossed mixed-effects power (via ", tags$code("lme4"), ") in R and in Python, and ",
+      "precision/ROPE design analysis in R. The specification you build here drives all ",
+      "three interfaces."
     ),
     tags$div(
       class = "guide-links",
@@ -232,12 +242,15 @@ ui <- page_sidebar(
     nav_panel("Power",
       card(card_body(
         fluidRow(
-          column(4, numericInput("n_sims", "Simulations", 300, min = 100, max = 3000, step = 100)),
+          column(4, numericInput("n_sims", "Simulations", N_SIMS_DEFAULT,
+                                 min = N_SIMS_MIN, max = N_SIMS_MAX, step = 100)),
           column(8, div(class = "mt-4 d-flex gap-2 flex-wrap",
                         actionButton("run_power", "Estimate power", class = "btn-primary"),
                         actionButton("run_curve", "Power curve over N", class = "btn-outline-primary")))
         ),
-        tags$small(class = "text-muted", "Two-group Gaussian, in-browser. The curve uses up to 200 sims/point to stay responsive."),
+        tags$small(class = "text-muted", sprintf(
+          "Two-group Gaussian, computed in your browser. The curve uses at most %d simulations a point, to stay responsive.",
+          N_SIMS_CURVE)),
         verbatimTextOutput("power_out"),
         plotOutput("power_plot", height = "320px")))),
     nav_panel("R script",
@@ -293,9 +306,13 @@ server <- function(input, output, session) {
     validate(need(!is.null(s), parse_error() %||% "Please enter a valid design specification."))
     s
   }
+  # The replicate count to run, read from the Simulations box and clamped to the app's range.
+  # A cleared box arrives as NA and a pasted word arrives as NA with a warning, and clamping NA
+  # leaves NA, so the fallback is the value the box started at.
   nsims <- function() {
     v <- suppressWarnings(as.integer(input$n_sims))
-    if (length(v) == 0 || is.na(v)) 500L else max(100L, min(v, 3000L))
+    if (length(v) != 1L || is.na(v)) N_SIMS_DEFAULT
+    else max(N_SIMS_MIN, min(v, N_SIMS_MAX))
   }
   resp_name  <- function(spec) spec$response$name %||% "y"
   group_name <- function(spec) {
@@ -401,7 +418,7 @@ server <- function(input, output, session) {
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
     grid <- grid[grid >= 4]
-    ns   <- min(nsims(), 200L)   # keep the in-browser sweep responsive
+    ns   <- min(nsims(), N_SIMS_CURVE)
     pw   <- vapply(grid, function(n) {
       s <- spec; s$units$subject$n <- as.integer(n); power_design(s, n_sims = ns)$power
     }, numeric(1))

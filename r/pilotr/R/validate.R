@@ -5,14 +5,14 @@
 # it, so a specification with a misspelled field loaded silently and kept the misspelling.
 #
 # That matters more than a typo usually would, because several of the ways a specification can
-# be wrong produce plausible data rather than an error:
+# be wrong produce plausible data and no error at all:
 #
 #   * A mistyped coefficient key resolves to no column, so that effect is silently set to zero.
-#     A spec whose focal effect is named "cnod" instead of "cond" generates exactly the data of
+#     A spec whose focal effect is spelled "cnod" for "cond" generates exactly the data of
 #     a null design, and reports success.
 #   * varies_by took anything other than "subject" as item-level, so a per-trial predictor was
 #     silently given one value per item.
-#   * A response parameter belonging to another family is ignored rather than refused.
+#   * A response parameter belonging to another family is silently ignored.
 #
 # It also matters for version negotiation. Once 0.3 features exist, a 0.3 specification opened
 # by a 0.2 implementation, an un-upgraded Python twin, or a cached browser build produces
@@ -47,8 +47,7 @@
 .orelse <- function(a, b) if (is.null(a)) b else a
 
 # Resolve a specification argument to a validated list. Every public entry point calls this
-# exactly once, so that a path is read once and validation runs once for a whole replicate loop
-# rather than once per replicate.
+# exactly once, so that a path is read once and validation runs once for a whole replicate loop.
 .as_spec <- function(spec, strict = TRUE) {
   if (is.character(spec)) return(load_spec(spec, validate = strict))
   validate_spec(spec, strict = strict)
@@ -72,8 +71,8 @@
 }
 
 # Response families and the parameters each one uses. Anything else supplied under `response`
-# is refused rather than ignored, because a leftover parameter from another family is usually a
-# half-finished edit and silently dropping it hides the mistake.
+# is refused, because a leftover parameter from another family is usually a half-finished edit
+# and silently dropping it would hide the mistake.
 .family_params <- list(
   gaussian          = "sigma",
   lognormal         = "sigma",
@@ -97,21 +96,21 @@
 #'
 #' @details
 #' Validation exists because several ways of getting a specification wrong produce plausible
-#' data rather than an error. A mistyped coefficient key resolves to no column and so silently
+#' data and no error at all. A mistyped coefficient key resolves to no column and so silently
 #' sets that effect to zero, which generates exactly the data of a null design and reports
 #' success. A response parameter left over from another family is ignored. Neither is
 #' detectable in the output, which is why they are refused here.
 #'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
-#' later; a specification declaring a version newer than this implementation is refused rather
-#' than partially understood. A specification with no `spec_version` is treated as 0.2, which is
+#' later. A specification declaring a version newer than this implementation is refused
+#' outright. A specification with no `spec_version` is treated as 0.2, which is
 #' what every specification written before the field existed is.
 #'
 #' @param spec A design specification (path or list).
 #' @param strict Whether an unrecognised field is an error (the default) or a warning. Set
 #'   `FALSE` to load a specification carrying private annotations, accepting that a misspelled
-#'   field will then be ignored rather than reported.
+#'   field will then be ignored in silence.
 #' @return The specification, invisibly, so that the call can be chained.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
@@ -119,7 +118,7 @@
 #'   intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
 #' validate_spec(spec)
 #'
-#' # A mistyped coefficient key is refused rather than silently treated as a zero effect.
+#' # A mistyped coefficient key is refused, where it used to pass as a zero effect.
 #' bad <- spec
 #' bad$fixed$coefficients <- list(effct = 0.5)
 #' try(validate_spec(bad))
@@ -141,8 +140,8 @@ validate_spec <- function(spec, strict = TRUE) {
   if (is.null(dv)) {
     bad("spec_version '", declared, "' is not of the form 'major.minor'")
   } else {
-    # The version as pilotr read it, rather than as it was written, so that the two engines report
-    # the same thing about a JSON number they render differently.
+    # The version as pilotr read it, so that the two engines report the same thing about a JSON
+    # number they render differently.
     shown <- paste0(dv[1], ".", dv[2])
     if (dv[1] > sv[1] || (dv[1] == sv[1] && dv[2] > sv[2]))
       bad("this specification declares spec_version ", shown,
@@ -178,10 +177,10 @@ validate_spec <- function(spec, strict = TRUE) {
       has_item <- !is.null(u$item)
       for (nm in intersect(names(u), c("subject", "item"))) {
         un <- u[[nm]]
-        # Only the list test, not the names() test used elsewhere for an object: an empty JSON
-        # object arrives as an unnamed empty list, and the twin reports the missing n for it
-        # rather than the wrong shape. Without this guard `un$n` below threw the base error
-        # "$ operator is invalid for atomic vectors" where Python said what was wrong.
+        # The list test here, where an object is elsewhere tested by names(): an empty JSON
+        # object arrives as an unnamed empty list, and names() would call it the wrong shape
+        # where the twin reports the missing n. Without this guard `un$n` below threw the base
+        # error "$ operator is invalid for atomic vectors" where Python said what was wrong.
         if (!is.list(un)) { bad("'units.", nm, "' must be an object"); next }
         for (k in setdiff(names(un), c("n", "per_subject")))
           unknown("unknown field 'units.", nm, ".", k, "'")

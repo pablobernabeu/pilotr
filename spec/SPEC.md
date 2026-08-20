@@ -1,9 +1,9 @@
 # The `pilotr` design specification (v0.3)
 
-A design specification is a single JSON object describing a data-generating process
-(DGP) for an experiment. It is the contract shared by the web application, the R package, and the
-Python package. Given the same spec and seed, every implementation must produce an
-identical data set, within the boundary set out under **Scope of the guarantee** below.
+A design specification is a single JSON object describing a data-generating process (DGP) for
+an experiment. It is the contract shared by the web application, the R package and the Python
+package. Given the same spec and seed, every implementation must produce an identical data set,
+within the boundary set out under [Scope of the guarantee](#scope-of-the-guarantee) below.
 
 The machine-readable form of this document is
 [`design.schema.json`](https://github.com/pablobernabeu/pilotr/blob/main/spec/design.schema.json).
@@ -21,10 +21,15 @@ A specification that uses a feature introduced in 0.3 must declare `"0.3"` or la
 bookkeeping: a 0.2 implementation reads such a specification differently and generates different
 data while reporting success, which is the worst failure mode available to a reproducibility tool.
 The 0.3 features are observation-level predictors, `dist`, `reliability`, the `exgaussian` family,
-the `correlated` flag, and interaction random slopes. An implementation from 0.3 onwards refuses a
-specification declaring a version newer than it understands, rather than reading part of it.
+the `correlated` flag and interaction random slopes. An implementation from 0.3 onwards refuses a
+specification declaring a version newer than it understands, and never reads it in part.
 
 ## Top-level fields
+
+A specification is a flat object with the nine fields below, of which `name`, `seed`, `units`,
+`fixed` and `response` are required. The rest may be omitted: a specification with no
+`spec_version` is a 0.2 specification, and one with no `factors`, `predictors` or `random` simply
+has none of them.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -38,8 +43,8 @@ specification declaring a version newer than it understands, rather than reading
 | `random` | object | Random-effect structure by unit (`subject`, `item`). Empty `{}` ⇒ no random effects. |
 | `response` | object | Outcome family + parameters (see below). |
 
-A coefficient or slope key that names no existing column contributes zero, which silently removes
-the term rather than failing. `validate_spec()` therefore refuses such a key: a design whose focal
+A coefficient or slope key that names no existing column contributes zero, so it silently removes
+the term and raises nothing. `validate_spec()` therefore refuses such a key: a design whose focal
 effect is misspelled generates exactly the data of a null design and reports success.
 
 ### Factors
@@ -77,7 +82,7 @@ predictor, as in `(1 + SyntaxPC | subject)`). The defaults are `mean` 0 and `sd`
 `varies_by` is one of `"subject"`, `"item"` or `"observation"`. The last of these, new in 0.3,
 draws one value per row, which is what a predictor varying trial by trial needs. Before 0.3 any
 value other than `"subject"` was read as item-level, so a predictor declared to vary by `"trial"`
-was silently given one value per item; it is now validated against the three names that exist.
+was silently given one value per item. It is now validated against the three names that exist.
 
 `dist` (new in 0.3) selects the distribution, either `"normal"`, which uses `mean` and `sd`, or
 `"uniform"`, which uses `min` and `max`. A uniform draw consumes exactly as much of the random
@@ -92,9 +97,9 @@ between them does not move the stream.
 { "name": "z_reading", "varies_by": "subject", "sd": 1, "reliability": 0.8 }
 ```
 
-The **latent** value drives the linear predictor and any random slope keyed on the predictor, while
-the **observed**, contaminated value is what appears in the returned data, which is what an analyst
-would actually have measured. Writing `ρ` for the reliability and using the predictor's population
+The latent value drives the linear predictor and any random slope keyed on the predictor, while
+the returned data carries the observed, contaminated value, which is what an analyst would have
+measured. Writing `ρ` for the reliability and using the predictor's population
 mean and standard deviation,
 
 ```
@@ -104,13 +109,13 @@ observed = mean + (true − mean + sd·sqrt((1 − ρ)/ρ)·z) · sqrt(ρ)
 so the observed variable has the same variance as the latent one and correlates `sqrt(ρ)` with it.
 Reliability in the classical sense is that squared correlation, which is why the field is `ρ`.
 
-The attenuation is `sqrt(ρ)` rather than the `ρ` of the textbook regression-dilution result because
-both variables are placed on the same variance here; standardising the observed variable back to
+The attenuation is `sqrt(ρ)`, where the textbook regression-dilution result gives `ρ`, because
+both variables are placed on the same variance here. Standardising the observed variable back to
 the latent one's variance absorbs the `1/sqrt(ρ)` factor that result carries.
 
-The moments used are the **population** ones, not the sample mean and standard deviation of the
-values drawn. R's `mean()` and `sd()` accumulate in long double and Python's do not, so
-standardising against the sample would reintroduce a cross-language divergence.
+The moments used are the population ones. R's `mean()` and `sd()` accumulate in long double and
+Python's do not, so standardising against the sample mean and standard deviation of the values
+drawn would reintroduce a cross-language divergence.
 
 One further normal is drawn per value, and only when `reliability` is present and below 1, so a
 specification that does not use it keeps the original stream. No comparable package models
@@ -129,7 +134,7 @@ unreliable predictors, and cross-level interactions are where unreliability bite
 The random-effect column order is `["intercept", <slopes in listed order>]`. A
 covariance matrix `Σ = D · R · D` is formed from the SDs `D` and the correlation matrix `R`,
 which has a unit diagonal and off-diagonals taken from `correlations`, keyed `"a,b"` (a tilde
-separator, `"a~b"`, is also accepted). Each element is computed as `(sd_i · sd_j) · r_ij`; the
+separator, `"a~b"`, is also accepted). Each element is computed as `(sd_i · sd_j) · r_ij`. That
 bracketing is part of the contract, because floating-point multiplication is not associative and
 the alternative grouping lands on a different double for some inputs. Per unit, a vector
 `b = L z` is drawn, where `L` is the lower Cholesky factor of `Σ` and `z` are iid standard
@@ -137,8 +142,8 @@ normals. The unit's contribution to a row's linear predictor is
 `b[intercept] + Σ_k b[slope_k] · (design value of slope_k for that row)`.
 
 Slope keys follow exactly the same rule as fixed coefficients: a contrast column, a continuous
-predictor, or an `"a:b"` interaction between them. Before 0.3 an interaction slope was accepted,
-sized into the covariance, drawn from the stream, and then silently discarded, so the emitted
+predictor or an `"a:b"` interaction between them. Before 0.3 an interaction slope was accepted,
+sized into the covariance, drawn from the stream and then silently discarded, so the emitted
 analysis model contained a term the generative process did not, which inflates power in the
 direction Barr et al. (2013) warn about.
 
@@ -168,9 +173,13 @@ The units are assigned to groups in equal blocks. For example, subjects nested i
 
 Each group draws a random-effect vector (intercept + any slopes) applied to all rows of the
 units in that group, and the simulated data gains a column with the group id. Useful for
-hierarchical designs (e.g. participants within sites, schools, or languages).
+hierarchical designs (e.g. participants within sites, schools or languages).
 
 ### Response families
+
+`response.family` selects one of eight generation rules, each mapping the linear predictor `η` to
+an outcome on the scale that family works on. The parameters column names the extra fields the
+family reads from `response`.
 
 | `family` | Parameters | Generation |
 |---|---|---|
@@ -193,13 +202,13 @@ residual on the analysis scale.
 The Poisson mean has an upper bound, and it is the same in every implementation. The inverse-CDF
 walk starts from `exp(−λ)`, which underflows to exactly zero once `λ` passes about 746, and from
 there the cumulative distribution can never reach the drawn uniform, so no count exists to return.
-Both implementations refuse such a mean with the same message rather than returning the walk's
-iteration cap as though it were a draw. In practice this caps the linear predictor of a `poisson`
-response at roughly 6.6, a mean count near 750, which is well above the rates count outcomes are
-normally specified at.
+Both implementations refuse such a mean with the same message, where earlier versions returned the
+walk's iteration cap as though it were a draw. The effect is to cap the linear predictor of a
+`poisson` response at roughly 6.6, a mean count near 750, which is well above the rates count
+outcomes are normally specified at.
 
 `η` (the linear predictor for a row) = `intercept + Σ β_key · value(key)`, where a key is a
-contrast column, a continuous predictor, or an `"a:b"` interaction (the product of the named
+contrast column, a continuous predictor or an `"a:b"` interaction (the product of the named
 columns), `+` subject random part `+` item random part `+` the random parts of any additional
 grouping factors. `name` sets the output column name. An optional `round` sets the decimal
 rounding of the response, and applies only to the families whose outcome is continuous, the others
@@ -234,14 +243,20 @@ ports. Every inner product, including those inside the Cholesky factorisation an
 product, is written as an explicit double fold.
 
 For the same reason, integer powers are written as repeated multiplication rather than with `^` or
-`**`. R special-cases small integer exponents while Python calls the library `pow()`; measured over
-200,000 draws in the Gamma sampler's range, the two disagreed on a third of inputs by up to 6 ulp,
-and because that value decides a rejection step, the disagreement changed how many draws were
-consumed.
+`**`. R special-cases small integer exponents while Python calls the library `pow()`, and
+measured over 200,000 draws in the Gamma sampler's range the two disagreed on a third of inputs
+by up to 6 ulp. Because that value decides a rejection step, the disagreement also changed how
+many draws were consumed.
 
 ## RNG contract (identical across all implementations)
 
-**Uniform generator.** L'Ecuyer (1988) combined LCG:
+Two generators and one draw order fix the random stream. Everything drawn anywhere in pilotr
+comes from the uniform generator below, either directly or through the normal transform, and in
+the sequence set out under [Draw order](#draw-order).
+
+### Uniform generator
+
+Uniform deviates come from L'Ecuyer's (1988) combined LCG:
 
 ```
 s1 ← (40014 · s1) mod 2147483563
@@ -254,10 +269,15 @@ All products stay below 2^53, so the arithmetic is exact in IEEE-754 doubles and
 Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` and
 `s2 ← 1 + ((40692 · s1) mod 2147483398)`, after which 10 warm-up draws are discarded.
 
-**Normal deviates.** Wichura (1988) Algorithm AS 241 applied to `u`, the algorithm R's
-`qnorm` uses. Deviates therefore agree to full double precision.
+### Normal deviates
 
-**Draw order (must be identical everywhere):**
+Every normal in pilotr is Wichura's (1988) Algorithm AS 241 applied to `u`, the algorithm R's
+`qnorm` uses, so the two languages agree to full double precision.
+
+### Draw order
+
+The order in which the stream is consumed is as much part of the contract as the generator
+itself, and every implementation must follow the sequence below exactly.
 
 0. If `units.item.per_subject` is set (partial crossing): for each subject `s = 1..S`, in
    row-build order, sample that subject's item subset by a partial Fisher–Yates shuffle,
@@ -267,71 +287,76 @@ Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` 
 1. For each continuous predictor (in listed order): for each of its units `u = 1..N`, draw one
    deviate, `N(mean, sd)` by default or `Uniform(min, max)` when `dist` is `"uniform"`, and then,
    only when `reliability` is present and below 1, one further standard normal for that value's
-   measurement error. `N` is the number of subjects, of items, or of rows, according to
+   measurement error. `N` is the number of subjects, of items or of rows, according to
    `varies_by`. (Skipped entirely when there is no `predictors` block, so factor-only specs keep
    the original stream. A uniform costs the same one draw as a normal, and a `reliability` of 1 or
    absent costs nothing, so neither moves the stream either.)
 2. For each subject `s = 1..S`: draw `q_subject` standard normals (intercept, then each
-   slope in listed order); set `b_subject[s] = L_subject · z`.
-3. For each item `t = 1..I` (if items exist): draw `q_item` standard normals; set
+   slope in listed order), and set `b_subject[s] = L_subject · z`.
+3. For each item `t = 1..I` (if items exist): draw `q_item` standard normals, and set
    `b_item[t] = L_item · z`.
 4. For each additional grouping factor (in the order the `random` entries are listed): for
-   each group `g = 0..K−1`, draw `q_group` standard normals; set `b_group[g] = L_group · z`.
-5. Iterate observations in **canonical row order** and draw the response. Most families
-   consume exactly one deviate per row (normal for gaussian/lognormal/shifted_lognormal;
-   uniform for bernoulli/poisson/ordinal). The ex-Gaussian consumes exactly two, a normal then a
-   uniform, in that order. The beta family instead consumes a variable,
-   data-dependent number of draws per row: two Gamma variates through the Marsaglia–Tsang
-   rejection sampler, each consuming normal–uniform pairs until acceptance (with one extra
-   uniform per Gamma variate whose shape is below 1).
+   each group `g = 0..K−1`, draw `q_group` standard normals, and set `b_group[g] = L_group · z`.
+5. Iterate observations in canonical row order, defined below, and draw the response. Most
+   families consume exactly one deviate per row, a normal for gaussian, lognormal and
+   shifted_lognormal and a uniform for bernoulli, poisson and ordinal. The ex-Gaussian consumes
+   exactly two, a normal then a uniform, in that order. The beta family instead consumes a
+   variable, data-dependent number of draws per row: two Gamma variates through the
+   Marsaglia–Tsang rejection sampler, each consuming normal–uniform pairs until acceptance (with
+   one extra uniform per Gamma variate whose shape is below 1).
 
-**Extending the draw order.** A new feature must consume **zero** draws when it is not used, so
-that every specification written before it stays bit-identical. Each of the 0.3 additions is built
-that way: an observation-level predictor only appears when declared, a uniform draw costs the same
-as the normal it replaces, a `reliability` of 1 or absent draws nothing, and a family branch is
+### Canonical row order
+
+Step 5 iterates the observations as nested loops, outermost first,
+`for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
+listed order, levels in listed order): emit row`. Between-unit factors assign a level to
+each unit by equal blocks in level order and do not expand rows.
+
+### Extending the draw order
+
+A new feature must consume no draws at all when it is not used, so that every specification
+written before it stays bit-identical. Each of the 0.3 additions is built that way: an
+observation-level predictor only appears when declared, a uniform draw costs the same as the
+normal it replaces, a `reliability` of 1 or absent draws nothing, and a family branch is
 reached only when that family is selected.
 
-**Replicate seeds.** The power and precision loops derive their per-replicate seeds from the
-specification's seed by drawing from the shared generator, skipping any duplicate, rather than by
-adding the replicate index. Consecutive seeds are not independent streams here: seeding sets `s1` to
-`1 + (seed mod 2147483562)` and `s2` from `s1`, with only ten warm-up draws discarded, so the first
-draw of replicate `i` correlated 0.95 with that of replicate `i + 1` under the old rule. An
-arithmetic scramble does not help, since the seeding rule is linear in the seed. This changed every
-number pilotr produced before 0.3.
+### Replicate seeds
+
+The power and precision loops derive their per-replicate seeds from the specification's seed by
+drawing from the shared generator and skipping any duplicate. Adding the replicate index, the
+rule they used before 0.3, does not give independent streams here: seeding sets `s1` to
+`1 + (seed mod 2147483562)` and `s2` from `s1`, with only ten warm-up draws discarded, so the
+first draw of replicate `i` correlated 0.95 with that of replicate `i + 1`. An arithmetic
+scramble does not help, since the seeding rule is linear in the seed. This changed every number
+pilotr produced before 0.3.
 
 ## Scope of the guarantee
 
-Identical data means bit-identical, and holds exactly for:
-
-* the `gaussian` family, and any design whose response path applies no transcendental function to
-  the linear predictor;
-* **any** family when `response.round` is set, since rounding quantises away a last-bit difference.
+Identical data means bit-identical, and holds exactly for the `gaussian` family and for any design
+whose response path applies no transcendental function to the linear predictor. It also holds for
+every family when `response.round` is set, since rounding quantises away a last-bit difference.
 
 For `lognormal`, `shifted_lognormal`, `exgaussian`, `bernoulli`, `poisson`, `ordinal` and `beta`
 without `round`, results may differ in the last unit in the last place. IEEE-754 requires correct
-rounding for addition, subtraction, multiplication, division and square root, but **not** for
-`exp()` or `log()`, and the R and Python builds on a given platform need not share a maths library.
-Measured over 200,000 arguments in the log-reaction-time range, R and CPython `exp()` disagreed on
-0.44% of them by up to 6 ulp, and `log()` on 0.12% by up to 1 ulp.
+rounding for addition, subtraction, multiplication, division and square root, but leaves the
+rounding of `exp()` and `log()` to the implementation. The R and Python builds on a given
+platform need not share a maths library. Measured over 200,000 arguments in the log-reaction-time
+range, R and CPython `exp()` disagreed on 0.44% of them by up to 6 ulp, and `log()` on 0.12% by up
+to 1 ulp.
 
-This is demonstrable rather than assumed. Taking a shifted-lognormal design and switching only its
-family to `gaussian`, so that the seed, the random-effect structure, the linear predictor and the
-entire draw sequence are unchanged, gives bit-identical output in both languages, while the
+This is demonstrable, and has been demonstrated. Taking a shifted-lognormal design and switching
+only its family to `gaussian`, so that the seed, the random-effect structure, the linear predictor
+and the entire draw sequence are unchanged, gives bit-identical output in both languages, while the
 lognormal original differs in a handful of rows. `exp()` is the only remaining difference.
 
 For the discrete families the practical consequence is different in kind. A last-bit difference in
-`exp()` usually changes nothing, because the outcome is an integer decided by a comparison; but when
-the comparison sits exactly on a threshold, the outcome moves by a whole category. This is rare and
-it is not impossible, so a design analysis that has to be reproducible to the last observation should
+`exp()` usually changes nothing, because the outcome is an integer decided by a comparison. When
+the comparison sits exactly on a threshold, though, the outcome moves by a whole category. That is
+rare but possible, so a design analysis that has to be reproducible to the last observation should
 either set `round` or stay with `gaussian`.
 
 The stricter guarantee within one language is unconditional: the same implementation, specification
 and seed always produce the same data.
-
-**Canonical row order:** nested loops, outermost first,
-`for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
-listed order, levels in listed order): emit row`. Between-unit factors assign a level to
-each unit by equal blocks in level order and do not expand rows.
 
 ## References
 

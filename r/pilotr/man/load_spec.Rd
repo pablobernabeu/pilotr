@@ -22,10 +22,11 @@ Load a design specification from a JSON file
 }
 \details{
 The specification is validated by default, via \code{\link[=validate_spec]{validate_spec()}}, because several ways of
-getting one wrong produce plausible data rather than an error: a mistyped coefficient key
+getting one wrong produce plausible data and no error at all: a mistyped coefficient key
 resolves to no column and so silently sets that effect to zero, and a response parameter
 left over from another family is ignored. Validation also refuses a specification declaring a
-\code{spec_version} newer than this implementation understands, rather than reading it partially.
+\code{spec_version} newer than this implementation understands, and never reads such a file in
+part.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

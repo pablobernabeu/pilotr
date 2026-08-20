@@ -11,22 +11,22 @@
 # count behind each point, with a probit link. The link is not a convenience. A power curve is a
 # normal tail probability, and under the normal approximation to a two-group comparison the
 # probit of power is exactly linear in the square root of the sample size, so this
-# parameterisation estimates two coefficients of a curve the design analysis already implies
-# rather than bending a general sigmoid to fit.
+# parameterisation estimates two coefficients of a curve the design analysis already implies,
+# where a general sigmoid would have to be bent to fit.
 #
-# The choice was checked rather than assumed, by tools/calibration/solve_curve_calibration.R,
-# which produces every figure quoted here and writes them to a file beside itself. Against
-# stats::power.t.test(), over twelve combinations of effect size and target power on each of three
+# The choice was checked, by tools/calibration/solve_curve_calibration.R, which produces every
+# figure quoted here and writes them to a file beside itself. Against stats::power.t.test(),
+# over twelve combinations of effect size and target power on each of three
 # grid shapes at 400 replicates a point, the probit solved to a mean absolute error of 2.75%,
 # 2.18% and 3.70%, the logit to 3.27%, 2.54% and 4.28%. The two separate most clearly on the grid
 # that sweeps the widest range: reaching a power of 0.995, the logit's Pearson chi-square per
 # degree of freedom rose to 1.65 against 1.15 for the probit, and its intervals covered the
 # analytic answer nine times in twelve where the probit covered twelve. The margin is not large,
 # because at this replicate count most of what separates a solved size from the analytic one is
-# Monte Carlo noise in the curve rather than the link fitted to it. Rerun at the seed base 77000,
-# which the calibration script takes as its third argument, and the probit still leads on the
-# tight grid and by more on the tall one, while the coarse grid swaps: four widely spaced points
-# do not tell the two links apart.
+# Monte Carlo noise in the curve, and only a little of it is the link fitted to that curve.
+# Rerun at the seed base 77000, which the calibration script takes as its third argument, and
+# the probit still leads on the tight grid and by more on the tall one, while the coarse grid
+# swaps: four widely spaced points do not tell the two links apart.
 #
 # The inversion and its interval are the delta method that MASS::dose.p() applies to a fitted
 # glm: the solved point on the fitted scale is (link(target) - intercept) / slope, and its
@@ -53,21 +53,20 @@
 # narrow interval its replicate counts alone imply, which is the overconfidence this function
 # exists to remove.
 #
-# The regression is written out rather than handed to glm(), because the Python twin has no glm
+# The regression is written out here, with no call to glm(), because the Python twin has no glm
 # to hand it to and the two engines have to agree. With an intercept and one slope the weighted
 # normal equations are a two-by-two solve in closed form, small enough to mirror line for line,
 # and the reductions are spelled out as loops for the reason core.R gives: base R's sum() and
 # CPython's sum() are each more accurate than a plain double fold, and in different ways.
 #
 # Extrapolation is the one thing these functions must not do. A curve that does not reach the
-# target within the range it swept is refused rather than extended, and a fit that solves outside
-# that range is refused as well.
+# target within the range it swept is refused, and so is a fit that solves outside that range.
 #
 # Agreement with the Python twin is checked by tools/parity/solve_cross.py, at a relative
-# tolerance rather than bit for bit. The fit calls exp() and the normal distribution function at
-# every iteration, and IEEE-754 fixes the rounding of neither, so the two languages' maths
-# libraries put the last bits in different places even though the arithmetic between them is
-# written to be identical.
+# tolerance, where the generative core is held bit for bit. The fit calls exp() and the normal
+# distribution function at every iteration, and IEEE-754 fixes the rounding of neither, so the
+# two languages' maths libraries put the last bits in different places even though the
+# arithmetic between them is written to be identical.
 
 # Rate columns and replicate-count columns are looked for in this order. The names are those the
 # curve functions already use, so a curve goes in unaltered.
@@ -77,9 +76,9 @@
 .SOLVE_TRANSFORMS <- c("sqrt", "identity", "log")
 .SOLVE_MAXIT <- 100L
 .SOLVE_TOL <- 1e-11
-# 1 / sqrt(2 * pi). The normal density is written out with it rather than taken from
-# stats::dnorm(), so that the Python twin evaluates the same expression and the only difference
-# left between the two is the rounding of exp().
+# 1 / sqrt(2 * pi). The normal density is written out with it, with no call to stats::dnorm(),
+# so that the Python twin evaluates the same expression and the only difference left between the
+# two is the rounding of exp().
 .SOLVE_INV_SQRT_2PI <- 0.3989422804014327
 
 # Every number that reaches a refusal message goes through this, so that the two engines format
@@ -128,7 +127,7 @@
     dmu <- exp(-0.5 * eta * eta) * .SOLVE_INV_SQRT_2PI
     v <- mu * (1 - mu)
     # A fitted rate pinned at zero or one has neither a variance to divide by nor a derivative,
-    # so the point carries no weight at that step rather than contributing an infinity.
+    # so the point carries no weight at that step, and no infinity enters the sum.
     w <- ifelse(v > 0 & dmu > 0, m * dmu * dmu / v, 0)
     z <- ifelse(dmu > 0, eta + (y - mu) / dmu, eta)
     fit <- .solve_wls(u, z, w)
@@ -202,8 +201,8 @@
 #' fitted the same way.
 #'
 #' The interval is the delta-method interval of `MASS::dose.p()`, computed on the scale named by
-#' `transform` and mapped back, so it is symmetric on that scale rather than on the natural one.
-#' That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
+#' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural
+#' one. That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
 #' far more sample size than the same change lower down. Where the two-parameter model does not
 #' describe the curve, the interval is widened by the heterogeneity factor of probit analysis,
 #' Pearson's chi-square over its degrees of freedom (Finney, 1971), reported as `dispersion`. It
@@ -211,7 +210,7 @@
 #' narrower interval than its own residuals justify.
 #'
 #' The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
-#' square root of the sample size rather than with the sample size itself. Sweep something else,
+#' square root of the sample size. Sweep something else,
 #' an effect size or a random-effect standard deviation, and `"identity"` is usually right.
 #'
 #' Nothing here extrapolates. A curve whose rates do not straddle the target is refused, with the
@@ -251,10 +250,10 @@
 #'   scale on which the interval is symmetric), `dispersion` (the heterogeneity factor applied,
 #'   1 where the model fits), `x` and `y` (the columns used), `transform`, `intercept` and `slope`
 #'   (the fitted coefficients), `n_points` (the number of curve points the fit used), and `x_min`
-#'   and `x_max` (the swept range). A bound falling outside that range is not an error but a
-#'   message: the sweep was too narrow to pin the value down, and should be widened. A
-#'   `dispersion` well above 1 says the curve is not the shape the model assumes, so the solve
-#'   deserves a wider grid or more replicates rather than trust.
+#'   and `x_max` (the swept range). A bound is allowed to fall outside that range. When one does,
+#'   the sweep was too narrow to pin the value down and should be widened. A `dispersion` well
+#'   above 1 says the curve is not the shape the model assumes, so the solve deserves a wider grid
+#'   or more replicates before it deserves any trust.
 #' @references Fieller, E. C. (1954). Some problems in interval estimation. \emph{Journal of the
 #'   Royal Statistical Society: Series B}, 16(2), 175-185.
 #'   \doi{10.1111/j.2517-6161.1954.tb00159.x}
@@ -361,7 +360,7 @@ solve_curve <- function(curve, target, x = NULL, y = NULL, n = NULL, effect = NU
 #'
 #' @details
 #' Everything [solve_curve()] does applies here, including its refusals: a curve that never
-#' reaches the target within the sizes it swept is refused rather than extrapolated, and the
+#' reaches the target within the sizes it swept is refused outright, and the
 #' reported interval can extend past the largest size simulated, which means the sweep was too
 #' narrow to settle the question.
 #'
@@ -417,6 +416,10 @@ target_n <- function(curve, target = 0.8, ...) {
   keep
 }
 
+# One column as numbers, refusing a column that is not numeric. An NA passes this check and is
+# dropped later by the finiteness filter, which is what it deserves: the point simply has no rate.
+# What the refusal is for is a column of the wrong kind, a label or a factor, which no amount of
+# dropping would rescue. The Python twin reads a JSON null the same way, as a missing number.
 .solve_numeric <- function(v, nm, what) {
   if (!is.numeric(v))
     stop(sprintf("the %s column '%s' is not numeric.", what, nm), call. = FALSE)

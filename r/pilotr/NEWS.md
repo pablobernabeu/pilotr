@@ -2,7 +2,7 @@
 
 * `solve_curve()` and `target_n()` solve a simulated design curve for the value that
   meets a target. The package computed the whole curve and then handed back the last and
-  most load-bearing step, the number that goes into a preregistration, at replicate counts
+  most consequential step, the number that goes into a preregistration, at replicate counts
   where neighbouring points are not significantly different. The plots drew a dashed line
   at 0.80 and left the reader to judge the crossing by eye. `target_n()` now takes the
   data frame `power_curve_mixed()` already returns and reports the sample size at which
@@ -12,12 +12,12 @@
 
   The fit is a binomial probit regression of the decision rate against the swept value,
   weighted by the replicates behind each point and inverted by the delta method that
-  `MASS::dose.p()` applies to a fitted `glm`. The probit is not arbitrary: under the normal
-  approximation to a two-group comparison the probit of power is linear in the square root
-  of the sample size. Checked against `stats::power.t.test()` over 36 combinations of
-  effect size, target power and grid shape, at 400 replicates a point, the solved sample
-  size sat within 2.9% of the analytic answer on average and 6.9% at worst, against 3.4%
-  and 8.9% for a logit fitted the same way.
+  `MASS::dose.p()` applies to a fitted `glm`. The probit follows from the design itself:
+  under the normal approximation to a two-group comparison the probit of power is linear
+  in the square root of the sample size. Checked against `stats::power.t.test()` over 36
+  combinations of effect size, target power and grid shape, at 400 replicates a point, the
+  solved sample size sat within 2.9% of the analytic answer on average and 6.9% at worst,
+  against 3.4% and 8.9% for a logit fitted the same way.
   `tools/calibration/solve_curve_calibration.R` runs that comparison and writes every
   figure quoted for it to a file beside itself. Where the two-parameter model does not
   describe the curve, the interval is widened by the heterogeneity factor of probit
@@ -30,72 +30,69 @@
   app reports the solved size beside the curve it draws, and prints the refusal when the
   sweep does not settle the question.
 
-* **A Poisson mean beyond the sampler's reach was returned as the iteration cap.** The
+* A Poisson mean beyond the sampler's reach was returned as the iteration cap. The
   inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
-  mean passes about 746 — a poisson intercept of 7 already implies a mean of exp(7),
-  about 1097 — after which every simulated count came back as the cap of 1000000 while
-  reporting success. Both engines now refuse such a mean, naming `exp(eta)` and the
-  offending value, with message text character-for-character identical across the twins.
-  Feasible means are untouched and the parity dumps are unchanged.
-* **`generate_design_analysis(file = )` wrote the script through a text-mode
-  connection.** On Windows the file arrived with CRLF line endings, which turns the
-  SLURM part's first line into a `#!/bin/bash\r` shebang no cluster can execute, and on
-  every platform it carried a doubled trailing newline. The script now reaches the disk
-  byte for byte as returned, and the app's script and specification downloads write
-  through the same binary path.
-* **The emitted SLURM wrapper could only run for its author.** It hard-coded the
-  author's cluster account and project paths, so any other user's submission failed at
-  the scheduler while the surrounding instructions told them to save the parts under
-  their own names. The wrapper now carries two placeholders marked `EDIT` — the
-  `--account` directive and a writable `PROJECT_DIR` — and it invokes the
-  `design_analysis.R` saved next to it rather than a path on the author's cluster.
+  mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7), about
+  1097), after which every simulated count came back as the cap of 1000000 while reporting
+  success. Both engines now refuse such a mean, naming `exp(eta)` and the offending value,
+  with message text character-for-character identical across the twins. Feasible means are
+  untouched and the parity dumps are unchanged.
+* `generate_design_analysis(file = )` wrote the script through a text-mode connection. On
+  Windows the file arrived with CRLF line endings, which turns the SLURM part's first line
+  into a `#!/bin/bash\r` shebang no cluster can execute, and on every platform it carried
+  a doubled trailing newline. The script now reaches the disk byte for byte as returned,
+  and the app's script and specification downloads write through the same binary path.
+* The emitted SLURM wrapper could only run for its author. It hard-coded the author's
+  cluster account and project paths, so any other user's submission failed at the
+  scheduler while the surrounding instructions told them to save the parts under their own
+  names. The wrapper now carries two placeholders marked `EDIT`, the `--account` directive
+  and a writable `PROJECT_DIR`, and it invokes the `design_analysis.R` that sits beside it,
+  wherever the user saved the pair.
 * `precision_design()` documents all sixteen of its columns. The Monte Carlo standard
   errors and Wilson interval bounds were returned but missing from the reference page.
 * `spec_from_model()` gains test coverage: the recovered specification's units,
   `between`/`vary_within` placement, interaction keys read back off product columns,
   and random-effect estimates are checked against the design that generated the pilot
   data, alongside the refusal paths for models the function cannot read.
-* **A true effect of exactly zero returned `Inf`, and the package recommends that input.**
+* A true effect of exactly zero returned `Inf`, and the package recommends that input.
   `design_conditions()` deliberately produces a null condition so a run can show how often
   it declares something when there is nothing to find. Putting it through `power_design()`
   returned `type_m = Inf`, straight into the app's display, while Type S silently
   degenerated to "the estimate is positive" because `true_effect > 0` is `FALSE` at zero.
   The Python twin raised `ZeroDivisionError` on the same input. Type S and Type M are now
-  `NA` when the true effect is zero or unknown, in both engines — the guard `power_mixed()`
-  already carried, applied to the other three sites.
-* **`response_variance()` reported a total that was not the sum of its parts.** An
-  undefined fixed component was laundered into zero while the result kept calling itself
-  the sum. A single-row design now reports a fixed component of 0 and an honest total.
-* **The declared minimum R version is now stated.** `Depends: R (>= 4.0.0)` — 4.0.0 is the
-  release whose `round()` the cross-language claim assumes, so the floor is load-bearing
-  rather than conventional. A new CI job checks the declared Suggests floors, which the
-  matrix (release, devel, oldrel-1) sat well above and so never exercised.
-* **The Bayesian design-analysis record carries the rule that produced it** — the decision
-  thresholds, the convergence gate, a specification fingerprint and the package version —
-  and the aggregator refuses to pool replicates that disagree on any of them.
-* **The HPC precision-array job was broken and stale.** It hand-listed the engine files and
-  omitted `validate.R`, so it died on its first real line; it also used the indexed seed
+  `NA` when the true effect is zero or unknown, in both engines, which is the guard
+  `power_mixed()` already carried, applied to the other three sites.
+* `response_variance()` reported a total that was not the sum of its parts. An undefined
+  fixed component was laundered into zero while the result kept calling itself the sum. A
+  single-row design now reports a fixed component of 0 and an honest total.
+* The package now declares a minimum R version, `Depends: R (>= 4.0.0)`. The cross-language
+  claim assumes the `round()` that arrived in 4.0.0, which is where that floor comes from. A
+  new CI job checks the declared Suggests floors, which the matrix (release, devel, oldrel-1)
+  sat well above and so never exercised.
+* The Bayesian design-analysis record carries the rule that produced it, namely the
+  decision thresholds, the convergence gate, a specification fingerprint and the package
+  version, and the aggregator refuses to pool replicates that disagree on any of them.
+* The HPC precision-array job was broken and stale. It hand-listed the engine files and
+  omitted `validate.R`, so it died on its first real line, and it used the indexed seed
   rule abandoned at 0.3, which correlates consecutive replicates and understates the job's
   own Monte Carlo error. It now sources the package wholesale, as the parity harness does,
   and uses the package's own replicate seeds, `qnorm(0.975)` and error reporting.
-* Four small divergences between the two engines are closed: a non-whole seed truncates
-  identically, a whole `spec_version` reads the same however written, a non-object unit is
-  reported rather than crashing with a base error, and the message text of each is now
-  character-for-character identical across the twins.
-
-* **A test that the packaged example specifications match the repository's own.**
+* Three small divergences between the two engines are closed. A non-whole seed truncates
+  identically, a whole `spec_version` reads the same however it was written, and a
+  non-object unit is now reported as such, where R used to crash with a base error. The
+  message text of each is character-for-character identical across the twins.
+* The packaged example specifications are now tested against the repository's own copies.
   `spec/examples/*.json` is canonical and both packages carry a mirror so an installed
   copy can reach it, but nothing enforced the mirror. A load-and-simulate test cannot: a
   stale packaged copy still loads and simulates perfectly well, it simply describes a
   different design from the one the repository documents. The new `test-examples.R`
   compares the bytes, and is twinned with the Python suite's `test_examples.py`. It skips
   when the package is checked in isolation from the repository.
-
-* **A test that `print.pilotr_power()` keeps its whole output on one stream.** A header
-  written with `message()` or through cli would land on the message stream while the table
-  beneath it went to standard output, which knitr collects separately and renders as two
-  boxes for one printed object. The method already used `cat()` throughout;
-  `test-print.R` now holds it there.
+* A test now holds `print.pilotr_power()` to keeping its whole output on one stream. A
+  header written with `message()` or through cli would land on the message stream while the
+  table beneath it went to standard output, which knitr collects separately and renders as
+  two boxes for one printed object. The method already used `cat()` throughout, and
+  `test-print.R` keeps it there.
 * Every vignette now turns console colour off and fixes the console width while it
   renders. pkgdown passes the calling terminal's colour support into its build
   subprocess, so a coloured message or error would otherwise reach the reader as escape
@@ -152,16 +149,16 @@ All eight shipped examples are now bit-identical between the two languages as sh
 adversarial specifications added to exercise what the shipped examples do not. With `response.round`
 removed, six of the eight remain bit-identical, and the two whose family applies `exp()` to the
 linear predictor, `crossed_mixed_rt` and `reading_time_continuous`, differ by at most one unit in the
-last place, on 0.09% and 0.05% of cells. That residue is the libm limit described immediately below
-rather than a defect, and `tools/parity/tolerance.json` records which cases are allowed it and why.
+last place, on 0.09% and 0.05% of cells. That residue is the libm limit described immediately
+below, and `tools/parity/tolerance.json` records which cases carry an allowance for it, and why.
 
 * The scope of the guarantee is now stated honestly in `spec/SPEC.md`. It is exact for
   `gaussian`, for any design applying no transcendental function to the linear predictor, and for
   any family with `response.round` set. The families that apply `exp()` or `log()` may differ in the
   last unit in the last place, because IEEE-754 does not require correct rounding for those
   functions and the two builds need not share a maths library. Measured rates are given, and the
-  attribution is demonstrated rather than asserted. The same design switched to `gaussian`, with an
-  identical seed, structure and draw sequence, is bit-identical.
+  attribution is demonstrated: the same design switched to `gaussian`, with an identical seed,
+  structure and draw sequence, is bit-identical.
 
 ## Validation and versioning
 
@@ -169,15 +166,15 @@ rather than a defect, and `tools/parity/tolerance.json` records which cases are 
   the schema cannot express, and `load_spec()` now calls it by default. A strict draft-07 schema had
   shipped since 0.1 with no code path consulting it.
 * Validation exists because several ways of getting a specification wrong produced plausible data
-  rather than an error. A mistyped coefficient key resolved to no column and so silently set that
+  and no error at all. A mistyped coefficient key resolved to no column and so silently set that
   effect to zero, which generates exactly the data of a null design and reports success. A
   response parameter left over from another family was ignored. Both are now refused.
 * `spec_version` negotiates the format. A specification with no such field is a 0.2
   specification. One using a 0.3 feature must declare 0.3, because a 0.2 implementation reads it
   differently and generates different data without complaint. One declaring a version newer than
-  the implementation understands is refused rather than partly read.
+  the implementation understands is refused outright.
 * `simulate_design()` gains `validate`, defaulting to `TRUE`. The replicate loops validate once and
-  then skip it, so a sweep pays the cost once rather than once per replicate.
+  then skip it, so a sweep pays the cost once.
 
 ## Fixes
 
@@ -197,7 +194,7 @@ rather than a defect, and `tools/parity/tolerance.json` records which cases are 
   failed to round-trip. Since the JSON file is the portable artefact, the specification itself was a
   source of divergence. Numbers are now written at the shortest precision that round-trips exactly,
   so `0.3` still reads as `0.3`. The blanket `auto_unbox` is gone too, so a one-element
-  `vary_within` or a single ordinal threshold stays an array instead of collapsing to a scalar.
+  `vary_within` or a single ordinal threshold stays an array.
 * `generate_r_script()` embedded the specification through `deparse()`, which prints 15
   significant digits and so does not round-trip. It now emits numbers at full precision, which
   matters because the point of the script is bit-for-bit reproduction.
@@ -208,21 +205,20 @@ rather than a defect, and `tools/parity/tolerance.json` records which cases are 
 * `model_data()` did not create the product column an interaction random slope needs, so the
   emitted formula referred to a variable the modelling data lacked. It now covers the union of the
   fixed-coefficient and random-slope keys.
-* A focal effect that never appears in any fit now warns instead of returning decision
-  proportions of zero, which read as 'this design can decide nothing' when the cause was a name that
-  did not match the model.
+* A focal effect that never appears in any fit now warns. It used to return decision proportions
+  of zero, which read as 'this design can decide nothing' when the cause was a name that did not
+  match the model.
 * A replicate loop in which no fit succeeds now reports why, passing on the fitter's own
   message. An unidentifiable random-effects structure previously produced a silent result of `NA`.
-* A correlation naming a random-effect term that does not exist is an error rather than a subscript
-  failure.
+* A correlation naming a random-effect term that does not exist now raises a clear error, where it
+  used to fail at a subscript.
 
 ## New in the generative core
 
 * `varies_by = "observation"` draws a predictor once per row, for a quantity that varies trial by
   trial. `varies_by` is also validated now, because anything other than `"subject"` was previously
   read as item-level, so a predictor declared to vary by `"trial"` was silently given one value per
-  item.
-  Anyone who wrote that had wrong results.
+  item, and anyone who wrote that got wrong results.
 * `dist = "uniform"`, with `min` and `max`. A uniform costs the same single draw as a normal, so
   it does not move the stream.
 * `reliability` on a predictor simulates imperfect measurement. The latent value drives the
@@ -236,15 +232,15 @@ rather than a defect, and `tools/parity/tolerance.json` records which cases are 
   leaves a symmetric residual on the analysis scale.
 * `response_variance()` decomposes the linear predictor's variance into the fixed part, each
   grouping factor's part, and the residual. Each grouping factor's component is exact for the
-  realised design, averaging over the random-effect distribution analytically rather than drawing
-  from it, because estimating it from the drawn effects of 30 subjects carries a sampling error of
-  around a quarter of the component.
+  realised design, averaging over the random-effect distribution analytically, because estimating
+  it from the drawn effects of 30 subjects carries a sampling error of around a quarter of the
+  component.
 
   A residual is reported for all eight families, not only the four carrying an explicit `sigma`,
   so the components are a complete decomposition everywhere and their ratios read as the design's
   intraclass correlations. For the link families it is the latent-scale distribution-specific
-  variance (Nakagawa, Johnson and Schielzeth, 2017). Three of those four are exact for the process
-  pilotr actually simulates rather than borrowed conventions: a `bernoulli` row is drawn as
+  variance (Nakagawa, Johnson and Schielzeth, 2017). Three of those four are derived from the
+  process pilotr simulates and are exact for it: a `bernoulli` row is drawn as
   `1[u < invlogit(eta)]`, so its latent error is a standard logistic variate of variance `pi^2 / 3`,
   `ordinal` compares the same uniform against cumulative thresholds and inherits it, and for `beta`
   the identity `Var(logit(Y)) = trigamma(a) + trigamma(b)` is exact. `poisson` is the one
@@ -254,20 +250,19 @@ rather than a defect, and `tools/parity/tolerance.json` records which cases are 
 * `calibrate_response()` rescales a design to a target total variance, which is what lets a
   region of practical equivalence be stated in standard-deviation units and read the same way across
   designs. It now accounts for a residual it cannot move. A `bernoulli` or `ordinal` design carries
-  a latent residual of about 3.29, so calibrating one to a total variance of 1 is impossible and is
-  refused with that number rather than silently missing the target. For `poisson` and `beta` the
-  residual moves with the linear predictor, so the factor is solved numerically at the cost of one
-  extra simulation rather than one per candidate.
+  a latent residual of about 3.29, so calibrating one to a total variance of 1 is impossible, and
+  is refused with that number in the message. For `poisson` and `beta` the residual moves with the
+  linear predictor, so the factor is solved numerically, and the whole search costs one extra
+  simulation.
 
 ## New in the design-analysis layer
 
-* `generate_design_analysis()` emits a runnable Bayesian design analysis rather than running
-  one: a `brm()` call with `sample_prior = "yes"`, a Savage-Dickey Bayes factor, a highest-density
+* `generate_design_analysis()` emits a Bayesian design analysis as a runnable script: a
+  `brm()` call with `sample_prior = "yes"`, a Savage-Dickey Bayes factor, a highest-density
   interval against a region of practical equivalence, a three-way supported/null/inconclusive
   verdict, and a convergence gate that withholds every verdict when R-hat or the divergence rate
-  fails it. Optionally it also emits a SLURM array wrapper and an aggregator. Emitting a script
-  rather than fitting a model is what keeps this reachable from the browser build, where Stan cannot
-  run at all.
+  fails it. Optionally it also emits a SLURM array wrapper and an aggregator. Emitting a script is
+  what keeps this reachable from the browser build, where Stan cannot run at all.
 * `power_mixed()` is no longer restricted to one within-unit factor and a crossed design, and no
   longer fits a formula written into the source. It takes `focal` and `formula`, derives the model
   from the specification through `model_formula()` and `model_data()`, and runs the same replicate

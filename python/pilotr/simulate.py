@@ -62,10 +62,10 @@ def load_spec(path, validate=True):
     """Load a JSON design specification from a file.
 
     The specification is validated by default, because several ways of getting one wrong produce
-    plausible data rather than an error: a mistyped coefficient key resolves to no column and so
+    plausible data and no error at all: a mistyped coefficient key resolves to no column and so
     silently sets that effect to zero, and a response parameter left over from another family is
     ignored. Validation also refuses a specification declaring a ``spec_version`` newer than this
-    implementation understands, rather than reading it partially.
+    implementation understands, and never reads such a file in part.
 
     Parameters
     ----------
@@ -92,7 +92,8 @@ def _ranef(unit_spec, label=None):
     """Return (columns, lower-Cholesky L) for a unit's random-effect covariance.
 
     `label` names the grouping factor, so that a covariance which is not positive definite can
-    be reported against the entry the user wrote rather than as an anonymous matrix failure.
+    be reported against the entry the user wrote, where it used to appear as an anonymous
+    matrix failure.
     """
     cols = ["intercept"] + list(unit_spec.get("slopes", {}).keys())
     sds = [unit_spec["intercept_sd"]] + [unit_spec.get("slopes", {})[c] for c in cols[1:]]
@@ -123,15 +124,16 @@ def _attenuate(latent, pmean, psd, rho, z):
 
     The observed variable then has the same variance as the latent one and correlates sqrt(rho)
     with it. Reliability in the classical sense is that squared correlation, which is why the
-    field is rho rather than the correlation itself.
+    field is rho, and the correlation itself is its square root.
 
-    The attenuation is sqrt(rho), not the rho of the textbook regression-dilution result, because
-    both variables are put on the same variance here; standardising the observed variable back to
-    the latent one's variance absorbs the 1 / sqrt(rho) factor that result carries.
+    The attenuation is sqrt(rho), where the textbook regression-dilution result gives rho,
+    because both variables are put on the same variance here. Standardising the observed
+    variable back to the latent one's variance absorbs the 1 / sqrt(rho) factor that result
+    carries.
 
-    Population moments, not the sample mean and standard deviation of the values actually drawn.
-    R's mean() and sd() accumulate in long double and Python's do not, so standardising against
-    the sample would reintroduce exactly the cross-language divergence this release removes.
+    The moments used are the population ones. R's mean() and sd() accumulate in long double and
+    Python's do not, so standardising against the sample mean and standard deviation of the
+    values drawn would reintroduce exactly the cross-language divergence this release removes.
     """
     return pmean + (latent - pmean + psd * math.sqrt((1.0 - rho) / rho) * z) * math.sqrt(rho)
 
@@ -233,7 +235,7 @@ def simulate(spec, validate=True) -> Dataset:
     # ---- continuous predictors ----
     # One draw per unit for a subject- or item-level predictor, and one per row for an
     # observation-level one. The rows are already enumerated by this point, so the third case is
-    # another branch of the same dispatch rather than a restructuring. Before 0.3 `varies_by` was
+    # one more branch of the same dispatch, and no restructuring. Before 0.3 `varies_by` was
     # read as "subject or else item", so a predictor declared to vary by "trial" was silently
     # given one value per item; it is now validated against the three names that exist.
     #
@@ -244,8 +246,8 @@ def simulate(spec, validate=True) -> Dataset:
     # `reliability` draws one further normal per value, and only when it is present and below
     # one, so a specification that does not use it keeps the original stream. The latent value
     # drives the linear predictor and any random slope keyed on the predictor, while the
-    # contaminated observed value is what goes into the returned data, which is what an analyst
-    # would actually have measured.
+    # returned data carries the contaminated observed value, which is what an analyst would
+    # have measured.
     n_rows = len(rows)
     pred_latent, pred_observed, pred_unit = {}, {}, {}
     for p in predictors:

@@ -8,55 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **A Poisson mean beyond the sampler's reach was returned as the iteration cap.** The
+- A Poisson mean beyond the sampler's reach was returned as the iteration cap. The
   inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
   mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7),
   about 1097), after which every simulated count came back as 1000000 while reporting
   success. Both engines now refuse such a mean, naming `exp(eta)` and the offending
-  value, with message text character-for-character identical across the twins; a linear
-  predictor large enough to overflow `math.exp` itself folds into the same refusal
-  instead of surfacing as `OverflowError`. Feasible means are untouched and the parity
-  dumps are unchanged.
-- **A true effect of exactly zero broke both engines, and the package recommends that
-  input.** `design_conditions()` deliberately produces a null condition so a run can show
-  how often it declares something when there is nothing to find; feeding it through
+  value, with message text character-for-character identical across the twins. A linear
+  predictor large enough to overflow `math.exp` itself folds into the same refusal, so it
+  never reaches the caller as an `OverflowError`. Feasible means are untouched and the
+  parity dumps are unchanged.
+- A true effect of exactly zero broke both engines, and the package recommends that
+  input. `design_conditions()` deliberately produces a null condition so a run can show
+  how often it declares something when there is nothing to find. Feeding it through
   `power()` raised `ZeroDivisionError` in Python and returned `Inf` in R, with Type S
   quietly degenerating to "the estimate is positive". Type S and Type M are now
-  undefined when the true effect is zero or unknown, in both engines — the guard the
-  mixed-effects path already carried, applied to the other three sites.
-- **Four small twin divergences closed**: a non-whole seed now truncates identically in
+  undefined when the true effect is zero or unknown, in both engines, which is the guard
+  the mixed-effects path already carried, applied to the other three sites.
+- Four small twin divergences are closed. A non-whole seed now truncates identically in
   both engines, a whole `spec_version` is read the same however it was written, a
-  non-object unit is reported rather than crashing R with a base error, and
-  `replicate_seeds()` is annotated as returning integers. Message text is now
+  non-object unit is now reported as such, where R used to crash with a base error, and
+  `replicate_seeds()` is annotated as returning integers. Message text is
   character-for-character identical across the two engines in each case.
 
 ### Changed
-- **The Bayesian design-analysis record carries the rule that produced it** — the decision
-  thresholds, the convergence gate, a fingerprint of the specification and the pilotr
-  version — and the aggregator refuses to pool replicates that disagree on any of them.
-  Two array runs with different ROPEs previously aggregated into one table with nothing
-  to tell them apart.
-- **The parity harness anchors only the IEEE-754-exact cases.** The golden anchor's
+- The Bayesian design-analysis record carries the rule that produced it, namely the
+  decision thresholds, the convergence gate, a fingerprint of the specification and the
+  pilotr version, and the aggregator refuses to pool replicates that disagree on any of
+  them. Two array runs with different ROPEs previously aggregated into one table with
+  nothing to tell them apart.
+- The parity harness anchors only the IEEE-754-exact cases. The golden anchor's
   criterion was "zero ulp allowance", which admitted cases whose bytes pass through
   `exp()`, `log()` or `pow()` whenever the platforms measured so far happened to agree
   on them. `tolerance.json` now classifies those cases as transcendental explicitly:
   they stay gated by the cross-language comparison, at zero ulp unless an allowance is
   recorded, and `golden.json` pins only the Gaussian cases. The validator cross-check
   (`tools/parity/validate_cross.py`) also runs in CI now, and its default `Rscript` is
-  the one on `PATH` rather than a path on the author's machine.
-- **The parity contract now has a third gate, at a relative tolerance rather than in ulps.**
-  `solve_curve` is an iterative fit, not a single arithmetic result, and it calls `exp` and
-  the normal distribution function at every step, so a golden hash would pin one platform's
-  maths library exactly as `tolerance.json` says such cases must not be. It is kept out of
-  `golden.json` and out of the dump harness, and gated by `tools/parity/solve_cross.py`
-  instead, which puts fixed curves through both engines and compares the solved value, its
+  whichever one is on `PATH`, where it used to be a path on the author's machine.
+- The parity contract now has a third gate, at a relative tolerance where the other two
+  work in ulps. `solve_curve` is an iterative fit, and it calls `exp` and the normal
+  distribution function at every step, so a golden hash would pin one platform's maths
+  library exactly as `tolerance.json` says such cases must not be. It is kept out of
+  `golden.json` and out of the dump harness, and gated by `tools/parity/solve_cross.py`,
+  which puts fixed curves through both engines and compares the solved value, its
   interval and the text of every refusal. The allowance is 1e-9 relative, against a largest
   measured disagreement of 5.0e-15.
 
 ### Added
-- **`solve_curve` and `target_n`, which solve a simulated design curve for the value that
-  meets a target.** The package computed the whole curve and then handed back the last and
-  most load-bearing step, the number that goes into a preregistration, at replicate counts
+- `solve_curve` and `target_n` solve a simulated design curve for the value that meets a
+  target. The package computed the whole curve and then handed back the last and most
+  consequential step, the number that goes into a preregistration, at replicate counts
   where neighbouring points are not significantly different. The documentation drew a dashed
   line at 0.80 and left the reader to judge the crossing by eye. `target_n` now takes the
   records `power_curve` already returns and reports the sample size at which power reaches
@@ -65,12 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The fit is a binomial probit regression of the decision rate against the swept value,
   weighted by the replicates behind each point and inverted by the delta method that R's
-  `MASS::dose.p` applies to a fitted `glm`. The probit is not arbitrary: under the normal
-  approximation to a two-group comparison the probit of power is linear in the square root
-  of the sample size. Checked against R's `stats::power.t.test` over 36 combinations of
-  effect size, target power and grid shape, at 400 replicates a point, the solved sample
-  size sat within 2.9% of the analytic answer on average and 6.9% at worst, against 3.4%
-  and 8.9% for a logit fitted the same way.
+  `MASS::dose.p` applies to a fitted `glm`. The probit follows from the design itself:
+  under the normal approximation to a two-group comparison the probit of power is linear
+  in the square root of the sample size. Checked against R's `stats::power.t.test` over 36
+  combinations of effect size, target power and grid shape, at 400 replicates a point, the
+  solved sample size sat within 2.9% of the analytic answer on average and 6.9% at worst,
+  against 3.4% and 8.9% for a logit fitted the same way.
   `tools/calibration/solve_curve_calibration.R` runs that comparison and writes every
   figure quoted for it to a file beside itself. Where the two-parameter model does not
   describe the curve, the interval is widened by the heterogeneity factor of probit
@@ -82,26 +82,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refusal message is character-for-character identical with the R twin's, checked by
   `tools/parity/solve_cross.py`.
 
-- **`power_curve` reports the replicate counts behind each point.** Its records gain
+- `power_curve` reports the replicate counts behind each point. Its records gain
   `n_sims` and `n_significant` alongside `n_subject`, `power` and `type_m`. A power estimate
   over 1000 replicates should weigh more in a solve than one over 50, and the count is what
   says which it is. Without it a curve could not be handed to `solve_curve` at all.
 
-- **A test that the packaged example specifications match the repository's own.**
+- The packaged example specifications are now tested against the repository's own copies.
   `spec/examples/*.json` is canonical and both packages carry a mirror so an
   installed copy can reach it, but nothing enforced the mirror. The existing test
   could not: a stale packaged copy still loads and simulates perfectly well, it
   simply describes a different design from the one the repository documents. The
   new test compares the bytes, and is twinned with `test-examples.R`.
-- **CI tests what users install, not only the checkout.** The matrix gains Python
-  3.14. A new job installs the built wheel into a bare environment outside the
+- CI now tests the built distribution as well as the checkout. The matrix gains
+  Python 3.14. A new job installs the built wheel into a bare environment outside the
   repository and calls `pilotr_example()` there, then resolves and parses one
   specification: that is the only check that can catch the example mirror going
   missing from the distribution, since an editable install finds the repository
   copy regardless. A second new job installs the declared minimum dependency
   versions of the extras. A weekly schedule runs the suite when nobody has
-  pushed; the workflow's paths filters mean a quiet month otherwise sees no run
-  at all.
+  pushed, since the workflow's paths filters mean a quiet month otherwise sees no
+  run at all.
 
 <!-- The date is when the 0.3.0 work landed on main, not a release date: 0.3.0 has
      not been tagged yet. Set it to the tag date when the release is cut, along with
@@ -118,7 +118,7 @@ install 0.2.1 to reproduce output from 0.2.1.
   against the cross-field rules the schema cannot express, and `load_spec()` and
   `simulate()` now call it by default. A strict draft-07 schema had shipped since
   0.1 with no code path consulting it, and several ways of getting a
-  specification wrong produced plausible data rather than an error. A mistyped
+  specification wrong produced plausible data and no error at all. A mistyped
   coefficient key resolved to no column and so silently set that effect to zero,
   which generates exactly the data of a null design and reports success. A
   response parameter left over from another family was ignored. Both are now
@@ -128,7 +128,7 @@ install 0.2.1 to reproduce output from 0.2.1.
   with no such field is a 0.2 specification. One that uses a 0.3 feature has to
   declare 0.3, because a 0.2 implementation reads it differently and generates
   different data without complaint, and one declaring a version newer than this
-  implementation understands is refused rather than partly read.
+  implementation understands is refused outright.
 - `replicate_seeds()` is exported, so a hand-written loop or a cluster array task
   can seed its replicates by the same rule the power functions use.
 - The `exgaussian` response family, the registered model family for
@@ -189,7 +189,7 @@ install 0.2.1 to reproduce output from 0.2.1.
   silence, which produced random effects whose standard deviations were several
   times those requested.
 - A correlation naming a random-effect term that does not exist is reported
-  against the entry the user wrote, rather than failing as a lookup error deep
+  against the entry the user wrote, where it used to fail as a lookup error deep
   inside the covariance code.
 - `varies_by` is validated against the three unit names that exist. Anything
   other than `"subject"` was previously read as item-level, so a predictor
@@ -199,10 +199,10 @@ install 0.2.1 to reproduce output from 0.2.1.
 
 ### Changed
 
-- The guides load a bundled design specification through `pilotr_example()`
-  rather than by a path relative to the repository. The path resolved only
-  inside a checkout, so a reader who had installed pilotr and copied the line
-  met a missing-file error.
+- The guides load a bundled design specification through `pilotr_example()`. The
+  path relative to the repository that they used before resolved only inside a
+  checkout, so a reader who had installed pilotr and copied the line met a
+  missing-file error.
 
 ## [0.2.0] - 2026-07-15
 
@@ -225,8 +225,8 @@ and seed.
 - `simulate` generates a dataset from a design specification supplied as a plain
   dictionary or a JSON file, with `load_spec` reading a specification authored
   elsewhere, such as one downloaded from the no-code app. A `per_subject` value
-  below 1 or above the number of items is rejected with a clear `ValueError`; the
-  R package raises on the same inputs.
+  below 1 or above the number of items is rejected with a clear `ValueError`, and
+  the R package raises on the same inputs.
 - Response families for Gaussian outcomes, reaction times, accuracy, counts,
   ordinal responses and Beta-distributed proportions.
 - Power and design analysis through `power`, `power_curve` and `power_mixed`,

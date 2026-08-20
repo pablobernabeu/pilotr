@@ -166,7 +166,7 @@ def dot(a, b, m: int) -> float:
     accurate than a naive fold, but they are more accurate in different ways, so an inner
     product of length three or more can land on different doubles in the two ports. Spelling
     the loop out keeps the arithmetic identical, which is what the cross-language guarantee
-    actually needs.
+    needs.
     """
     s = 0.0
     for k in range(m):
@@ -202,11 +202,11 @@ def cholesky(cov: list[list[float]], label=None, cols=None) -> list[list[float]]
     Cholesky routine rejects has to be an error, because the alternative is plausible-looking
     data from a process the user never described.
 
-    A pivot of exactly zero is left alone. That is a genuinely useful case, not a failure: it is
+    A pivot of exactly zero is left alone. It is a useful case, and no kind of failure: it is
     what a slope with a standard deviation of zero produces, which is how a term is held fixed
     while the rest of the structure is kept intact. The tolerance absorbs the rounding of an
-    exactly-singular matrix, so a term that is only numerically rather than truly negative is
-    clamped as before rather than rejected.
+    exactly-singular matrix, so a term that is negative only numerically, with no true
+    negativity behind it, is still clamped as before.
     """
     n = len(cov)
     L = [[0.0] * n for _ in range(n)]
@@ -231,7 +231,23 @@ def matvec(L: list[list[float]], z: list[float]) -> list[float]:
 # --- Response transforms (inverse-CDF / link functions) ---------------------------
 
 def inv_logit(x: float) -> float:
-    """Logistic (inverse-logit) link `1 / (1 + exp(-x))`, evaluated stably for large `|x|`."""
+    """Logistic (inverse-logit) link, `1 / (1 + exp(-x))`.
+
+    The two branches keep the exponent negative on either side of zero, so a large `|x|`
+    underflows towards 0 or 1 where a single expression would overflow `math.exp`. The R twin,
+    `.inv_logit`, branches at the same value, so both languages evaluate the same expression
+    for a given `x`.
+
+    Parameters
+    ----------
+    x : float
+        A value on the logit scale.
+
+    Returns
+    -------
+    float
+        The corresponding probability, in (0, 1).
+    """
     if x >= 0:
         return 1.0 / (1.0 + math.exp(-x))
     e = math.exp(x)

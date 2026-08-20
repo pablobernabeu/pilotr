@@ -103,7 +103,7 @@ as241 <- function(p) {
 # applied Neumaier compensation to float sequences since version 3.12. Both are more accurate
 # than a naive fold, but they are more accurate in different ways, so an inner product of
 # length three or more can land on different doubles in the two ports. Spelling the loop out
-# keeps the arithmetic identical, which is what the cross-language guarantee actually needs.
+# keeps the arithmetic identical, which is what the cross-language guarantee needs.
 .dot <- function(a, b, m) {
   s <- 0
   if (m > 0) for (k in seq_len(m)) s <- s + a[k] * b[k]
@@ -120,11 +120,11 @@ as241 <- function(p) {
 # R's chol() rejects has to be an error, because the alternative is plausible-looking data from
 # a process the user never described.
 #
-# A pivot of exactly zero is left alone. That is a genuinely useful case, not a failure: it is
+# A pivot of exactly zero is left alone. It is a useful case, and no kind of failure: it is
 # what a slope with a standard deviation of zero produces, which is how a term is held fixed
 # while the rest of the structure is kept intact. The tolerance below absorbs the rounding of
-# an exactly-singular matrix, so a term that is only numerically rather than truly negative is
-# clamped as before rather than rejected.
+# an exactly-singular matrix, so a term that is negative only numerically, with no true
+# negativity behind it, is still clamped as before.
 .cholesky <- function(cov, label = NULL, cols = NULL) {
   n <- nrow(cov); L <- matrix(0, n, n)
   tol <- .Machine$double.eps * n * max(c(diag(cov), 1))

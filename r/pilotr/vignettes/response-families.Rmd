@@ -174,16 +174,16 @@ written on.
 These match the families that researchers fit in `lme4`, `glmmTMB` and `brms`, so a design
 simulated here corresponds to the model that will later be fit. The point-and-click application
 exposes six of the eight families. The full engine, including the plain lognormal, the
-ex-Gaussian, continuous predictors, interactions, nesting and partial crossing, is available by
-writing the specification directly, as shown next.
+ex-Gaussian, continuous predictors, interactions, nesting and partial crossing, is reached by
+writing the specification directly, as the last section of this vignette shows.
 
 The `exgaussian` family, new in 0.3, takes `sigma` and `beta` and draws a normal plus an
 exponential, mean-centred by subtracting the exponential's own mean so that $\eta$ remains the
 mean of the response. That is brms's `exgaussian(mu, sigma, beta)` parameterisation, so a
 specification and the model fitted to it agree on what the intercept means. A shifted lognormal
-is not a substitute, because `model_data()` logs the response back and leaves a symmetric
-residual on the analysis scale. `build_spec()` does not cover it, so an ex-Gaussian design is
-written directly, in the way the next section shows.
+will not stand in for it, because `model_data()` logs the response back and leaves a symmetric
+residual on the analysis scale. `build_spec()` does not cover the family either, so an
+ex-Gaussian design has to be written out by hand.
 
 ## Writing the specification directly
 

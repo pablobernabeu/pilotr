@@ -71,13 +71,13 @@ model_formula <- function(spec) {
   # unconditionally asked lmer to estimate a correlation that the specification had fixed at
   # zero, which spends degrees of freedom on a parameter known to be absent and makes a
   # boundary-singular fit the likely outcome. Since model_data() supplies numeric contrast
-  # columns rather than factors, `||` genuinely decorrelates here, without the partial-effect
+  # columns, with no factors among them, `||` does decorrelate here, without the partial-effect
   # caveat that applies to `||` on a factor.
   re <- vapply(names(spec$random), function(g)
     sprintf("(%s %s %s)", paste(c("1", vapply(names(spec$random[[g]]$slopes), .us, character(1))),
                                 collapse = " + "), .re_bar(spec$random[[g]]), g),
     character(1))
-  # Anchor the formula in the global environment rather than this function's evaluation
+  # Anchor the formula in the global environment, away from this function's evaluation
   # frame. print.formula omits its `<environment: ...>` line only for the global
   # environment, so any other choice trails a raw memory address that changes on every
   # run, which is noise in the printed result and makes the documented output impossible
