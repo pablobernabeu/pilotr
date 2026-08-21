@@ -9,10 +9,9 @@ authors:
     orcid: "https://orcid.org/0000-0003-1083-2460"
     email: pcbernabeu@gmail.com
 version: "0.3.0"
-# This is still 0.2.1's release date, because 0.3.0 has not been tagged yet. Set it to
-# the date 0.3.0 is tagged when the release is cut, along with the version above, which
-# nothing generates either.
-date-released: "2026-07-23"
+# Neither field is generated from anything, so both are set by hand at release. Keep
+# date-released equal to the date the 0.3.0 tag is cut.
+date-released: "2026-08-21"
 doi: "10.5281/zenodo.21266313"
 license: MIT
 repository-code: "https://github.com/pablobernabeu/pilotr"

@@ -6,7 +6,7 @@ before, and the version submitted is 0.3.0.
 ## R CMD check results
 
 Local `R CMD check --as-cran` on a tarball built from the submitted sources
-(Windows 11 x64, R 4.6.1, pandoc 3.8.3, 2026-08-02):
+(Windows 11 x64, R 4.6.1, pandoc 3.8.3, 2026-08-21):
 
 0 errors | 0 warnings | 1 note
 
@@ -25,10 +25,10 @@ all passed.
 Version 0.3.0 was checked in the two environments below.
 
 * Locally on Windows 11 x64 under R 4.6.1, with `R CMD check --as-cran` on the
-  built tarball (2026-08-02).
+  built tarball (2026-08-21).
 * On GitHub Actions, covering macOS-latest (release), windows-latest (release and
   devel) and ubuntu-latest (release, devel and oldrel-1), each running
-  `R CMD check --no-manual --as-cran`.
+  `R CMD check --no-manual --as-cran` (2026-08-20).
 
 All six GitHub Actions runs finished with status OK, meaning no errors, no
 warnings and no notes. Those runs disable the CRAN incoming feasibility check,

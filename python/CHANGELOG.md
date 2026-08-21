@@ -5,55 +5,45 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-08-21
 
-### Fixed
-- A Poisson mean beyond the sampler's reach was returned as the iteration cap. The
-  inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
-  mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7),
-  about 1097), after which every simulated count came back as 1000000 while reporting
-  success. Both engines now refuse such a mean, naming `exp(eta)` and the offending
-  value, with message text character-for-character identical across the twins. A linear
-  predictor large enough to overflow `math.exp` itself folds into the same refusal, so it
-  never reaches the caller as an `OverflowError`. Feasible means are untouched and the
-  parity dumps are unchanged.
-- A true effect of exactly zero broke both engines, and the package recommends that
-  input. `design_conditions()` deliberately produces a null condition so a run can show
-  how often it declares something when there is nothing to find. Feeding it through
-  `power()` raised `ZeroDivisionError` in Python and returned `Inf` in R, with Type S
-  quietly degenerating to "the estimate is positive". Type S and Type M are now
-  undefined when the true effect is zero or unknown, in both engines, which is the guard
-  the mixed-effects path already carried, applied to the other three sites.
-- Four small twin divergences are closed. A non-whole seed now truncates identically in
-  both engines, a whole `spec_version` is read the same however it was written, a
-  non-object unit is now reported as such, where R used to crash with a base error, and
-  `replicate_seeds()` is annotated as returning integers. Message text is
-  character-for-character identical across the two engines in each case.
-
-### Changed
-- The Bayesian design-analysis record carries the rule that produced it, namely the
-  decision thresholds, the convergence gate, a fingerprint of the specification and the
-  pilotr version, and the aggregator refuses to pool replicates that disagree on any of
-  them. Two array runs with different ROPEs previously aggregated into one table with
-  nothing to tell them apart.
-- The parity harness anchors only the IEEE-754-exact cases. The golden anchor's
-  criterion was "zero ulp allowance", which admitted cases whose bytes pass through
-  `exp()`, `log()` or `pow()` whenever the platforms measured so far happened to agree
-  on them. `tolerance.json` now classifies those cases as transcendental explicitly:
-  they stay gated by the cross-language comparison, at zero ulp unless an allowance is
-  recorded, and `golden.json` pins only the Gaussian cases. The validator cross-check
-  (`tools/parity/validate_cross.py`) also runs in CI now, and its default `Rscript` is
-  whichever one is on `PATH`, where it used to be a path on the author's machine.
-- The parity contract now has a third gate, at a relative tolerance where the other two
-  work in ulps. `solve_curve` is an iterative fit, and it calls `exp` and the normal
-  distribution function at every step, so a golden hash would pin one platform's maths
-  library exactly as `tolerance.json` says such cases must not be. It is kept out of
-  `golden.json` and out of the dump harness, and gated by `tools/parity/solve_cross.py`,
-  which puts fixed curves through both engines and compares the solved value, its
-  interval and the text of every refusal. The allowance is 1e-9 relative, against a largest
-  measured disagreement of 5.0e-15.
+Two of the changes below alter numbers that earlier versions produced. Both are
+deliberate corrections, and neither can be made without moving the output, so
+install 0.2.1 to reproduce output from 0.2.1.
 
 ### Added
+
+- `validate_spec()` checks a design specification against the portable schema and
+  against the cross-field rules the schema cannot express, and `load_spec()` and
+  `simulate()` now call it by default. A strict draft-07 schema had shipped since
+  0.1 with no code path consulting it, and several ways of getting a
+  specification wrong produced plausible data and no error at all. A mistyped
+  coefficient key resolved to no column and so silently set that effect to zero,
+  which generates exactly the data of a null design and reports success. A
+  response parameter left over from another family was ignored. Both are now
+  refused. Both functions take a `validate` argument, so a replicate loop can
+  validate once and then skip the check.
+- `SPEC_VERSION`, and the `spec_version` field it negotiates. A specification
+  with no such field is a 0.2 specification. One that uses a 0.3 feature has to
+  declare 0.3, because a 0.2 implementation reads it differently and generates
+  different data without complaint, and one declaring a version newer than this
+  implementation understands is refused outright.
+- `replicate_seeds()` is exported, so a hand-written loop or a cluster array task
+  can seed its replicates by the same rule the power functions use.
+- The `exgaussian` response family, the registered model family for
+  reaction-time work, taking `sigma` and `beta`. It is written in brms's
+  parameterisation, in which `mu` is the mean, so a specification and the model
+  fitted to it agree on what the intercept means.
+- A predictor can now vary by `"observation"`, drawing a fresh value for every
+  row, for a quantity that varies trial by trial.
+- A predictor can be drawn from a uniform distribution through `dist` with `min`
+  and `max`. A uniform costs the same single draw as a normal, so switching
+  between them does not move the random stream.
+- A predictor can carry a `reliability`, which simulates imperfect measurement.
+  The latent value drives the linear predictor and any random slope keyed on the
+  predictor, while the contaminated observed value is what appears in the
+  returned data, which is what an analyst would actually have measured.
+
 - `solve_curve` and `target_n` solve a simulated design curve for the value that meets a
   target. The package computed the whole curve and then handed back the last and most
   consequential step, the number that goes into a preregistration, at replicate counts
@@ -103,48 +93,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pushed, since the workflow's paths filters mean a quiet month otherwise sees no
   run at all.
 
-<!-- The date is when the 0.3.0 work landed on main, not a release date: 0.3.0 has
-     not been tagged yet. Set it to the tag date when the release is cut, along with
-     date-released in CITATION.cff. -->
-## [0.3.0] - 2026-08-01
-
-Two of the changes below alter numbers that earlier versions produced. Both are
-deliberate corrections, and neither can be made without moving the output, so
-install 0.2.1 to reproduce output from 0.2.1.
-
-### Added
-
-- `validate_spec()` checks a design specification against the portable schema and
-  against the cross-field rules the schema cannot express, and `load_spec()` and
-  `simulate()` now call it by default. A strict draft-07 schema had shipped since
-  0.1 with no code path consulting it, and several ways of getting a
-  specification wrong produced plausible data and no error at all. A mistyped
-  coefficient key resolved to no column and so silently set that effect to zero,
-  which generates exactly the data of a null design and reports success. A
-  response parameter left over from another family was ignored. Both are now
-  refused. Both functions take a `validate` argument, so a replicate loop can
-  validate once and then skip the check.
-- `SPEC_VERSION`, and the `spec_version` field it negotiates. A specification
-  with no such field is a 0.2 specification. One that uses a 0.3 feature has to
-  declare 0.3, because a 0.2 implementation reads it differently and generates
-  different data without complaint, and one declaring a version newer than this
-  implementation understands is refused outright.
-- `replicate_seeds()` is exported, so a hand-written loop or a cluster array task
-  can seed its replicates by the same rule the power functions use.
-- The `exgaussian` response family, the registered model family for
-  reaction-time work, taking `sigma` and `beta`. It is written in brms's
-  parameterisation, in which `mu` is the mean, so a specification and the model
-  fitted to it agree on what the intercept means.
-- A predictor can now vary by `"observation"`, drawing a fresh value for every
-  row, for a quantity that varies trial by trial.
-- A predictor can be drawn from a uniform distribution through `dist` with `min`
-  and `max`. A uniform costs the same single draw as a normal, so switching
-  between them does not move the random stream.
-- A predictor can carry a `reliability`, which simulates imperfect measurement.
-  The latent value drives the linear predictor and any random slope keyed on the
-  predictor, while the contaminated observed value is what appears in the
-  returned data, which is what an analyst would actually have measured.
-
 ### Changed
 
 - The power functions no longer seed replicate `i` with `seed + (i - 1)`.
@@ -181,6 +129,28 @@ install 0.2.1 to reproduce output from 0.2.1.
   difference propagated through the Cholesky factor into every random effect
   drawn.
 
+- The Bayesian design-analysis record carries the rule that produced it, namely the
+  decision thresholds, the convergence gate, a fingerprint of the specification and the
+  pilotr version, and the aggregator refuses to pool replicates that disagree on any of
+  them. Two array runs with different ROPEs previously aggregated into one table with
+  nothing to tell them apart.
+- The parity harness anchors only the IEEE-754-exact cases. The golden anchor's
+  criterion was "zero ulp allowance", which admitted cases whose bytes pass through
+  `exp()`, `log()` or `pow()` whenever the platforms measured so far happened to agree
+  on them. `tolerance.json` now classifies those cases as transcendental explicitly:
+  they stay gated by the cross-language comparison, at zero ulp unless an allowance is
+  recorded, and `golden.json` pins only the Gaussian cases. The validator cross-check
+  (`tools/parity/validate_cross.py`) also runs in CI now, and its default `Rscript` is
+  whichever one is on `PATH`, where it used to be a path on the author's machine.
+- The parity contract now has a third gate, at a relative tolerance where the other two
+  work in ulps. `solve_curve` is an iterative fit, and it calls `exp` and the normal
+  distribution function at every step, so a golden hash would pin one platform's maths
+  library exactly as `tolerance.json` says such cases must not be. It is kept out of
+  `golden.json` and out of the dump harness, and gated by `tools/parity/solve_cross.py`,
+  which puts fixed curves through both engines and compares the solved value, its
+  interval and the text of every refusal. The allowance is 1e-9 relative, against a largest
+  measured disagreement of 5.0e-15.
+
 ### Fixed
 
 - A random-effect covariance that is not positive definite is now an error naming
@@ -194,6 +164,28 @@ install 0.2.1 to reproduce output from 0.2.1.
 - `varies_by` is validated against the three unit names that exist. Anything
   other than `"subject"` was previously read as item-level, so a predictor
   declared to vary by `"trial"` was silently given one value per item.
+
+- A Poisson mean beyond the sampler's reach was returned as the iteration cap. The
+  inverse-CDF walk starts from `exp(-mean)`, which underflows to exactly zero once the
+  mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7),
+  about 1097), after which every simulated count came back as 1000000 while reporting
+  success. Both engines now refuse such a mean, naming `exp(eta)` and the offending
+  value, with message text character-for-character identical across the twins. A linear
+  predictor large enough to overflow `math.exp` itself folds into the same refusal, so it
+  never reaches the caller as an `OverflowError`. Feasible means are untouched and the
+  parity dumps are unchanged.
+- A true effect of exactly zero broke both engines, and the package recommends that
+  input. `design_conditions()` deliberately produces a null condition so a run can show
+  how often it declares something when there is nothing to find. Feeding it through
+  `power()` raised `ZeroDivisionError` in Python and returned `Inf` in R, with Type S
+  quietly degenerating to "the estimate is positive". Type S and Type M are now
+  undefined when the true effect is zero or unknown, in both engines, which is the guard
+  the mixed-effects path already carried, applied to the other three sites.
+- Four small twin divergences are closed. A non-whole seed now truncates identically in
+  both engines, a whole `spec_version` is read the same however it was written, a
+  non-object unit is now reported as such, where R used to crash with a base error, and
+  `replicate_seeds()` is annotated as returning integers. Message text is
+  character-for-character identical across the two engines in each case.
 
 ## [0.2.1] - 2026-07-23
 
@@ -246,7 +238,6 @@ and seed.
 - A documentation site whose guides execute their examples at build time, so the
   tables and figures shown are real `pilotr` output.
 
-[Unreleased]: https://github.com/pablobernabeu/pilotr/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.3.0
 [0.2.1]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.0
