@@ -9,33 +9,38 @@
 #' portable JSON design specification shared with the Python package of the
 #' same name. Fixed effect sizes are user-specified, by-subject and by-item
 #' random intercepts and slopes are crossed, and the response families cover
-#' Gaussian, lognormal, shifted lognormal, Bernoulli, Poisson, ordinal and
-#' Beta outcomes. Power and precision-based design analysis run from the same
-#' specification.
+#' Gaussian, lognormal, shifted lognormal, ex-Gaussian, Bernoulli, Poisson,
+#' ordinal and Beta outcomes. Power and precision-based design analysis run
+#' from the same specification.
 #'
 #' @details
 #' A pilotr workflow begins with a design specification, a plain list recording
 #' the study you plan to run: its groups and conditions, sample sizes, fixed
-#' effect sizes, random-effect standard deviations, and the response family.
+#' effect sizes, random-effect standard deviations and the response family.
 #' Assemble one from a flat list of design inputs with
 #' [build_spec()], or read one back from a JSON file with
-#' [load_spec()]. The package ships one ready-to-run specification per
+#' [load_spec()], which checks it with [validate_spec()] as it
+#' goes. The package ships one ready-to-run specification per
 #' design family, and [pilotr_example()] returns their paths.
 #' [default_response_name()] gives the response column that a
 #' family uses by default, and [spec_json()] serialises a specification
-#' back to JSON for the Python twin or the no-code app to read.
+#' back to JSON for the Python twin or the no-code app to read. Where a pilot
+#' study or a published model is already in hand,
+#' [spec_from_model()] reads a specification off a fitted `lmer`
+#' model, so the random-effect standard deviations need not be invented.
 #'
 #' [simulate_design()] turns a specification into an analysis-ready
 #' data frame with one row per observation. A specification carries its own
 #' seed, and both languages draw from the combined generator built by
 #' [make_rng()] on top of the inverse-normal routine
 #' [as241()], so a given specification and seed produce identical data
-#' in either language.
+#' in either language. [replicate_seeds()] gives the seeds the
+#' replicate loops hand to their replicates, for a loop written by hand or
+#' spread over a cluster.
 #'
 #' For analysis, [model_data()] adds the response column that the
-#' model expects, and [model_formula()] derives the maximal
-#' mixed-model formula the design implies. [brms_bridge()] returns
-#' the formula, family and priors for a Bayesian fit.
+#' model expects, and [model_formula()] derives the mixed-model
+#' formula the specification implies.
 #'
 #' Design analysis runs from that same specification.
 #' [power_design()] estimates power for a two-group Gaussian
@@ -46,11 +51,25 @@
 #' [precision_design()] and its curve counterpart
 #' [precision_curve()] report the width of the interval a design
 #' buys and the decision probabilities against a region of practical
-#' equivalence.
+#' equivalence. A curve is answered rather than read by eye:
+#' [target_n()] solves a power curve for the sample size that meets
+#' a target and reports an interval on it, and [solve_curve()] is
+#' the general form for any swept axis.
 #'
-#' Two functions round the package off. [generate_r_script()]
-#' writes a self-contained script that reproduces a simulation, and
-#' [run_app()] launches the bundled no-code app.
+#' [response_variance()] decomposes the variance a specification
+#' implies, and [calibrate_response()] rescales the design to a
+#' target total variance, which is what lets a region of practical equivalence
+#' be stated in standard-deviation units. [sweep_spec()] runs any
+#' of the analyses over a grid of values for any field of the specification,
+#' and [design_conditions()] builds the coefficient sets for an
+#' effect-size grid.
+#'
+#' Three functions emit code rather than results.
+#' [generate_r_script()] writes a self-contained script that
+#' reproduces a simulation, [generate_design_analysis()] writes a
+#' Bayesian design analysis with an optional cluster wrapper, and
+#' [brms_bridge()] returns the formula, family and priors for a
+#' Bayesian fit. [run_app()] launches the bundled no-code app.
 #'
 #' For a worked introduction, see
 #' `vignette("getting-started", package = "pilotr")`.

@@ -23,7 +23,7 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 \value{
 A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{n_significant},
 \code{true_effect}, \code{mean_estimate}, \code{type_s} (sign-error rate among significant
-replicates), and \code{type_m} (mean exaggeration ratio among significant
+replicates) and \code{type_m} (mean exaggeration ratio among significant
 replicates). Both design-analysis quantities are \code{NaN} when no replicate reached
 significance and when the true effect is zero, as in the null condition
 \code{\link[=design_conditions]{design_conditions()}} produces: neither is defined without a true value to

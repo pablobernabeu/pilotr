@@ -10,33 +10,38 @@ Generative simulation of experimental and behavioural data sets from a
 portable JSON design specification shared with the Python package of the
 same name. Fixed effect sizes are user-specified, by-subject and by-item
 random intercepts and slopes are crossed, and the response families cover
-Gaussian, lognormal, shifted lognormal, Bernoulli, Poisson, ordinal and
-Beta outcomes. Power and precision-based design analysis run from the same
-specification.
+Gaussian, lognormal, shifted lognormal, ex-Gaussian, Bernoulli, Poisson,
+ordinal and Beta outcomes. Power and precision-based design analysis run
+from the same specification.
 }
 \details{
 A pilotr workflow begins with a design specification, a plain list recording
 the study you plan to run: its groups and conditions, sample sizes, fixed
-effect sizes, random-effect standard deviations, and the response family.
+effect sizes, random-effect standard deviations and the response family.
 Assemble one from a flat list of design inputs with
 \code{\link[=build_spec]{build_spec()}}, or read one back from a JSON file with
-\code{\link[=load_spec]{load_spec()}}. The package ships one ready-to-run specification per
+\code{\link[=load_spec]{load_spec()}}, which checks it with \code{\link[=validate_spec]{validate_spec()}} as it
+goes. The package ships one ready-to-run specification per
 design family, and \code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
 \code{\link[=default_response_name]{default_response_name()}} gives the response column that a
 family uses by default, and \code{\link[=spec_json]{spec_json()}} serialises a specification
-back to JSON for the Python twin or the no-code app to read.
+back to JSON for the Python twin or the no-code app to read. Where a pilot
+study or a published model is already in hand,
+\code{\link[=spec_from_model]{spec_from_model()}} reads a specification off a fitted \code{lmer}
+model, so the random-effect standard deviations need not be invented.
 
 \code{\link[=simulate_design]{simulate_design()}} turns a specification into an analysis-ready
 data frame with one row per observation. A specification carries its own
 seed, and both languages draw from the combined generator built by
 \code{\link[=make_rng]{make_rng()}} on top of the inverse-normal routine
 \code{\link[=as241]{as241()}}, so a given specification and seed produce identical data
-in either language.
+in either language. \code{\link[=replicate_seeds]{replicate_seeds()}} gives the seeds the
+replicate loops hand to their replicates, for a loop written by hand or
+spread over a cluster.
 
 For analysis, \code{\link[=model_data]{model_data()}} adds the response column that the
-model expects, and \code{\link[=model_formula]{model_formula()}} derives the maximal
-mixed-model formula the design implies. \code{\link[=brms_bridge]{brms_bridge()}} returns
-the formula, family and priors for a Bayesian fit.
+model expects, and \code{\link[=model_formula]{model_formula()}} derives the mixed-model
+formula the specification implies.
 
 Design analysis runs from that same specification.
 \code{\link[=power_design]{power_design()}} estimates power for a two-group Gaussian
@@ -47,11 +52,25 @@ sample size to locate where a design becomes adequately powered.
 \code{\link[=precision_design]{precision_design()}} and its curve counterpart
 \code{\link[=precision_curve]{precision_curve()}} report the width of the interval a design
 buys and the decision probabilities against a region of practical
-equivalence.
+equivalence. A curve is answered rather than read by eye:
+\code{\link[=target_n]{target_n()}} solves a power curve for the sample size that meets
+a target and reports an interval on it, and \code{\link[=solve_curve]{solve_curve()}} is
+the general form for any swept axis.
 
-Two functions round the package off. \code{\link[=generate_r_script]{generate_r_script()}}
-writes a self-contained script that reproduces a simulation, and
-\code{\link[=run_app]{run_app()}} launches the bundled no-code app.
+\code{\link[=response_variance]{response_variance()}} decomposes the variance a specification
+implies, and \code{\link[=calibrate_response]{calibrate_response()}} rescales the design to a
+target total variance, which is what lets a region of practical equivalence
+be stated in standard-deviation units. \code{\link[=sweep_spec]{sweep_spec()}} runs any
+of the analyses over a grid of values for any field of the specification,
+and \code{\link[=design_conditions]{design_conditions()}} builds the coefficient sets for an
+effect-size grid.
+
+Three functions emit code rather than results.
+\code{\link[=generate_r_script]{generate_r_script()}} writes a self-contained script that
+reproduces a simulation, \code{\link[=generate_design_analysis]{generate_design_analysis()}} writes a
+Bayesian design analysis with an optional cluster wrapper, and
+\code{\link[=brms_bridge]{brms_bridge()}} returns the formula, family and priors for a
+Bayesian fit. \code{\link[=run_app]{run_app()}} launches the bundled no-code app.
 
 For a worked introduction, see
 \code{vignette("getting-started", package = "pilotr")}.

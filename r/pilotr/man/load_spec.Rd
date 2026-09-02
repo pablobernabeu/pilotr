@@ -10,8 +10,9 @@ load_spec(path, validate = TRUE)
 \item{path}{Path to a JSON design-specification file.}
 
 \item{validate}{Whether to validate the specification after reading it. \code{TRUE} (the default)
-applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}; \code{FALSE} skips validation, and
-any other value is passed to \code{validate_spec()} as its \code{strict} argument.}
+applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}; \code{FALSE} skips validation; any other
+value, \code{NA} for instance, validates leniently with \code{strict = FALSE}, so an unrecognised
+field is a warning rather than an error.}
 }
 \value{
 The specification as a nested list, with sub-lists left unsimplified so that the

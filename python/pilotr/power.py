@@ -112,7 +112,7 @@ def _power_impl(spec, n_sims, alpha, executor):
         spec = load_spec(spec)
     if spec["response"]["family"] != "gaussian":
         raise NotImplementedError(
-            "The power backend currently handles only the gaussian two-group design.")
+            "The power backend handles only the gaussian two-group design.")
 
     between = [f for f in spec["factors"] if f.get("between")]
     if len(between) != 1 or len(between[0]["levels"]) != 2:
@@ -222,8 +222,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         Keys: `backend` (the estimator used), `n_sims`, `n_converged` (how many replicates
         the model fit), `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
         `type_s`, `type_m`. `power` is the proportion of significant results among the
-        `n_converged` converged replicates, not among `n_sims`. `type_s` and `type_m` are
+        `n_converged` replicates that were fit, not among `n_sims`. `type_s` and `type_m` are
         `nan` when no replicate reached significance and when the true effect is zero.
+
+        The R twin calls this count `n_returned` and keeps `n_converged` for the fits that
+        carried neither a singular variance component nor a convergence warning, a distinction
+        this backend cannot draw because statsmodels does not report boundary singularity.
 
     Raises
     ------

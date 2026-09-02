@@ -129,7 +129,7 @@
 #' Variance components of the linear predictor
 #'
 #' Decompose the variance of a design's linear predictor into the part contributed by the fixed
-#' effects, the part contributed by each grouping factor's random effects, and the residual
+#' effects, the part contributed by each grouping factor's random effects and the residual
 #' variance added by the response family. Useful for putting a region of practical equivalence or
 #' a smallest effect size of interest on a known scale, and for seeing which term dominates a
 #' design before committing to it.
@@ -174,7 +174,7 @@
 #'
 #' @param spec A design specification (path or list).
 #' @return A named list of variance components: `fixed`, one entry per grouping factor,
-#'   `residual`, and `total` (their sum).
+#'   `residual` and `total` (their sum).
 #' @references Nakagawa, S., Johnson, P. C. D. and Schielzeth, H. (2017). The coefficient of
 #'   determination R2 and intra-class correlation coefficient from generalized linear mixed-effects
 #'   models revisited and expanded. \emph{Journal of the Royal Society Interface}, 14(134),

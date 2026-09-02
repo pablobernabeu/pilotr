@@ -4,7 +4,7 @@ Covers the three things a methods-package reviewer checks first: the RNG is
 deterministic, the inverse-normal is numerically correct, and the engine recovers the
 ground-truth parameters it was given.
 """
-import os, re, sys, statistics, math
+import json, os, re, sys, statistics, math, warnings
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
@@ -143,6 +143,24 @@ def test_a_non_object_unit_is_reported_rather_than_crashing():
         validate_spec(s)
 
 
+def test_only_false_skips_validation_and_other_values_are_lenient(tmp_path):
+    # `validate` is not a plain flag: False skips validation, True is strict and anything else
+    # validates leniently, which is what both twins' docstrings promise.
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["extra_field"] = "x"
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(s))
+    with pytest.raises(ValueError, match="unknown top-level field 'extra_field'"):
+        load_spec(str(path))
+    with pytest.warns(UserWarning, match="unknown top-level field 'extra_field'"):
+        load_spec(str(path), validate=None)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        load_spec(str(path), validate=False)
+    with pytest.warns(UserWarning, match="unknown top-level field 'extra_field'"):
+        simulate(s, validate=None)
+
+
 def test_a_non_whole_seed_truncates_as_in_the_r_twin():
     # Reachable only outside validation, the fast path the replicate loops use.
     assert RNG(2.7).uniform() == RNG(2).uniform()
@@ -188,6 +206,9 @@ def test_power_mixed_also_refuses_to_divide_by_a_zero_true_effect():
     assert r["n_converged"] > 0  # so the NaNs below are the guard, not a failed fit
     assert math.isnan(r["type_s"])
     assert math.isnan(r["type_m"])
+    # This n_converged counts the replicates that were fit, which the R twin calls n_returned,
+    # so it is the denominator of power here.
+    assert r["n_significant"] == round(r["power"] * r["n_converged"])
 
 
 def test_additional_grouping_column_present():

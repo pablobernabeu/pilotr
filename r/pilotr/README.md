@@ -25,15 +25,23 @@ gathering anything. A single specification drives three interchangeable
 interfaces, namely a no-code web app, this R package and the Python
 package.
 
-This is the feature-parity twin of [the Python
+This is the twin of [the Python
 package](https://pablobernabeu.github.io/pilotr/python/) of the same
 name. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in
 either language, bit for bit apart from a documented tolerance of a few
 units in the last place where an unrounded response family applies
-`exp()` or `log()` to the linear predictor. The R package additionally
-offers precision/ROPE design analysis, the `lme4` reference backend for
-mixed-effects power, the `brms` bridge and the app launcher.
+`exp()` or `log()` to the linear predictor. Loading and validating a
+specification, simulation, the replicate seeds, two-group Gaussian
+power, crossed mixed-effects power and the curve solvers are shared. The
+R package covers more ground beyond that: precision and ROPE design
+analysis, the `lme4` reference backend for mixed-effects power,
+specification authoring (`build_spec()`, `spec_json()`,
+`spec_from_model()`), the derived analysis model (`model_formula()`,
+`model_data()`), calibration (`calibrate_response()`,
+`response_variance()`), sweeps (`sweep_spec()`, `design_conditions()`,
+`power_curve_mixed()`), the script emitters (`generate_r_script()`,
+`generate_design_analysis()`, the `brms` bridge) and the app launcher.
 
 ## Installation
 

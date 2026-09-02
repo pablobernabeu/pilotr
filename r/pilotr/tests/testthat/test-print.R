@@ -47,6 +47,13 @@ test_that("the singularity note is part of the same block", {
   expect_true(note < length(out))
 })
 
+test_that("digits sets the decimal places of the rates and of the interval", {
+  out <- capture.output(print(fake_power(), digits = 2))
+  expect_true(any(grepl("[0.55, 0.69]", out, fixed = TRUE)))
+  expect_true(any(grepl(" 0.62 ", out, fixed = TRUE)))
+  expect_false(any(grepl("0.551", out, fixed = TRUE)))
+})
+
 test_that("printing returns its input invisibly", {
   x <- fake_power()
   con <- file(nullfile(), open = "wt")

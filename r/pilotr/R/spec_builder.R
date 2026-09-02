@@ -5,16 +5,17 @@
 #' Default response-column name for a family
 #'
 #' @param family A response-family name, one of `"gaussian"`, `"lognormal"`,
-#'   `"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or
-#'   `"beta"`.
-#' @return The conventional response-column name for that family (for example `"RT"` for
-#'   `"lognormal"` and `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
+#'   `"shifted_lognormal"`, `"exgaussian"`, `"bernoulli"`, `"poisson"`,
+#'   `"ordinal"` or `"beta"`.
+#' @return The conventional response-column name for that family (for example `"RT"` for the
+#'   reaction-time families `"lognormal"`, `"shifted_lognormal"` and `"exgaussian"`), or
+#'   `"outcome"` for an unrecognised family.
 #' @examples
 #' default_response_name("bernoulli")
 #' @export
 default_response_name <- function(family) {
   switch(family,
-         gaussian = "score", lognormal = "RT", shifted_lognormal = "RT",
+         gaussian = "score", lognormal = "RT", shifted_lognormal = "RT", exgaussian = "RT",
          bernoulli = "accuracy", poisson = "count", ordinal = "rating",
          beta = "proportion", "outcome")
 }
@@ -31,13 +32,18 @@ default_response_name <- function(family) {
 #' @param p A named list of design inputs. Common fields are `name`, `seed`,
 #'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items`,
 #'   `n_item`, `factor_name`, `lev1`, `lev2`, `intercept`, `effect`,
-#'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`,
-#'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
-#'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
-#'   `item_corr`.
+#'   `family`, `resp_name` and family parameters such as `sigma`, `shift`,
+#'   `beta`, `thresholds` or `phi`; within-design random effects use `subj_int_sd`,
+#'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd` and
+#'   `item_corr`. An optional `round` sets the decimal rounding of the response
+#'   for the `gaussian`, `lognormal`, `shifted_lognormal` and `exgaussian`
+#'   families and defaults to 4; pass `round = NULL` to leave the response
+#'   unrounded.
 #' @return A design specification as a nested list, ready for
-#'   [simulate_design()], [spec_json()], or the
-#'   power and precision functions.
+#'   [simulate_design()], [spec_json()] or the
+#'   power and precision functions. For those families it carries
+#'   `response$round`, which is what makes the data identical rather than merely
+#'   close between the two implementations.
 #' @examples
 #' build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "control", lev2 = "treatment", n_subject = 40,
@@ -85,8 +91,14 @@ build_spec <- function(p) {
   }
 
   resp <- list(family = p$family, name = resp_name)
-  if (p$family %in% c("gaussian", "lognormal", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
+  if (p$family %in% c("gaussian", "lognormal", "shifted_lognormal", "exgaussian")) {
+    resp$sigma <- p$sigma
+    # Rounding is what lets the two implementations produce the same data rather than data that
+    # agrees to within a few units in the last place, so it is on unless `p` says otherwise.
+    resp$round <- if ("round" %in% names(p)) p$round else 4L
+  }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
+  if (p$family == "exgaussian") resp$beta <- p$beta
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   if (p$family == "beta") resp$phi <- p$phi
   spec$response <- resp
@@ -173,11 +185,13 @@ build_spec <- function(p) {
 #' Serialise a design specification to pretty-printed JSON
 #'
 #' @details
-#' Numbers are written at 17 significant digits, which is the shortest precision that
-#' round-trips every IEEE-754 double exactly. The JSON file is the portable artefact that the
-#' R and 'Python' implementations both read, so anything less makes the specification itself a
-#' source of cross-language divergence: at the previous setting a coefficient of `1/3` came
-#' back as `0.33333333333333298`, and over a sample of 214 doubles 189 failed to round-trip.
+#' Numbers are written at the shortest precision that round-trips the double exactly, never
+#' more than 17 significant digits, so a coefficient typed as `0.3` reads back as `0.3` while
+#' `1/3` keeps every digit it needs. The JSON file is the portable artefact that the
+#' R and 'Python' implementations both read, so any precision short of an exact round trip
+#' makes the specification itself a source of cross-language divergence: at the previous
+#' setting a coefficient of `1/3` came back as `0.33333333333333298`, and over a sample of 214
+#' doubles 189 failed to round-trip.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing the specification as pretty-printed JSON,
@@ -235,14 +249,15 @@ spec_json <- function(spec) {
 #' and confirms that it reproduces the data bit-for-bit.
 #'
 #' @details
-#' Numbers are emitted at 17 significant digits rather than through `deparse()`, which prints
-#' 15 and so does not round-trip: `deparse(1/3)` reads back as a different double. Since the
+#' Numbers are emitted at the shortest precision that round-trips exactly, at most 17
+#' significant digits, rather than through `deparse()`, which prints 15 and so does not
+#' round-trip: `deparse(1/3)` reads back as a different double. Since the
 #' point of the script is bit-for-bit reproduction, the embedded specification has to preserve
 #' every coefficient exactly.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing a runnable R script that loads `pilotr`,
-#'   embeds the specification, and simulates the data.
+#'   embeds the specification and simulates the data.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 20,
@@ -252,7 +267,7 @@ spec_json <- function(spec) {
 generate_r_script <- function(spec) {
   paste0(
     "# Reproducible simulation exported by pilotr.\n",
-    "# install.packages(\"pilotr\")   # once available; then run this script as-is.\n",
+    "# remotes::install_github(\"pablobernabeu/pilotr\", subdir = \"r/pilotr\")\n",
     "library(pilotr)\n\n",
     "spec <- ", .r_literal(spec), "\n\n",
     "data <- simulate_design(spec)              # analysis-ready data frame\n",

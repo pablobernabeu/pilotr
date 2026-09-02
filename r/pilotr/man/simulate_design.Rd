@@ -16,16 +16,16 @@ The default \code{TRUE} catches the errors that would otherwise pass silently, s
 mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 Validation costs a few milliseconds, so the replicate loops behind the power and precision
 functions validate once and then pass \code{FALSE}; there is rarely a reason to set it
-directly.}
+directly. Any value other than \code{TRUE} or \code{FALSE} validates leniently, as in \code{\link[=load_spec]{load_spec()}}.}
 }
 \value{
 A data frame with one row per observation, containing a \code{subject} column, an
-optional \code{item} column, any grouping, factor, and continuous-predictor columns, and the
+optional \code{item} column, any grouping, factor and continuous-predictor columns and the
 response column named by the specification.
 }
 \description{
 Generate an analysis-ready data set from a portable design specification: a linear
-predictor built from fixed effect sizes (categorical contrasts, continuous predictors,
+predictor built from fixed effect sizes (categorical contrasts, continuous predictors
 and their interactions) plus crossed by-subject and by-item random intercepts and slopes,
 mapped through the chosen response family.
 }

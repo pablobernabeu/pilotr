@@ -5,6 +5,32 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The documentation states the cross-language tolerance one way throughout. Some
+  pages promised agreement to within one unit in the last place, and one said the
+  last bit, where the harness allows the eight units recorded in
+  `tools/parity/tolerance.json`. Every statement now says a few units in the last
+  place, within that allowance.
+- `power_mixed()` and the power guide record that `n_converged` counts the
+  replicates the model fit, which the R twin calls `n_returned`, keeping
+  `n_converged` for the fits that carried neither a singular variance component
+  nor a convergence warning. The two packages have used the name for different
+  things since 0.3.0, and neither said so.
+- `load_spec()` and `simulate()` describe what `validate` does with a value that
+  is neither `True` nor `False`. The docstrings named truthy values, where `0`
+  and `None` validate leniently too.
+- The power backend refuses a non-gaussian design without calling the limit
+  temporary. The message said the backend `currently` handles only the gaussian
+  two-group design, where no wider backend is planned, and it stays byte-identical
+  to the R one.
+- The README and the documentation home page no longer call the two packages
+  feature-parity twins. They name the surface the two share and say that
+  calibration, sweeps, the generated-analysis emitters and the no-code app have
+  no Python counterpart yet, as the API reference already did.
+
 ## [0.3.0] - 2026-08-21
 
 Two of the changes below alter numbers that earlier versions produced. Both are

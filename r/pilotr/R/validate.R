@@ -363,7 +363,7 @@ validate_spec <- function(spec, strict = TRUE) {
         }
       }
       if (!is.null(re$correlated) && !(is.logical(re$correlated) && length(re$correlated) == 1L))
-        bad(where, ".correlated must be TRUE or FALSE")
+        bad(where, ".correlated must be true or false")
       if (isTRUE(identical(re$correlated, FALSE)) && length(re$correlations))
         bad(where, " sets correlated = false but also supplies correlations; one of the two has to go")
       if (g %in% c("subject", "item")) {

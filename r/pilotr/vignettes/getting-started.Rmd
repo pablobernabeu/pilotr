@@ -120,6 +120,6 @@ that read it.
 - [Precision / ROPE design analysis](precision-rope.html), which plans by precision against a
   region of practical equivalence and sweeps sample size.
 - [Cross-language reproducibility](cross-language.html), describing the shared generator that
-  makes R and Python agree to the last bit.
+  makes an R run and a Python run reproduce each other.
 - [The no-code app](the-no-code-app.html), the point-and-click interface over the same
   specification, running in the browser or locally with `run_app()`.

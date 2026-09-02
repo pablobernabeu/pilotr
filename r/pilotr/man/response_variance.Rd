@@ -11,11 +11,11 @@ response_variance(spec)
 }
 \value{
 A named list of variance components: \code{fixed}, one entry per grouping factor,
-\code{residual}, and \code{total} (their sum).
+\code{residual} and \code{total} (their sum).
 }
 \description{
 Decompose the variance of a design's linear predictor into the part contributed by the fixed
-effects, the part contributed by each grouping factor's random effects, and the residual
+effects, the part contributed by each grouping factor's random effects and the residual
 variance added by the response family. Useful for putting a region of practical equivalence or
 a smallest effect size of interest on a known scale, and for seeing which term dominates a
 design before committing to it.

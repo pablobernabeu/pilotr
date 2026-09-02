@@ -17,7 +17,7 @@
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
 #' @return A list with elements `n_sims`, `alpha`, `power`, `n_significant`,
 #'   `true_effect`, `mean_estimate`, `type_s` (sign-error rate among significant
-#'   replicates), and `type_m` (mean exaggeration ratio among significant
+#'   replicates) and `type_m` (mean exaggeration ratio among significant
 #'   replicates). Both design-analysis quantities are `NaN` when no replicate reached
 #'   significance and when the true effect is zero, as in the null condition
 #'   [design_conditions()] produces: neither is defined without a true value to
@@ -35,7 +35,7 @@
 power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   spec <- .as_spec(spec)
   if (spec$response$family != "gaussian")
-    stop("The power backend currently handles only the gaussian two-group design.")
+    stop("The power backend handles only the gaussian two-group design.")
   between <- Filter(function(f) !is.null(f$between), spec$factors)
   if (length(between) != 1 || length(between[[1]]$levels) != 2)
     stop("The power backend expects exactly one 2-level between factor.")

@@ -10,15 +10,20 @@ build_spec(p)
 \item{p}{A named list of design inputs. Common fields are \code{name}, \code{seed},
 \code{n_subject}, \code{design_kind} (\code{"between"} or \code{"within"}), \code{include_items},
 \code{n_item}, \code{factor_name}, \code{lev1}, \code{lev2}, \code{intercept}, \code{effect},
-\code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift},
-\code{thresholds}, or \code{phi}; within-design random effects use \code{subj_int_sd},
-\code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
-\code{item_corr}.}
+\code{family}, \code{resp_name} and family parameters such as \code{sigma}, \code{shift},
+\code{beta}, \code{thresholds} or \code{phi}; within-design random effects use \code{subj_int_sd},
+\code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd} and
+\code{item_corr}. An optional \code{round} sets the decimal rounding of the response
+for the \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} and \code{exgaussian}
+families and defaults to 4; pass \code{round = NULL} to leave the response
+unrounded.}
 }
 \value{
 A design specification as a nested list, ready for
-\code{\link[=simulate_design]{simulate_design()}}, \code{\link[=spec_json]{spec_json()}}, or the
-power and precision functions.
+\code{\link[=simulate_design]{simulate_design()}}, \code{\link[=spec_json]{spec_json()}} or the
+power and precision functions. For those families it carries
+\code{response$round}, which is what makes the data identical rather than merely
+close between the two implementations.
 }
 \description{
 Assemble a portable design specification (a plain list, serialisable with

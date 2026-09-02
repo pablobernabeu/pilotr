@@ -15,8 +15,9 @@
 #'
 #' @param path Path to a JSON design-specification file.
 #' @param validate Whether to validate the specification after reading it. `TRUE` (the default)
-#'   applies [validate_spec()] with `strict = TRUE`; `FALSE` skips validation, and
-#'   any other value is passed to `validate_spec()` as its `strict` argument.
+#'   applies [validate_spec()] with `strict = TRUE`; `FALSE` skips validation; any other
+#'   value, `NA` for instance, validates leniently with `strict = FALSE`, so an unrecognised
+#'   field is a warning rather than an error.
 #' @return The specification as a nested list, with sub-lists left unsimplified so that the
 #'   structure round-trips exactly. Pass the result to [simulate_design()].
 #' @examples
@@ -144,7 +145,7 @@ load_spec <- function(path, validate = TRUE) {
 #' Simulate a data set from a design specification
 #'
 #' Generate an analysis-ready data set from a portable design specification: a linear
-#' predictor built from fixed effect sizes (categorical contrasts, continuous predictors,
+#' predictor built from fixed effect sizes (categorical contrasts, continuous predictors
 #' and their interactions) plus crossed by-subject and by-item random intercepts and slopes,
 #' mapped through the chosen response family.
 #'
@@ -156,9 +157,9 @@ load_spec <- function(path, validate = TRUE) {
 #'   mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 #'   Validation costs a few milliseconds, so the replicate loops behind the power and precision
 #'   functions validate once and then pass `FALSE`; there is rarely a reason to set it
-#'   directly.
+#'   directly. Any value other than `TRUE` or `FALSE` validates leniently, as in [load_spec()].
 #' @return A data frame with one row per observation, containing a `subject` column, an
-#'   optional `item` column, any grouping, factor, and continuous-predictor columns, and the
+#'   optional `item` column, any grouping, factor and continuous-predictor columns and the
 #'   response column named by the specification.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

@@ -136,7 +136,10 @@ print(table([{k: res[k] for k in (
 
 `n_converged` reports how many replicates the mixed model actually fit. Convergence problems
 are common in small crossed designs, so this is a useful diagnostic in its own right, and it is
-the denominator of `power`, the significant proportion among the converged replicates.
+the denominator of `power`, the significant proportion among the replicates that were fit. The R
+package calls that count `n_returned` and reserves `n_converged` for the fits that carried
+neither a singular variance component nor a convergence warning, which statsmodels does not
+report, so compare the two names rather than the one label when reading results side by side.
 
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
 `true_effect`). The statsmodels variance-component fit overstates random-slope variance, so

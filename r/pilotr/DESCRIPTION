@@ -16,7 +16,7 @@ Description: Generative simulation of experimental and behavioural data sets fro
     <doi:10.1177/1745691614551642> and a region of practical equivalence. A shared
     cross-language random-number generator means that, given the same specification and
     seed, the R and 'Python' implementations produce identical data: exactly for the
-    Gaussian family and for any family with rounding set, and to within the last unit in
+    Gaussian family and for any family with rounding set, and to within a few units in
     the last place for families applying a transcendental function to the linear
     predictor, whose rounding the IEEE-754 standard does not fix.
 License: MIT + file LICENSE

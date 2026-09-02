@@ -56,9 +56,9 @@ analysis is meant to expose.
 ## Crossed mixed-effects designs
 
 A feature that distinguishes pilotr from a marginal simulator is power estimation for crossed
-by-subject and by-item designs. The R interface fits the maximal model
-`y ~ cond + (1 + cond | subject) + (1 + cond | item)` with `lme4`/`lmerTest` and tests the
-fixed effect with Satterthwaite degrees of freedom.
+by-subject and by-item designs. The R interface derives the analysis model from the
+specification, fits it with `lme4`/`lmerTest` and tests each fixed effect with Satterthwaite
+degrees of freedom.
 
 ```{r}
 spec_c <- build_spec(list(
@@ -71,26 +71,39 @@ spec_c <- build_spec(list(
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
 ```
 
+The model fitted is the one the specification implies, contrast columns, response transform and
+all, so nothing about the analysis has to be written out by hand.
+
+```{r}
+model_formula(spec_c)
+```
+
 ```{r, eval = FALSE}
 # A tiny replicate count keeps the vignette fast. Use 200 or more for real planning.
 pm <- power_mixed(spec_c, n_sims = 20)
-unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+pm
 ```
 
 ```{r, include = FALSE}
 # The result of running exactly the chunk above, precomputed and shipped with
 # the package so that the vignette builds within CRAN's check-time budget.
-pm <- as.list(read.csv("power-mixed-cache.csv"))
+# Regenerate it with tools/regenerate-vignette-caches.R.
+pm <- readRDS("power-mixed-cache.rds")
 ```
 
 ```{r, echo = FALSE}
-unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+pm
 ```
 
-`n_converged` reports how many replicates the maximal model actually fit. This is a useful
-diagnostic in its own right, since convergence problems are common in small crossed designs,
-and it is the denominator of `power`, which is the significant proportion among the converged
-replicates.
+The fit accounting is reported in full because a mixed model can return a usable estimate while
+still sitting on a boundary. `n_returned` counts the replicates that yielded a fit, and it is the
+denominator of `power`. The remaining counts break those fits down: `n_converged` are the ones
+with neither a warning nor a singular fit, and here they are a minority, which says that a
+maximal random-effect structure over 24 subjects and 18 items is richer than this design can
+support. That is common in small crossed designs, and worth reporting beside the power rather
+than hidden behind it. Singular and warning fits are kept in the rate, because their
+fixed-effect estimates remain interpretable and dropping them would bias the result:
+singularity is not independent of the variance estimates that produce it.
 
 `power_mixed()` carries its own simulation loop over the portable specification, with no other
 power package underneath it. It covers territory pioneered by
@@ -108,18 +121,25 @@ curve <- power_curve_mixed(
   spec_c,
   subject_ns = c(8, 12, 16, 24, 32, 44, 56),
   n_sims = 50)
-curve
+curve[, c("n_subject", "power", "power_mcse", "type_m", "n_returned",
+          "n_converged", "n_singular")]
 ```
 
 ```{r, include = FALSE}
 # The result of running exactly the chunk above, precomputed and shipped with
 # the package so that the vignette builds within CRAN's check-time budget.
+# Regenerate it with tools/regenerate-vignette-caches.R.
 curve <- read.csv("power-curve-cache.csv")
 ```
 
 ```{r, echo = FALSE}
-curve
+curve[, c("n_subject", "power", "power_mcse", "type_m", "n_returned",
+          "n_converged", "n_singular")]
 ```
+
+The sweep also returns the Wilson interval on each power estimate, `power_lo` and `power_hi`,
+along with the Type S error and the rest of the fit accounting. `n_singular` drifts down as the
+sample size rises, which is the design starting to support the model it is analysed under.
 
 ## The sample size the curve implies
 
@@ -151,10 +171,8 @@ Plotting the curve and the solved size together shows what the solve has done.
 # website's dark mode then inverts the figure's ink, so the axes and labels
 # follow the theme and the figure carries no opaque matte.
 library(ggplot2)
-# Each power estimate is a proportion over the converged replicates, so it
-# carries a binomial Monte Carlo standard error. The shaded band is the 95%
-# interval.
-curve$se <- sqrt(curve$power * (1 - curve$power) / curve$n_converged)
+# Each power estimate is a proportion over a finite number of replicates, and
+# the sweep reports its 95% Wilson interval, which is what the band draws.
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
   # The solved sample size and its interval. The dashed horizontal line marks
@@ -162,8 +180,7 @@ ggplot(curve, aes(n_subject, power)) +
   annotate("rect", xmin = solved$lo, xmax = solved$hi, ymin = -Inf, ymax = Inf,
            fill = "grey60", alpha = .15) +
   geom_vline(xintercept = solved$value, linetype = 2, colour = "grey60") +
-  geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se),
-                  ymax = pmin(1, power + 1.96 * se)),
+  geom_ribbon(aes(ymin = power_lo, ymax = power_hi),
               alpha = .15, fill = "#2C6FB0") +
   geom_line(colour = "#2C6FB0", linewidth = 0.8) +
   geom_point(colour = "#2C6FB0", size = 2.6) +
@@ -180,10 +197,9 @@ ggplot(curve, aes(n_subject, power)) +
         panel.grid       = element_line(colour = "grey80"))
 ```
 
-The shaded horizontal band along the curve is the Monte Carlo interval, the binomial standard
-error of each power estimate over its converged replicates widened to a 95% envelope. The
-vertical band is the solved sample size and its own interval, which is what the dashed target
-line invites the reader to guess at.
+The shaded horizontal band along the curve is the Monte Carlo interval, the Wilson interval the
+sweep reports for each power estimate. The vertical band is the solved sample size and its own
+interval, which is what the dashed target line invites the reader to guess at.
 
 ## Parallel execution
 

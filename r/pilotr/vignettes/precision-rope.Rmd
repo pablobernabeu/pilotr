@@ -101,30 +101,34 @@ prc <- precision_curve(spec_c, focal = c(effect = 0.05),
                        subject_ns = c(15, 30, 60, 100, 140, 180, 220, 260),
                        rope = 0.02, n_sims = 200)
 prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
-        "n_converged")]
+        "n_returned", "n_converged", "n_singular")]
 ```
 
 ```{r, include = FALSE}
 # The result of running exactly the chunk above, precomputed and shipped with
-# the package so that the vignette builds within CRAN's check-time budget. All
-# 200 replicates converged at every sample size.
+# the package so that the vignette builds within CRAN's check-time budget.
+# Regenerate it with tools/regenerate-vignette-caches.R.
 prc <- read.csv("precision-curve-cache.csv")
 ```
 
 ```{r, echo = FALSE}
 prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
-        "n_converged")]
+        "n_returned", "n_converged", "n_singular")]
 ```
 
 As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
 decision more reliably. That is a more informative criterion than power against a point null,
 because it asks whether the study can distinguish the effect from a negligible one, where power
-asks only whether it can be distinguished from zero. Each estimate rests on 200 replicates, all
-of which converged, so its Monte Carlo standard error is at most about 0.035, which the figure
-below shows as a band.
+asks only whether it can be distinguished from zero. Each estimate rests on the 200 replicates
+that returned a fit, so its Monte Carlo standard error is at most about 0.035, which the figure
+below shows as a band. `n_converged` counts the subset of those fits that carried neither a
+warning nor a singularity, and it climbs across the sweep, because the random-effect structure
+becomes supportable as the design grows. The singular fits are kept in the decision
+proportions, since their fixed-effect estimates remain interpretable and dropping them would
+bias the result.
 
 Scanning the table for the smallest simulated *N* that meets a target of
-'`p_meaningful` ≥ 0.90' puts this design at 220 subjects, but that answer is a property of where
+'`p_meaningful` ≥ 0.90' puts this design at 180 subjects, but that answer is a property of where
 the grid points happen to fall. `solve_curve()` fits the decision probability against the sample
 size and inverts the fit, so all eight points inform the answer, where scanning the table uses
 only the two either side of the target.
@@ -134,13 +138,14 @@ solved <- solve_curve(prc, target = 0.9)
 unlist(solved[c("value", "lo", "hi", "dispersion")])
 ```
 
-The sweep read by eye therefore asks for some thirty-five subjects more than the fitted crossing
-does, and 220 sits outside the interval altogether. The fit is a binomial probit regression
-weighted by the replicates behind each point, and the interval is the delta-method interval that
-`MASS::dose.p()` computes for a fitted `glm`. The interval matters more here than the point it
-surrounds: with 200 replicates per point this design needs somewhere between about 165 and 207
-subjects to reach a determinate ROPE decision nine times in ten, and a preregistration quoting
-a single figure would be claiming more than the simulation supports.
+The sweep read by eye therefore lands a few subjects short of the fitted crossing, and it lands
+there by the accident of 180 being a grid point rather than by anything the curve says. The fit
+is a binomial probit regression weighted by the replicates behind each point, and the interval
+is the delta-method interval that `MASS::dose.p()` computes for a fitted `glm`. The interval
+matters more here than the point it surrounds: with 200 replicates per point this design needs
+somewhere between about 171 and 202 subjects to reach a determinate ROPE decision nine times in
+ten, and a preregistration quoting a single figure would be claiming more than the simulation
+supports.
 
 The reported `dispersion` above 1 is part of that width. It says the eight points scatter about
 the fitted curve rather more than their replicate counts alone would explain, so the interval
@@ -154,15 +159,13 @@ its place in designs where practical equivalence is the hypothesis of interest.
 
 ```{r, fig.width = 6.5, fig.height = 3.2, dev.args = list(bg = "transparent")}
 library(ggplot2)
-# Each probability is a proportion over the converged replicates, so it carries
-# a binomial Monte Carlo standard error, and the band is its 95% interval. The
-# two panels are on different scales, hence the free y axis.
-prc$se <- sqrt(prc$p_meaningful * (1 - prc$p_meaningful) / prc$n_converged)
+# Each probability is a proportion over a finite number of replicates, and the
+# sweep reports its 95% Wilson interval, which is what the band draws. The two
+# panels are on different scales, hence the free y axis.
 panels <- c("P(CI outside the ROPE)", "Mean 95% CI width")
 long <- rbind(
   data.frame(n_subject = prc$n_subject, panel = panels[1], y = prc$p_meaningful,
-             lo = pmax(0, prc$p_meaningful - 1.96 * prc$se),
-             hi = pmin(1, prc$p_meaningful + 1.96 * prc$se)),
+             lo = prc$p_meaningful_lo, hi = prc$p_meaningful_hi),
   data.frame(n_subject = prc$n_subject, panel = panels[2],
              y = prc$mean_ci_width,
              lo = NA, hi = NA))

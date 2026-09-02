@@ -37,9 +37,9 @@ meaningful decision about an effect no larger than \code{rope} cannot rise above
 large the sample.}
 
 \item{n_sims}{Number of Monte Carlo replicates. \code{p_meaningful} and \code{p_equivalent} are
-proportions over the converged replicates, so they carry a Monte Carlo standard error of
-about \code{sqrt(p * (1 - p) / n_sims)} and move in coarse steps when \code{n_sims} is small. At
-least 200 replicates are advisable for real planning.}
+proportions over the replicates that returned an estimate (\code{n_returned}), so they carry a
+Monte Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)} and move in coarse steps
+when \code{n_sims} is small. At least 200 replicates are advisable for real planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because every replicate takes its own seed from

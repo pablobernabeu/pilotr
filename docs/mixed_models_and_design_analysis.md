@@ -31,8 +31,8 @@ planning.
   frequentist analogue of a Bayesian HDI-vs-ROPE decision.
 - Additional grouping. A design with subjects nested in clusters generates a cluster random
   intercept and is bit-identical across R and Python (`nested_clusters.json`, parity diff 0.0).
-- Cross-language parity. The continuous-predictor design is bit-identical between R and Python
-  (~5e-15 over 4,000 rows × 7 columns). Factor-only specs keep the original RNG stream.
+- Cross-language parity. The continuous-predictor design agrees between R and Python to ~5e-15
+  over 4,000 rows × 7 columns. Factor-only specs keep the original RNG stream.
 
 ## Recommended workflow
 

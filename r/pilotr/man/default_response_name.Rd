@@ -8,12 +8,13 @@ default_response_name(family)
 }
 \arguments{
 \item{family}{A response-family name, one of \code{"gaussian"}, \code{"lognormal"},
-\code{"shifted_lognormal"}, \code{"bernoulli"}, \code{"poisson"}, \code{"ordinal"}, or
-\code{"beta"}.}
+\code{"shifted_lognormal"}, \code{"exgaussian"}, \code{"bernoulli"}, \code{"poisson"},
+\code{"ordinal"} or \code{"beta"}.}
 }
 \value{
-The conventional response-column name for that family (for example \code{"RT"} for
-\code{"lognormal"} and \code{"shifted_lognormal"}), or \code{"outcome"} for an unrecognised family.
+The conventional response-column name for that family (for example \code{"RT"} for the
+reaction-time families \code{"lognormal"}, \code{"shifted_lognormal"} and \code{"exgaussian"}), or
+\code{"outcome"} for an unrecognised family.
 }
 \description{
 Default response-column name for a family

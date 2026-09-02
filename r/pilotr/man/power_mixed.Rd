@@ -60,6 +60,11 @@ remain interpretable and discarding them would bias the result: singularity is n
 of the variance estimates that produce it. A large \code{n_singular} means the model being fitted is
 richer than the design can support at that sample size, which is common in crossed designs
 (Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
+
+The 'Python' twin reports a single count, under the name \code{n_converged}, which is what
+\code{n_returned} counts here: its \code{statsmodels} backend does not report boundary singularity, so
+it cannot separate the fit outcomes. Read the two names against each other when comparing
+results across the languages.
 }
 \description{
 For each replicate, simulate from the ground-truth specification, fit the model the

@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A \code{pilotr_power} object, as returned by \code{\link[=power_mixed]{power_mixed()}}.}
 
-\item{digits}{Number of significant digits for the reported rates.}
+\item{digits}{Number of decimal places for the reported rates and for the interval bounds.}
 
 \item{...}{Ignored, present for consistency with the generic.}
 }

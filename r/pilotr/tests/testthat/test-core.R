@@ -33,6 +33,17 @@ test_that("spec_json is valid JSON and round-trips through load_spec", {
   expect_equal(simulate_design(load_spec(tmp))$score, simulate_design(spec)$score)
 })
 
+test_that("only FALSE skips validation and any other value validates leniently", {
+  spec <- gaussian_between()
+  spec$extra_field <- "x"
+  tmp <- tempfile(fileext = ".json"); on.exit(unlink(tmp))
+  writeLines(spec_json(spec), tmp)
+  expect_error(load_spec(tmp), "unknown top-level field 'extra_field'")
+  expect_warning(load_spec(tmp, validate = NA), "unknown top-level field 'extra_field'")
+  expect_warning(load_spec(tmp, validate = 1), "unknown top-level field 'extra_field'")
+  expect_silent(load_spec(tmp, validate = FALSE))
+})
+
 test_that("power_design returns Type S / Type M and a plausible power", {
   r <- power_design(gaussian_between(), n_sims = 100)
   expect_true(all(c("n_sims", "power", "type_s", "type_m", "true_effect", "mean_estimate")
@@ -76,10 +87,14 @@ test_that("default_response_name covers every family", {
   expect_equal(default_response_name("gaussian"), "score")
   expect_equal(default_response_name("lognormal"), "RT")
   expect_equal(default_response_name("shifted_lognormal"), "RT")
+  expect_equal(default_response_name("exgaussian"), "RT")
   expect_equal(default_response_name("bernoulli"), "accuracy")
   expect_equal(default_response_name("poisson"), "count")
   expect_equal(default_response_name("ordinal"), "rating")
   expect_equal(default_response_name("beta"), "proportion")
+  # And nothing the validator registers falls through to the unrecognised-family fallback.
+  for (f in names(pilotr:::.family_params))
+    expect_false(identical(default_response_name(f), "outcome"), info = f)
 })
 
 test_that("each response family simulates a column on the expected scale", {
@@ -128,6 +143,38 @@ test_that("build_spec carries sigma through for the lognormal family", {
   d <- simulate_design(spec)
   expect_equal(nrow(d), 10)
   expect_true(all(d$RT > 0))
+})
+
+test_that("build_spec assembles a usable exgaussian response", {
+  spec <- build_spec(list(name = "eg", seed = 1, design_kind = "between",
+                          factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 20,
+                          intercept = 500, effect = 20, family = "exgaussian",
+                          resp_name = "", sigma = 50, beta = 100))
+  expect_identical(spec$response$name, "RT")
+  expect_equal(spec$response$sigma, 50)
+  expect_equal(spec$response$beta, 100)
+  expect_silent(validate_spec(spec))
+  expect_true(all(simulate_design(spec)$RT > 0))
+})
+
+test_that("build_spec rounds the four families it documents unless p says otherwise", {
+  p <- list(name = "r", seed = 1, design_kind = "between",
+            factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
+            intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1)
+  expect_identical(build_spec(p)$response$round, 4L)
+  expect_identical(build_spec(c(p, list(round = 1)))$response$round, 1)
+  p["round"] <- list(NULL)                       # an explicit NULL leaves the response unrounded
+  spec <- build_spec(p)
+  expect_null(spec$response$round)
+  expect_false(all(simulate_design(spec)$score == round(simulate_design(spec)$score, 4)))
+
+  # `beta` is continuous too, and validate_spec() accepts a rounding for it, but build_spec()
+  # has never set one, which is why the documentation names the families rather than the
+  # category.
+  b <- build_spec(list(name = "b", seed = 1, design_kind = "between",
+                       factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
+                       intercept = 0, effect = 0.5, family = "beta", resp_name = "", phi = 10))
+  expect_null(b$response$round)
 })
 
 test_that("per_subject must lie between 1 and the number of items", {
@@ -215,6 +262,13 @@ test_that("the fit counts distinguish singular fits from clean convergence", {
   expect_identical(out$n_attempted, 6L)
   expect_true(out$n_converged <= out$n_returned)
   expect_true(out$n_singular > 0L)
+
+  # The decision proportions are over the replicates that returned an estimate, not the
+  # converged ones, so p * n_returned is a whole number even where the two counts differ.
+  pr <- precision_design(spec, focal = c(effect = 0.05), rope = 0.02, n_sims = 6)
+  expect_true(pr$n_converged < pr$n_returned)
+  expect_equal(pr$p_meaningful * pr$n_returned, round(pr$p_meaningful * pr$n_returned))
+  expect_equal(pr$p_equivalent * pr$n_returned, round(pr$p_equivalent * pr$n_returned))
 })
 
 test_that("an interaction random slope reaches the linear predictor", {
@@ -270,6 +324,14 @@ test_that("a non-object unit is reported rather than crashing", {
   expect_error(validate_spec(spec), "'units.subject.n' must be a whole number", fixed = TRUE)
 })
 
+test_that("a non-boolean correlated is refused in the spelling the twin uses", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  spec$random$subject$correlated <- "yes"
+  # The field lives in a JSON file, so the message names JSON literals, as the twin's does.
+  expect_error(validate_spec(spec), "random.subject.correlated must be true or false",
+               fixed = TRUE)
+})
+
 test_that("a non-whole seed truncates, as int(abs(seed)) does in the twin", {
   # Reachable only through validate = FALSE, the fast path the replicate loops use. Rounding here
   # handed the two engines different data from one specification.
@@ -297,6 +359,10 @@ test_that("spec_json round-trips a coefficient exactly", {
   # And it stays readable: a value typed as 0.3 is not written as 0.29999999999999999.
   spec$fixed$coefficients$cond <- 0.3
   expect_true(grepl('"cond": 0.3', spec_json(spec), fixed = TRUE))
+  # The emitted script keeps the same shortest round-tripping form.
+  expect_true(grepl("cond = 0.3)", generate_r_script(spec), fixed = TRUE))
+  spec$fixed$coefficients$cond <- 1 / 3
+  expect_true(grepl("cond = 0.3333333333333333", generate_r_script(spec), fixed = TRUE))
 })
 
 test_that("brms_bridge maps the beta family to brms's Beta()", {
@@ -327,6 +393,16 @@ test_that("generate_r_script emits a self-contained, runnable script", {
   expect_true(grepl("library(pilotr)", rs, fixed = TRUE))
   expect_true(grepl("simulate_design", rs, fixed = TRUE))
   expect_true(grepl("spec <-", rs, fixed = TRUE))
+  expect_true(grepl("install_github", rs, fixed = TRUE))
+  expect_false(grepl("once available", rs, fixed = TRUE))
+})
+
+test_that("model_data and model_formula accept a specification path", {
+  path <- pilotr_example("crossed_mixed_rt")
+  spec <- load_spec(path)
+  d <- simulate_design(spec)
+  expect_identical(model_data(path, d), model_data(spec, d))
+  expect_identical(deparse(model_formula(path)), deparse(model_formula(spec)))
 })
 
 test_that("pilotr_example lists the bundled specs and resolves each to a file", {

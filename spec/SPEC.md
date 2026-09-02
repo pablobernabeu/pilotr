@@ -337,12 +337,12 @@ whose response path applies no transcendental function to the linear predictor. 
 every family when `response.round` is set, since rounding quantises away a last-bit difference.
 
 For `lognormal`, `shifted_lognormal`, `exgaussian`, `bernoulli`, `poisson`, `ordinal` and `beta`
-without `round`, results may differ in the last unit in the last place. IEEE-754 requires correct
-rounding for addition, subtraction, multiplication, division and square root, but leaves the
-rounding of `exp()` and `log()` to the implementation. The R and Python builds on a given
-platform need not share a maths library. Measured over 200,000 arguments in the log-reaction-time
-range, R and CPython `exp()` disagreed on 0.44% of them by up to 6 ulp, and `log()` on 0.12% by up
-to 1 ulp.
+without `round`, results may differ by a few units in the last place, within the allowance of 8
+recorded in `tools/parity/tolerance.json`. IEEE-754 requires correct rounding for addition,
+subtraction, multiplication, division and square root, but leaves the rounding of `exp()` and
+`log()` to the implementation. The R and Python builds on a given platform need not share a maths
+library. Measured over 200,000 arguments in the log-reaction-time range, R and CPython `exp()`
+disagreed on 0.44% of them by up to 6 ulp, and `log()` on 0.12% by up to 1 ulp.
 
 This is demonstrable, and has been demonstrated. Taking a shifted-lognormal design and switching
 only its family to `gaussian`, so that the seed, the random-effect structure, the linear predictor

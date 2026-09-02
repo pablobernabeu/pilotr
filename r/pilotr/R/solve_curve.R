@@ -225,11 +225,11 @@
 #' 36. Nearly all of that error is the Monte Carlo noise the interval is describing, and it falls
 #' with the square root of the replicate count. Raise the count far enough and the interval
 #' narrows onto a fitted shape that is still slightly the wrong shape, so replicates alone do not
-#' make a solved size arbitrarily accurate. The remedies are a finer grid, more replicates, or a
+#' make a solved size arbitrarily accurate. The remedies are a finer grid, more replicates or a
 #' design with a closed form to check against.
 #'
 #' @param curve A curve, as returned by [power_curve_mixed()], [precision_curve()] or
-#'   [sweep_spec()]: one row per swept value, with the swept value, a decision rate, and the
+#'   [sweep_spec()]: one row per swept value, with the swept value, a decision rate and the
 #'   number of replicates behind it.
 #' @param target The decision rate to solve for, strictly between 0 and 1.
 #' @param x Name of the column holding the swept value. `NULL`, the default, takes the leading
@@ -249,7 +249,7 @@
 #'   bounds), `level`, `target`, `se` (the delta-method standard error on the fitted scale, the
 #'   scale on which the interval is symmetric), `dispersion` (the heterogeneity factor applied,
 #'   1 where the model fits), `x` and `y` (the columns used), `transform`, `intercept` and `slope`
-#'   (the fitted coefficients), `n_points` (the number of curve points the fit used), and `x_min`
+#'   (the fitted coefficients), `n_points` (the number of curve points the fit used) and `x_min`
 #'   and `x_max` (the swept range). A bound is allowed to fall outside that range. When one does,
 #'   the sweep was too narrow to pin the value down and should be widened. A `dispersion` well
 #'   above 1 says the curve is not the shape the model assumes, so the solve deserves a wider grid

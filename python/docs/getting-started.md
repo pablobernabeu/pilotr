@@ -87,6 +87,6 @@ From here, [Response families](families.md) shows what each of the eight familie
 which scale its effect is written on, [Worked examples](examples.md) gives one ready-to-run
 design per family, and [Power and design analysis](power.md) turns a specification into a power
 estimate with its Type S and Type M errors. [Cross-language reproducibility](cross-language.md)
-explains why an R run and a Python run agree to the last bit,
+explains how closely an R run and a Python run agree,
 [Specification format](specification.md) documents the JSON itself, and the
 [API reference](api.md) lists every public function and class.

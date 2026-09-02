@@ -73,8 +73,9 @@ def load_spec(path, validate=True):
         Path to a JSON design-specification file.
     validate : bool
         Whether to validate the specification after reading it. ``True`` (the default) applies
-        `validate_spec` strictly; ``False`` skips validation; ``"lenient"`` or any other truthy
-        non-``True`` value validates with ``strict=False``.
+        `validate_spec` strictly; ``False`` skips validation; any other value, ``None`` for
+        instance, validates with ``strict=False``, so an unrecognised field is a warning rather
+        than an error.
 
     Returns
     -------
@@ -175,7 +176,8 @@ def simulate(spec, validate=True) -> Dataset:
         Whether to validate the specification first. The default ``True`` catches the errors
         that would otherwise pass silently, such as a mistyped coefficient key, which resolves
         to no column and so sets that effect to zero. Validation costs a few milliseconds, so
-        replicate loops validate once and then pass ``False``.
+        replicate loops validate once and then pass ``False``. Any value other than ``True``
+        or ``False`` validates leniently, as in `load_spec`.
 
     Returns
     -------

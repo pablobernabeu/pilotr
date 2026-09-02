@@ -71,8 +71,8 @@ identical(simulate_design(spec)$score, simulate_design(spec2)$score)
 ## The same design in Python
 
 The Python package reads the identical specification and produces the identical data. The
-code below is not evaluated here. It shows the Python you would run, and its output matches
-the R data to the last bit.
+code below is not evaluated here. It shows the Python you would run, and because this is a
+rounded gaussian design its output is identical to the R data.
 
 ```python
 from pilotr import simulate, load_spec
@@ -97,7 +97,7 @@ what the bit-identical claim rests on.
 # and the table would claim a stricter result than the check actually produced.
 knitr::kable(read.csv("parity-summary.csv",
                       colClasses = c(max_abs_diff = "character")),
-             format = "html", table.attr = 'class="table data-output"')
+             format = "html", table.attr = 'class="table"')
 ```
 
 The difference is exactly zero for every design whose responses are rounded, and about

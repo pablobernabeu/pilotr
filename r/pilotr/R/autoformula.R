@@ -24,6 +24,10 @@
 #' head(model_data(spec, simulate_design(spec)))
 #' @export
 model_data <- function(spec, d) {
+  # A path is loaded here rather than passed through .as_spec(), because this runs once per
+  # replicate in the power and precision loops, where the specification has been validated
+  # already and re-validating it would be pure cost.
+  if (is.character(spec)) spec <- load_spec(spec)
   resp <- spec$response; shift <- if (is.null(resp$shift)) 0 else resp$shift
   d$.y <- if (resp$family %in% c("lognormal", "shifted_lognormal")) log(d[[resp$name]] - shift) else d[[resp$name]]
   for (f in spec$factors) for (col in names(f$contrasts))      # contrast columns from labels
@@ -66,6 +70,7 @@ model_data <- function(spec, d) {
 #' model_formula(spec)
 #' @export
 model_formula <- function(spec) {
+  if (is.character(spec)) spec <- load_spec(spec)
   fixed <- vapply(names(spec$fixed$coefficients), .us, character(1))
   # `|` only when the process actually correlates the terms, `||` otherwise. Emitting `|`
   # unconditionally asked lmer to estimate a correlation that the specification had fixed at

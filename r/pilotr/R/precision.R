@@ -41,9 +41,9 @@
 #'   meaningful decision about an effect no larger than `rope` cannot rise above 0.5 however
 #'   large the sample.
 #' @param n_sims Number of Monte Carlo replicates. `p_meaningful` and `p_equivalent` are
-#'   proportions over the converged replicates, so they carry a Monte Carlo standard error of
-#'   about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps when `n_sims` is small. At
-#'   least 200 replicates are advisable for real planning.
+#'   proportions over the replicates that returned an estimate (`n_returned`), so they carry a
+#'   Monte Carlo standard error of about `sqrt(p * (1 - p) / n_sims)` and move in coarse steps
+#'   when `n_sims` is small. At least 200 replicates are advisable for real planning.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.

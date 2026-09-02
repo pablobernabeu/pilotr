@@ -52,7 +52,7 @@ invisibly.}
 \value{
 A length-one character string holding the emitted script, invisibly when \code{file} is
 given. For \code{array = "slurm"} the string holds three banner-separated parts, an R analysis
-script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
+script, a bash array wrapper and an R aggregator; the wrapper is not submittable as
 emitted, since its \code{--account} and \code{PROJECT_DIR} placeholders must be filled in first.
 }
 \description{
@@ -96,7 +96,7 @@ that has not converged carries the authority of a number without the sampling be
 
 A verdict is a function of the whole rule, the whole gate and the specification, so each
 replicate's record carries all of them: \code{bf_threshold}, \code{rope}, \code{ci_mass}, \code{max_rhat_limit},
-\code{max_divergent_limit}, an MD5 fingerprint of the canonical specification JSON, and the pilotr
+\code{max_divergent_limit}, an MD5 fingerprint of the canonical specification JSON and the pilotr
 version that produced the data. A results directory collects whatever was written into it, and
 the emitted aggregator globs it, so without those columns two array runs under different
 regions of practical equivalence would combine into one table with nothing to tell them apart.

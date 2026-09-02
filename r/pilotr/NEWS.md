@@ -1,3 +1,68 @@
+# pilotr (development version)
+
+## Fixes
+
+* `model_data()` and `model_formula()` accept a path to a specification file. Both documented
+  `spec` as a path or a list, the wording every other entry point uses, and both then read the
+  list directly, so a path failed at a base R subscript instead of being loaded.
+* The script that `generate_r_script()` emits gives an installation command that works. Its header
+  carried `install.packages("pilotr")`, marked 'once available', where the package is installed
+  from GitHub.
+* `print.pilotr_power()` takes `digits` as the decimal places it has always applied, and the
+  confidence interval follows it. `digits` was documented as significant digits and the interval
+  was fixed at three decimal places whatever it was set to.
+* `default_response_name()` returns `"RT"` for the `exgaussian` family, which fell through to the
+  `"outcome"` used for an unrecognised family.
+* `build_spec()` assembles an `exgaussian` response. It wrote neither `sigma` nor `beta` for that
+  family, so the specification it returned was one `validate_spec()` refuses, and the response
+  column was named `outcome`.
+* A non-boolean `random.<group>.correlated` is refused in the spelling the specification is
+  written in. The message named the R literals `TRUE` and `FALSE` for a field that lives in a JSON
+  file, where the message beside it and the 'Python' twin both say `true` and `false`.
+* The power backend refuses a non-gaussian design without calling the limit temporary. The
+  message said the backend `currently` handles only the gaussian two-group design, where no
+  wider backend is planned.
+
+## Documentation
+
+* The power and precision vignettes ship caches regenerated under 0.3.0. The three they carried
+  predated the change to the replicate seeds and to the fit accounting, so the numbers and columns
+  shown were not the ones the code shown beside them produces, and the prose read `n_converged` as
+  the denominator of the decision rates when that denominator is `n_returned`. The vignettes now
+  report the fit accounting in full, plot the Wilson intervals the sweeps already return, and
+  derive the analysis formula through `model_formula()` rather than quoting one.
+  `tools/regenerate-vignette-caches.R` writes all three caches, and a test compares their columns
+  against a live run, so a change to a replicate loop cannot leave a stale cache behind.
+* The `?pilotr` overview names the `exgaussian` family and every export. Ten of the 0.3.0
+  additions were missing from the topic that heads the reference index.
+* The cross-language tolerance is stated one way throughout. `DESCRIPTION` and `spec/SPEC.md`
+  promised agreement to within the last unit in the last place, the READMEs and the vignettes said
+  a few units, and two sentences said the last bit. The measured residue is one unit and the
+  harness allows the eight recorded in `tools/parity/tolerance.json`, so every statement now says
+  a few units in the last place, within that allowance.
+* `spec_json()` and `generate_r_script()` describe the precision they write. Both said 17
+  significant digits, where they write the shortest form that reads back as the same double, so a
+  coefficient typed as 0.3 is written as 0.3.
+* `precision_design()` states one denominator for its decision proportions. The `n_sims` argument
+  called them proportions over the converged replicates while the return value correctly named
+  `n_returned`, which since 0.3.0 can be several times larger.
+* `load_spec()` describes what `validate` does with a value other than `TRUE` or `FALSE`. It
+  documented such a value as forwarded to `validate_spec()` as its `strict` argument, where it
+  validates leniently, and `simulate_design()` said nothing about it at all.
+* `?power_mixed` records that the 'Python' twin reports a single `n_converged`, which counts what
+  `n_returned` counts here. The two packages have used the name for different things since 0.3.0,
+  and neither said so.
+* `build_spec()` describes the rounding it applies, and takes `round` to change or drop it. The
+  four decimal places it writes into a `gaussian`, `lognormal`, `shifted_lognormal` or
+  `exgaussian` response, which are what makes the data of such a design identical in the two
+  implementations rather than merely close, appeared nowhere in the documentation and could not
+  be turned off.
+* The `sweep_spec()` effect-size example no longer fits the null design twice. It passed an
+  explicit zero to `design_conditions()`, which prepends the all-zero condition itself.
+* The README no longer calls the two packages feature-parity twins. It names the surface they
+  share and lists what the R package covers beyond it, where a list of four had left thirteen
+  R-only exports out.
+
 # pilotr 0.3.0
 
 Released 2026-08-21.
@@ -56,9 +121,10 @@ below, and `tools/parity/tolerance.json` records which cases carry an allowance 
 
 * The scope of the guarantee is now stated honestly in `spec/SPEC.md`. It is exact for
   `gaussian`, for any design applying no transcendental function to the linear predictor, and for
-  any family with `response.round` set. The families that apply `exp()` or `log()` may differ in the
-  last unit in the last place, because IEEE-754 does not require correct rounding for those
-  functions and the two builds need not share a maths library. Measured rates are given, and the
+  any family with `response.round` set. The families that apply `exp()` or `log()` may differ by a
+  few units in the last place, within the allowance `tools/parity/tolerance.json` records, because
+  IEEE-754 does not require correct rounding for those functions and the two builds need not share
+  a maths library. Measured rates are given, and the
   attribution is demonstrated: the same design switched to `gaussian`, with an identical seed,
   structure and draw sequence, is bit-identical.
 
@@ -82,11 +148,6 @@ below, and `tools/parity/tolerance.json` records which cases carry an allowance 
   the implementation understands is refused outright.
 * `simulate_design()` gains `validate`, defaulting to `TRUE`. The replicate loops validate once and
   then skip it, so a sweep pays the cost once.
-
-* `spec_from_model()` gains test coverage: the recovered specification's units,
-  `between`/`vary_within` placement, interaction keys read back off product columns,
-  and random-effect estimates are checked against the design that generated the pilot
-  data, alongside the refusal paths for models the function cannot read.
 
 * The package now declares a minimum R version, `Depends: R (>= 4.0.0)`. The cross-language
   claim assumes the `round()` that arrived in 4.0.0, which is where that floor comes from. A
@@ -236,6 +297,16 @@ below, and `tools/parity/tolerance.json` records which cases carry an allowance 
 
 ## New in the design-analysis layer
 
+* `spec_from_model()` reads a specification off a linear mixed model already fitted with
+  `lme4::lmer()` or `lmerTest::lmer()`, raising the numbers of subjects and items as it goes, so a
+  pilot study or a published model becomes the starting point of a power analysis with no
+  random-effect standard deviation left to invent. Which of a fit's numeric columns were
+  contrast-coded factors and which were covariates is recorded nowhere in the fit, so it is
+  inferred by a rule stated in full on the reference page and reported by a message on every call,
+  and an interaction's product column is recognised by checking the product identity in the data
+  rather than by its name. The recovered specification's units, `between`/`vary_within` placement,
+  interaction keys and random-effect estimates are tested against the design that generated the
+  pilot data, alongside the refusal paths for models the function cannot read.
 * `generate_design_analysis()` emits a Bayesian design analysis as a runnable script: a
   `brm()` call with `sample_prior = "yes"`, a Savage-Dickey Bayes factor, a highest-density
   interval against a region of practical equivalence, a three-way supported/null/inconclusive

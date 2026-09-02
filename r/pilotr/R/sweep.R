@@ -35,11 +35,11 @@
 
 #' Sweep an analysis over one field of a design specification
 #'
-#' Vary a single field of a specification across a set of values, run an analysis at each, and bind
+#' Vary a single field of a specification across a set of values, run an analysis at each and bind
 #' the results into one data frame. Sample size is the axis users sweep most often, and
 #' [power_curve_mixed()] and [precision_curve()] are wrappers around this for it, but any field can
 #' be swept, including an effect size, a random-effect standard deviation, a residual standard
-#' deviation, or the number of items per subject.
+#' deviation or the number of items per subject.
 #'
 #' @details
 #' The specification is validated once, before the sweep, so a mistake in it is reported before any
@@ -79,9 +79,10 @@
 #'   # Sample size, the same sweep power_curve_mixed() performs.
 #'   sweep_spec(spec, "units$subject$n", c(12, 18), power_mixed, n_sims = 8)
 #'
-#'   # Effect size, which the old curve functions could not reach.
+#'   # Effect size, which the old curve functions could not reach. design_conditions() prepends
+#'   # the all-zero condition, so the same sweep also reports the Type I error rate.
 #'   sweep_spec(spec, "fixed$coefficients",
-#'              design_conditions(effect = c(0, 0.03, 0.06)), power_mixed, n_sims = 8)
+#'              design_conditions(effect = c(0.03, 0.06)), power_mixed, n_sims = 8)
 #' }
 #' }
 #' @seealso [design_conditions()] to build effect-size grids, [power_mixed()] and

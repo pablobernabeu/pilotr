@@ -62,5 +62,5 @@ The app does not own the design. The specification does. Download the specificat
 or the data (`.csv`), and run the specification unchanged in R with `simulate_design()` or in
 Python with `pilotr.simulate()` for identical data. The heavier analyses stay with the installed
 packages: crossed mixed-effects power in R, through `lme4` as the reference backend, and in
-Python, and precision/ROPE design analysis in R. Whichever interface you use, the specification
-you build in the app drives all three.
+Python, and precision/ROPE design analysis, calibration, sweeps and the script emitters in R.
+Whichever interface you use, the specification you build in the app drives all three.

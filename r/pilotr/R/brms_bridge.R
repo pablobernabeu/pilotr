@@ -4,12 +4,12 @@
 # confirmatory Bayesian model. The function emits code that can be copied into a script, and it
 # requires neither brms nor Stan to be installed.
 
-#' Derive a brms formula, family, and priors from a design spec
+#' Derive a brms formula, family and priors from a design spec
 #'
 #' @param spec a design spec (path or list).
 #' @param prior_scale SD of the Normal prior on fixed main effects (standardised scale).
 #' @param interaction_scale SD of the Normal prior on interaction terms (default prior_scale/2).
-#' @return Invisibly, a list with elements `formula`, `family`, `priors`, and `code`; the
+#' @return Invisibly, a list with elements `formula`, `family`, `priors` and `code`; the
 #'   `code` element (a ready-to-fit `brms` model) is also printed to the console.
 #' @examples
 #' spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

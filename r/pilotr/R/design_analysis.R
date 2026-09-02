@@ -475,7 +475,7 @@
 #'
 #' A verdict is a function of the whole rule, the whole gate and the specification, so each
 #' replicate's record carries all of them: `bf_threshold`, `rope`, `ci_mass`, `max_rhat_limit`,
-#' `max_divergent_limit`, an MD5 fingerprint of the canonical specification JSON, and the pilotr
+#' `max_divergent_limit`, an MD5 fingerprint of the canonical specification JSON and the pilotr
 #' version that produced the data. A results directory collects whatever was written into it, and
 #' the emitted aggregator globs it, so without those columns two array runs under different
 #' regions of practical equivalence would combine into one table with nothing to tell them apart.
@@ -510,7 +510,7 @@
 #'   invisibly.
 #' @return A length-one character string holding the emitted script, invisibly when `file` is
 #'   given. For `array = "slurm"` the string holds three banner-separated parts, an R analysis
-#'   script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
+#'   script, a bash array wrapper and an R aggregator; the wrapper is not submittable as
 #'   emitted, since its `--account` and `PROJECT_DIR` placeholders must be filled in first.
 #' @references Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
 #'   American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}

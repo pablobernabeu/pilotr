@@ -585,15 +585,6 @@ table.table thead th code {
   background: rgba(255, 255, 255, .16);
 }
 
-// A table that is printed data rather than prose (the worked-examples article renders
-// simulated data frames through knitr::kable) belongs at the code size the rest of the
-// site gives printed output, not at prose size. Reference tables written in Markdown keep
-// the reading size, so the rule is opt-in through the class rather than blanket.
-table.data-output {
-  font-size: .85rem;                    // level with pre and pre code above
-  font-variant-numeric: tabular-nums;
-}
-
 // Breathing room beneath figures (a plot renders as a lone image in its
 // paragraph).
 :is(.contents, main) p > img:only-child { margin-bottom: .7rem; }

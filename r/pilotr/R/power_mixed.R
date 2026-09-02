@@ -74,6 +74,11 @@
 #'   of the variance estimates that produce it. A large `n_singular` means the model being fitted is
 #'   richer than the design can support at that sample size, which is common in crossed designs
 #'   (Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
+#'
+#'   The 'Python' twin reports a single count, under the name `n_converged`, which is what
+#'   `n_returned` counts here: its `statsmodels` backend does not report boundary singularity, so
+#'   it cannot separate the fit outcomes. Read the two names against each other when comparing
+#'   results across the languages.
 #' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
@@ -189,7 +194,7 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 #' visible as the estimate.
 #'
 #' @param x A `pilotr_power` object, as returned by [power_mixed()].
-#' @param digits Number of significant digits for the reported rates.
+#' @param digits Number of decimal places for the reported rates and for the interval bounds.
 #' @param ... Ignored, present for consistency with the generic.
 #' @return `x`, invisibly.
 #' @export
@@ -205,7 +210,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
     power = round(unname(x$power), digits),
     mcse = round(unname(x$power_mcse), digits),
     ci95 = ifelse(is.na(x$power_lo), NA_character_,
-                  sprintf("[%.3f, %.3f]", unname(x$power_lo), unname(x$power_hi))),
+                  sprintf("[%.*f, %.*f]", digits, unname(x$power_lo), digits, unname(x$power_hi))),
     n_sig = unname(x$n_significant),
     type_s = round(unname(x$type_s), digits),
     type_m = round(unname(x$type_m), digits),
@@ -249,7 +254,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   identical to a serial run.
 #' @return A data frame with one row per sample size and focal effect, with columns `n_subject`,
 #'   `effect`, `true`, `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `type_s`,
-#'   `type_m`, and the `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning` fit
+#'   `type_m` and the `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning` fit
 #'   counts. `n_singular` typically falls as the sample size rises, so reading it down the sweep
 #'   shows where the model becomes supportable.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
