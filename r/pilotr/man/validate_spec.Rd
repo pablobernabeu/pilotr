@@ -25,8 +25,10 @@ implementation understands. Called by \code{\link[=load_spec]{load_spec()}} by d
 Validation exists because several ways of getting a specification wrong produce plausible
 data and no error at all. A mistyped coefficient key resolves to no column and so silently
 sets that effect to zero, which generates exactly the data of a null design and reports
-success. A response parameter left over from another family is ignored. Neither is
-detectable in the output, which is why they are refused here.
+success. A response parameter left over from another family is ignored. A response named
+after the factor writes the response over the factor column, so the design condition never
+reaches the data. None of these is detectable in the output, which is why they are refused
+here.
 
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or

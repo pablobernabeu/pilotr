@@ -47,6 +47,11 @@ A coefficient or slope key that names no existing column contributes zero, so it
 the term and raises nothing. `validate_spec()` therefore refuses such a key: a design whose focal
 effect is misspelled generates exactly the data of a null design and reports success.
 
+Every name that reaches the data as a column, namely `subject`, `item`, each additional grouping
+factor, each factor, each predictor and the response, has to be non-empty and distinct from the
+others, and `validate_spec()` refuses a repeat. A repeated name is written over the column before
+it, so a response named after the factor leaves the design condition out of the data altogether.
+
 ### Factors
 
 ```json

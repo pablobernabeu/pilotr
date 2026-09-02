@@ -54,6 +54,16 @@ def _is_str(x) -> bool:
     return isinstance(x, str)
 
 
+def _is_name(x) -> bool:
+    """A name that reaches the data as a column name.
+
+    Blank passed ``_is_str``, and the spec then produced a column with no name at all, where the
+    R twin failed inside its simulator with a message naming neither the field nor the emptied
+    control.
+    """
+    return _is_str(x) and x.strip() != ""
+
+
 def _is_num(x) -> bool:
     # bool is a subclass of int in Python, and a boolean where a number belongs is a mistake.
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
@@ -61,6 +71,11 @@ def _is_num(x) -> bool:
 
 def _is_whole(x) -> bool:
     return _is_num(x) and float(x) == round(float(x))
+
+
+def _name_list(xs) -> str:
+    """Join names as 'a', 'a and b', 'a, b and c'."""
+    return xs[0] if len(xs) < 2 else "%s and %s" % (", ".join(xs[:-1]), xs[-1])
 
 
 def _parse_version(v):
@@ -228,8 +243,8 @@ def validate_spec(spec, strict: bool = True):
                 for k in f:
                     if k not in ("name", "levels", "contrasts", "vary_within", "between"):
                         unknown("unknown field '%s.%s'" % (where, k))
-                if not _is_str(f.get("name")):
-                    bad("%s.name must be a single string" % where)
+                if not _is_name(f.get("name")):
+                    bad("%s.name must be a non-empty string" % where)
                 levels = f.get("levels")
                 nlev = len(levels) if isinstance(levels, list) else 0
                 if not isinstance(levels, list) or nlev < 2 or not all(_is_str(v) for v in levels):
@@ -289,8 +304,8 @@ def validate_spec(spec, strict: bool = True):
                     if k not in ("name", "varies_by", "mean", "sd", "dist", "min", "max",
                                  "reliability"):
                         unknown("unknown field '%s.%s'" % (where, k))
-                if not _is_str(p.get("name")):
-                    bad("%s.name must be a single string" % where)
+                if not _is_name(p.get("name")):
+                    bad("%s.name must be a non-empty string" % where)
                 else:
                     pred_names.append(p["name"])
                 vb = p.get("varies_by")
@@ -367,6 +382,9 @@ def validate_spec(spec, strict: bool = True):
             bad("'random' must be an object keyed by grouping factor")
         else:
             for g, re in random_spec.items():
+                if not _is_name(g):
+                    bad("a 'random' grouping factor must have a non-empty name")
+                    continue
                 where = "random.%s" % g
                 if not isinstance(re, dict):
                     bad("%s must be an object" % where)
@@ -436,7 +454,7 @@ def validate_spec(spec, strict: bool = True):
             if fam not in FAMILY_PARAMS:
                 bad("'response.family' must be one of %s%s"
                     % (", ".join(FAMILY_PARAMS), (", not '%s'" % fam) if _is_str(fam) else ""))
-            if not _is_str(r.get("name")) or not r["name"]:
+            if not _is_name(r.get("name")):
                 bad("'response.name' must be a non-empty string")
             if fam in FAMILY_PARAMS:
                 needed = FAMILY_PARAMS[fam]
@@ -469,6 +487,43 @@ def validate_spec(spec, strict: bool = True):
                     elif fam not in ROUNDING_FAMILIES:
                         unknown("'response.round' has no effect for the %s family, whose outcome "
                                 "is already an integer" % fam)
+
+    # ---- column collisions ----
+    # Each name claimed below becomes a column of the simulated data, in this order, and a repeat
+    # is written over the column before it. A response named after the factor therefore leaves the
+    # design condition out of the data altogether, and since this engine appends a second column
+    # of the same name where the R twin overwrites the earlier one, the two export different
+    # tables from one and the same portable specification.
+    claims: list[tuple[str, str]] = []
+
+    def claim(nm, where):
+        if _is_name(nm):
+            claims.append((nm, where))
+
+    if isinstance(units, dict):
+        if units.get("subject") is not None:
+            claim("subject", "units.subject")
+        if has_item:
+            claim("item", "units.item")
+    if isinstance(random_spec, dict):
+        for g in random_spec:
+            if g not in ("subject", "item"):
+                claim(g, "random.%s" % g)
+    if isinstance(factors, list):
+        for i, f in enumerate(factors, start=1):
+            if isinstance(f, dict):
+                claim(f.get("name"), "factors[%d].name" % i)
+    if isinstance(predictors, list):
+        for i, p in enumerate(predictors, start=1):
+            if isinstance(p, dict):
+                claim(p.get("name"), "predictors[%d].name" % i)
+    if isinstance(r, dict):
+        claim(r.get("name"), "response.name")
+    claimed = [nm for nm, _ in claims]
+    for nm in dict.fromkeys(nm for nm in claimed if claimed.count(nm) > 1):
+        bad("the name '%s' is used by %s; each of those becomes a column of the simulated data, "
+            "so one would silently overwrite another"
+            % (nm, _name_list([w for n, w in claims if n == nm])))
 
     if soft:
         warnings.warn("in this design specification:\n  - " + "\n  - ".join(soft), stacklevel=2)

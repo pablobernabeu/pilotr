@@ -47,6 +47,7 @@ jobs:
           set -e
           Rscript r/pilotr/tests/test_app_logic.R      # engine + spec builder (asserts; exits 1 on failure)
           Rscript r/pilotr/tests/test_app_server.R     # Shiny app server + callr verify
+          Rscript r/pilotr/tests/test_app_lite_server.R # the serverless app, staged as the site build stages it
           Rscript r/pilotr/examples/run_demo.R         # jsonlite + generative engine
           Rscript r/pilotr/examples/run_power_mixed.R  # lme4 / lmerTest crossed-LMM power
           Rscript r/pilotr/examples/equivalence_faux.R # faux equivalence

@@ -20,6 +20,15 @@ default_response_name <- function(family) {
          beta = "proportion", "outcome")
 }
 
+# The counts that must survive as whole numbers. A cleared numeric control arrives as NA and
+# as.integer() turned it into NA_integer_, which writes as the string "NA" in the JSON and is
+# then refused by load_spec(), away from the interface that produced it; a typed decimal was
+# truncated in silence, so the design reproduced with a seed the user never chose.
+.whole_input <- function(x, field) {
+  if (!.is_whole(x)) stop("'", field, "' must be a single whole number", call. = FALSE)
+  as.integer(x)
+}
+
 #' Build a design specification from a flat list of design inputs
 #'
 #' Assemble a portable design specification (a plain list, serialisable with
@@ -38,7 +47,9 @@ default_response_name <- function(family) {
 #'   `item_corr`. An optional `round` sets the decimal rounding of the response
 #'   for the `gaussian`, `lognormal`, `shifted_lognormal` and `exgaussian`
 #'   families and defaults to 4; pass `round = NULL` to leave the response
-#'   unrounded.
+#'   unrounded. `seed`, `n_subject` and `n_item` must each be a single whole
+#'   number; anything else is an error rather than a value quietly rounded down
+#'   or carried through as `NA`.
 #' @return A design specification as a nested list, ready for
 #'   [simulate_design()], [spec_json()] or the
 #'   power and precision functions. For those families it carries
@@ -60,14 +71,14 @@ build_spec <- function(p) {
     factor$between <- "subject"
   }
 
-  units <- list(subject = list(n = as.integer(p$n_subject)))
+  units <- list(subject = list(n = .whole_input(p$n_subject, "n_subject")))
   if (identical(p$design_kind, "within") && isTRUE(p$include_items)) {
-    units$item <- list(n = as.integer(p$n_item))
+    units$item <- list(n = .whole_input(p$n_item, "n_item"))
   }
 
   spec <- list(
     spec_version = .SPEC_VERSION,
-    name = p$name, seed = as.integer(p$seed),
+    name = p$name, seed = .whole_input(p$seed, "seed"),
     units = units,
     factors = list(factor),
     fixed = list(intercept = p$intercept, coefficients = list(effect = p$effect))

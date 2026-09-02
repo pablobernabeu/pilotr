@@ -53,6 +53,20 @@ test_that("power_design returns Type S / Type M and a plausible power", {
   expect_equal(r$true_effect, 5)
 })
 
+# The Python twin used to return power 0 here, where stats::t.test() stopped with "not enough
+# observations"; both languages now refuse the design in the same words.
+test_that("power_design refuses a between factor with fewer than two units in a level", {
+  spec <- gaussian_between()
+  for (n in c(2, 3)) {
+    spec$units$subject$n <- n
+    expect_error(power_design(spec, n_sims = 5),
+                 "The power backend needs at least 2 subjects at each level of the between factor.",
+                 fixed = TRUE)
+  }
+  spec$units$subject$n <- 4
+  expect_gte(power_design(spec, n_sims = 5)$power, 0)
+})
+
 # design_conditions() recommends a condition in which every effect is zero, so this input is not
 # hypothetical. Dividing by it used to report type_m = Inf and a type_s that had degenerated into
 # the proportion of positive estimates.
@@ -155,6 +169,29 @@ test_that("build_spec assembles a usable exgaussian response", {
   expect_equal(spec$response$beta, 100)
   expect_silent(validate_spec(spec))
   expect_true(all(simulate_design(spec)$RT > 0))
+})
+
+test_that("build_spec refuses a count that is not a whole number", {
+  p <- list(name = "w", seed = 1, design_kind = "between",
+            factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
+            intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1)
+  # A cleared numeric control arrives as NA, and as.integer() carried it into the spec as
+  # NA_integer_, which writes as the string "NA" and is refused only later, by load_spec().
+  expect_error(build_spec(utils::modifyList(p, list(seed = NA_integer_))),
+               "'seed' must be a single whole number", fixed = TRUE)
+  expect_error(build_spec(utils::modifyList(p, list(n_subject = NA_integer_))),
+               "'n_subject' must be a single whole number", fixed = TRUE)
+  # A typed decimal was truncated in silence, so the design reproduced under another seed.
+  expect_error(build_spec(utils::modifyList(p, list(seed = 2024.5))),
+               "'seed' must be a single whole number", fixed = TRUE)
+  expect_identical(build_spec(utils::modifyList(p, list(seed = 2024)))$seed, 2024L)
+
+  w <- list(name = "wi", seed = 1, design_kind = "within", include_items = TRUE,
+            n_subject = 4, n_item = NA_integer_, factor_name = "cond", lev1 = "a", lev2 = "b",
+            intercept = 0, effect = 0.5, subj_int_sd = 0.1, subj_slope_sd = 0,
+            item_int_sd = 0.1, item_slope_sd = 0,
+            family = "gaussian", resp_name = "", sigma = 1)
+  expect_error(build_spec(w), "'n_item' must be a single whole number", fixed = TRUE)
 })
 
 test_that("build_spec rounds the four families it documents unless p says otherwise", {
@@ -330,6 +367,43 @@ test_that("a non-boolean correlated is refused in the spelling the twin uses", {
   # The field lives in a JSON file, so the message names JSON literals, as the twin's does.
   expect_error(validate_spec(spec), "random.subject.correlated must be true or false",
                fixed = TRUE)
+})
+
+test_that("a name that would take another column's place is refused", {
+  # A response named after the factor overwrote the factor column here and appended a second
+  # column of the same name in the twin, so one specification exported two different tables.
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  clash <- "the name 'group' is used by factors[1].name and response.name"
+  spec$response$name <- "group"
+  expect_error(validate_spec(spec), clash, fixed = TRUE)
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$factors[[1]]$name <- "subject"
+  expect_error(validate_spec(spec),
+               "the name 'subject' is used by units.subject and factors[1].name", fixed = TRUE)
+  spec <- load_spec(pilotr_example("nested_clusters"))
+  spec$response$name <- "site"
+  expect_error(validate_spec(spec),
+               "the name 'site' is used by random.site and response.name", fixed = TRUE)
+})
+
+test_that("a blank name is refused where it used to fail inside the simulator", {
+  # An emptied 'Factor name' box built a spec that validated and then stopped in simulate_design()
+  # with base R's "replacement has length zero"; the twin wrote a column with no name at all.
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$factors[[1]]$name <- ""
+  expect_error(validate_spec(spec), "factors[1].name must be a non-empty string", fixed = TRUE)
+  spec$factors[[1]]$name <- "  "
+  expect_error(validate_spec(spec), "factors[1].name must be a non-empty string", fixed = TRUE)
+  spec <- load_spec(pilotr_example("reading_time_continuous"))
+  spec$predictors[[1]]$name <- ""
+  expect_error(validate_spec(spec), "predictors[1].name must be a non-empty string", fixed = TRUE)
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$response$name <- " "
+  expect_error(validate_spec(spec), "'response.name' must be a non-empty string", fixed = TRUE)
+  spec <- load_spec(pilotr_example("nested_clusters"))
+  names(spec$random)[names(spec$random) == "site"] <- ""
+  expect_error(validate_spec(spec),
+               "a 'random' grouping factor must have a non-empty name", fixed = TRUE)
 })
 
 test_that("a non-whole seed truncates, as int(abs(seed)) does in the twin", {

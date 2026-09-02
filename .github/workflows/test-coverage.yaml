@@ -39,14 +39,15 @@ jobs:
           extra-packages: any::covr
           needs: check
 
-      - name: Drop the two dev-only app gates from tests/
-        # tests/test_app_logic.R and tests/test_app_server.R locate themselves
-        # through the --file= argument Rscript passes them, which covr's test
-        # runner does not supply, so under covr they stop at normalizePath()
-        # before testing anything. Both are .Rbuildignore'd, so R CMD check
-        # never runs them either; removing them from the runner's checkout
-        # measures exactly the suite the built package carries.
-        run: rm r/pilotr/tests/test_app_logic.R r/pilotr/tests/test_app_server.R
+      - name: Drop the dev-only app gates from tests/
+        # tests/test_app_logic.R, tests/test_app_server.R and
+        # tests/test_app_lite_server.R locate themselves through the --file=
+        # argument Rscript passes them, which covr's test runner does not
+        # supply, so under covr they stop at normalizePath() before testing
+        # anything. All three are .Rbuildignore'd, so R CMD check never runs
+        # them either; removing them from the runner's checkout measures
+        # exactly the suite the built package carries.
+        run: rm r/pilotr/tests/test_app_logic.R r/pilotr/tests/test_app_server.R r/pilotr/tests/test_app_lite_server.R
 
       - name: Measure and report coverage
         shell: Rscript {0}

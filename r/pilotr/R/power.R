@@ -6,7 +6,9 @@
 #' t-test, alongside the Type S (sign) and Type M (magnitude) design-analysis errors of
 #' Gelman and Carlin (2014).
 #'
-#' @param spec A design specification (path or list) for a two-group Gaussian design.
+#' @param spec A design specification (path or list) for a two-group Gaussian design. Each
+#'   level of the between factor needs at least two units, since a group of one leaves the
+#'   t-test with no variance of its own.
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 #'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and
 #'   `type_m` average over the significant replicates alone, so they settle more
@@ -40,6 +42,13 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   if (length(between) != 1 || length(between[[1]]$levels) != 2)
     stop("The power backend expects exactly one 2-level between factor.")
   f <- between[[1]]; fname <- f$name; lev0 <- f$levels[1]; lev1 <- f$levels[2]
+  # The between unit is split into equal blocks in level order, so the smaller group holds
+  # floor(n / 2) units. A group of one carries no variance of its own, and the two languages'
+  # t-tests part company there: stats::t.test() stops, while scipy returns a NaN p-value that
+  # counts as a non-significant replicate. Both refuse the design instead.
+  if (spec$units[[f$between]]$n %/% length(f$levels) < 2)
+    stop(sprintf("The power backend needs at least 2 %ss at each level of the between factor.",
+                 f$between))
   col <- names(f$contrasts)[1]; vals <- f$contrasts[[col]]
   true_effect <- spec$fixed$coefficients[[col]] * (vals[2] - vals[1])
   yname <- spec$response$name

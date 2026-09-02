@@ -19,9 +19,87 @@
 * A non-boolean `random.<group>.correlated` is refused in the spelling the specification is
   written in. The message named the R literals `TRUE` and `FALSE` for a field that lives in a JSON
   file, where the message beside it and the 'Python' twin both say `true` and `false`.
+* `power_design()` refuses a design that leaves a level of the between factor with fewer than two
+  units, instead of passing it to `stats::t.test()`. One subject per group stopped inside the
+  t-test with 'not enough observations', where the 'Python' twin returned a power of zero for the
+  same specification; both now refuse it in the same words.
 * The power backend refuses a non-gaussian design without calling the limit temporary. The
   message said the backend `currently` handles only the gaussian two-group design, where no
   wider backend is planned.
+* Both apps report a refusal from the power backend as a line of text on the Power tab. An error
+  inside an observer ends the Shiny session, so a design the backend declines, such as two
+  subjects in a between-subjects design, greyed the page out and took the design the user had
+  built with it. The guard that routes an unsupported design to the installed package now asks
+  for exactly one two-level between factor, where it read only the first factor and so let a
+  three-level design through to the engine.
+* The bundled app reports a pasted specification that does not parse. The message travelled as a
+  `validate()` call, which a rendered output reads but an observer and a download do not, so Run
+  power analysis and Verify did nothing at all and the specification download failed in the
+  browser. It now travels as it already did in the lite app, and the three downloads fall back to
+  a placeholder rather than failing.
+* Both apps show one snapshot on the Data tab. The Summary and the Plot read the data from the
+  last Simulate click but the response and factor names from the live design, so any change that
+  renames a column without a re-click, a new response family among them, replaced both tabs with a
+  raw R message and no hint that the fix was to select Simulate again. Simulate now captures the
+  specification it ran alongside the data, and the tab says when the design has moved on since.
+* `validate_spec()` refuses a specification in which two of the names that become columns of the
+  simulated data are the same. A response called after the factor, which the app's 'Response name'
+  box invites, wrote the response over the factor column and left the design condition out of the
+  data with no warning at all, and the 'Python' twin appended a second column of the same name
+  instead, so one portable specification exported two different tables. The check covers the
+  subject and item columns, any extra grouping factor, the factor and predictor names and the
+  response name, and both engines report the clash in the same words.
+* `validate_spec()` refuses a blank name for a factor, a predictor, an extra grouping factor or
+  the response. An emptied 'Factor name' box built a specification that validated and then stopped
+  inside `simulate_design()` with base R's 'replacement has length zero', which names neither the
+  field nor the control that was cleared, where the 'Python' twin wrote a column with no name at
+  all. A blank key under `random` was reported as a malformed object here and accepted outright by
+  the twin; both engines now name the grouping factor in the same words.
+* Both apps plot a factor of more than two levels. The fill scales were handed exactly two
+  colours, so a three-group between-subjects design, which the paste box is there to express and
+  the point-and-click controls cannot, replaced the Summary & plot tab with ggplot2's
+  'Insufficient values in manual scale'. The scales now take as many colours as the data has
+  levels, from a palette of six that falls back to `grDevices::hcl.colors()` beyond that.
+* `build_spec()` refuses a seed or a unit count that is not a whole number, and both apps report
+  the refusal on the Design spec tab. A cleared 'Seed' or 'N subjects' box arrives as `NA` and was
+  carried into the specification as `NA_integer_`, which writes as the string `"NA"`, so the tab
+  the app calls the single source of truth showed, and Download spec wrote, a file that
+  `load_spec()` refuses, which the user only discovers later and elsewhere; a decimal typed into
+  'Seed' was truncated in silence, so the data came from a seed nobody chose. Both apps now
+  validate the specification they build before showing or downloading it, as they already did
+  for a pasted one.
+* The bundled app names its three downloads after the specification they carry. They were built
+  from the sidebar boxes, so a pasted design was saved under whatever those boxes happened to hold
+  and a data file asserted a seed that had not generated it, the filename being all that travels
+  with a CSV once it leaves the app, and an emptied 'Design name' box produced `.json`, `.R` and
+  `_seed2024.csv`, which are hidden on Unix and refused or renamed by some browsers. The lite app
+  already took the name from the specification.
+* The bundled app runs the power curve in the background worker that `run_app(async = TRUE)` sets
+  up, as the point estimate already did. The curve is the point estimate repeated once for each of
+  five sample sizes, so the button that blocked the session for five times as long was the one
+  left in the main process, and the promise that power runs 'do not block the UI' held for only
+  one of the two. Where the app runs from source, and so has no worker, the progress bar moves
+  once per sample size rather than resting a third of the way across for the whole sweep.
+* The bundled app's Verify button runs the script the tab shows. It read the specification back
+  from JSON instead, so the script's own writer, which quotes list names and formats every number
+  itself, was never exercised, and a defect confined to it would have left the button green
+  against the promise made on the tab, in the vignette and in `generate_r_script()` that a clean
+  R session reproduces the data bit for bit. The comparison is now on the whole data frame rather
+  than on a sum of the response, which a change of row order, of column names or of column types
+  leaves untouched.
+* The bundled app is themed as the browser variant is, through `bslib`. It rendered under
+  Shiny's default Bootstrap 3, so a reader coming from the documentation site or from the
+  browser app met a third set of colours locally, and the spacing class under the power buttons,
+  a Bootstrap 5 utility, did nothing at all. Both variants now set the same theme, and the app
+  still runs, unthemed, where `bslib` is not installed.
+* The bundled app's paste box carries a label, as the lite app's does. It was given an empty one,
+  which is worse than none: the control was named for nobody, and a screen reader had only the
+  placeholder to read out, which is not a name.
+* The bundled app's Power tab describes its own cap on the number of simulations. The line shown
+  before the first run offered an unlimited count 'once you install the package', which is
+  installed whenever that line is on screen; the cap belongs to the app, and `power_design()`
+  called directly takes any count. `?run_app` now records the cap and the `PILOTR_MAX_SIMS`
+  environment variable that sets it.
 
 ## Documentation
 
@@ -62,6 +140,9 @@
 * The README no longer calls the two packages feature-parity twins. It names the surface they
   share and lists what the R package covers beyond it, where a list of four had left thirteen
   R-only exports out.
+* The browser app's guide points at the help the sidebar actually offers. It sent the reader to
+  'the example buttons there', where the app has three buttons, none of them examples, and the
+  paste box instead carries links to the example specifications and to the format.
 
 # pilotr 0.3.0
 

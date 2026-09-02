@@ -89,6 +89,9 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     ------
     NotImplementedError
         If the design is not a single two-level between-subjects Gaussian factor.
+    ValueError
+        If a level of the between factor holds fewer than two units, which leaves the t-test
+        with a group carrying no variance of its own.
 
     Notes
     -----
@@ -118,6 +121,14 @@ def _power_impl(spec, n_sims, alpha, executor):
     if len(between) != 1 or len(between[0]["levels"]) != 2:
         raise NotImplementedError("The power backend expects exactly one 2-level between factor.")
     factor = between[0]
+    # The between unit is split into equal blocks in level order, so the smaller group holds
+    # floor(n / 2) units. A group of one carries no variance of its own, and the two languages'
+    # t-tests part company there: scipy returns a nan p-value that counts as a non-significant
+    # replicate, while R's stats::t.test() stops. Both refuse the design instead.
+    n_unit = spec.get("units", {}).get(factor["between"], {}).get("n")
+    if n_unit is not None and n_unit // len(factor["levels"]) < 2:
+        raise ValueError("The power backend needs at least 2 %ss at each level of the "
+                         "between factor." % factor["between"])
     fname = factor["name"]
     lev0, lev1 = factor["levels"]
     col, vals = next(iter(factor["contrasts"].items()))

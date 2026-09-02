@@ -7,7 +7,9 @@
 power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
 }
 \arguments{
-\item{spec}{A design specification (path or list) for a two-group Gaussian design.}
+\item{spec}{A design specification (path or list) for a two-group Gaussian design. Each
+level of the between factor needs at least two units, since a group of one leaves the
+t-test with no variance of its own.}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and

@@ -16,7 +16,9 @@ build_spec(p)
 \code{item_corr}. An optional \code{round} sets the decimal rounding of the response
 for the \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} and \code{exgaussian}
 families and defaults to 4; pass \code{round = NULL} to leave the response
-unrounded.}
+unrounded. \code{seed}, \code{n_subject} and \code{n_item} must each be a single whole
+number; anything else is an error rather than a value quietly rounded down
+or carried through as \code{NA}.}
 }
 \value{
 A design specification as a nested list, ready for

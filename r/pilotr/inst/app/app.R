@@ -27,6 +27,8 @@ if (!exists("simulate_design", mode = "function")) {
   ENGINE_FILES <- normalizePath(.files)
 }
 
+`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.character(a) && !nzchar(a))) b else a
+
 MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))
 N_SIMS_DEFAULT <- 1000L   # the value the Simulations box starts at
 N_SIMS_MIN     <- 100L    # the smallest count the box accepts
@@ -57,6 +59,19 @@ FAMILY_DEFAULTS <- list(
   ordinal           = list(intercept = 0,   effect = 0.8),
   beta              = list(intercept = 0,   effect = 0.8, phi = 8)
 )
+
+# Fill colours for the plots. A pasted spec may carry a factor with any number of levels, so
+# the scales size the palette to the data: a fixed pair handed to a three-level scale left the
+# Summary & plot tab showing a ggplot2 error in place of the plot.
+PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0", "#C8922A", "#5A5A5A")
+pal <- function(k) if (k <= length(PALETTE)) PALETTE[seq_len(k)] else grDevices::hcl.colors(k, "Dynamic")
+
+# The same theme the lite app sets, so the two variants and the documentation site share one
+# identity. A bare fluidPage() renders under Shiny's default Bootstrap 3, whose primary is a
+# different blue and which does not define the `mb-3` spacing set below the power buttons.
+# Keep this call and app-lite's in step. Without bslib the app still runs, unthemed.
+APP_THEME <- if (requireNamespace("bslib", quietly = TRUE))
+  bslib::bs_theme(version = 5, primary = "#2C6FB0", "border-radius" = "0.5rem") else NULL
 
 guide_tab <- tabPanel(
   "Guide",
@@ -104,6 +119,7 @@ guide_tab <- tabPanel(
 
 # ---------------------------------------------------------------- UI ----
 ui <- fluidPage(
+  theme = APP_THEME,
   tags$head(tags$link(rel = "icon", type = "image/png", href = "favicon.png")),
   titlePanel("pilotr: design, simulate and power analysis (one spec, three interfaces)"),
   sidebarLayout(
@@ -164,7 +180,9 @@ ui <- fluidPage(
       tags$hr(),
       tags$details(
         tags$summary("Advanced: paste a JSON spec (overrides the controls)"),
-        textAreaInput("spec_json_in", NULL, "", rows = 5,
+        # A label, not NULL: an empty one names the control for nobody, and the summary above
+        # is a sibling rather than a label, so a screen reader had only the placeholder to read.
+        textAreaInput("spec_json_in", "Design spec (JSON)", "", rows = 5,
           placeholder = "Paste a pilotr spec with continuous predictors / interactions (e.g. a reading-time design)")),
       actionButton("simulate", "Simulate", class = "btn-primary"),
       downloadButton("dl_spec", "Download spec (.json)"),
@@ -221,6 +239,12 @@ server <- function(input, output, session) {
     if (!is.null(d$phi))   updateNumericInput(session, "phi",   value = d$phi)
   }, ignoreInit = TRUE)
 
+  parse_error <- reactiveVal(NULL)
+
+  # Returns the spec, or NULL if a pasted spec is invalid, with the message in parse_error().
+  # The message travels in a reactive value rather than a validate() call so that the observers
+  # and the downloads can report it too, as the lite app's already did: validate() inside an
+  # observer aborts it silently, and inside a downloadHandler it fails the browser's request.
   current_spec <- reactive({
     txt <- input$spec_json_in
     if (!is.null(txt) && nzchar(trimws(txt))) {                 # advanced override
@@ -228,15 +252,19 @@ server <- function(input, output, session) {
       # than a bare fromJSON, so a pasted spec faces the same validation as a loaded one.
       # Several of the ways a spec can be wrong produce plausible data rather than an error
       # (a mistyped coefficient key resolves to no column and silently generates null-effect
-      # data), which is exactly what 0.3.0's validation refuses. validate() surfaces the
-      # message in every output that reads the spec.
+      # data), which is exactly what 0.3.0's validation refuses.
       spec <- tryCatch({
         tf <- tempfile(fileext = ".json"); writeLines(txt, tf); load_spec(tf)
       }, error = function(e) e)
-      if (inherits(spec, "error")) validate(need(FALSE, conditionMessage(spec)))
+      if (inherits(spec, "error")) { parse_error(conditionMessage(spec)); return(NULL) }
+      parse_error(NULL)
       return(spec)
     }
-    build_spec(list(
+    # The controls can also build a specification the package refuses: a cleared numeric box
+    # arrives as NA, and a response named after the factor takes its column. Validating the
+    # built spec here is what keeps the Design spec tab, which the app calls the single source
+    # of truth, from showing and downloading a file that load_spec() will not read.
+    spec <- tryCatch(validate_spec(build_spec(list(
       name = input$name, seed = input$seed, n_subject = input$n_subject,
       include_items = input$include_items, n_item = input$n_item,
       design_kind = input$design_kind, factor_name = input$factor_name,
@@ -245,17 +273,54 @@ server <- function(input, output, session) {
       item_int_sd = input$item_int_sd, item_slope_sd = input$item_slope_sd, item_corr = input$item_corr,
       family = input$family, resp_name = input$resp_name, sigma = input$sigma,
       shift = input$shift, thresholds = input$thresholds, phi = input$phi
-    ))
+    ))), error = function(e) e)
+    if (inherits(spec, "error")) { parse_error(conditionMessage(spec)); return(NULL) }
+    parse_error(NULL)
+    spec
   })
 
-  data <- eventReactive(input$simulate, simulate_design(current_spec()), ignoreNULL = FALSE)
+  spec_req <- function() {
+    s <- current_spec()
+    validate(need(!is.null(s), parse_error() %||% "Please enter a valid design specification."))
+    s
+  }
 
-  output$json <- renderText(spec_json(current_spec()))
-  output$dims <- renderText({ d <- data(); sprintf("Simulated %d rows x %d columns (seed %d).", nrow(d), ncol(d), input$seed) })
-  output$head <- renderTable(head(data(), 10), striped = TRUE, spacing = "xs")
+  # Simulate captures the specification it ran alongside the data, so that every tab describes
+  # one snapshot. Reading the response and factor names from the live specification instead put
+  # the names out of step with the columns as soon as a control was changed without a re-click,
+  # and the summary and the plot then failed with a raw R message.
+  #
+  # A specification the engine refuses, such as one whose response repeats the factor name, comes
+  # back as a message rather than an error, so that it reaches the tabs as a sentence.
+  snapshot <- eventReactive(input$simulate, {
+    s <- current_spec(); if (is.null(s)) return(NULL)
+    tryCatch(list(spec = s, data = simulate_design(s)),
+             error = function(e) list(error = conditionMessage(e)))
+  }, ignoreNULL = FALSE)
+
+  snap_req <- function() {
+    snap <- snapshot()
+    validate(need(!is.null(snap) && is.null(snap$error),
+                  snap$error %||% parse_error() %||%
+                    "Please correct the specification, then select Simulate."))
+    snap
+  }
+  data_req <- function() snap_req()$data
+
+  output$json <- renderText(spec_json(spec_req()))
+  # The notice is what keeps the Data tab honest once the design has moved on: the table below
+  # still shows the snapshot, not the specification the other tabs describe.
+  output$dims <- renderText({
+    snap <- snap_req(); d <- snap$data; live <- current_spec()
+    sprintf("Simulated %d rows x %d columns (seed %s).%s", nrow(d), ncol(d), snap$spec$seed,
+            if (!is.null(live) && !identical(live, snap$spec))
+              " The design has changed since then; select Simulate to bring this up to date." else "")
+  })
+  output$head <- renderTable(head(data_req(), 10), striped = TRUE, spacing = "xs")
 
   output$summary <- renderPrint({
-    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    snap <- snap_req(); d <- snap$data; spec <- snap$spec
+    yn <- spec$response$name; fn <- .grp_col(spec)
     has_grp <- !is.null(fn) && fn %in% names(d)
     if (is.numeric(d[[yn]])) {
       if (has_grp) {
@@ -267,32 +332,32 @@ server <- function(input, output, session) {
   })
 
   output$plot <- renderPlot({
-    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    snap <- snap_req(); d <- snap$data; spec <- snap$spec
+    yn <- spec$response$name; fn <- .grp_col(spec)
     has_grp <- !is.null(fn) && fn %in% names(d)
-    pal2 <- c("#2C6FB0", "#B0402C")
     base <- theme_minimal(base_size = 14)
     if (is.numeric(d[[yn]])) {
       if (has_grp)
         ggplot(d, aes(.data[[fn]], .data[[yn]], fill = .data[[fn]])) +
           geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
-          scale_fill_manual(values = pal2, guide = "none") +
+          scale_fill_manual(values = pal(nlevels(factor(d[[fn]]))), guide = "none") +
           labs(x = fn, y = yn, title = paste("Distribution of", yn)) + base
       else
         ggplot(d, aes(.data[[yn]])) +
-          geom_histogram(bins = 30, fill = "#2C6FB0", colour = "white") +
+          geom_histogram(bins = 30, fill = PALETTE[1], colour = "white") +
           labs(x = yn, y = "count", title = paste("Distribution of", yn)) + base
     } else if (has_grp)
       ggplot(d, aes(.data[[yn]], fill = .data[[fn]])) +
         geom_bar(position = "dodge") +
-        scale_fill_manual(values = pal2, name = fn) +
+        scale_fill_manual(values = pal(nlevels(factor(d[[fn]]))), name = fn) +
         labs(x = yn, y = "count", title = paste("Counts of", yn)) + base
     else
       ggplot(d, aes(.data[[yn]])) +
-        geom_bar(fill = "#2C6FB0") +
+        geom_bar(fill = PALETTE[1]) +
         labs(x = yn, y = "count", title = paste("Counts of", yn)) + base
   })
 
-  output$rscript <- renderText(generate_r_script(current_spec()))
+  output$rscript <- renderText(generate_r_script(spec_req()))
   output$repro_py <- renderText(paste0(
     "# The same design also runs in Python (bit-identical given the same seed):\n",
     "from pilotr import simulate\n",
@@ -309,45 +374,79 @@ server <- function(input, output, session) {
     writeLines(text, con, sep = "")
   }
 
-  output$dl_rscript <- downloadHandler(
-    filename = function() paste0(input$name, ".R"),
-    content = function(file) write_text_download(generate_r_script(current_spec()), file))
+  # Downloads are named after the specification they carry rather than after the sidebar boxes,
+  # as in the lite app. With a pasted spec in force the two are different designs, and a data
+  # file named after a seed that did not generate it is worse than one carrying no seed at all,
+  # the filename being all that travels with a CSV once it leaves the app. An emptied Design
+  # name falls back to 'design' rather than writing a dot-file.
+  download_name <- function(ext, seed = FALSE) {
+    s <- current_spec()
+    paste0(s$name %||% "design",
+           if (seed && !is.null(s$seed)) paste0("_seed", s$seed) else "", ext)
+  }
 
-  # ---- Verify: run the exported design in a clean R subprocess and compare ----
+  # The three downloads degrade gracefully on an invalid pasted spec, as in the lite app: a
+  # downloadHandler that stops leaves the browser with a failed request and no explanation.
+  output$dl_rscript <- downloadHandler(
+    filename = function() download_name(".R"),
+    content = function(file) {
+      s <- current_spec()
+      oops <- "# Invalid specification. Correct it in the app, then download the script again."
+      write_text_download(if (is.null(s)) oops else generate_r_script(s), file)
+    })
+
+  # ---- Verify: run the exported R script in a clean R subprocess and compare ----
   verify_result <- reactiveVal(NULL)
   observeEvent(input$verify_code, {
     spec <- current_spec()
-    ref <- simulate_design(spec); yn <- spec$response$name
-    ref_chk <- if (is.numeric(ref[[yn]])) sum(ref[[yn]]) else paste(ref[[yn]], collapse = "")
+    if (is.null(spec)) {
+      verify_result(list(msg = parse_error() %||% "Please correct the specification first.")); return()
+    }
+    ref <- tryCatch(simulate_design(spec), error = function(e) e)
+    if (inherits(ref, "error")) { verify_result(list(msg = conditionMessage(ref))); return() }
     if (!requireNamespace("callr", quietly = TRUE)) {
       verify_result(list(msg = "Install the 'callr' package to verify in a clean R session.")); return()
     }
-    withProgress(message = "Running the design in a clean R session...", value = 0.5, {
-      res <- tryCatch(callr::r(function(json, files) {
-        if (is.null(files)) library(pilotr) else for (f in files) source(f)
-        s <- jsonlite::fromJSON(json, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
-        d <- simulate_design(s); yn <- s$response$name
-        list(n = nrow(d), chk = if (is.numeric(d[[yn]])) sum(d[[yn]]) else paste(d[[yn]], collapse = ""))
-      }, args = list(json = spec_json(spec), files = ENGINE_FILES)), error = function(e) e)
+    # The subprocess runs the script this tab offers, which is what the button promises. Handing
+    # it the JSON instead exercised the JSON writer and left the script's own writer, which
+    # quotes list names and formats every number itself, unverified: a defect confined to it
+    # would have left the button green. The comparison is on the whole data frame, so
+    # 'reproduces this data' covers the column names, the types and the row order too.
+    withProgress(message = "Running the exported script in a clean R session...", value = 0.5, {
+      res <- tryCatch(callr::r(function(script, files) {
+        env <- new.env(parent = globalenv())
+        # From source there is no installed package to attach, and the engine files the app
+        # itself read are the code the script has to reproduce with, so its library() call
+        # stands down once they are in place.
+        if (is.null(files)) library(pilotr)
+        else { for (f in files) source(f, local = env); env$library <- function(...) invisible(NULL) }
+        eval(parse(text = script), envir = env)
+        env$data
+      }, args = list(script = generate_r_script(spec), files = ENGINE_FILES)), error = function(e) e)
     })
     if (inherits(res, "error")) { verify_result(list(msg = paste("error:", conditionMessage(res)))); return() }
-    ident <- isTRUE(all.equal(res$chk, ref_chk)) && res$n == nrow(ref)
-    verify_result(list(ok = ident, n = res$n, ref_n = nrow(ref)))
+    if (!is.data.frame(res)) { verify_result(list(msg = "The script ran but left no data set behind.")); return() }
+    verify_result(list(ok = identical(res, ref), n = nrow(res), ref_n = nrow(ref)))
   })
   output$verify_out <- renderText({
     r <- verify_result()
     if (is.null(r)) return("Select Verify to run the script in a fresh R process and confirm that it reproduces this data.")
     if (!is.null(r$msg)) return(r$msg)
-    if (isTRUE(r$ok)) sprintf("Reproduces identically in a clean R session.\n  %d rows (app) match %d rows (clean run), and the response checksum matches.", r$ref_n, r$n)
-    else sprintf("Mismatch. The app produced %d rows and the clean run produced %d rows, or the checksum differs.", r$ref_n, r$n)
+    if (isTRUE(r$ok)) sprintf("The script reproduces this data bit for bit in a clean R session.\n  %d rows, every column identical.", r$ref_n)
+    else sprintf("Mismatch. The app produced %d rows and the clean run of the script produced %d; the two data sets are not identical.", r$ref_n, r$n)
   })
 
   # ---- power: point estimate + curve, capped, async when installed (worker process) ----
   power_result     <- reactiveVal(NULL)
   power_curve_data <- reactiveVal(NULL)
-  gaussian_two_group <- function(spec)
+  # The shape power_design() covers: a gaussian response and exactly one 2-level between
+  # factor. Testing only the first factor let a 3-level design (or a second between factor)
+  # through to the engine, whose refusal then travelled as an unhandled error.
+  gaussian_two_group <- function(spec) {
+    between <- Filter(function(f) !is.null(f$between), spec$factors)
     identical(spec$response$family, "gaussian") &&
-      length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
+      length(between) == 1L && length(between[[1]]$levels) == 2L
+  }
   not_supported <- paste0(
     "The in-app power backend covers the two-group Gaussian design. For a crossed\n",
     "mixed-effects design, download the spec (the Design spec tab) and run it directly:\n\n",
@@ -363,6 +462,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_power, {
     power_curve_data(NULL)
     spec <- current_spec()
+    if (is.null(spec)) { power_result(list(msg = parse_error() %||% "Please correct the specification first.")); return() }
     if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); return() }
     n <- .n_sims_input(input$n_sims)
     if (.async_ok) {
@@ -371,36 +471,74 @@ server <- function(input, output, session) {
       promises::then(p, onFulfilled = function(res) power_result(res),
                         onRejected = function(e) power_result(list(msg = paste("error:", conditionMessage(e)))))
     } else {
+      # An error in an observer ends the session, and with it the design the user built, so
+      # every engine refusal that the guard above does not cover (too few subjects per group,
+      # say) is reported as a line of text instead.
       withProgress(message = sprintf("Simulating %d datasets...", n), value = 0.5,
-                   power_result(power_design(spec, n_sims = n)))
+                   power_result(tryCatch(power_design(spec, n_sims = n),
+                                         error = function(e) list(msg = paste("error:", conditionMessage(e))))))
     }
   })
 
   observeEvent(input$run_curve, {
     spec <- current_spec()
+    if (is.null(spec)) { power_result(list(msg = parse_error() %||% "Please correct the specification first.")); power_curve_data(NULL); return() }
     if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); power_curve_data(NULL); return() }
     n <- .n_sims_input(input$n_sims)
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
-    withProgress(message = "Computing the power curve...", value = 0.3, {
-      pw <- vapply(grid, function(nn) {
-        s <- spec; s$units$subject$n <- as.integer(nn); power_design(s, n_sims = n)$power
-      }, numeric(1))
-    })
-    # A dashed target line leaves the reader to judge the crossing. target_n() estimates
-    # it instead, and reports its refusal when the curve does not settle the question,
-    # which is more use than a number the sweep cannot support.
-    solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = n),
-                                target = 0.8),
-                       error = function(e) conditionMessage(e))
-    power_result(list(msg = paste0(
-      sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
-              n, paste(grid, collapse = ", ")),
-      if (is.character(solved)) paste0("Target power 0.80: ", solved)
-      else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
-                   solved$n, solved$n_lo, solved$n_hi))))
-    power_curve_data(list(grid = grid, pw = pw,
-                          solved = if (is.character(solved)) NULL else solved))
+    if (!length(grid)) {
+      power_result(list(msg = "The power curve needs at least 4 subjects. Raise N subjects, then select Power curve."))
+      power_curve_data(NULL); return()
+    }
+    # The curve is the sweep the point estimate repeats once per grid point, so it is the
+    # more expensive of the two buttons and the one that most needs the background worker
+    # run_app(async = TRUE) promises. Reporting the solved curve is shared by both branches.
+    report <- function(pw) {
+      if (inherits(pw, "error")) {
+        power_result(list(msg = paste("error:", conditionMessage(pw)))); power_curve_data(NULL); return()
+      }
+      # A dashed target line leaves the reader to judge the crossing. target_n() estimates
+      # it instead, and reports its refusal when the curve does not settle the question,
+      # which is more use than a number the sweep cannot support.
+      solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = n),
+                                  target = 0.8),
+                         error = function(e) conditionMessage(e))
+      power_result(list(msg = paste0(
+        sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
+                n, paste(grid, collapse = ", ")),
+        if (is.character(solved)) paste0("Target power 0.80: ", solved)
+        else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
+                     solved$n, solved$n_lo, solved$n_hi))))
+      power_curve_data(list(grid = grid, pw = pw,
+                            solved = if (is.character(solved)) NULL else solved))
+    }
+    if (.async_ok) {
+      power_curve_data(NULL)
+      power_result(list(msg = sprintf("Running %d simulations at each of %d sample sizes in a background worker...",
+                                      n, length(grid))))
+      p <- promises::future_promise({
+        vapply(grid, function(nn) {
+          s <- spec; s$units$subject$n <- as.integer(nn); pilotr::power_design(s, n_sims = n)$power
+        }, numeric(1))
+      }, seed = TRUE)
+      promises::then(p, onFulfilled = report,
+                        onRejected = function(e) {
+                          power_result(list(msg = paste("error:", conditionMessage(e))))
+                          power_curve_data(NULL)
+                        })
+    } else {
+      # One step per grid point rather than one for the whole sweep, which left the bar at a
+      # third of the way across for as long as the sweep took.
+      report(withProgress(message = "Computing the power curve...", value = 0,
+        tryCatch(vapply(seq_along(grid), function(i) {
+          s <- spec; s$units$subject$n <- as.integer(grid[i])
+          pw_i <- power_design(s, n_sims = n)$power
+          incProgress(1 / length(grid),
+                      detail = sprintf("N = %d (%d of %d)", grid[i], i, length(grid)))
+          pw_i
+        }, numeric(1)), error = function(e) e)))
+    }
   })
 
   # Render as text (not print) to keep the message free of a trailing NULL. Shiny skips
@@ -412,7 +550,7 @@ server <- function(input, output, session) {
     n <- sum(input$run_power, input$run_curve)
     r <- power_result()
     txt <- if (is.null(r))
-      sprintf("Set the number of simulations (capped at %d in the app, unlimited once you install the package), then select Run power analysis.", MAX_SIMS)
+      sprintf("Set the number of simulations (capped at %d here; power_design() takes any count when called directly), then select Run power analysis.", MAX_SIMS)
     else if (!is.null(r$msg)) r$msg
     else sprintf("Simulations  : %d\nPower        : %.3f\nType S error : %.4f\nType M (exag): %.3f\nTrue effect  : %.3f | mean estimate: %.3f",
                  r$n_sims, r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate)
@@ -431,19 +569,26 @@ server <- function(input, output, session) {
                  ymin = -Inf, ymax = Inf, fill = "#888888", alpha = .15) +
         geom_vline(xintercept = pc$solved$value, linetype = 2, colour = "#888888")
     p +
-      geom_line(colour = "#2C6FB0", linewidth = 0.9) +
-      geom_point(colour = "#2C6FB0", size = 3) +
+      geom_line(colour = PALETTE[1], linewidth = 0.9) +
+      geom_point(colour = PALETTE[1], size = 3) +
       scale_y_continuous(limits = c(0, 1)) +
       labs(x = expression(italic(N) ~ "subjects"), y = "Power", title = "Power curve") +
       theme_minimal(base_size = 14)
   })
 
   output$dl_spec <- downloadHandler(
-    filename = function() paste0(input$name, ".json"),
-    content = function(file) write_text_download(spec_json(current_spec()), file))
+    filename = function() download_name(".json"),
+    content = function(file) {
+      s <- current_spec()
+      write_text_download(if (is.null(s)) "{}" else spec_json(s), file)
+    })
   output$dl_data <- downloadHandler(
-    filename = function() paste0(input$name, "_seed", input$seed, ".csv"),
-    content = function(file) write.csv(simulate_design(current_spec()), file, row.names = FALSE))
+    filename = function() download_name(".csv", seed = TRUE),
+    content = function(file) {
+      s <- current_spec()
+      d <- if (is.null(s)) NULL else tryCatch(simulate_design(s), error = function(e) NULL)
+      if (is.null(d)) writeLines("", file) else write.csv(d, file, row.names = FALSE)
+    })
 }
 
 shinyApp(ui, server)

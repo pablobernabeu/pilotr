@@ -28,7 +28,7 @@
         "type": "object",
         "required": ["name", "levels", "contrasts"],
         "properties": {
-          "name": { "type": "string" },
+          "name": { "type": "string", "minLength": 1 },
           "levels": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
           "contrasts": {
             "type": "object",
@@ -48,7 +48,7 @@
         "type": "object",
         "required": ["name", "varies_by"],
         "properties": {
-          "name": { "type": "string" },
+          "name": { "type": "string", "minLength": 1 },
           "varies_by": {
             "type": "string",
             "enum": ["subject", "item", "observation"],
@@ -92,6 +92,7 @@
         "subject": { "$ref": "#/$defs/ranef" },
         "item": { "$ref": "#/$defs/ranef" }
       },
+      "propertyNames": { "minLength": 1 },
       "additionalProperties": { "$ref": "#/$defs/ranef" }
     },
     "response": {

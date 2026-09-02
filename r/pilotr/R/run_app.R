@@ -8,6 +8,12 @@
 #' work is not blocked by a shared process, and power simulations can be parallelised across
 #' the user's own cores.
 #'
+#' @details
+#' The Power tab caps the number of simulations one run may ask for, at 5000, to keep a mistyped
+#' count from occupying the session for hours. Set the `PILOTR_MAX_SIMS` environment variable
+#' before launching to raise or lower that cap. It belongs to the app alone: [power_design()]
+#' and [power_mixed()] called directly take any count.
+#'
 #' @param ... passed to [shiny::runApp()] (e.g. `port`,
 #'   `launch.browser`).
 #' @param async If TRUE (default when 'future' and 'promises' are installed), set a

@@ -131,7 +131,8 @@ guide <- card(
            "families. The ", tags$b("Advanced: paste a full JSON spec"), " box in the sidebar ",
            "overrides those controls and gives access to the rest of the engine. This includes ",
            "continuous predictors and interactions, additional grouping factors (nesting), and ",
-           "partial crossing. The example buttons there illustrate the format."),
+           "partial crossing. Ready-to-run example specifications, and the format itself, are ",
+           "linked under the box."),
     tags$div(
       class = "alert alert-info", role = "alert",
       "This is the lite build, so the heavier analyses stay with the installed packages: ",
@@ -288,8 +289,11 @@ server <- function(input, output, session) {
       if (inherits(spec, "error")) { parse_error(conditionMessage(spec)); return(NULL) }
       parse_error(NULL); spec
     } else {
-      parse_error(NULL)
-      build_spec(list(
+      # The controls can also build a specification the package refuses: a cleared numeric box
+      # arrives as NA, and a response named after the factor takes its column. Validating the
+      # built spec here is what keeps the Design spec tab, offered as the portable source of
+      # truth, from showing and downloading a file that load_spec() will not read.
+      spec <- tryCatch(validate_spec(build_spec(list(
         name = input$name, seed = input$seed, n_subject = input$n_subject,
         include_items = input$include_items, n_item = input$n_item, design_kind = input$design_kind,
         factor_name = input$factor_name, lev1 = input$lev1, lev2 = input$lev2,
@@ -297,7 +301,10 @@ server <- function(input, output, session) {
         subj_int_sd = input$subj_int_sd, subj_slope_sd = input$subj_slope_sd, subj_corr = input$subj_corr,
         item_int_sd = input$item_int_sd, item_slope_sd = input$item_slope_sd, item_corr = input$item_corr,
         family = input$family, resp_name = input$resp_name, sigma = input$sigma,
-        shift = input$shift, thresholds = input$thresholds, phi = input$phi))
+        shift = input$shift, thresholds = input$thresholds, phi = input$phi))),
+        error = function(e) e)
+      if (inherits(spec, "error")) { parse_error(conditionMessage(spec)); return(NULL) }
+      parse_error(NULL); spec
     }
   })
 
@@ -320,25 +327,43 @@ server <- function(input, output, session) {
     if (length(f) >= 1 && !is.null(f[[1]]$name)) f[[1]]$name else NA_character_
   }
 
-  sim_data <- eventReactive(input$simulate, {
-    s <- current_spec(); if (is.null(s)) return(NULL); simulate_design(s)
+  # Simulate captures the specification it ran alongside the data, so that every tab describes
+  # one snapshot. Reading the response and factor names from the live specification instead put
+  # the names out of step with the columns as soon as a control was changed without a re-click,
+  # and the summary and the plot then failed with a raw R message.
+  #
+  # A specification the engine refuses, such as one whose response repeats the factor name, comes
+  # back as a message rather than an error, so that it reaches the tabs as a sentence.
+  snapshot <- eventReactive(input$simulate, {
+    s <- current_spec(); if (is.null(s)) return(NULL)
+    tryCatch(list(spec = s, data = simulate_design(s)),
+             error = function(e) list(error = conditionMessage(e)))
   }, ignoreNULL = FALSE)
 
-  data_req <- function() {
-    d <- sim_data()
-    validate(need(!is.null(d), parse_error() %||% "Please correct the specification, then select Simulate."))
-    d
+  snap_req <- function() {
+    snap <- snapshot()
+    validate(need(!is.null(snap) && is.null(snap$error),
+                  snap$error %||% parse_error() %||%
+                    "Please correct the specification, then select Simulate."))
+    snap
   }
+  data_req <- function() snap_req()$data
 
   output$json <- renderText(spec_json(spec_req()))
 
+  # The notice is what keeps the Data tab honest once the design has moved on: the table below
+  # still shows the snapshot, not the specification the other tabs describe.
   output$dims <- renderText({
-    d <- data_req(); sprintf("Simulated %d rows x %d columns.", nrow(d), ncol(d))
+    snap <- snap_req(); d <- snap$data; live <- current_spec()
+    sprintf("Simulated %d rows x %d columns.%s", nrow(d), ncol(d),
+            if (!is.null(live) && !identical(live, snap$spec))
+              " The design has changed since then; select Simulate to bring this up to date." else "")
   })
   output$head <- renderTable(head(data_req(), 12), striped = TRUE, hover = TRUE, spacing = "xs")
 
   output$summary <- renderPrint({
-    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    snap <- snap_req(); d <- snap$data
+    yn <- resp_name(snap$spec); gn <- group_name(snap$spec)
     y <- d[[yn]]
     if (is.na(gn) || is.null(d[[gn]])) {
       if (is.numeric(y)) print(round(c(mean = mean(y), sd = sd(y), min = min(y), max = max(y)), 3))
@@ -353,18 +378,19 @@ server <- function(input, output, session) {
   })
 
   output$plot <- renderPlot({
-    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    snap <- snap_req(); d <- snap$data
+    yn <- resp_name(snap$spec); gn <- group_name(snap$spec)
     y <- d[[yn]]; base <- theme_minimal(base_size = 14)
     has_grp <- !is.na(gn) && !is.null(d[[gn]])
     if (has_grp && is.numeric(y)) {
       ggplot(d, aes(.data[[gn]], .data[[yn]], fill = .data[[gn]])) +
         geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
-        scale_fill_manual(values = pal(2), guide = "none") +
+        scale_fill_manual(values = pal(nlevels(factor(d[[gn]]))), guide = "none") +
         labs(x = gn, y = yn, title = paste(yn, "by", gn)) + base
     } else if (has_grp) {
       ggplot(d, aes(.data[[yn]], fill = .data[[gn]])) +
         geom_bar(position = "dodge") +
-        scale_fill_manual(values = pal(length(unique(d[[gn]]))), name = gn) +
+        scale_fill_manual(values = pal(nlevels(factor(d[[gn]]))), name = gn) +
         labs(x = yn, y = "count", title = paste(yn, "by", gn)) + base
     } else if (is.numeric(y)) {
       ggplot(d, aes(.data[[yn]])) +
@@ -378,9 +404,13 @@ server <- function(input, output, session) {
   })
 
   # ---- power (two-group Gaussian) ----
+  # The shape power_design() covers: a gaussian response and exactly one 2-level between
+  # factor. Testing only the first factor let a 3-level design (or a second between factor)
+  # through to the engine, whose refusal then travelled as an unhandled error.
   gaussian_two_group <- function(spec) {
+    between <- Filter(function(f) !is.null(f$between), spec$factors)
     identical(spec$response$family, "gaussian") &&
-      length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
+      length(between) == 1L && length(between[[1]]$levels) == 2L
   }
   not_supported_msg <- paste0(
     "The in-browser demo runs power only for the two-group Gaussian design.\n",
@@ -405,7 +435,12 @@ server <- function(input, output, session) {
     spec <- current_spec()
     if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); return() }
     if (!gaussian_two_group(spec)) { power_out(not_supported_msg); power_plot(NULL); return() }
-    ns <- nsims(); r <- power_design(spec, n_sims = ns)
+    # An error in an observer ends the session, and with it the design the user built, so
+    # every engine refusal that the guard above does not cover (too few subjects per group,
+    # say) is reported as a line of text instead.
+    ns <- nsims()
+    r <- tryCatch(power_design(spec, n_sims = ns), error = function(e) e)
+    if (inherits(r, "error")) { power_out(paste("error:", conditionMessage(r))); return() }
     power_out(sprintf(
       "Power: %.3f   |   Type S: %.4f   |   Type M: %.3f\nTrue effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
       r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate, ns))
@@ -418,10 +453,17 @@ server <- function(input, output, session) {
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
     grid <- grid[grid >= 4]
+    if (!length(grid)) {
+      power_out("The power curve needs at least 4 subjects. Raise N subjects, then select Power curve.")
+      power_plot(NULL); return()
+    }
     ns   <- min(nsims(), N_SIMS_CURVE)
-    pw   <- vapply(grid, function(n) {
+    pw   <- tryCatch(vapply(grid, function(n) {
       s <- spec; s$units$subject$n <- as.integer(n); power_design(s, n_sims = ns)$power
-    }, numeric(1))
+    }, numeric(1)), error = function(e) e)
+    if (inherits(pw, "error")) {
+      power_out(paste("error:", conditionMessage(pw))); power_plot(NULL); return()
+    }
     # A dashed target line leaves the reader to judge the crossing. target_n() estimates
     # it instead, and reports its refusal when the curve does not settle the question,
     # which is more use than a number the sweep cannot support.
@@ -483,7 +525,8 @@ server <- function(input, output, session) {
     function() paste0(current_spec()$name %||% "design", ".R"),
     content = function(file) {
       s <- current_spec()
-      write_text_download(if (is.null(s)) "# Invalid specification. Please correct the pasted JSON." else generate_r_script(s), file)
+      oops <- "# Invalid specification. Correct it in the app, then download the script again."
+      write_text_download(if (is.null(s)) oops else generate_r_script(s), file)
     })
 
   # ---- downloads (degrade gracefully on an invalid pasted spec) ----
@@ -497,7 +540,8 @@ server <- function(input, output, session) {
     function() paste0(current_spec()$name %||% "design", ".csv"),
     content = function(file) {
       s <- current_spec()
-      if (is.null(s)) writeLines("", file) else write.csv(simulate_design(s), file, row.names = FALSE)
+      d <- if (is.null(s)) NULL else tryCatch(simulate_design(s), error = function(e) NULL)
+      if (is.null(d)) writeLines("", file) else write.csv(d, file, row.names = FALSE)
     })
 
   # Keep the download links live even while their tab is hidden, so a click always works

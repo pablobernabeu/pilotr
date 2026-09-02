@@ -31,6 +31,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   calibration, sweeps, the generated-analysis emitters and the no-code app have
   no Python counterpart yet, as the API reference already did.
 
+### Fixed
+
+- `validate_spec()` refuses a specification in which two of the names that become
+  columns of the simulated data are the same. A response called after the factor
+  produced a second column of the same name, where the R twin wrote the response
+  over the factor column and left the design condition out of the data, so one
+  portable specification exported two different tables. The check covers the
+  subject and item columns, any extra grouping factor, the factor and predictor
+  names and the response name, and both engines report the clash in the same
+  words.
+- `validate_spec()` refuses a blank name for a factor, a predictor, an extra
+  grouping factor or the response. A blank one passed the string check and then
+  produced a column with no name at all, where the R twin stopped inside its
+  simulator with a message naming neither the field nor the control that was
+  cleared. A blank key under `random` was accepted here and reported as a
+  malformed object by the twin; both engines now name the grouping factor in the
+  same words.
+- `power()` refuses a design that leaves a level of the between factor with fewer
+  than two units. One subject per group returned a power of zero, because scipy
+  answers a group carrying no variance with a nan p-value, where the R twin
+  stopped inside `stats::t.test()`; both now refuse it in the same words.
+
 ## [0.3.0] - 2026-08-21
 
 Two of the changes below alter numbers that earlier versions produced. Both are

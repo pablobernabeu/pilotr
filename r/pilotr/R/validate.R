@@ -55,8 +55,20 @@
 }
 
 .is_scalar_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
+
+# A name that reaches the data as a column name. Blank passed .is_scalar_string(), and the spec
+# then failed inside simulate_design() with base R's "replacement has length zero", which names
+# neither the field nor the emptied control, where the twin wrote a column with no name at all.
+.is_name <- function(x) .is_scalar_string(x) && nzchar(trimws(x))
+
 .is_scalar_number <- function(x) is.numeric(x) && length(x) == 1L && !is.na(x) && is.finite(x)
 .is_whole <- function(x) .is_scalar_number(x) && x == round(x)
+
+# Joins names as "a", "a and b", "a, b and c".
+.name_list <- function(x) {
+  if (length(x) < 2L) return(paste0(x, collapse = ""))
+  paste0(paste(x[-length(x)], collapse = ", "), " and ", x[length(x)])
+}
 
 # A version arrives as whatever JSON produced. A single part is read as a whole version, so "1"
 # and the JSON number 1.0 both mean 1.0. The padding is what keeps the two engines agreeing about
@@ -98,8 +110,10 @@
 #' Validation exists because several ways of getting a specification wrong produce plausible
 #' data and no error at all. A mistyped coefficient key resolves to no column and so silently
 #' sets that effect to zero, which generates exactly the data of a null design and reports
-#' success. A response parameter left over from another family is ignored. Neither is
-#' detectable in the output, which is why they are refused here.
+#' success. A response parameter left over from another family is ignored. A response named
+#' after the factor writes the response over the factor column, so the design condition never
+#' reaches the data. None of these is detectable in the output, which is why they are refused
+#' here.
 #'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
@@ -208,7 +222,7 @@ validate_spec <- function(spec, strict = TRUE) {
       if (!is.list(f) || is.null(names(f))) { bad(where, " must be an object"); next }
       for (k in setdiff(names(f), c("name", "levels", "contrasts", "vary_within", "between")))
         unknown("unknown field '", where, ".", k, "'")
-      if (!.is_scalar_string(f$name)) bad(where, ".name must be a single string")
+      if (!.is_name(f$name)) bad(where, ".name must be a non-empty string")
       nlev <- length(f$levels)
       if (!is.character(f$levels) || nlev < 2)
         bad(where, ".levels must be an array of at least two strings")
@@ -258,7 +272,7 @@ validate_spec <- function(spec, strict = TRUE) {
       for (k in setdiff(names(p), c("name", "varies_by", "mean", "sd", "dist",
                                     "min", "max", "reliability")))
         unknown("unknown field '", where, ".", k, "'")
-      if (!.is_scalar_string(p$name)) bad(where, ".name must be a single string")
+      if (!.is_name(p$name)) bad(where, ".name must be a non-empty string")
       else pred_names <- c(pred_names, p$name)
       if (!.is_scalar_string(p$varies_by) ||
           !p$varies_by %in% c("subject", "item", "observation"))
@@ -327,6 +341,7 @@ validate_spec <- function(spec, strict = TRUE) {
     if (!is.list(spec$random) || is.null(names(spec$random)))
       bad("'random' must be an object keyed by grouping factor")
     else for (g in names(spec$random)) {
+      if (!.is_name(g)) { bad("a 'random' grouping factor must have a non-empty name"); next }
       re <- spec$random[[g]]; where <- paste0("random.", g)
       if (!is.list(re) || is.null(names(re))) { bad(where, " must be an object"); next }
       for (k in setdiff(names(re), c("intercept_sd", "slopes", "correlations", "correlated",
@@ -389,8 +404,7 @@ validate_spec <- function(spec, strict = TRUE) {
       if (!.is_scalar_string(fam) || !fam %in% names(.family_params))
         bad("'response.family' must be one of ", paste(names(.family_params), collapse = ", "),
             if (.is_scalar_string(fam)) paste0(", not '", fam, "'") else "")
-      if (!.is_scalar_string(r$name) || !nzchar(r$name))
-        bad("'response.name' must be a non-empty string")
+      if (!.is_name(r$name)) bad("'response.name' must be a non-empty string")
       if (.is_scalar_string(fam) && fam %in% names(.family_params)) {
         needed <- .family_params[[fam]]
         allowed <- c("family", "name", "round", needed)
@@ -424,6 +438,35 @@ validate_spec <- function(spec, strict = TRUE) {
       }
     }
   }
+
+  # ---- column collisions ----
+  # Each name claimed below becomes a column of the simulated data, in this order, and a repeat
+  # is written over the column before it. A response named after the factor therefore leaves the
+  # design condition out of the data altogether, and since R overwrites the earlier column where
+  # the twin appends a second one of the same name, the two engines export different tables from
+  # one and the same portable specification.
+  col_names <- character(0); col_where <- character(0)
+  claim <- function(nm, where) {
+    if (!.is_name(nm)) return(invisible(NULL))
+    col_names <<- c(col_names, nm); col_where <<- c(col_where, where)
+  }
+  if (is.list(u) && !is.null(names(u))) {
+    if (!is.null(u$subject)) claim("subject", "units.subject")
+    if (has_item) claim("item", "units.item")
+  }
+  for (g in setdiff(names(.orelse(spec$random, list())), c("subject", "item")))
+    claim(g, paste0("random.", g))
+  if (is.list(spec$factors)) for (i in seq_along(spec$factors))
+    if (is.list(spec$factors[[i]]))
+      claim(spec$factors[[i]]$name, paste0("factors[", i, "].name"))
+  if (is.list(spec$predictors)) for (i in seq_along(spec$predictors))
+    if (is.list(spec$predictors[[i]]))
+      claim(spec$predictors[[i]]$name, paste0("predictors[", i, "].name"))
+  if (is.list(r)) claim(r$name, "response.name")
+  for (nm in unique(col_names[duplicated(col_names)]))
+    bad("the name '", nm, "' is used by ", .name_list(col_where[col_names == nm]),
+        "; each of those becomes a column of the simulated data, so one would silently ",
+        "overwrite another")
 
   if (length(soft)) warning(paste0("in this design specification:\n  - ",
                                    paste(soft, collapse = "\n  - ")), call. = FALSE)

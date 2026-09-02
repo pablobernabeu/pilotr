@@ -143,6 +143,53 @@ def test_a_non_object_unit_is_reported_rather_than_crashing():
         validate_spec(s)
 
 
+def test_a_name_that_would_take_another_column_s_place_is_refused():
+    # A response named after the factor appended a second column of the same name here and
+    # overwrote the factor column in the R twin, so one specification exported two different
+    # tables.
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["response"]["name"] = "group"
+    with pytest.raises(ValueError, match=re.escape(
+            "the name 'group' is used by factors[1].name and response.name")):
+        validate_spec(s)
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["factors"][0]["name"] = "subject"
+    with pytest.raises(ValueError, match=re.escape(
+            "the name 'subject' is used by units.subject and factors[1].name")):
+        validate_spec(s)
+    s = load_spec(os.path.join(SPEC, "nested_clusters.json"))
+    s["response"]["name"] = "site"
+    with pytest.raises(ValueError, match=re.escape(
+            "the name 'site' is used by random.site and response.name")):
+        validate_spec(s)
+
+
+def test_a_blank_name_is_refused_where_it_used_to_reach_the_data():
+    # An emptied 'Factor name' box built a spec that validated and then produced a column with no
+    # name at all; the R twin stopped inside its simulator with "replacement has length zero".
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    for blank in ("", "  "):
+        s["factors"][0]["name"] = blank
+        with pytest.raises(ValueError,
+                           match=re.escape("factors[1].name must be a non-empty string")):
+            validate_spec(s)
+    s = load_spec(os.path.join(SPEC, "reading_time_continuous.json"))
+    s["predictors"][0]["name"] = ""
+    with pytest.raises(ValueError,
+                       match=re.escape("predictors[1].name must be a non-empty string")):
+        validate_spec(s)
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    s["response"]["name"] = " "
+    with pytest.raises(ValueError,
+                       match=re.escape("'response.name' must be a non-empty string")):
+        validate_spec(s)
+    s = load_spec(os.path.join(SPEC, "nested_clusters.json"))
+    s["random"][""] = s["random"].pop("site")
+    with pytest.raises(ValueError, match=re.escape(
+            "a 'random' grouping factor must have a non-empty name")):
+        validate_spec(s)
+
+
 def test_only_false_skips_validation_and_other_values_are_lenient(tmp_path):
     # `validate` is not a plain flag: False skips validation, True is strict and anything else
     # validates leniently, which is what both twins' docstrings promise.
@@ -186,6 +233,21 @@ def test_zero_true_effect_leaves_type_s_and_type_m_undefined():
     assert math.isnan(r["type_s"])
     assert math.isnan(r["type_m"])
     assert 0.0 <= r["power"] <= 1.0  # power itself is still reported
+
+
+def test_power_refuses_a_between_level_with_fewer_than_two_units():
+    # scipy answered one subject per group with a nan p-value and a power of 0, where R's
+    # stats::t.test() stopped; both languages now refuse the design in the same words.
+    pytest.importorskip("scipy")
+    from pilotr import power
+
+    s = load_spec(os.path.join(SPEC, "between_2group_gaussian.json"))
+    for n in (2, 3):
+        s["units"]["subject"]["n"] = n
+        with pytest.raises(ValueError, match="at least 2 subjects at each level"):
+            power(s, n_sims=5)
+    s["units"]["subject"]["n"] = 4
+    assert 0.0 <= power(s, n_sims=5)["power"] <= 1.0
 
 
 def test_power_mixed_also_refuses_to_divide_by_a_zero_true_effect():
