@@ -17,7 +17,7 @@ planning.
 | Bounded proportions | the `beta` family, with a mean and precision parameterisation |
 | Partial crossing | a per-subject item count (`item.per_subject`), so each subject sees a sampled subset of items |
 | Precision-based design analysis | `precision_design()` / `precision_curve()` report P(95% CI outside/inside a ROPE) and expected CI width, swept over *N* |
-| Bayesian bridge | `brms_bridge()` emits a ready-to-fit `brms` formula and priors from the spec |
+| Bayesian bridge | `brms_bridge()` returns a ready-to-fit `brms` formula and priors from the spec |
 
 ## Validation (`r/pilotr/examples/precision_design_analysis.R`, `r/pilotr/examples/run_demo.R`, `python/examples/run_demo.py`)
 
@@ -47,7 +47,7 @@ planning.
    ROPE decision together with a confidence interval on it. `target_n(curve)` is the same thing
    for a power curve against a target power. Neither extrapolates: a curve that does not reach
    the target within the sizes swept is refused rather than extended.
-4. Confirm in `brms`. `brms_bridge(spec)` emits the confirmatory model (family, fixed/random
+4. Confirm in `brms`. `brms_bridge(spec)` returns the confirmatory model (family, fixed/random
    formula and weakly-informative priors). Simulate one dataset, fit it in `brms` and check
    recovery, prior-predictive behaviour and the HDI-vs-ROPE decision before collecting data.
 

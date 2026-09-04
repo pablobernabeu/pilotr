@@ -14,8 +14,10 @@ brms_bridge(spec, prior_scale = 0.5, interaction_scale = NULL)
 \item{interaction_scale}{SD of the Normal prior on interaction terms (default prior_scale/2).}
 }
 \value{
-Invisibly, a list with elements \code{formula}, \code{family}, \code{priors}, and \code{code}; the
-\code{code} element (a ready-to-fit \code{brms} model) is also printed to the console.
+An object of class \code{pilotr_bridge}: a list with elements \code{formula}, \code{family},
+\code{priors}, and \code{code}, the last being a ready-to-fit \code{brms} model. The object is returned
+visibly, and \code{\link[=print.pilotr_bridge]{print.pilotr_bridge()}} writes \code{code} to the console, so a bare call shows
+the model while an assignment stays silent.
 }
 \description{
 Derive a brms formula, family, and priors from a design spec
@@ -27,6 +29,11 @@ spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
   subj_int_sd = 0.12, subj_slope_sd = 0.04, subj_corr = 0.2,
   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
-bridge <- brms_bridge(spec)
+bridge <- brms_bridge(spec)          # silent
 bridge$formula
+bridge                               # prints the ready-to-fit model
+}
+\seealso{
+\code{\link[=print.pilotr_bridge]{print.pilotr_bridge()}} for the display, and \code{\link[=model_formula]{model_formula()}} for the frequentist
+counterpart of the formula.
 }

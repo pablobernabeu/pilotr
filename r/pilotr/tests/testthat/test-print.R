@@ -1,9 +1,10 @@
-# The package's one print method has to reach the reader as a single block. cli
-# and message() write to the message stream, which knitr collects separately
-# from standard output, so a method that put its header on one stream and its
-# table on the other rendered one printed object as two boxes on the
-# documentation site. print.pilotr_power writes throughout with cat() and
-# print(); these tests hold it there.
+# A print method has to reach the reader as a single block. cli and message()
+# write to the message stream, which knitr collects separately from standard
+# output, so a method that put its header on one stream and its table on the
+# other rendered one printed object as two boxes on the documentation site.
+# print.pilotr_power writes throughout with cat() and print(); these tests hold
+# it there. print.pilotr_bridge, the package's other method, is tested in
+# test-brms-bridge.R alongside the function whose result it displays.
 
 # A power result built by hand rather than by power_mixed(), which needs lme4
 # and a few seconds of fitting. The print method only reads these fields.

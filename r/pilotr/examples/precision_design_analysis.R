@@ -44,4 +44,6 @@ cat(if (is.character(solved)) paste0("  -> ", solved, "\n")
 
 # ---- (3) Bridge to the confirmatory Bayesian fit ----
 cat("\n=== brms bridge (confirmatory Bayesian model from the same spec) ===\n")
-invisible(brms_bridge(spec))
+# brms_bridge() returns the model rather than printing it, so the display is asked for here,
+# in keeping with the cat() calls that head every other section of this script.
+print(brms_bridge(spec))

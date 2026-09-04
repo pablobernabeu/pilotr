@@ -61,6 +61,20 @@ test_that("a script written to `file` is LF-only with a single trailing newline"
   expect_false(endsWith(out, "\n\n"))
 })
 
+# The model in the emitted script is brms_bridge()'s, read straight from the object it returns.
+# Generation used to divert that function's printing around itself with sink(); the emission has
+# to be silent now that there is nothing to divert, and it has to carry the same model as before.
+test_that("generation is silent and embeds the bridge's model", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  expect_silent(script <- generate_design_analysis(spec, focal = c(cond = 0.05)))
+  expect_length(capture.output(again <- generate_design_analysis(spec, focal = c(cond = 0.05)),
+                               type = "message"), 0L)
+  b <- brms_bridge(spec)
+  expect_true(grepl(paste0("  ", b$formula, ","), script, fixed = TRUE))
+  expect_true(grepl(paste0("  family = ", b$family, ","), script, fixed = TRUE))
+  for (p in b$priors) expect_true(grepl(p, script, fixed = TRUE))
+})
+
 # The verdict is a pure function of the rule, the gate and the specification, so a record that
 # carries only the verdict cannot be told apart from one produced under a different ROPE.
 test_that("the emitted record carries the rule, the gate, the spec and the version", {

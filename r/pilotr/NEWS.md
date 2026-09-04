@@ -123,6 +123,12 @@ below, and `tools/parity/tolerance.json` records which cases carry an allowance 
 * `generate_r_script()` embedded the specification through `deparse()`, which prints 15
   significant digits and so does not round-trip. It now emits numbers at full precision, which
   matters because the point of the script is bit-for-bit reproduction.
+* `brms_bridge()` wrote its model to the console instead of returning it. The code reached
+  standard output on every call, whether or not anything was there to read it, and the one internal
+  caller, `generate_design_analysis()`, had to divert that output around itself through a sink to a
+  temporary file. It now returns a `pilotr_bridge` object, visibly, carrying the same `formula`,
+  `family`, `priors` and `code` as before, and the new `print()` method writes the code. A bare call
+  at the console still shows the model; an assignment is silent.
 * `model_formula()` and `brms_bridge()` emitted correlated random effects unconditionally, along
   with an LKJ prior, while the generative process only correlates them when `correlations` is
   supplied. They now follow the new `correlated` flag and emit a double bar otherwise. A group with

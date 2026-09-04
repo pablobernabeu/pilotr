@@ -304,7 +304,7 @@ test_that("brms_bridge maps the beta family to brms's Beta()", {
                           factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,
                           intercept = 0, effect = 0.8, family = "beta",
                           resp_name = "", phi = 8))
-  out <- capture.output(bridge <- brms_bridge(spec))
+  bridge <- brms_bridge(spec)
   expect_equal(bridge$family, "Beta()")
 })
 

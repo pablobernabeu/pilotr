@@ -207,10 +207,12 @@ In pilotr the same gain takes one argument.
 
 ## A bridge to the Bayesian workflow
 
-For a confirmatory Bayesian fit, `brms_bridge()` emits a ready-to-run `brms` model. It
+For a confirmatory Bayesian fit, `brms_bridge()` returns a ready-to-run `brms` model. It
 provides the family, the fixed and random-effects formula, and a weakly-informative prior set,
 all derived from the same specification, so that the planning model and the confirmatory model
-remain consistent.
+remain consistent. Printing the result shows the model as code to copy into a script; assigning
+it instead gives the same parts as `formula`, `family` and `priors`, silently, for a caller
+assembling its own.
 
 ```{r}
 brms_bridge(spec_c)

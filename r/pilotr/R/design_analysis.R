@@ -78,19 +78,6 @@
   paste0("c(", paste(parts, collapse = ", "), ")")
 }
 
-# The formula, family and priors for the design, taken from brms_bridge().
-#
-# brms_bridge() prints its ready-to-fit model as a side effect, which is useful at the console
-# and unwanted in the middle of a string being assembled, so the printing is diverted while the
-# returned list is read. Recomputing the model here instead would give the emitted script a
-# second copy of the bridge's logic, free to drift away from it.
-.bridge_quietly <- function(spec) {
-  con <- file(tempfile(), open = "wt")
-  on.exit({ sink(); close(con) }, add = TRUE)
-  sink(con)
-  brms_bridge(spec)
-}
-
 # A banner separating the emitted files. The marker is a comment in both R and bash, so the
 # same form works above an R part and above a shell part, and it is fixed text so that a caller
 # can split the output on it.
@@ -568,7 +555,10 @@ generate_design_analysis <- function(spec, focal,
          call. = FALSE)
 
   f      <- .da_focal(focal, spec)
-  bridge <- .bridge_quietly(spec)
+  # The formula, family and priors for the design come from brms_bridge(), which returns them
+  # without printing. Recomputing the model here instead would give the emitted script a second
+  # copy of the bridge's logic, free to drift away from it.
+  bridge <- brms_bridge(spec)
   analysis <- .da_analysis_lines(spec, f, rule, gate, bridge)
 
   lines <- if (identical(array, "none")) analysis else c(

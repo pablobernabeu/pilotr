@@ -135,6 +135,7 @@ reference:
   - generate_r_script
   - generate_design_analysis
   - brms_bridge
+  - print.pilotr_bridge
 - title: Reproducibility
   desc: The shared random-number stream that makes an R run and a Python run agree bit for bit.
   contents:
