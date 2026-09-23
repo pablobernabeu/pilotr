@@ -395,8 +395,8 @@ server <- function(input, output, session) {
     "    from pilotr import load_spec, power_mixed\n",
     "    power_mixed(load_spec(\"design.json\"), n_sims=200)\n\n",
     "Install:\n",
-    "    install.packages(\"pilotr\")        # R, from CRAN\n",
-    "    pip install \"pilotr[mixed]\"       # Python, from PyPI, with the statsmodels backend")
+    "    install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # R, from CRAN, with the lme4 backend\n",
+    "    pip install \"pilotr[mixed]\"                          # Python, from PyPI, with the statsmodels backend")
 
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
   power_plot <- reactiveVal(NULL)
