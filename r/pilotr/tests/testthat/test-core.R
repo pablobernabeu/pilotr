@@ -299,6 +299,62 @@ test_that("spec_json round-trips a coefficient exactly", {
   expect_true(grepl('"cond": 0.3', spec_json(spec), fixed = TRUE))
 })
 
+test_that("spec_json writes numbers a build without long doubles reads back", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  spec$fixed$coefficients$cond <- 1 / 3
+  txt <- spec_json(spec)
+  # Sixteen significant digits, not the seventeen jsonlite writes on its own. The shorter form
+  # is reached only by formatting the double itself. Shortening jsonlite's output instead meant
+  # reading it back with as.numeric(), which without long doubles lands one unit in the last
+  # place low, and the specification then held a coefficient the user never set.
+  expect_true(grepl('"cond": 0.3333333333333333', txt, fixed = TRUE))
+  expect_false(grepl("0.33333333333333331", txt, fixed = TRUE))
+
+  # Read a decimal the way R does when built without long-double arithmetic: accumulate the
+  # mantissa digits in a double, then apply the decimal exponent. Seventeen significant digits
+  # overflow the 53-bit mantissa on the way, so a number written at that width does not come
+  # back. Fifteen and sixteen stay inside it and are correctly rounded everywhere.
+  no_long_double <- function(s) {
+    neg <- substr(s, 1, 1) == "-"
+    if (neg) s <- substring(s, 2)
+    expn <- 0
+    if (grepl("[eE]", s)) {
+      halves <- strsplit(s, "[eE]")[[1]]
+      expn <- as.numeric(halves[2])
+      s <- halves[1]
+    }
+    parts <- strsplit(s, ".", fixed = TRUE)[[1]]
+    if (length(parts) > 1) expn <- expn - nchar(parts[2])
+    ans <- 0
+    for (d in strsplit(paste0(parts, collapse = ""), "")[[1]]) ans <- 10 * ans + as.numeric(d)
+    fac <- 10^abs(expn)
+    ans <- if (expn < 0) ans / fac else ans * fac
+    if (neg) -ans else ans
+  }
+
+  # Blank the string literals first, so that a factor level such as "group 2" is not read as a
+  # number, then check every number the document actually carries.
+  outside_strings <- gsub('"[^"]*"', '""', txt)
+  toks <- regmatches(outside_strings,
+                     gregexpr("-?[0-9][0-9.eE+-]*", outside_strings))[[1]]
+  expect_gt(length(toks), 10)
+  for (tok in toks) expect_identical(no_long_double(tok), as.numeric(tok))
+})
+
+test_that("a label written to imitate the number tag survives spec_json", {
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  # Numbers reach the document as tagged strings and are unwrapped afterwards, so a label
+  # spelled like a tagged number would come back as a number rather than as itself. The tag is
+  # lengthened until the specification's own text does not contain it.
+  spec$response$name <- "@pilotr-number@1.5@pilotr-number@"
+  spec$fixed$coefficients$grp <- 1 / 3
+  f <- tempfile(fileext = ".json")
+  writeLines(spec_json(spec), f)
+  back <- load_spec(f, validate = FALSE)
+  expect_identical(back$response$name, spec$response$name)
+  expect_identical(as.numeric(back$fixed$coefficients$grp), 1 / 3)
+})
+
 test_that("brms_bridge maps the beta family to brms's Beta()", {
   spec <- build_spec(list(name = "b", seed = 1, design_kind = "between",
                           factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,

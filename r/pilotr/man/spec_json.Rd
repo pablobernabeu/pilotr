@@ -17,11 +17,19 @@ the portable artefact that the R and 'Python' packages both consume.
 Serialise a design specification to pretty-printed JSON
 }
 \details{
-Numbers are written at 17 significant digits, which is the shortest precision that
-round-trips every IEEE-754 double exactly. The JSON file is the portable artefact that the
-R and 'Python' implementations both read, so anything less makes the specification itself a
-source of cross-language divergence: at the previous setting a coefficient of \code{1/3} came
+Each number is written at the shortest width that reads back as exactly the same
+IEEE-754 double, which is 15 significant digits for most values a user types and at most
+17 for the rest. The JSON file is the portable artefact that the R and 'Python'
+implementations both read, so a fixed lower precision makes the specification itself a
+source of cross-language divergence: at 15 digits throughout, a coefficient of \code{1/3} came
 back as \code{0.33333333333333298}, and over a sample of 214 doubles 189 failed to round-trip.
+Writing every number at 17 instead would round-trip but read badly, turning an effect
+typed as 0.3 into \code{0.29999999999999999}.
+
+Preferring the shorter width is not only a matter of appearance. A build of R without
+long-double arithmetic reads 17 significant digits inexactly, because the digits overflow
+the 53-bit mantissa before the decimal exponent is applied, so the few values that need
+that width are the ones such a build cannot recover. Anything shorter it reads correctly.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

@@ -20,10 +20,11 @@ a reproducible script; the application's Verify button runs that script in a cle
 and confirms that it reproduces the data bit-for-bit.
 }
 \details{
-Numbers are emitted at 17 significant digits rather than through \code{deparse()}, which prints
-15 and so does not round-trip: \code{deparse(1/3)} reads back as a different double. Since the
-point of the script is bit-for-bit reproduction, the embedded specification has to preserve
-every coefficient exactly.
+Numbers are emitted at the shortest width that reads back as the same double, rather than
+through \code{deparse()}, which prints 15 significant digits and so does not round-trip:
+\code{deparse(1/3)} reads back as a different double. Since the point of the script is
+bit-for-bit reproduction, the embedded specification has to preserve every coefficient
+exactly.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

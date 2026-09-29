@@ -1,3 +1,30 @@
+# pilotr 0.3.1
+
+Released 2026-09-17.
+
+## Fixes
+
+* `spec_json()` no longer corrupts a coefficient on a build of R without long-double
+  arithmetic. Numbers were written by asking `jsonlite` for 17 significant digits and then
+  shortening each one in the text, which meant reading the number back with `as.numeric()`.
+  That read-back is not correct everywhere. Without long doubles `as.numeric()` accumulates
+  the mantissa in a double before applying the decimal exponent, and 17 significant digits
+  overflow the 53-bit mantissa on the way, so `"0.33333333333333331"` came back one unit in
+  the last place below `1/3`. The shortened form then recorded that wrong value, and the
+  saved specification no longer held the coefficient the user had set. Each number is now
+  formatted from the double itself, before `jsonlite` sees the document, so nothing is ever
+  read back from the text it was just written to. A coefficient of `1/3` is written at 16
+  significant digits rather than 17, which is both the shorter form and the one such a build
+  reads back exactly. Found by CRAN's no-long-double check.
+
+* `generate_r_script()` could write `Inf` in place of a finite coefficient on the same builds.
+  It embeds each number through the helper that looks for the shortest decimal that reads back
+  as the same double, and that helper returned nothing at all when none of the three widths it
+  tried passed the check, a case the caller took to mean the value was infinite. Without long
+  doubles the 17-digit width fails that check for the very values that need it. The helper now
+  falls back to 17 significant digits, which is the widest form there is and so the one to use
+  when nothing shorter will do, and returns nothing only for a value that really is not finite.
+
 # pilotr 0.3.0
 
 Released 2026-08-21.

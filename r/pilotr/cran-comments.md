@@ -1,36 +1,57 @@
-## Resubmission
+## Submission
 
-This is a resubmission. The package has not been on CRAN before and the version
-is unchanged at 0.3.0.
+This release fixes the test failure reported for 0.3.0 on the no-long-double
+check.
 
-In response to the comment on writing to the console, `brms_bridge()` no longer
-does. It previously wrote the `brms` model it derives to standard output with
-`cat()` on every call, whether or not anything was there to read it. It now
-returns that model as a `pilotr_bridge` object, carrying the same `formula`,
-`family`, `priors` and `code` elements as before, and a registered `print()`
-method writes the code and returns the object invisibly. Assigning the result is
-therefore silent, as is the one internal use of it inside
-`generate_design_analysis()`, which no longer has to divert the output around
-itself through a sink; a bare call at the console, or an explicit `print()`,
-still shows the model.
+    -- Failure ('test-core.R:296:3'): spec_json round-trips a coefficient exactly --
+    Expected `as.numeric(back$fixed$coefficients$cond)` to be identical to `1/3`.
+    Differences:
+      `actual`: 0.333333333333333259
+    `expected`: 0.333333333333333315
 
-Every remaining `cat()` or `print()` call in the package's R code is either
-inside one of the two `print()` methods, where console output is the point, or
-part of the text of a standalone analysis script that the package emits for the
-user to run rather than runs itself. Diagnostics elsewhere use `message()`.
+The fault was in the package rather than in the test, and it was a real one:
+the saved design specification no longer held the coefficient the user had set.
+`spec_json()` wrote the document by asking `jsonlite` for 17 significant digits
+and then shortening each number in the resulting text, which meant reading the
+number back with `as.numeric()`. Without long doubles `as.numeric()` accumulates
+the mantissa in a double before applying the decimal exponent, and 17
+significant digits overflow the 53-bit mantissa on the way, so
+`"0.33333333333333331"` reads back one unit in the last place below `1/3`. The
+shortened form then recorded that wrong value.
+
+Each number is now formatted from the double itself, before `jsonlite` sees the
+document, so nothing is read back from text the package has just written. A
+coefficient of `1/3` is written at 16 significant digits rather than 17, which
+is both the shorter form and the one such a build reads back exactly. The same
+helper feeds `generate_r_script()`, where it could return nothing at all for a
+finite value and so embed `Inf` in place of a coefficient. It now falls back to
+17 significant digits instead.
+
+I do not have a no-long-double build to hand, so the fix was checked by
+reproducing in R the accumulation `R_strtod()` performs when `LDOUBLE` is
+`double`. Under that arithmetic the 17-digit form gives 0.333333333333333259,
+the value reported above, and the 16-digit form the package now writes gives
+`1/3` exactly. Two regression tests were added: one reads every number
+`spec_json()` writes under that same arithmetic, the other covers a label
+written to imitate the marker the new code uses internally.
 
 ## R CMD check results
 
-Local `R CMD check --as-cran` on a tarball built from the resubmitted sources
-(Windows 11 x64, R 4.6.1, pandoc 3.8.3, 2026-08-31):
+Local `R CMD check --as-cran` on a tarball built from the submitted sources
+(Windows 11 x64, R 4.6.1, pandoc 3.10, 2026-09-17):
 
 0 errors | 0 warnings | 1 note
 
-The note is the new-submission note raised by the CRAN incoming feasibility
-check.
+The note comes from the CRAN incoming feasibility check and is about the
+interval since the last release.
 
     Maintainer: 'Pablo Bernabeu <pcbernabeu@gmail.com>'
-    New submission
+
+    Days since last update: 5
+
+0.3.0 was published five days ago and this release exists only to correct the
+fault that the no-long-double check found in it, so the short interval is the
+reason for the submission rather than an oversight.
 
 Examples, examples under `--run-donttest`, the tests, the re-building of the
 vignettes and both the PDF and the HTML manual were all checked in that run and
@@ -38,22 +59,15 @@ all passed.
 
 ## Test environments
 
-Version 0.3.0 was checked in the two environments below.
+Version 0.3.1 was checked locally on Windows 11 x64 under R 4.6.1, with
+`R CMD check --as-cran` on the built tarball (2026-09-17).
 
-* Locally on Windows 11 x64 under R 4.6.1, with `R CMD check --as-cran` on the
-  built tarball (2026-08-31, on the resubmitted sources).
-* On GitHub Actions, covering macOS-latest (release), windows-latest (release and
-  devel) and ubuntu-latest (release, devel and oldrel-1), each running
-  `R CMD check --no-manual --as-cran` (2026-08-20, on the sources as first
-  submitted; the change described above is the only one to the R code since).
-
-All six GitHub Actions runs finished with status OK, meaning no errors, no
-warnings and no notes. Those runs disable the CRAN incoming feasibility check,
-which is why the new-submission note appears only in the local run.
+The repository's GitHub Actions workflow covers macOS-latest (release),
+windows-latest (release and devel) and ubuntu-latest (release, devel and
+oldrel-1), each running `R CMD check --no-manual --as-cran`, and runs on the
+commit carrying this change.
 
 ## Notes
-
-Some aspects of the package are worth flagging for the review.
 
 * The package contains no compiled code.
 * Examples that fit mixed-effects models are wrapped in `\donttest{}` and additionally
@@ -61,4 +75,4 @@ Some aspects of the package are worth flagging for the review.
   skipped where those suggested packages are unavailable.
 * `run_app()` launches an interactive Shiny application, so its example is wrapped in
   `\dontrun{}`.
-* This is a new package, so there are no reverse dependencies.
+* There are no reverse dependencies.
