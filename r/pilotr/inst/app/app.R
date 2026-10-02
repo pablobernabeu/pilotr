@@ -7,24 +7,43 @@
 library(shiny)
 library(ggplot2)
 
-# When the package is loaded (run_app), its functions are available; from source, locate
-# and source the engine + spec-builder. (Installed packages have no R/ source files, so we
-# only source when the functions are not already present.)
+# shiny sources this file into an environment whose parent is the global environment, so the
+# package's functions are visible here only when pilotr is attached. pilotr::run_app() loads
+# the namespace without attaching it, and shiny::runApp() on the installed app directory does
+# not attach pilotr either. When this file is the installed package's own app.R, the app
+# therefore binds every export of the namespace into its environment, which leaves the search
+# path as it was. Anything the app uses from pilotr must accordingly be exported, and helpers
+# that only the app needs are defined below. From the source tree, the app sources the engine
+# beside it instead, even in a session where an installed pilotr is loaded.
 ENGINE_FILES <- NULL   # resolved source paths (dev) so the verifier can rebuild in a clean R session
 if (!exists("simulate_design", mode = "function")) {
-  # Load the whole engine directory rather than naming its files. The list this
-  # replaced had to track R/ by hand, and when validate.R arrived with 0.3.0 it
-  # did not: .SPEC_VERSION went undefined and every Simulate click failed. Each
-  # file in R/ only defines functions and constants, so order does not matter.
-  # "." last, for a layout that stages the engine beside the app; app.R and the
-  # roxygen sentinel are dropped so that case cannot source this file into itself.
-  .dir <- Find(dir.exists, c("../../R", "../R", "R", "."))
-  if (is.null(.dir)) stop("cannot find the pilotr engine sources")
-  .files <- sort(list.files(.dir, pattern = "[.][Rr]$", full.names = TRUE))
-  .files <- .files[!basename(.files) %in% c("pilotr-package.R", "app.R")]
-  if (!length(.files)) stop("no pilotr engine sources in ", .dir)
-  for (f in .files) source(f)
-  ENGINE_FILES <- normalizePath(.files)
+  .installed_app <- system.file("app", package = "pilotr")
+  if (nzchar(.installed_app) &&
+      identical(normalizePath(getwd(), winslash = "/"),
+                normalizePath(.installed_app, winslash = "/")) &&
+      requireNamespace("pilotr", quietly = TRUE)) {
+    for (.name in getNamespaceExports("pilotr"))
+      assign(.name, getExportedValue("pilotr", .name), envir = environment())
+  } else {
+    # Load the whole engine directory rather than naming its files. The list this
+    # replaced had to track R/ by hand, and when validate.R arrived with 0.3.0 it
+    # did not: .SPEC_VERSION went undefined and every Simulate click failed. Each
+    # file in R/ only defines functions and constants, so order does not matter.
+    # "." last, for a layout that stages the engine beside the app; app.R and the
+    # roxygen sentinel are dropped so that case cannot source this file into itself.
+    # A directory counts only if it holds simulate.R. An installed package has an R/
+    # directory too, holding the lazy-load database and no sources, and accepting any
+    # directory sent the installed app there.
+    .dir <- Find(function(d) file.exists(file.path(d, "simulate.R")),
+                 c("../../R", "../R", "R", "."))
+    if (is.null(.dir))
+      stop("cannot find the pilotr engine. Launch the app with pilotr::run_app(), or run it ",
+           "from the package's source tree, whose R/ directory holds simulate.R.")
+    .files <- sort(list.files(.dir, pattern = "[.][Rr]$", full.names = TRUE))
+    .files <- .files[!basename(.files) %in% c("pilotr-package.R", "app.R")]
+    for (f in .files) source(f)
+    ENGINE_FILES <- normalizePath(.files)
+  }
 }
 
 MAX_SIMS <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))

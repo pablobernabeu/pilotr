@@ -70,6 +70,11 @@
 
 * The `sweep_spec()` example no longer runs the null condition twice.
 
+* `pilotr::run_app()` works in a session that has not attached pilotr. The app looked for the
+  package's functions among attached packages and then for source files, and in an installed
+  package found neither, so the documented launcher stopped with "no pilotr engine sources". The
+  app now takes the functions from the package's namespace, without attaching the package.
+
 ## Documentation
 
 * `citation("pilotr")` names the R package version alone. It read "R and Python package

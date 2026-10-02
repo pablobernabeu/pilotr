@@ -61,6 +61,51 @@ jobs:
       # nothing.
       - name: Check that brms accepts the bridge's models
         run: Rscript tools/brms/check_bridge.R
+      # The smoke test runs the app from the source tree, where it sources R/ itself. Installed,
+      # the app takes the package's functions from the namespace, which pilotr::run_app() loads
+      # without attaching the package. Nothing here exercised that path, so the documented
+      # launcher could stop before the app started while every step stayed green.
+      - name: Install pilotr from this checkout
+        run: R CMD INSTALL r/pilotr
+      - name: Run the installed app in a session that has not attached pilotr
+        env:
+          NOT_CRAN: "true"   # the test is skipped on CRAN, and this job is not CRAN
+        shell: Rscript {0}
+        run: |
+          res <- as.data.frame(testthat::test_file(
+            "r/pilotr/tests/testthat/test-app-installed.R",
+            package = "pilotr", load_package = "installed"))
+          # A skip would mean that the step tested nothing, so it fails the step too.
+          if (any(res$failed > 0 | res$error | res$skipped))
+            stop("test-app-installed.R failed or was skipped", call. = FALSE)
+      - name: Launch the installed app with pilotr::run_app()
+        shell: Rscript {0}
+        run: |
+          # run_app() blocks while the app runs, so it runs in a background process while this one
+          # requests the page, and the step fails unless the page answers with HTTP 200. Before
+          # the app listens, run_app() starts one future worker per core, which can take minutes
+          # on a busy machine, so the deadline is generous. A crash ends the wait at once,
+          # because the loop stops when the process exits.
+          log <- tempfile(fileext = ".log")
+          app <- callr::r_bg(function() pilotr::run_app(port = 8765, launch.browser = FALSE),
+                             stdout = log, stderr = "2>&1")
+          status <- NA_integer_
+          deadline <- Sys.time() + 300
+          while (app$is_alive() && Sys.time() < deadline) {
+            status <- tryCatch(attr(curlGetHeaders("http://127.0.0.1:8765/"), "status"),
+                               error = function(e) NA_integer_)
+            if (identical(status, 200L)) break
+            Sys.sleep(1)
+          }
+          exited <- !app$is_alive()
+          invisible(app$kill_tree())   # the app and the future workers that run_app() started
+          writeLines(readLines(log, warn = FALSE))
+          if (!identical(status, 200L))
+            stop(if (exited) "pilotr::run_app() stopped before it answered on port 8765"
+                 else paste("pilotr::run_app() had not answered on port 8765 with HTTP 200",
+                            "after 300 seconds"),
+                 call. = FALSE)
+          cat("pilotr::run_app() answered on port 8765 with HTTP 200\n")
 
   python-deps:
     name: Python suite (latest PyPI deps)
