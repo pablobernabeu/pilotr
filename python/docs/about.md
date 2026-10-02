@@ -9,8 +9,10 @@ If you use pilotr in published work, please cite it:
 # from one string, using the version the package itself reports, so none of them can
 # drift away from the code. This reaches none of the copies that sit where no code can
 # run, and those still have to be bumped by hand when a release is cut. They are the
-# 'extra.version' chip in mkdocs.yml, the 'version' field in CITATION.cff, and the
-# citation block in the repository README and in the Python package's README.
+# 'extra.version' chip in mkdocs.yml and the 'version' field in CITATION.cff, and
+# tools/check_versions.py fails CI when either disagrees with the package. The note names
+# the Python package alone, because the R and Python packages are released separately and
+# their version numbers need not agree.
 import pilotr
 
 version = pilotr.__version__
@@ -20,7 +22,7 @@ bibtex = (
     "  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},\n"
     "  author = {Pablo Bernabeu},\n"
     "  year   = {2026},\n"
-    f"  note   = {{R and Python package version {version}}},\n"
+    f"  note   = {{Python package version {version}}},\n"
     "  doi    = {10.5281/zenodo.21266313},\n"
     "  url    = {https://doi.org/10.5281/zenodo.21266313},\n"
     "}\n"
@@ -41,7 +43,7 @@ if on_disk != bibtex:
         f.write(bibtex)
 
 print("> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable")
-print(f"> design specification* (R and Python package version {version}).")
+print(f"> design specification* (Python package version {version}).")
 print("> https://doi.org/10.5281/zenodo.21266313")
 print()
 print("```bibtex")

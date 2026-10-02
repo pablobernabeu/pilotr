@@ -73,14 +73,15 @@ API reference. The full repository, including the R package and the no-code app,
 
 ## Citation
 
-If pilotr contributes to published work, please cite it.
+If pilotr contributes to published work, please cite it, with the version of the package you
+used (`pilotr.__version__`).
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification* (R and Python package version 0.3.0).
-> https://doi.org/10.5281/zenodo.21266313
+> design specification*. https://doi.org/10.5281/zenodo.21266313
 
 The [About page](https://pablobernabeu.github.io/pilotr/python/about/) carries the same citation
-with a BibTeX entry, and a short note on the developer. The repository also ships
+with the Python package's version and a BibTeX entry, and a short note on the developer. The R
+and Python packages are released separately, so their version numbers can differ. The repository also ships
 [`CITATION.cff`](https://github.com/pablobernabeu/pilotr/blob/main/CITATION.cff), which is what
 GitHub's *Cite this repository* button reads.
 

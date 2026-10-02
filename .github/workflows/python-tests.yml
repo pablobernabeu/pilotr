@@ -11,6 +11,13 @@ on:
       - 'r/pilotr/R/**'
       - 'spec/**'
       - 'tools/parity/**'
+      # The files tools/check_versions.py reads outside python/, so that a change to
+      # any of them is checked.
+      - 'tools/check_versions.py'
+      - 'CITATION.cff'
+      - 'README.md'
+      - 'r/pilotr/DESCRIPTION'
+      - 'r/pilotr/README.md'
       - '.github/workflows/python-tests.yml'
   pull_request:
     branches: [main, master]
@@ -19,6 +26,11 @@ on:
       - 'r/pilotr/R/**'
       - 'spec/**'
       - 'tools/parity/**'
+      - 'tools/check_versions.py'
+      - 'CITATION.cff'
+      - 'README.md'
+      - 'r/pilotr/DESCRIPTION'
+      - 'r/pilotr/README.md'
       - '.github/workflows/python-tests.yml'
   # Dependencies and interpreters move when this repository does not, and the
   # paths filters above mean a quiet month sees no run at all. A weekly run
@@ -53,6 +65,11 @@ jobs:
       # settings so both trees are held to one rule set.
       - name: Lint the Python sources
         run: ruff check python tools
+      # The version strings set by hand at release (CITATION.cff, the Python copies and the
+      # README citations) drifted apart before this check existed. It needs only the
+      # standard library, so it runs here beside the linter.
+      - name: Check that the release metadata agree
+        run: python tools/check_versions.py
 
   pytest:
     runs-on: ubuntu-latest

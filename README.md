@@ -278,12 +278,15 @@ python -m pytest python/tests -q
 
 ## Citation
 
-If pilotr contributes to published work, please cite it.
+If pilotr contributes to published work, please cite it, with the version of the package you
+used.
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification* (R and Python package version 0.3.0). https://doi.org/10.5281/zenodo.21266313
+> specification*. https://doi.org/10.5281/zenodo.21266313
 
-The About page of each documentation site carries the same reference with a BibTeX entry, for
+The R and Python packages are released separately, so their version numbers can differ. In R,
+`citation("pilotr")` gives the reference with the installed version. The About page of each
+documentation site gives it with that package's version and a BibTeX entry, for
 [the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
 [the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
 ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*

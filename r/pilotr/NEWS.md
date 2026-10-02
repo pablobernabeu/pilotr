@@ -1,6 +1,20 @@
-# pilotr 0.3.1
+# pilotr (development version)
 
-Released 2026-09-17.
+## Documentation
+
+* `citation("pilotr")` names the R package version alone. It read "R and Python package
+  version 0.3.1" while the Python package stood at 0.3.0, and the two packages are released
+  separately. It also gives the author's ORCID iD now.
+
+* The 0.3.0 and 0.3.1 entries below no longer give release dates. Both gave dates on which
+  neither version reached CRAN, and the site already prints the CRAN date beside each entry.
+
+* The tree CRAN published as pilotr 0.3.0 is tagged `cran-0.3.0` on GitHub, and 0.3.1 is
+  tagged `v0.3.1` and archived on Zenodo. The `v0.3.0` tag and its Zenodo record predate two
+  changes that CRAN's 0.3.0 carried, namely that `brms_bridge()` returns a visible
+  `pilotr_bridge` object and that this object has a print method.
+
+# pilotr 0.3.1
 
 ## Fixes
 
@@ -26,8 +40,6 @@ Released 2026-09-17.
   when nothing shorter will do, and returns nothing only for a value that really is not finite.
 
 # pilotr 0.3.0
-
-Released 2026-08-21.
 
 ## Read this first
 

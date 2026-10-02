@@ -64,3 +64,18 @@ website build exercises the vignettes and guides on every push to `main`.
 By contributing you agree that your contribution is licensed under the same MIT
 licence as the package, and that you will follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Releasing
+
+The R and Python packages are released separately, so their version numbers can
+differ. An R release sets `Version` in `r/pilotr/DESCRIPTION`. A Python release
+sets the version in `python/pyproject.toml`, `python/pilotr/__init__.py` and
+`extra.version` in `python/mkdocs.yml` together, after which a docs build
+rewrites `python/docs/pilotr.bib` for committing. `CITATION.cff` follows the
+newer release of the two, with the date it first became public. The README
+citations give no version. `python tools/check_versions.py` checks all of this,
+and CI runs it.
+
+On the day CRAN or PyPI accepts a release, push the exact tree submitted, tag it
+by name (for example `git push origin v0.4.0`, never `--tags`) and publish the
+GitHub release, which Zenodo archives.

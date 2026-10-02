@@ -5,7 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-08-21
+## [Unreleased]
+
+### Fixed
+
+- The citation on the About page names the Python package version alone. It read "R and
+  Python package version", although the two packages are released separately and their
+  version numbers can differ. The BibTeX file the page offers for download says the same.
+- The 0.3.0 entry carries the date the release reached PyPI, 2026-08-27.
+
+## [0.3.0] - 2026-08-27
 
 Two of the changes below alter numbers that earlier versions produced. Both are
 deliberate corrections, and neither can be made without moving the output, so
@@ -238,6 +247,7 @@ and seed.
 - A documentation site whose guides execute their examples at build time, so the
   tables and figures shown are real `pilotr` output.
 
+[Unreleased]: https://github.com/pablobernabeu/pilotr/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.3.0
 [0.2.1]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.0
