@@ -5,6 +5,7 @@
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml)
 [![python-tests](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml)
+[![CRAN status](https://www.r-pkg.org/badges/version/pilotr)](https://CRAN.R-project.org/package=pilotr)
 [![PyPI](https://img.shields.io/pypi/v/pilotr.svg)](https://pypi.org/project/pilotr/)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
@@ -49,14 +50,21 @@ portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/
 
 ## Installation
 
-The Python package is on PyPI. The R package has not reached CRAN yet, so it installs from this
-repository, where it sits in the `r/pilotr` subdirectory.
+The Python package is on [PyPI](https://pypi.org/project/pilotr/) and the R package is on
+[CRAN](https://CRAN.R-project.org/package=pilotr).
 
 ```bash
 pip install pilotr             # core engine, pure Python and dependency-free
 pip install "pilotr[power]"    # + scipy, for simulation-based power
 pip install "pilotr[mixed]"    # + scipy, statsmodels and pandas, for crossed mixed-effects power
 ```
+
+```r
+install.packages("pilotr")
+```
+
+The development version of the R package installs from this repository, where it sits in the
+`r/pilotr` subdirectory:
 
 ```r
 # install.packages("remotes")
@@ -133,7 +141,7 @@ sharing that process. The architecture is therefore split according to how the t
 
 | Path | How | Concurrency | Use for |
 |---|---|---|---|
-| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (`pip install pilotr`; the R package installs from this repository until it reaches CRAN) | unbounded, each user on their own machine and cores | real work, especially heavy power runs parallelised across cores |
+| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (installed with `install.packages("pilotr")` or `pip install pilotr`) | unbounded, each user on their own machine and cores | real work, especially heavy power runs parallelised across cores |
 | Serverless demo | `app-lite/` exported with shinylive to a static site on GitHub Pages | unbounded, each browser computes via WebAssembly | a low-cost link for design, simulation and Gaussian power |
 | Shared hosted instance | shinyapps.io or ShinyProxy | low and costly | best avoided as the main channel, since it blocks and the prototype's free tier allowed 25 hours per month |
 

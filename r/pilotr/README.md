@@ -5,6 +5,7 @@
 
 <!-- badges: start -->
 
+[![CRAN status](https://www.r-pkg.org/badges/version/pilotr)](https://CRAN.R-project.org/package=pilotr)
 [![R-CMD-check](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
@@ -38,6 +39,15 @@ the `brms` bridge, the analysis-script emitters, the helpers that derive
 the analysis model and build specifications, and the app launcher.
 
 ## Installation
+
+pilotr is on [CRAN](https://CRAN.R-project.org/package=pilotr):
+
+``` r
+install.packages("pilotr")
+```
+
+The development version installs from the `r/pilotr` subdirectory of the
+[GitHub repository](https://github.com/pablobernabeu/pilotr):
 
 ``` r
 # install.packages("remotes")
