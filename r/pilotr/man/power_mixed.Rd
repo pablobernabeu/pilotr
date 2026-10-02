@@ -55,7 +55,7 @@ because a fit can return a usable estimate while still being boundary-singular o
 convergence warning: \code{n_returned} counts replicates that yielded a fit, \code{n_converged} those
 that did so with neither a warning nor a singular fit, \code{n_singular} those where
 \code{lme4::isSingular()} was true, and \code{n_warning} those with a warning or optimiser convergence
-message. Singular and warning fits are retained in \code{power}, since their fixed-effect estimates
+message other than lme4's singular-fit notice, which \code{n_singular} already counts. Singular and warning fits are retained in \code{power}, since their fixed-effect estimates
 remain interpretable and discarding them would bias the result: singularity is not independent
 of the variance estimates that produce it. A large \code{n_singular} means the model being fitted is
 richer than the design can support at that sample size, which is common in crossed designs

@@ -215,6 +215,23 @@ test_that("the fit counts distinguish singular fits from clean convergence", {
   expect_identical(out$n_attempted, 6L)
   expect_true(out$n_converged <= out$n_returned)
   expect_true(out$n_singular > 0L)
+  # lme4 records its singular-fit notice among the optimiser's messages. Counted as a warning, it
+  # made n_warning equal n_singular in every run, so a fit that failed to converge could not be told
+  # apart from one that was merely singular. Three of these six fits are singular, as before the
+  # fix, and the warning count no longer includes them.
+  expect_lt(out$n_warning, out$n_singular)
+  expect_identical(out$n_singular, 3L)
+})
+
+test_that("a singular fit is not also recorded as a fit with warnings", {
+  skip_if_not_installed("lme4")
+  # Every subject has the same mean, so the subject variance is estimated at the boundary.
+  d <- data.frame(subject = factor(rep(1:10, each = 4)), x = rep(c(-0.5, 0.5), 20))
+  d$y <- 1 + 0.3 * d$x + rep(c(0.1, -0.1, -0.2, 0.2), 10)
+  f <- pilotr:::.fit_lmer(y ~ x + (1 | subject), d)
+  expect_true(f$singular)
+  expect_false(any(grepl("singular", f$messages, ignore.case = TRUE)))
+  expect_false(f$converged)
 })
 
 test_that("an interaction random slope reaches the linear predictor", {

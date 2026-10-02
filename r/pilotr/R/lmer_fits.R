@@ -13,11 +13,19 @@
 # precision. They are counted and reported instead, which tells the user something actionable,
 # namely that the model being fitted is richer than the data can support.
 
-# Fit one mixed model and record what the fitter actually reported. Returns the fit (NULL if it
-# failed outright), whether it is boundary-singular, any warning or convergence messages, and a
-# strict `converged` flag that is TRUE only when there were neither.
+# Fit one mixed model and record what the fitter reported. Returns the fit (NULL if it failed
+# outright), whether it is boundary-singular, any warning or convergence messages other than the
+# singular-fit notice, and a strict `converged` flag that is TRUE only when there were neither.
 .fit_lmer <- function(formula, data, test = FALSE) {
   msgs <- character(0)
+  # By default lme4 stores its boundary (singular) fit notice with the optimiser's messages, which
+  # are read below. Every singular fit was then also counted as a fit with warnings, and n_warning
+  # could never differ from n_singular. The check is switched off here, and singularity is taken
+  # from isSingular(), whose default tolerance matches this one. Filtering the notice by its text
+  # would break whenever lme4 rewords it, as it did in 1.1-21.
+  ctrl <- lme4::lmerControl(
+    calc.derivs = FALSE,
+    check.conv.singular = lme4::.makeCC(action = "ignore", tol = 1e-4))
   # The fitter's own error message is kept and passed on. A model that lme4 refuses
   # outright, most often because the random-effects structure is unidentifiable at that sample
   # size, otherwise produced a result of NA with nothing to explain it, which leaves the user with
@@ -26,11 +34,9 @@
     tryCatch(
       suppressMessages(
         if (test)
-          lmerTest::lmer(formula, data = data,
-                         control = lme4::lmerControl(calc.derivs = FALSE))
+          lmerTest::lmer(formula, data = data, control = ctrl)
         else
-          lme4::lmer(formula, data = data,
-                     control = lme4::lmerControl(calc.derivs = FALSE))),
+          lme4::lmer(formula, data = data, control = ctrl)),
       error = function(e) { msgs <<- c(msgs, conditionMessage(e)); NULL }),
     warning = function(w) {
       msgs <<- c(msgs, conditionMessage(w))

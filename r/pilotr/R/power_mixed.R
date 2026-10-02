@@ -69,7 +69,7 @@
 #'   convergence warning: `n_returned` counts replicates that yielded a fit, `n_converged` those
 #'   that did so with neither a warning nor a singular fit, `n_singular` those where
 #'   `lme4::isSingular()` was true, and `n_warning` those with a warning or optimiser convergence
-#'   message. Singular and warning fits are retained in `power`, since their fixed-effect estimates
+#'   message other than lme4's singular-fit notice, which `n_singular` already counts. Singular and warning fits are retained in `power`, since their fixed-effect estimates
 #'   remain interpretable and discarding them would bias the result: singularity is not independent
 #'   of the variance estimates that produce it. A large `n_singular` means the model being fitted is
 #'   richer than the design can support at that sample size, which is common in crossed designs

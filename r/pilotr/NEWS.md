@@ -1,5 +1,12 @@
 # pilotr (development version)
 
+## Fixes
+
+* `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
+  records its singular-fit notice among the optimiser's messages, so every singular fit was also
+  counted as a fit with warnings, and a run could not show whether any fit had failed to
+  converge. `n_converged` and `n_singular` are unchanged.
+
 ## Documentation
 
 * `citation("pilotr")` names the R package version alone. It read "R and Python package
