@@ -51,14 +51,23 @@
       stop("`focal` contains an empty or missing coefficient name", call. = FALSE)
     true <- rep(NA_real_, length(nms))
   }
+  # The script reads each effect's draws as `b_<name>` and tests it with hypothesis(), both under
+  # the name brms gives the coefficient. For an interaction, that name lists the parts in the
+  # order they first appear in the formula (.brms_labels()), so a focal effect is matched to the
+  # specification's coefficients by its set of parts and carried into the script under brms's
+  # name. Written as in the specification, "cond:age" named no column of the draws when brms
+  # called the coefficient "age:cond".
+  avail <- as.character(names(spec[["fixed"]][["coefficients"]]))
+  hit <- match(.part_set(nms), .part_set(avail))
+  nms <- ifelse(is.na(hit), nms, unname(.brms_labels(avail))[hit])
+  # After the mapping, so that one interaction asked for in both orders counts as a repeat.
   if (anyDuplicated(nms))
     stop("duplicated focal effect(s): ",
          paste(sprintf("'%s'", unique(nms[duplicated(nms)])), collapse = ", "), call. = FALSE)
   # A focal name that is not a fixed coefficient of this design produces a script that stops at
   # its first hypothesis test, which on a cluster is discovered hours into a queued run. Saying
   # so at emission time costs nothing.
-  avail <- names(spec[["fixed"]][["coefficients"]])
-  miss <- setdiff(nms, avail)
+  miss <- nms[is.na(hit)]
   if (length(miss))
     warning(sprintf(
       "focal effect%s %s %s not a fixed coefficient of this design, so the emitted script will stop at %s hypothesis test; the design's coefficients are %s",
@@ -177,9 +186,11 @@
     paste0("  ", bridge$formula, ","),
     "  data   = dat,",
     paste0("  family = ", bridge$family, ","),
-    "  prior  = c(",
-    paste0("    ", paste(bridge$priors, collapse = ",\n    ")),
-    "  ),",
+    # A design with no coefficients and no random effects has no prior to set.
+    if (length(bridge$priors)) c(
+      "  prior  = c(",
+      paste0("    ", paste(bridge$priors, collapse = ",\n    ")),
+      "  ),"),
     '  sample_prior = "yes",',
     "  chains = 4, iter = 4000, warmup = 2000, cores = 4,",
     "  control = list(adapt_delta = 0.95),",
@@ -451,7 +462,12 @@
 #' Because the Savage-Dickey ratio is read off the prior as well as the posterior, the emitted
 #' `brm()` call sets `sample_prior = "yes"`, and the Bayes factor it produces is a statement
 #' about the prior that [brms_bridge()] supplies as much as about the data. Widening that prior
-#' moves the factor towards the null.
+#' moves the factor towards the null. The prior is the bridge's at its defaults. For the
+#' continuous families, a coefficient's prior has a standard deviation of 0.5 standard
+#' deviations of the response per standard deviation of the coefficient's column, and 0.25 for
+#' an interaction. For the link families, it is 0.5 and 0.25 on the link scale, per unit of the
+#' coefficient's column. Bayes factors depend on these widths (Kass and Raftery, 1995), so they
+#' belong in any report of the design analysis.
 #'
 #' The convergence gate is checked before any verdict is formed. R-hat is the rank-normalised
 #' version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate where the older
@@ -470,10 +486,13 @@
 #'
 #' @param spec A design specification (path or list).
 #' @param focal A character vector of focal coefficient names, or a named numeric vector mapping
-#'   those names to their true values. The names are the coefficients of the emitted model, so an
-#'   interaction is written `a:b` as in the specification, not `a_b` as in the `lme4` formula
-#'   from [model_formula()]. A name that is not a fixed coefficient of the design is reported as
-#'   a warning here, well before the emitted script would fail on it.
+#'   those names to their true values. The names are the specification's coefficients, so an
+#'   interaction is written `a:b`, not `a_b` as in the `lme4` formula from [model_formula()],
+#'   with its parts in either order. The script refers to each effect by the name brms gives it,
+#'   which for an interaction lists the parts in the order they first appear in the formula, so
+#'   `cond:age` reaches the script as `age:cond` when the specification lists `age` first. A
+#'   name that is not a fixed coefficient of the design is reported as a warning here, well
+#'   before the emitted script would fail on it.
 #' @param rule The decision rule, a named list with elements `bf` (the Bayes-factor threshold,
 #'   applied in both directions), `rope` (the half-width of the region of practical equivalence,
 #'   on the scale of the model's coefficients) and `ci` (the mass of the highest-density

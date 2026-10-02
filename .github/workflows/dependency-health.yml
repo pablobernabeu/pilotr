@@ -41,7 +41,12 @@ jobs:
         with:
           working-directory: r/pilotr
           dependencies: '"all"'        # Imports + Suggests (lme4, lmerTest, shiny, callr, ...)
-          extra-packages: any::faux    # equivalence_faux.R uses faux, a dev/CI dependency (not a package Suggests)
+          # Dev and CI dependencies, neither of them a package Suggests. equivalence_faux.R uses
+          # faux, and tools/brms/check_bridge.R uses brms, which the package keeps out of its
+          # dependencies so that no Stan toolchain enters its own check matrix.
+          extra-packages: |
+            any::faux
+            any::brms
       - name: Smoke-test the engine and every key dependency
         run: |
           set -e
@@ -50,6 +55,12 @@ jobs:
           Rscript r/pilotr/examples/run_demo.R         # jsonlite + generative engine
           Rscript r/pilotr/examples/run_power_mixed.R  # lme4 / lmerTest crossed-LMM power
           Rscript r/pilotr/examples/equivalence_faux.R # faux equivalence
+      # brms_bridge() and generate_design_analysis() write brms code without loading brms, so this
+      # is the only place brms itself checks that code. It validates the priors and writes the Stan
+      # program for every shipped example and for the two families no example uses, compiling
+      # nothing.
+      - name: Check that brms accepts the bridge's models
+        run: Rscript tools/brms/check_bridge.R
 
   python-deps:
     name: Python suite (latest PyPI deps)

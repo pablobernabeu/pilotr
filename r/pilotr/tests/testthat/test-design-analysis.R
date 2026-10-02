@@ -75,6 +75,34 @@ test_that("generation is silent and embeds the bridge's model", {
   for (p in b$priors) expect_true(grepl(p, script, fixed = TRUE))
 })
 
+# brms calls reading_time_continuous's "cond:age" coefficient "age:cond", because age comes
+# first in the formula, so the script's draws hold `b_age:cond` and no `b_cond:age`. A focal
+# interaction is accepted with its parts in either order and reaches the script as brms names it.
+test_that("a focal interaction reaches the script under the name brms gives it", {
+  spec <- load_spec(pilotr_example("reading_time_continuous"))
+  # A tenth of the subjects and a fifth of the items, which leaves every name as it is and keeps
+  # the two emissions quick.
+  spec[["units"]][["subject"]][["n"]] <- 5L
+  spec[["units"]][["item"]][["n"]] <- 8L
+  for (written in c("cond:age", "age:cond")) {
+    expect_silent(s <- generate_design_analysis(spec, focal = stats::setNames(0.02, written)))
+    expect_true(grepl('focal      <- "age:cond"', s, fixed = TRUE), info = written)
+    expect_true(grepl("focal_true <- c(`age:cond` = 0.02)", s, fixed = TRUE), info = written)
+    expect_true(grepl('coef = "age:cond"', s, fixed = TRUE), info = written)
+  }
+  # Both orders name one coefficient, so asking for both asks for it twice.
+  expect_error(generate_design_analysis(spec, focal = c("cond:age", "age:cond")),
+               "duplicated focal effect")
+})
+
+test_that("a design without random effects emits no prior on random-effect SDs", {
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  s <- generate_design_analysis(spec, focal = c(grp = 5))
+  expect_false(grepl('class = "sd"', s, fixed = TRUE))
+  expect_false(grepl('class = "Intercept"', s, fixed = TRUE))
+  expect_true(grepl('prior(normal(0, 10.23), class = "b", coef = "grp")', s, fixed = TRUE))
+})
+
 # The verdict is a pure function of the rule, the gate and the specification, so a record that
 # carries only the verdict cannot be told apart from one produced under a different ROPE.
 test_that("the emitted record carries the rule, the gate, the spec and the version", {

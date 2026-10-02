@@ -36,6 +36,12 @@ The cross-language parity table in `r/pilotr/vignettes/parity-summary.csv` is
 likewise generated, by `python examples/parity_check.py --csv`, which needs both
 demos to have been run first.
 
+brms is not a dependency of the package, so its test suite cannot ask brms
+whether it accepts the code that `brms_bridge()` and `generate_design_analysis()`
+emit. After changing either, run `Rscript tools/brms/check_bridge.R` with brms
+installed. It checks every shipped example and a design in each of the two
+response families no example uses, and it compiles nothing.
+
 The Python package:
 
 ```bash

@@ -1,5 +1,27 @@
 # pilotr (development version)
 
+## Read this first
+
+* `brms_bridge()` and `generate_design_analysis()` emit models that brms accepts, with priors on
+  the data's scale. A prior on random-effect standard deviations was emitted for designs without
+  random effects, which brms rejects, so four of the eight shipped examples failed before
+  sampling. An interaction key was used as written, `cond:age`, where brms names the coefficient
+  `age:cond`, so brms refused a fifth example's prior on it. The priors were also fixed at a unit
+  scale described as standardised, although nothing standardised the data. On a Gaussian design
+  with a residual SD of 10, the effect's prior was N(0, 0.5) and the Savage-Dickey Bayes factor
+  was about 1 whatever the data. Priors for the continuous families now scale with the response
+  and with each column's realised standard deviation, the intercept takes brms's default, and
+  the emitted call says that its data come from `model_data()`. Emitted scripts, priors and
+  Bayes factors change.
+
+* `generate_design_analysis()` accepts a focal interaction with its parts in either order and
+  writes it into the script under the name brms gives it. `brms_bridge()` validates a
+  specification given as a list, as the other entry points do, since its priors are now
+  measured on the data that specification simulates. It refuses a `prior_scale` or
+  `interaction_scale` that is not a single positive number, and a specification that gives one
+  interaction two keys, such as `cond:age` and `age:cond`, since brms estimates one coefficient
+  for both. A coefficient whose column does not vary is reported in a warning.
+
 ## Fixes
 
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4

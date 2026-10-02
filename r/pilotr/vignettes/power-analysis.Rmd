@@ -210,9 +210,12 @@ In pilotr the same gain takes one argument.
 For a confirmatory Bayesian fit, `brms_bridge()` returns a ready-to-run `brms` model. It
 provides the family, the fixed and random-effects formula, and a weakly-informative prior set,
 all derived from the same specification, so that the planning model and the confirmatory model
-remain consistent. Printing the result shows the model as code to copy into a script; assigning
-it instead gives the same parts as `formula`, `family` and `priors`, silently, for a caller
-assembling its own.
+remain consistent. The formula reads the contrast columns that `model_data()` adds, so the model
+runs on `model_data(spec_c, simulate_design(spec_c))` or on collected data passed through
+`model_data()`. Its priors are scaled to the response and to each of those columns, here on the
+log scale on which a shifted lognormal's coefficients act. Printing the result shows the model
+as code to copy into a script; assigning it instead gives the same parts as `formula`, `family`
+and `priors`, silently, for a caller assembling its own.
 
 ```{r}
 brms_bridge(spec_c)

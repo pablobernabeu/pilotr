@@ -18,10 +18,13 @@ generate_design_analysis(
 \item{spec}{A design specification (path or list).}
 
 \item{focal}{A character vector of focal coefficient names, or a named numeric vector mapping
-those names to their true values. The names are the coefficients of the emitted model, so an
-interaction is written \code{a:b} as in the specification, not \code{a_b} as in the \code{lme4} formula
-from \code{\link[=model_formula]{model_formula()}}. A name that is not a fixed coefficient of the design is reported as
-a warning here, well before the emitted script would fail on it.}
+those names to their true values. The names are the specification's coefficients, so an
+interaction is written \code{a:b}, not \code{a_b} as in the \code{lme4} formula from \code{\link[=model_formula]{model_formula()}},
+with its parts in either order. The script refers to each effect by the name brms gives it,
+which for an interaction lists the parts in the order they first appear in the formula, so
+\code{cond:age} reaches the script as \code{age:cond} when the specification lists \code{age} first. A
+name that is not a fixed coefficient of the design is reported as a warning here, well
+before the emitted script would fail on it.}
 
 \item{rule}{The decision rule, a named list with elements \code{bf} (the Bayes-factor threshold,
 applied in both directions), \code{rope} (the half-width of the region of practical equivalence,
@@ -85,7 +88,12 @@ disagree, which is the answer a small pilot most often deserves.
 Because the Savage-Dickey ratio is read off the prior as well as the posterior, the emitted
 \code{brm()} call sets \code{sample_prior = "yes"}, and the Bayes factor it produces is a statement
 about the prior that \code{\link[=brms_bridge]{brms_bridge()}} supplies as much as about the data. Widening that prior
-moves the factor towards the null.
+moves the factor towards the null. The prior is the bridge's at its defaults. For the
+continuous families, a coefficient's prior has a standard deviation of 0.5 standard
+deviations of the response per standard deviation of the coefficient's column, and 0.25 for
+an interaction. For the link families, it is 0.5 and 0.25 on the link scale, per unit of the
+coefficient's column. Bayes factors depend on these widths (Kass and Raftery, 1995), so they
+belong in any report of the design analysis.
 
 The convergence gate is checked before any verdict is formed. R-hat is the rank-normalised
 version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate where the older

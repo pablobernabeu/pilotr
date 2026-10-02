@@ -9,9 +9,12 @@ brms_bridge(spec, prior_scale = 0.5, interaction_scale = NULL)
 \arguments{
 \item{spec}{a design spec (path or list).}
 
-\item{prior_scale}{SD of the Normal prior on fixed main effects (standardised scale).}
+\item{prior_scale}{The standard deviation of the normal prior on a standardised main effect
+for the continuous families, that is on the coefficient multiplied by its column's standard
+deviation and divided by the response's. For \code{bernoulli}, \code{poisson}, \code{ordinal} and \code{beta},
+it is the standard deviation of the prior on the coefficient itself, on the link scale.}
 
-\item{interaction_scale}{SD of the Normal prior on interaction terms (default prior_scale/2).}
+\item{interaction_scale}{The same for interaction terms. Defaults to half of \code{prior_scale}.}
 }
 \value{
 An object of class \code{pilotr_bridge}: a list with elements \code{formula}, \code{family},
@@ -21,6 +24,47 @@ the model while an assignment stays silent.
 }
 \description{
 Derive a brms formula, family, and priors from a design spec
+}
+\details{
+The formula names the analysis columns of the design: each factor's numeric contrast columns
+and the predictors, with every interaction left for brms to form from its parts. A data set
+as \code{\link[=simulate_design]{simulate_design()}} returns it holds the factors' level labels and not their contrast
+columns, so it goes through \code{\link[=model_data]{model_data()}} first, as in
+\code{model_data(spec, simulate_design(spec))}. The emitted call says so beside its \code{data}
+argument. Collected data laid out in the same way go through \code{model_data()} too.
+
+brms names an interaction coefficient after its parts in the order they first appear in the
+formula, as \code{\link[stats:terms]{stats::terms()}} does, so a key \code{cond:age} in a specification that lists \code{age}
+first is the coefficient \code{age:cond}. The formula and the priors use the name brms uses. A
+specification that gives one interaction two keys, such as \code{cond:age} and \code{age:cond}, is
+refused, since brms estimates a single coefficient for it.
+
+For \code{gaussian} and \code{exgaussian} responses, the coefficients are on the response's own scale,
+and for \code{lognormal} and \code{shifted_lognormal} on the scale of its logarithm, so their priors are
+scaled to the data the design produces. Take \code{sd_y} to be the square root of the total
+variance that \code{\link[=response_variance]{response_variance()}} reports, and \code{sd_x} the standard deviation of a
+coefficient's column in \code{model_data(spec, simulate_design(spec))}, an interaction's product
+column included. The coefficient's prior is then \code{normal(0, s * sd_y / sd_x)}, where \code{s} is
+\code{prior_scale} for a main effect and \code{interaction_scale} for an interaction, and the
+random-effect standard deviations take a half-normal prior with standard deviation \code{sd_y}.
+For \code{bernoulli}, \code{poisson}, \code{ordinal} and \code{beta}, the coefficients are on the logit or log
+scale, which does not depend on the response's units. A coefficient's prior is then
+\code{normal(0, s)} per unit of its column, and the random-effect standard deviations take
+\code{normal(0, 1)}. These widths suit contrast columns and standardised predictors, while a
+predictor on a wider scale, such as age in years, gets a correspondingly wider prior per
+standard deviation. Widths are written to four significant digits.
+
+A prior on the random-effect standard deviations is emitted only when the design has random
+effects, and an LKJ prior on their correlations only when some grouping factor's effects are
+correlated. brms refuses a prior on a parameter the model does not contain. The intercept and
+the family's own parameters, such as the residual standard deviation, take brms's default
+priors. For the continuous families, brms centres the intercept's default prior on the median
+of the response, or of its logarithm for the two lognormal families.
+
+A Bayes factor computed against these priors depends on their widths (Kass and Raftery,
+1995), so a different \code{prior_scale} gives a different Bayes factor from the same data. For a
+continuous family at the default of 0.5, a standardised effect of 0.5 lies one prior standard
+deviation from zero.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
@@ -32,6 +76,10 @@ spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
 bridge <- brms_bridge(spec)          # silent
 bridge$formula
 bridge                               # prints the ready-to-fit model
+}
+\references{
+Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
+American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}
 }
 \seealso{
 \code{\link[=print.pilotr_bridge]{print.pilotr_bridge()}} for the display, and \code{\link[=model_formula]{model_formula()}} for the frequentist

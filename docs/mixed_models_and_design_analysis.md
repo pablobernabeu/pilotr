@@ -48,8 +48,10 @@ planning.
    for a power curve against a target power. Neither extrapolates: a curve that does not reach
    the target within the sizes swept is refused rather than extended.
 4. Confirm in `brms`. `brms_bridge(spec)` returns the confirmatory model (family, fixed/random
-   formula and weakly-informative priors). Simulate one dataset, fit it in `brms` and check
-   recovery, prior-predictive behaviour and the HDI-vs-ROPE decision before collecting data.
+   formula and weakly-informative priors, scaled to the response for the continuous families).
+   Simulate one dataset with `model_data(spec, simulate_design(spec))`, which adds the contrast
+   columns the formula reads, fit it in `brms` and check recovery, prior-predictive behaviour
+   and the HDI-vs-ROPE decision before collecting data.
 
 In this division of labour, pilotr serves as a design-and-planning engine, with `brms` (Stan)
 providing the confirmatory Bayesian layer.
