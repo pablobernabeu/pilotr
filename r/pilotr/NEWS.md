@@ -36,6 +36,18 @@
 * `load_spec()` reads a file that starts with a byte-order mark without warning about it. The
   specification format allows one, since some Windows editors add it.
 
+* `design_conditions()` changes only the effects it names. Through `sweep_spec()`, its
+  conditions replaced the whole coefficient list, so every coefficient they did not name was
+  dropped from data generation, from `model_formula()` and from the default focal set, contrary
+  to the documentation. On `reading_time_continuous`, a sweep of `cond` simulated and analysed a
+  one-coefficient model. Conditions are now merged into the specification's own coefficients, in
+  its order, and a condition naming a coefficient the specification lacks is refused. They carry
+  the class `pilotr_conditions`, which subsetting them with `[` and joining them with `c()` keep.
+  Any other list still replaces the addressed field wholesale. With 0.3.x, pass
+  `.base = spec$fixed$coefficients` to `design_conditions()` for the same result.
+
+* The `sweep_spec()` example no longer runs the null condition twice.
+
 ## Documentation
 
 * `citation("pilotr")` names the R package version alone. It read "R and Python package
@@ -49,6 +61,12 @@
   tagged `v0.3.1` and archived on Zenodo. The `v0.3.0` tag and its Zenodo record predate two
   changes that CRAN's 0.3.0 carried, namely that `brms_bridge()` returns a visible
   `pilotr_bridge` object and that this object has a print method.
+
+* `sweep_spec()` and `solve_curve()` say that a sweep over lists, `design_conditions()`
+  included, records a grid index in its leading column, and that `solve_curve()` solves for that
+  index unless `x` names another column. Both pages show the sweep to use for a single effect,
+  `sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed)`. It keeps the other
+  coefficients, and `solve_curve()` returns a minimum detectable effect from its curve.
 
 # pilotr 0.3.1
 

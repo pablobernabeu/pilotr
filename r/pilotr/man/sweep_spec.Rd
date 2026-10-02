@@ -11,7 +11,8 @@ sweep_spec(spec, path, values, fn, ..., .name = NULL)
 
 \item{path}{The field to vary, as \code{"units$subject$n"} or \code{c("units", "subject", "n")}.}
 
-\item{values}{A vector or list of values to set the field to, one grid point each.}
+\item{values}{A vector or list of values to set the field to, one grid point each.
+\code{\link[=design_conditions]{design_conditions()}} builds such a list for an effect-size sweep.}
 
 \item{fn}{The analysis to run at each grid point, for example \code{\link[=power_mixed]{power_mixed()}} or
 \code{\link[=precision_design]{precision_design()}}. It is called as \code{fn(spec, ...)}.}
@@ -22,9 +23,9 @@ sweep_spec(spec, path, values, fn, ..., .name = NULL)
 \code{path}.}
 }
 \value{
-A data frame binding the results, with the swept value as the leading column. When the
-swept values are not scalars, that column holds the grid index instead. \code{\link[=solve_curve]{solve_curve()}}
-reads that leading column, so a sweep goes straight into a solve.
+A data frame binding the results, with the swept value as the leading column, or the
+grid index when the values are lists. \code{\link[=solve_curve]{solve_curve()}} reads that leading column by default,
+so a sweep over single values goes straight into a solve.
 }
 \description{
 Vary a single field of a specification across a set of values, run an analysis at each, and bind
@@ -38,13 +39,24 @@ The specification is validated once, before the sweep, so a mistake in it is rep
 fitting starts rather than repeated at every grid point.
 
 A value may be a scalar, which replaces the addressed field, or a list, which replaces it
-wholesale. Replacing a whole \code{fixed$coefficients} object is how an effect-size sweep works, and
-\code{\link[=design_conditions]{design_conditions()}} builds those objects, including a common all-zero condition for examining
-behaviour under the null.
+wholesale. The conditions \code{\link[=design_conditions]{design_conditions()}} builds are the exception, because each names
+only the effects it varies. Each condition is merged into the addressed list with
+\code{\link[utils:modifyList]{utils::modifyList()}}, so the coefficients it names take its values and every other
+coefficient keeps the specification's, in the specification's order. That is the order in
+which the linear predictor is summed, so a condition simulates exactly the data of the
+specification edited by hand. A condition may name only coefficients the specification
+already has, and any other name is refused.
 
 The result of \code{fn} is coerced to a data frame: a \code{pilotr_power} object becomes one row per focal
 effect, a data frame is used as it stands, and a plain list becomes a single row. The swept value
-is added as a leading column, named by \code{.name} where the value is a scalar.
+is added as a leading column named by \code{.name}. A list has no single value to record, so a sweep
+over lists, the conditions \code{\link[=design_conditions]{design_conditions()}} builds included, records the grid index there.
+\code{\link[=solve_curve]{solve_curve()}} then needs \code{x} to name the column that holds the effect. To vary a single
+effect, sweep its own coefficient. For example,
+\code{sweep_spec(spec, "fixed$coefficients$cond", c(0, 0.02, 0.04), power_mixed)} keeps the other
+coefficients and names the leading column \code{cond}, so
+\code{solve_curve(curve, target = 0.8, effect = "cond", transform = "identity")} returns the
+minimum detectable effect.
 }
 \examples{
 \donttest{
@@ -62,7 +74,7 @@ if (requireNamespace("lme4", quietly = TRUE) &&
 
   # Effect size, which the old curve functions could not reach.
   sweep_spec(spec, "fixed$coefficients",
-             design_conditions(effect = c(0, 0.03, 0.06)), power_mixed, n_sims = 8)
+             design_conditions(effect = c(0.03, 0.06)), power_mixed, n_sims = 8)
 }
 }
 }

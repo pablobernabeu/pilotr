@@ -21,7 +21,8 @@
   .assign(spec, keys, value)
 }
 
-# Read a nested field, for the error message when a path does not exist.
+# Read a nested field: NULL when a path does not exist, so that sweep_spec() can say so, and
+# otherwise the value a design_conditions() condition is merged into.
 .get_path <- function(spec, path) {
   keys <- if (length(path) == 1L) strsplit(path, "$", fixed = TRUE)[[1]] else as.character(path)
   keys <- keys[nzchar(keys)]
@@ -46,25 +47,37 @@
 #' fitting starts rather than repeated at every grid point.
 #'
 #' A value may be a scalar, which replaces the addressed field, or a list, which replaces it
-#' wholesale. Replacing a whole `fixed$coefficients` object is how an effect-size sweep works, and
-#' [design_conditions()] builds those objects, including a common all-zero condition for examining
-#' behaviour under the null.
+#' wholesale. The conditions [design_conditions()] builds are the exception, because each names
+#' only the effects it varies. Each condition is merged into the addressed list with
+#' [utils::modifyList()], so the coefficients it names take its values and every other
+#' coefficient keeps the specification's, in the specification's order. That is the order in
+#' which the linear predictor is summed, so a condition simulates exactly the data of the
+#' specification edited by hand. A condition may name only coefficients the specification
+#' already has, and any other name is refused.
 #'
 #' The result of `fn` is coerced to a data frame: a `pilotr_power` object becomes one row per focal
 #' effect, a data frame is used as it stands, and a plain list becomes a single row. The swept value
-#' is added as a leading column, named by `.name` where the value is a scalar.
+#' is added as a leading column named by `.name`. A list has no single value to record, so a sweep
+#' over lists, the conditions [design_conditions()] builds included, records the grid index there.
+#' [solve_curve()] then needs `x` to name the column that holds the effect. To vary a single
+#' effect, sweep its own coefficient. For example,
+#' `sweep_spec(spec, "fixed$coefficients$cond", c(0, 0.02, 0.04), power_mixed)` keeps the other
+#' coefficients and names the leading column `cond`, so
+#' `solve_curve(curve, target = 0.8, effect = "cond", transform = "identity")` returns the
+#' minimum detectable effect.
 #'
 #' @param spec A design specification (path or list).
 #' @param path The field to vary, as `"units$subject$n"` or `c("units", "subject", "n")`.
 #' @param values A vector or list of values to set the field to, one grid point each.
+#'   [design_conditions()] builds such a list for an effect-size sweep.
 #' @param fn The analysis to run at each grid point, for example [power_mixed()] or
 #'   [precision_design()]. It is called as `fn(spec, ...)`.
 #' @param ... Further arguments passed to `fn` at every grid point.
 #' @param .name Name for the column recording the swept value. Defaults to the last element of
 #'   `path`.
-#' @return A data frame binding the results, with the swept value as the leading column. When the
-#'   swept values are not scalars, that column holds the grid index instead. [solve_curve()]
-#'   reads that leading column, so a sweep goes straight into a solve.
+#' @return A data frame binding the results, with the swept value as the leading column, or the
+#'   grid index when the values are lists. [solve_curve()] reads that leading column by default,
+#'   so a sweep over single values goes straight into a solve.
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE) &&
@@ -81,7 +94,7 @@
 #'
 #'   # Effect size, which the old curve functions could not reach.
 #'   sweep_spec(spec, "fixed$coefficients",
-#'              design_conditions(effect = c(0, 0.03, 0.06)), power_mixed, n_sims = 8)
+#'              design_conditions(effect = c(0.03, 0.06)), power_mixed, n_sims = 8)
 #' }
 #' }
 #' @seealso [design_conditions()] to build effect-size grids, [power_mixed()] and
@@ -92,9 +105,12 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
   spec <- .as_spec(spec)
   if (!is.function(fn)) stop("`fn` must be a function", call. = FALSE)
   if (!length(values)) stop("`values` must contain at least one value", call. = FALSE)
-  if (is.null(.get_path(spec, path)))
+  current <- .get_path(spec, path)
+  if (is.null(current))
     stop("`path` does not address a field of this specification: ",
          paste(path, collapse = "$"), call. = FALSE)
+  merge <- inherits(values, "pilotr_conditions")
+  if (merge) .check_conditions(values, current, path)
   if (is.null(.name)) {
     keys <- if (length(path) == 1L) strsplit(path, "$", fixed = TRUE)[[1]] else as.character(path)
     .name <- keys[length(keys)]
@@ -103,6 +119,11 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
   scalar_values <- !is.list(values)
   parts <- lapply(seq_along(values), function(i) {
     value <- if (is.list(values)) values[[i]] else values[i]
+    # A condition names only the effects it varies, so it is merged into the field. modifyList()
+    # keeps the field's own order, which for the coefficients is the order in which the linear
+    # predictor is summed. Reversing it moves 691 of the 4,000 unrounded responses of
+    # reading_time_continuous by up to 3.3e-16.
+    if (merge) value <- utils::modifyList(current, value)
     # The specification is already validated, and each grid point only replaces one field, so
     # revalidating at every point would repeat the same work; fn() validates its own argument.
     res <- fn(.set_path(spec, path, value), ...)
@@ -115,12 +136,32 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
   do.call(rbind, parts)
 }
 
+# Conditions may name only what the addressed list already holds. Merging another name would
+# append a coefficient the specification never declared, at the end of its order, and the
+# validator accepts any such key that resolves to a column.
+.check_conditions <- function(values, current, path) {
+  if (!is.list(current) || (length(current) && is.null(names(current))))
+    stop("design_conditions() merges its conditions into a named list such as ",
+         "fixed$coefficients, and `path` addresses ", paste(path, collapse = "$"),
+         ", which is not one", call. = FALSE)
+  have <- names(current)
+  unknown <- setdiff(unique(unlist(lapply(values, names), use.names = FALSE)), have)
+  if (length(unknown))
+    stop(sprintf(
+      "design_conditions() names %s, which %s not %s of this specification; its coefficients are %s",
+      paste(sprintf("'%s'", unknown), collapse = ", "),
+      if (length(unknown) > 1L) "are" else "is",
+      if (length(unknown) > 1L) "coefficients" else "a coefficient",
+      if (length(have)) paste(sprintf("'%s'", have), collapse = ", ") else "(none)"),
+      call. = FALSE)
+  invisible(NULL)
+}
+
 #' Build a grid of fixed-effect coefficient sets
 #'
-#' Produce the list of `fixed$coefficients` objects needed to sweep an effect size with
-#' [sweep_spec()], including a condition in which every named effect is zero, so that the same run
-#' shows both what a design detects and how often it declares something when there is nothing to
-#' find.
+#' Produce the conditions needed to sweep an effect size with [sweep_spec()], including a
+#' condition in which every named effect is zero, so that the same run shows both what a design
+#' detects and how often it declares something when there is nothing to find.
 #'
 #' @details
 #' Named arguments give the values each effect should take, and are recycled to a common length, so
@@ -128,15 +169,24 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
 #' 0.1. The all-zero condition comes first and is shared, since the Type I error rate is a property
 #' of the design rather than of any one effect size.
 #'
-#' Any coefficient the specification has that is not named here is left at its own value, so a
-#' sweep varies only the effects it names.
+#' [sweep_spec()] merges each condition into the specification's own coefficients and keeps their
+#' order, so any coefficient not named here keeps its value and a sweep varies only the effects it
+#' names. It refuses a condition that names a coefficient the specification lacks. Subsetting the
+#' result with `[` keeps its class, and so does `c()` when the result comes first. The three
+#' conditions of `c(design_conditions(cond = 0.02), design_conditions(age = 0.1, .null = FALSE))`
+#' are therefore merged in the same way. A list assembled by other means replaces the
+#' coefficients wholesale.
 #'
 #' @param ... Named numeric vectors, one per coefficient to vary.
 #' @param .null Whether to prepend a condition with every named effect set to zero. `TRUE` by
 #'   default.
-#' @param .base Optional named list of coefficients to hold fixed in every condition, for effects
-#'   the sweep does not vary.
-#' @return A list of named lists, each suitable as a `fixed$coefficients` value.
+#' @param .base Optional named list of coefficients to include in every condition, the null
+#'   condition among them. [sweep_spec()] already keeps the coefficients a condition does not
+#'   name. `.base` is therefore needed only to hold a coefficient at a value other than the
+#'   specification's, or for a condition used outside [sweep_spec()], such as one assigned to
+#'   `fixed$coefficients` by hand.
+#' @return A list of class `pilotr_conditions` holding one named list of coefficients per
+#'   condition. The class is how [sweep_spec()] recognises conditions to merge.
 #' @examples
 #' design_conditions(effect = c(0.03, 0.06))
 #' design_conditions(cond = c(0.02, 0.05), age = 0.1, .null = FALSE)
@@ -159,7 +209,34 @@ design_conditions <- function(..., .null = TRUE, .base = NULL) {
     zero <- lapply(effects, function(v) 0)
     conditions <- c(list(utils::modifyList(as.list(.base %||NULL% list()), zero)), conditions)
   }
-  conditions
+  structure(conditions, class = c("pilotr_conditions", "list"))
+}
+
+# Without this method `[` returns a plain list, which sweep_spec() substitutes wholesale, so a
+# subset such as conditions[-1] would again drop every coefficient it does not name. Base R's
+# `[.simple.list` keeps its class in the same way.
+#' @export
+#' @noRd
+`[.pilotr_conditions` <- function(x, i, ...) structure(NextMethod("["), class = class(x))
+
+# Joining two sets of conditions with c(), to vary one effect and then another in the same run,
+# would likewise return a plain list. Base R's `c.noquote` keeps its class in the same way. c()
+# dispatches on its first argument, so the conditions have to come first.
+#' @export
+#' @noRd
+c.pilotr_conditions <- function(..., recursive = FALSE) {
+  out <- NextMethod("c")
+  if (is.list(out)) class(out) <- c("pilotr_conditions", "list")
+  out
+}
+
+# The conditions print as the plain list they hold, without the class attribute that
+# sweep_spec() reads.
+#' @export
+#' @noRd
+print.pilotr_conditions <- function(x, ...) {
+  print(unclass(x), ...)
+  invisible(x)
 }
 
 # A local null-coalesce, named so that it cannot be confused with base R's `%||%` (added in 4.4)

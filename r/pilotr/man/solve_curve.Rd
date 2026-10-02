@@ -23,7 +23,7 @@ number of replicates behind it.}
 \item{target}{The decision rate to solve for, strictly between 0 and 1.}
 
 \item{x}{Name of the column holding the swept value. \code{NULL}, the default, takes the leading
-column.}
+column, which holds a grid index when the sweep was over lists.}
 
 \item{y}{Name of the column holding the decision rate. \code{NULL}, the default, takes \code{power} or
 \code{p_meaningful}, whichever is present.}
@@ -87,6 +87,15 @@ narrower interval than its own residuals justify.
 The default \code{transform} of \code{"sqrt"} suits a sample-size axis, where a rate rises with the
 square root of the sample size. Sweep something else,
 an effect size or a random-effect standard deviation, and \code{"identity"} is usually right.
+
+A sweep over the conditions \code{\link[=design_conditions]{design_conditions()}} builds is a sweep over lists, so its leading
+column holds a grid index, and solving it as it stands would solve for that index. Either name
+the column holding the effect with \code{x}, such as \code{true} in the rows of \code{\link[=power_mixed]{power_mixed()}}, or sweep
+one coefficient by its own path. The curve from
+\code{sweep_spec(spec, "fixed$coefficients$cond", c(0, 0.02, 0.04), power_mixed)} holds the other
+coefficients at their values and leads with a column named \code{cond}. From that curve,
+\code{solve_curve(curve, target = 0.8, effect = "cond", transform = "identity")} returns the minimum
+detectable effect.
 
 Nothing here extrapolates. A curve whose rates do not straddle the target is refused, with the
 range it did cover reported, and so is a fit that solves outside the swept range. A curve

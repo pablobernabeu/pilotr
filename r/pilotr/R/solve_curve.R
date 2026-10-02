@@ -213,6 +213,15 @@
 #' square root of the sample size. Sweep something else,
 #' an effect size or a random-effect standard deviation, and `"identity"` is usually right.
 #'
+#' A sweep over the conditions [design_conditions()] builds is a sweep over lists, so its leading
+#' column holds a grid index, and solving it as it stands would solve for that index. Either name
+#' the column holding the effect with `x`, such as `true` in the rows of [power_mixed()], or sweep
+#' one coefficient by its own path. The curve from
+#' `sweep_spec(spec, "fixed$coefficients$cond", c(0, 0.02, 0.04), power_mixed)` holds the other
+#' coefficients at their values and leads with a column named `cond`. From that curve,
+#' `solve_curve(curve, target = 0.8, effect = "cond", transform = "identity")` returns the minimum
+#' detectable effect.
+#'
 #' Nothing here extrapolates. A curve whose rates do not straddle the target is refused, with the
 #' range it did cover reported, and so is a fit that solves outside the swept range. A curve
 #' whose fitted slope cannot be told from zero is refused too: the crossing is then compatible
@@ -233,7 +242,7 @@
 #'   number of replicates behind it.
 #' @param target The decision rate to solve for, strictly between 0 and 1.
 #' @param x Name of the column holding the swept value. `NULL`, the default, takes the leading
-#'   column.
+#'   column, which holds a grid index when the sweep was over lists.
 #' @param y Name of the column holding the decision rate. `NULL`, the default, takes `power` or
 #'   `p_meaningful`, whichever is present.
 #' @param n The number of replicates behind each rate, either the name of a column or a numeric

@@ -12,17 +12,20 @@ design_conditions(..., .null = TRUE, .base = NULL)
 \item{.null}{Whether to prepend a condition with every named effect set to zero. \code{TRUE} by
 default.}
 
-\item{.base}{Optional named list of coefficients to hold fixed in every condition, for effects
-the sweep does not vary.}
+\item{.base}{Optional named list of coefficients to include in every condition, the null
+condition among them. \code{\link[=sweep_spec]{sweep_spec()}} already keeps the coefficients a condition does not
+name. \code{.base} is therefore needed only to hold a coefficient at a value other than the
+specification's, or for a condition used outside \code{\link[=sweep_spec]{sweep_spec()}}, such as one assigned to
+\code{fixed$coefficients} by hand.}
 }
 \value{
-A list of named lists, each suitable as a \code{fixed$coefficients} value.
+A list of class \code{pilotr_conditions} holding one named list of coefficients per
+condition. The class is how \code{\link[=sweep_spec]{sweep_spec()}} recognises conditions to merge.
 }
 \description{
-Produce the list of \code{fixed$coefficients} objects needed to sweep an effect size with
-\code{\link[=sweep_spec]{sweep_spec()}}, including a condition in which every named effect is zero, so that the same run
-shows both what a design detects and how often it declares something when there is nothing to
-find.
+Produce the conditions needed to sweep an effect size with \code{\link[=sweep_spec]{sweep_spec()}}, including a
+condition in which every named effect is zero, so that the same run shows both what a design
+detects and how often it declares something when there is nothing to find.
 }
 \details{
 Named arguments give the values each effect should take, and are recycled to a common length, so
@@ -30,8 +33,13 @@ Named arguments give the values each effect should take, and are recycled to a c
 0.1. The all-zero condition comes first and is shared, since the Type I error rate is a property
 of the design rather than of any one effect size.
 
-Any coefficient the specification has that is not named here is left at its own value, so a
-sweep varies only the effects it names.
+\code{\link[=sweep_spec]{sweep_spec()}} merges each condition into the specification's own coefficients and keeps their
+order, so any coefficient not named here keeps its value and a sweep varies only the effects it
+names. It refuses a condition that names a coefficient the specification lacks. Subsetting the
+result with \code{[} keeps its class, and so does \code{c()} when the result comes first. The three
+conditions of \code{c(design_conditions(cond = 0.02), design_conditions(age = 0.1, .null = FALSE))}
+are therefore merged in the same way. A list assembled by other means replaces the
+coefficients wholesale.
 }
 \examples{
 design_conditions(effect = c(0.03, 0.06))
