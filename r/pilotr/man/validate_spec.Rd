@@ -33,6 +33,11 @@ introduced in 0.3 is read differently by a 0.2 implementation, so it must declar
 later. A specification declaring a version newer than this implementation is refused
 outright. A specification with no \code{spec_version} is treated as 0.2, which is
 what every specification written before the field existed is.
+
+Every field is read by its exact name, as the 'Python' twin reads it, and a list that repeats
+a name within one object is refused, as \code{\link[=load_spec]{load_spec()}} refuses a file that does. A seed must
+be a whole number within plus or minus 2^53 - 1, the range in which both twins read a JSON
+integer exactly.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

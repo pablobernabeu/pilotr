@@ -21,7 +21,7 @@
 # otherwise be recovered, without reimplementing the row construction here.
 .eta_draw <- function(spec) {
   s <- spec
-  s$response <- list(family = "gaussian", name = ".eta", sigma = 1e-12)
+  s[["response"]] <- list(family = "gaussian", name = ".eta", sigma = 1e-12)
   simulate_design(s, validate = FALSE)[[".eta"]]
 }
 
@@ -33,10 +33,11 @@
 # the keys would shorten the stream and shift everything downstream, which would make the
 # components incomparable.
 .zero_random <- function(spec, keep = character(0)) {
-  for (g in names(spec$random)) {
+  for (g in names(spec[["random"]])) {
     if (g %in% keep) next
-    spec$random[[g]]$intercept_sd <- 0
-    for (k in names(spec$random[[g]]$slopes)) spec$random[[g]]$slopes[[k]] <- 0
+    spec[["random"]][[g]][["intercept_sd"]] <- 0
+    for (k in names(spec[["random"]][[g]][["slopes"]]))
+      spec[["random"]][[g]][["slopes"]][[k]] <- 0
   }
   spec
 }
@@ -51,8 +52,8 @@
 # a predictor measured with error, in place of its observed value.
 .design_column <- function(spec, key) {
   s <- .zero_random(spec)
-  s$fixed$intercept <- 0
-  s$fixed$coefficients <- stats::setNames(list(1), key)
+  s[["fixed"]][["intercept"]] <- 0
+  s[["fixed"]][["coefficients"]] <- stats::setNames(list(1), key)
   .eta_draw(s)
 }
 
@@ -106,12 +107,13 @@
 # `eta` is the per-row linear predictor, needed only by the two families whose residual depends on
 # the mean.
 .residual_variance <- function(resp, eta = NULL) {
-  switch(resp$family,
-    gaussian          = resp$sigma^2,
-    lognormal         = resp$sigma^2,
-    shifted_lognormal = resp$sigma^2,
+  sigma <- resp[["sigma"]]
+  switch(resp[["family"]],
+    gaussian          = sigma^2,
+    lognormal         = sigma^2,
+    shifted_lognormal = sigma^2,
     # Normal plus exponential, independent, so the variances add.
-    exgaussian        = resp$sigma^2 + resp$beta^2,
+    exgaussian        = sigma^2 + resp[["beta"]]^2,
     # The latent logistic error of the threshold comparison.
     bernoulli         = pi^2 / 3,
     ordinal           = pi^2 / 3,
@@ -119,7 +121,7 @@
     # random components are computed. Evaluating at the mean would not.
     poisson           = mean(trigamma(exp(eta))),
     beta              = {
-      phi <- if (is.null(resp$phi)) 10 else resp$phi
+      phi <- .orelse(resp[["phi"]], 10)
       mu <- vapply(eta, .inv_logit, numeric(1))
       mean(trigamma(mu * phi) + trigamma((1 - mu) * phi))
     },
@@ -191,7 +193,8 @@
 #' @export
 response_variance <- function(spec) {
   spec <- .as_spec(spec)
-  groups <- names(spec$random)
+  rs <- spec[["random"]]
+  groups <- names(rs)
 
   # stats::var() of a single value is NA, but a one-row design (validate_spec permits n = 1) has no
   # across-row variation at all, which is a different thing from an unknown amount of it.
@@ -202,11 +205,11 @@ response_variance <- function(spec) {
   out <- list(fixed = if (length(eta_fixed) > 1L) stats::var(eta_fixed) else 0)
 
   # One simulation per distinct slope column, shared across the grouping factors that use it.
-  slope_keys <- unique(unlist(lapply(groups, function(g) names(spec$random[[g]]$slopes))))
+  slope_keys <- unique(unlist(lapply(groups, function(g) names(rs[[g]][["slopes"]]))))
   columns <- stats::setNames(lapply(slope_keys, function(k) .design_column(spec, k)), slope_keys)
 
   for (g in groups) {
-    re <- .ranef(spec$random[[g]], g)
+    re <- .ranef(rs[[g]], g)
     Sigma <- re$L %*% t(re$L)
     # x collects the intercept (always 1) and this group's slope columns, per row.
     X <- cbind(1, if (length(re$cols) > 1L)
@@ -217,8 +220,9 @@ response_variance <- function(spec) {
   }
 
   # The full linear predictor, needed only by the families whose residual depends on the mean.
-  eta <- if (identical(.residual_kind(spec$response$family), "eta")) .eta_draw(spec) else NULL
-  out$residual <- .residual_variance(spec$response, eta)
+  resp <- spec[["response"]]
+  eta <- if (identical(.residual_kind(resp[["family"]]), "eta")) .eta_draw(spec) else NULL
+  out$residual <- .residual_variance(resp, eta)
   # A plain sum, with nothing silenced. validate_spec() admits only the families
   # .residual_variance() covers, so a missing component would be a fault worth surfacing rather
   # than one worth counting as zero and still calling the result the sum.
@@ -254,7 +258,8 @@ response_variance <- function(spec) {
     if (target_var <= parts$residual)
       stop(sprintf(
         "the %s family's own residual variance is %.6g on the latent scale, which already meets or exceeds the target of %.6g, and no rescaling of the design can move it; raise `target_var` above %.6g",
-        spec$response$family, parts$residual, target_var, parts$residual), call. = FALSE)
+        spec[["response"]][["family"]], parts$residual, target_var, parts$residual),
+        call. = FALSE)
     if (structural <= 0)
       stop("this design has no fixed or random variance to rescale", call. = FALSE)
     return(sqrt((target_var - parts$residual) / structural))
@@ -263,12 +268,12 @@ response_variance <- function(spec) {
   # kind == "eta": total(k) = k^2 * structural + residual(k * eta), increasing in k, so bracket and
   # solve. The residual is recomputed from the scaled eta, with no fresh simulation.
   eta1 <- .eta_draw(spec)
-  total_at <- function(k) k * k * structural + .residual_variance(spec$response, k * eta1)
+  total_at <- function(k) k * k * structural + .residual_variance(spec[["response"]], k * eta1)
   lo <- total_at(0)
   if (target_var <= lo)
     stop(sprintf(
       "even with every effect set to zero the %s family contributes a residual variance of %.6g on the latent scale, which already meets or exceeds the target of %.6g; raise `target_var` above %.6g",
-      spec$response$family, lo, target_var, lo), call. = FALSE)
+      spec[["response"]][["family"]], lo, target_var, lo), call. = FALSE)
   hi <- 1
   while (total_at(hi) < target_var && hi < 1e6) hi <- hi * 2
   if (total_at(hi) < target_var)
@@ -324,12 +329,14 @@ calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all")) {
     stop("`target_var` must be a single positive number", call. = FALSE)
 
   parts <- response_variance(spec)
-  kind <- .residual_kind(spec$response$family)
+  family <- spec[["response"]][["family"]]
+  beta <- spec[["response"]][["beta"]]
+  kind <- .residual_kind(family)
   has_sigma <- identical(kind, "free")
 
   if (identical(tune, "sigma")) {
     if (!has_sigma)
-      stop("the ", spec$response$family, " family has no residual standard deviation to tune, ",
+      stop("the ", family, " family has no residual standard deviation to tune, ",
            "since its residual variance is fixed by the link rather than by a parameter; ",
            "use tune = \"all\" to rescale the rest of the design instead", call. = FALSE)
     structural <- parts$total - parts$residual
@@ -337,17 +344,17 @@ calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all")) {
       stop(sprintf(
         "the fixed and random effects alone contribute a variance of %.6g, which already meets or exceeds the target of %.6g, so no residual standard deviation can reach it; lower the effect sizes, raise `target_var`, or use tune = \"all\"",
         structural, target_var), call. = FALSE)
-    if (identical(spec$response$family, "exgaussian")) {
+    if (identical(family, "exgaussian")) {
       # The exponential component's variance is beta^2 and is being held fixed, so only the
       # normal component is free to absorb the difference.
-      free <- target_var - structural - spec$response$beta^2
+      free <- target_var - structural - beta^2
       if (free <= 0)
         stop(sprintf(
           "with beta held at %.6g the exponential component alone contributes %.6g, leaving nothing for sigma; lower beta or use tune = \"all\"",
-          spec$response$beta, spec$response$beta^2), call. = FALSE)
-      spec$response$sigma <- sqrt(free)
+          beta, beta^2), call. = FALSE)
+      spec[["response"]][["sigma"]] <- sqrt(free)
     } else {
-      spec$response$sigma <- sqrt(target_var - structural)
+      spec[["response"]][["sigma"]] <- sqrt(target_var - structural)
     }
     return(spec)
   }
@@ -355,16 +362,16 @@ calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all")) {
   if (parts$total <= 0)
     stop("this design has no variance to rescale", call. = FALSE)
   k <- .calibration_factor(spec, parts, target_var, kind)
-  spec$fixed$intercept <- spec$fixed$intercept * k
-  for (nm in names(spec$fixed$coefficients))
-    spec$fixed$coefficients[[nm]] <- spec$fixed$coefficients[[nm]] * k
-  for (g in names(spec$random)) {
-    spec$random[[g]]$intercept_sd <- spec$random[[g]]$intercept_sd * k
-    for (nm in names(spec$random[[g]]$slopes))
-      spec$random[[g]]$slopes[[nm]] <- spec$random[[g]]$slopes[[nm]] * k
+  spec[["fixed"]][["intercept"]] <- spec[["fixed"]][["intercept"]] * k
+  for (nm in names(spec[["fixed"]][["coefficients"]]))
+    spec[["fixed"]][["coefficients"]][[nm]] <- spec[["fixed"]][["coefficients"]][[nm]] * k
+  for (g in names(spec[["random"]])) {
+    re <- spec[["random"]][[g]]
+    re[["intercept_sd"]] <- re[["intercept_sd"]] * k
+    for (nm in names(re[["slopes"]])) re[["slopes"]][[nm]] <- re[["slopes"]][[nm]] * k
+    spec[["random"]][[g]] <- re
   }
-  if (has_sigma) spec$response$sigma <- spec$response$sigma * k
-  if (identical(spec$response$family, "exgaussian"))
-    spec$response$beta <- spec$response$beta * k
+  if (has_sigma) spec[["response"]][["sigma"]] <- spec[["response"]][["sigma"]] * k
+  if (identical(family, "exgaussian")) spec[["response"]][["beta"]] <- beta * k
   spec
 }

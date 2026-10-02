@@ -21,7 +21,7 @@ functions are module-level so that they pickle under the Windows spawn start met
 
 from __future__ import annotations
 import copy, functools, math, statistics
-from .simulate import simulate, load_spec
+from .simulate import _simulate, _as_spec, load_spec
 from .core import replicate_seeds
 
 
@@ -48,9 +48,8 @@ def _power_replicate(seed, spec, fname, lev0, lev1, yname):
     """One two-group replicate: simulate at `seed`, t-test, return (estimate, p-value)."""
     from scipy import stats  # lazy: imported in each worker process on first use
 
-    s = copy.deepcopy(spec)
-    s["seed"] = seed
-    d = simulate(s)
+    # The specification was validated and normalised once, before the loop.
+    d = _simulate(dict(spec, seed=seed))
     g0 = [r[yname] for r in d.rows if r[fname] == lev0]
     g1 = [r[yname] for r in d.rows if r[fname] == lev1]
     t = stats.ttest_ind(g1, g0, equal_var=True)
@@ -108,8 +107,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
 def _power_impl(spec, n_sims, alpha, executor):
     """The replicate loop behind `power`, taking an optional executor so that sweep
     functions can start one process pool and reuse it across grid points."""
-    if isinstance(spec, str):
-        spec = load_spec(spec)
+    spec = _as_spec(spec)
     if spec["response"]["family"] != "gaussian":
         raise NotImplementedError(
             "The power backend currently handles only the gaussian two-group design.")
@@ -161,9 +159,7 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
 
     vcf = {"subj_i": "0 + C(subject)", "subj_s": "0 + C(subject):cc",
            "item_i": "0 + C(item)", "item_s": "0 + C(item):cc"}
-    s = copy.deepcopy(spec)
-    s["seed"] = seed
-    df = pd.DataFrame(simulate(s).rows)
+    df = pd.DataFrame(_simulate(dict(spec, seed=seed)).rows)
     df["cc"] = df[fname].map(l2c)
     df["yv"] = ([math.log(v - shift) for v in df[yname]]
                 if fam == "shifted_lognormal" else list(df[yname]))
@@ -241,8 +237,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     import pandas as _pd  # noqa: F401  fail fast before simulating
     import statsmodels.formula.api as _smf  # noqa: F401
 
-    if isinstance(spec, str):
-        spec = load_spec(spec)
+    spec = _as_spec(spec)
     if "item" not in spec["units"]:
         raise ValueError("power_mixed() requires a crossed design with an item unit.")
     within = [f for f in spec["factors"] if f.get("vary_within")]

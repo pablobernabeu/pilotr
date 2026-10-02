@@ -40,10 +40,17 @@ testServer(app = app_dir, {
         "a count below the minimum is clamped to 100")
   session$setInputs(n_sims = 300, run_power = 4)
 
+  # build_spec() keeps a seed of 2^31 or more, which it used to turn into NA. The caption
+  # formatted the seed with %d, which stops on a double outside the integer range.
+  session$setInputs(seed = 3e9, simulate = 2)
+  check(identical(nrow(data()), 64L) && grepl("(seed 3000000000)", output$dims, fixed = TRUE),
+        "a seed of 3e9 simulates and the caption prints it in full")
+  session$setInputs(seed = 2024, simulate = 3)
+
   # advanced: paste a continuous-predictor spec (continuous predictors + interactions) to override
   spec_txt <- paste(readLines(file.path(here, "..", "..", "..", "spec", "examples",
                                         "reading_time_continuous.json")), collapse = "\n")
-  session$setInputs(spec_json_in = spec_txt, simulate = 2)
+  session$setInputs(spec_json_in = spec_txt, simulate = 4)
   di <- data()
   check("SyntaxPC" %in% names(di) && nrow(di) == 4000,
         "advanced paste-spec path simulates a continuous-predictor design")

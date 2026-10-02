@@ -24,6 +24,47 @@ The 0.3 features are observation-level predictors, `dist`, `reliability`, the `e
 the `correlated` flag and interaction random slopes. An implementation from 0.3 onwards refuses a
 specification declaring a version newer than it understands, and never reads it in part.
 
+## Reading a specification
+
+The same file must mean the same design to every implementation. JSON leaves a few things to the
+reader, and R's jsonlite and Python's json settle them differently, so the rules below fix them.
+Both implementations' `load_spec()` follow them, and `tools/parity/validate_cross.py` reads a
+battery of awkward files through both to check that they agree.
+
+A specification file is UTF-8, with or without a byte-order mark, whatever the locale of the
+machine reading it, so level labels such as `"fácil"` or `"Łatwy"` read the same everywhere.
+Every field is looked up by its exact name. R's `$` used to match a name partially, so a `random`
+entry named `subject_site` was also read as `random.subject`.
+
+A file that repeats a key within one object is refused. JSON leaves the meaning of a repeated key
+undefined (RFC 8259, section 4), and the two readers differed: given `{"grp": 0.3, "grp": 0.5}` as
+coefficients, R applied 0.3 twice and Python 0.5 once. The refusal happens as the file is read, so
+it applies even when validation is switched off.
+
+A JSON `null` in an optional field means the field is absent, so `"spec_version": null` is a 0.2
+specification and `"slopes": null` means no slopes. A `null` in a required field counts as missing.
+A unit given as `"item": null` is refused, since the object it stands for is not there, and so is a
+`null` inside an array, such as a level.
+
+Where the schema has a single value, a one-element array holding that value is read as the value,
+so `"seed": [2024]` is the seed 2024. That is how `jsonlite::write_json()` writes every scalar by
+default, and such a file reads in Python as it does in R. For the same reason, `[]` is read as an
+empty object at exactly `random`, `fixed.coefficients`, `random.<group>.slopes` and
+`random.<group>.correlations`. Anywhere else an object belongs, such as `units`, `fixed`,
+`response` or `contrasts`, `[]` is refused. In the other direction, a `vary_within` given as one
+string and a single threshold given as a bare number are read as one-element arrays, because
+pilotr's own `spec_json()` wrote both forms before 0.3. A count written with a decimal point, such
+as `"n": 8.0`, is the integer 8, as JSON Schema draft-07 counts it.
+
+jsonlite turns an array of mixed types, such as levels `["a", 1]`, into strings, and R then
+accepts it. That reading is R's alone: Python refuses such an array, and writing every level as a
+string avoids the difference.
+
+A seed must be a whole number between −9007199254740991 and 9007199254740991, that is
+±(2^53 − 1). jsonlite reads a JSON number as a double, which holds every integer in that range and
+not every one beyond it, while Python reads an integer of any size exactly. A larger seed was
+therefore two different numbers in the two readers, which drew different data.
+
 ## Top-level fields
 
 A specification is a flat object with the nine fields below, of which `name`, `seed`, `units`,
@@ -35,7 +76,7 @@ has none of them.
 |---|---|---|
 | `spec_version` | string | Specification version, `"major.minor"`. Absent means 0.2. |
 | `name` | string | Human label for the design. |
-| `seed` | integer | Master seed (see RNG contract below). |
+| `seed` | integer | Master seed, within ±(2^53 − 1) (see RNG contract below). |
 | `units` | object | Sampling units, e.g. `{"subject": {"n": 30}, "item": {"n": 24}}`. `item` is optional. Add `per_subject` to `item` (e.g. `{"n": 40, "per_subject": 12}`) for partial crossing, in which each subject sees a random subset of items. |
 | `factors` | array | Experimental factors (categorical; see below). |
 | `predictors` | array | Optional continuous predictors (see below). |
@@ -267,7 +308,9 @@ u  ← d / 2147483563            # u ∈ (0, 1)
 
 All products stay below 2^53, so the arithmetic is exact in IEEE-754 doubles and in
 Python integers alike. The seeding rule is `s1 ← 1 + (|seed| mod 2147483562)` and
-`s2 ← 1 + ((40692 · s1) mod 2147483398)`, after which 10 warm-up draws are discarded.
+`s2 ← 1 + ((40692 · s1) mod 2147483398)`, after which 10 warm-up draws are discarded. The
+seed is bounded by ±(2^53 − 1), so it too is held exactly in both, and the remainder is taken of
+the same integer (see [Reading a specification](#reading-a-specification)).
 
 ### Normal deviates
 

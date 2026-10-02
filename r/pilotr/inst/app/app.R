@@ -251,7 +251,9 @@ server <- function(input, output, session) {
   data <- eventReactive(input$simulate, simulate_design(current_spec()), ignoreNULL = FALSE)
 
   output$json <- renderText(spec_json(current_spec()))
-  output$dims <- renderText({ d <- data(); sprintf("Simulated %d rows x %d columns (seed %d).", nrow(d), ncol(d), input$seed) })
+  # The seed through format(), since %d stops on a whole double beyond R's integer range and
+  # build_spec() keeps such a seed.
+  output$dims <- renderText({ d <- data(); sprintf("Simulated %d rows x %d columns (seed %s).", nrow(d), ncol(d), format(input$seed, scientific = FALSE)) })
   output$head <- renderTable(head(data(), 10), striped = TRUE, spacing = "xs")
 
   output$summary <- renderPrint({
@@ -442,7 +444,7 @@ server <- function(input, output, session) {
     filename = function() paste0(input$name, ".json"),
     content = function(file) write_text_download(spec_json(current_spec()), file))
   output$dl_data <- downloadHandler(
-    filename = function() paste0(input$name, "_seed", input$seed, ".csv"),
+    filename = function() paste0(input$name, "_seed", format(input$seed, scientific = FALSE), ".csv"),
     content = function(file) write.csv(simulate_design(current_spec()), file, row.names = FALSE))
 }
 

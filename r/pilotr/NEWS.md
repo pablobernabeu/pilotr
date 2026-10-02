@@ -7,6 +7,35 @@
   counted as a fit with warnings, and a run could not show whether any fit had failed to
   converge. `n_converged` and `n_singular` are unchanged.
 
+* Every specification field is read by its exact name. R looked fields up with `$`, which
+  matches a name partially, so a design whose random entries were `subject_site` and no
+  `subject` acquired by-subject random effects it never declared, and its data differed from the
+  Python twin's in every row. With `strict = FALSE`, a misspelt field such as `rounding` acted as
+  the field it resembled, although the warning said it would be ignored.
+
+* `load_spec()` and `validate_spec()` refuse a specification that repeats a key within one
+  object. JSON leaves a repeated key undefined and the two readers disagree: `{"grp": 0.3,
+  "grp": 0.5}` applied 0.3 twice in R and 0.5 once in Python. The refusal does not depend on
+  `validate`.
+
+* A seed must lie within ±(2^53 − 1), the range in which both twins read a JSON integer exactly.
+  Larger seeds were read as different numbers by the two readers, which then drew different data.
+
+* `build_spec()` and `spec_from_model()` keep a seed of 2^31 or more, which they used to turn
+  into `NA`, and leave a non-whole seed for `validate_spec()` to refuse, where they used to
+  truncate it. Seeds in the integer range are stored as before. The app accepts a larger seed
+  for the same reason and prints it in full.
+
+* A factor level, a `vary_within` entry or a `correlated` flag written as `null` is refused, as
+  the Python twin refuses it. R labelled those rows `NA` and read the flag as `false`.
+
+* A malformed `response`, `predictors`, `random` or `spec_version` value is reported in the
+  validator's own words. Some shapes stopped with a base R error, and a `spec_version` given as
+  an array of two versions was read as the first.
+
+* `load_spec()` reads a file that starts with a byte-order mark without warning about it. The
+  specification format allows one, since some Windows editors add it.
+
 ## Documentation
 
 * `citation("pilotr")` names the R package version alone. It read "R and Python package

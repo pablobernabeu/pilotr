@@ -34,16 +34,16 @@
 #' @export
 power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   spec <- .as_spec(spec)
-  if (spec$response$family != "gaussian")
+  if (spec[["response"]][["family"]] != "gaussian")
     stop("The power backend currently handles only the gaussian two-group design.")
-  between <- Filter(function(f) !is.null(f$between), spec$factors)
-  if (length(between) != 1 || length(between[[1]]$levels) != 2)
+  between <- Filter(function(f) !is.null(f[["between"]]), spec[["factors"]])
+  if (length(between) != 1 || length(between[[1]][["levels"]]) != 2)
     stop("The power backend expects exactly one 2-level between factor.")
-  f <- between[[1]]; fname <- f$name; lev0 <- f$levels[1]; lev1 <- f$levels[2]
-  col <- names(f$contrasts)[1]; vals <- f$contrasts[[col]]
-  true_effect <- spec$fixed$coefficients[[col]] * (vals[2] - vals[1])
-  yname <- spec$response$name
-  seeds <- replicate_seeds(spec$seed, n_sims)
+  f <- between[[1]]; fname <- f[["name"]]; lev0 <- f[["levels"]][1]; lev1 <- f[["levels"]][2]
+  col <- names(f[["contrasts"]])[1]; vals <- f[["contrasts"]][[col]]
+  true_effect <- spec[["fixed"]][["coefficients"]][[col]] * (vals[2] - vals[1])
+  yname <- spec[["response"]][["name"]]
+  seeds <- replicate_seeds(spec[["seed"]], n_sims)
 
   workers <- .check_workers(workers)
   cl <- NULL
@@ -73,7 +73,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
 # One Monte Carlo replicate of the two-group analysis. Kept at top level, out of a closure, so
 # that only the arguments travel to PSOCK workers. Returns c(estimate, p).
 .power_design_rep <- function(i, spec, seeds, yname, fname, lev0, lev1) {
-  s <- spec; s$seed <- seeds[i]                # same seeds as the Python port
+  s <- spec; s[["seed"]] <- seeds[i]           # same seeds as the Python port
   d <- simulate_design(s, validate = FALSE)
   g0 <- d[[yname]][d[[fname]] == lev0]
   g1 <- d[[yname]][d[[fname]] == lev1]

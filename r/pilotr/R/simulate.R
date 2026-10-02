@@ -13,6 +13,11 @@
 #' `spec_version` newer than this implementation understands, and never reads such a file in
 #' part.
 #'
+#' The file is read as UTF-8, with or without a byte-order mark. A file that repeats a key
+#' within one JSON object is refused whatever `validate` says, because JSON leaves a repeated
+#' key undefined and the R and 'Python' readers settle it differently: one coefficient given
+#' twice was applied twice at its first value in R and once at its second in 'Python'.
+#'
 #' @param path Path to a JSON design-specification file.
 #' @param validate Whether to validate the specification after reading it. `TRUE` (the default)
 #'   applies [validate_spec()] with `strict = TRUE`; `FALSE` skips validation, and
@@ -28,8 +33,19 @@
 #' identical(simulate_design(load_spec(f)), simulate_design(spec))
 #' @export
 load_spec <- function(path, validate = TRUE) {
-  spec <- jsonlite::fromJSON(path, simplifyVector = TRUE, simplifyDataFrame = FALSE,
-                             simplifyMatrix = FALSE)
+  # jsonlite reads a leading byte-order mark correctly but warns about it. SPEC.md allows one,
+  # since some Windows editors add it, so that warning alone is silenced.
+  spec <- withCallingHandlers(
+    jsonlite::fromJSON(path, simplifyVector = TRUE, simplifyDataFrame = FALSE,
+                       simplifyMatrix = FALSE),
+    warning = function(w) {
+      if (grepl("byte-order-mark", conditionMessage(w), fixed = TRUE))
+        invokeRestart("muffleWarning")
+    })
+  # Refused here, independently of `validate`, because the Python twin refuses a repeated key
+  # while parsing, before any validation could be skipped.
+  key <- .repeated_key(spec)
+  if (!is.null(key)) stop(.repeated_key_message(key), call. = FALSE)
   if (!isFALSE(validate)) validate_spec(spec, strict = isTRUE(validate))
   spec
 }
@@ -57,17 +73,19 @@ load_spec <- function(path, validate = TRUE) {
 # reported against the entry the user wrote, where it used to appear as an anonymous matrix
 # failure.
 .ranef <- function(u, label = NULL) {
-  slope_names <- names(u$slopes)
+  slopes <- u[["slopes"]]
+  cors <- u[["correlations"]]
+  slope_names <- names(slopes)
   cols <- c("intercept", slope_names)
-  sds <- c(u$intercept_sd, vapply(slope_names, function(s) u$slopes[[s]], numeric(1)))
+  sds <- c(u[["intercept_sd"]], vapply(slope_names, function(s) slopes[[s]], numeric(1)))
   n <- length(cols)
   R <- diag(n)
-  if (length(u$correlations) && !.re_correlated(u))
+  if (length(cors) && !.re_correlated(u))
     stop(sprintf(
       "'%s' sets correlated = FALSE but also supplies correlations (%s); one of the two has to go",
       if (is.null(label)) "unknown group" else label,
-      paste(sprintf("'%s'", names(u$correlations)), collapse = ", ")), call. = FALSE)
-  if (!is.null(u$correlations)) for (key in names(u$correlations)) {
+      paste(sprintf("'%s'", names(cors)), collapse = ", ")), call. = FALSE)
+  if (!is.null(cors)) for (key in names(cors)) {
     parts <- trimws(strsplit(gsub("~", ",", key), ",")[[1]])
     i <- match(parts[1], cols); j <- match(parts[2], cols)
     if (is.na(i) || is.na(j))
@@ -75,7 +93,7 @@ load_spec <- function(path, validate = TRUE) {
         "correlation '%s' for '%s' names a random-effect term that does not exist; available terms are %s",
         key, if (is.null(label)) "unknown group" else label,
         paste(sprintf("'%s'", cols), collapse = ", ")), call. = FALSE)
-    R[i, j] <- R[j, i] <- u$correlations[[key]]
+    R[i, j] <- R[j, i] <- cors[[key]]
   }
   cov <- outer(sds, sds) * R
   list(cols = cols, L = .cholesky(cov, label = label, cols = cols))
@@ -90,7 +108,7 @@ load_spec <- function(path, validate = TRUE) {
 # explicit flag lets the two agree, and defaults to the behaviour the specification already
 # had, so nothing changes for a specification that does not set it.
 .re_correlated <- function(u) {
-  if (!is.null(u$correlated)) isTRUE(u$correlated) else length(u$correlations) > 0L
+  if (!is.null(u[["correlated"]])) isTRUE(u[["correlated"]]) else length(u[["correlations"]]) > 0L
 }
 
 # The bar to use for a grouping factor in an emitted lmer or brms formula.
@@ -99,7 +117,7 @@ load_spec <- function(path, validate = TRUE) {
 # `(1 | g) + (0 + | g)`, which lme4 rejects as a syntax error, so a group carrying only
 # an intercept has to use a single bar. Nothing is lost: with one term there is no correlation
 # to estimate either way.
-.re_bar <- function(u) if (length(u$slopes) > 0L && !.re_correlated(u)) "||" else "|"
+.re_bar <- function(u) if (length(u[["slopes"]]) > 0L && !.re_correlated(u)) "||" else "|"
 
 # Contaminate a latent predictor value down to a stated reliability.
 #
@@ -170,18 +188,21 @@ simulate_design <- function(spec, validate = TRUE) {
   if (is.character(spec)) spec <- load_spec(spec, validate = validate)
   else if (!isFALSE(validate)) validate_spec(spec, strict = isTRUE(validate))
 
-  S <- spec$units$subject$n
-  has_item <- !is.null(spec$units$item)
-  I <- if (has_item) spec$units$item$n else 1L
+  # Every field is read with `[[ ]]`. `$` matches a name partially, so `random$subject` used to
+  # find an entry named `subject_site` and add by-subject effects nobody had declared.
+  units <- spec[["units"]]
+  S <- units[["subject"]][["n"]]
+  has_item <- !is.null(units[["item"]])
+  I <- if (has_item) units[["item"]][["n"]] else 1L
 
-  factors <- spec$factors
-  predictors <- spec$predictors
-  within <- Filter(function(f) !is.null(f$vary_within), factors)
-  between <- Filter(function(f) !is.null(f$between), factors)
-  within_sizes <- vapply(within, function(f) length(f$levels), integer(1))
+  factors <- spec[["factors"]]
+  predictors <- spec[["predictors"]]
+  within <- Filter(function(f) !is.null(f[["vary_within"]]), factors)
+  between <- Filter(function(f) !is.null(f[["between"]]), factors)
+  within_sizes <- vapply(within, function(f) length(f[["levels"]]), integer(1))
 
-  rng <- make_rng(spec$seed)
-  per_subject <- if (has_item) spec$units$item$per_subject else NULL
+  rng <- make_rng(spec[["seed"]])
+  per_subject <- if (has_item) units[["item"]][["per_subject"]] else NULL
   if (!is.null(per_subject)) {
     if (per_subject < 1)
       stop("per_subject (", per_subject, ") must be at least 1", call. = FALSE)
@@ -198,18 +219,18 @@ simulate_design <- function(spec, validate = TRUE) {
     for (combo in .product_indices(within_sizes)) {
       level_idx <- list()
       if (length(within)) for (m in seq_along(within))
-        level_idx[[within[[m]]$name]] <- combo[m]
+        level_idx[[within[[m]][["name"]]]] <- combo[m]
       for (f in between) {
-        n_lev <- length(f$levels)
-        unit <- if (f$between == "subject") s else t
-        n_unit <- if (f$between == "subject") S else I
-        level_idx[[f$name]] <- ((unit - 1) * n_lev) %/% n_unit
+        n_lev <- length(f[["levels"]])
+        unit <- if (f[["between"]] == "subject") s else t
+        n_unit <- if (f[["between"]] == "subject") S else I
+        level_idx[[f[["name"]]]] <- ((unit - 1) * n_lev) %/% n_unit
       }
       cvals <- list(); labels <- list()
       for (f in factors) {
-        li <- level_idx[[f$name]]
-        labels[[f$name]] <- f$levels[li + 1]
-        for (col in names(f$contrasts)) cvals[[col]] <- f$contrasts[[col]][li + 1]
+        li <- level_idx[[f[["name"]]]]
+        labels[[f[["name"]]]] <- f[["levels"]][li + 1]
+        for (col in names(f[["contrasts"]])) cvals[[col]] <- f[["contrasts"]][[col]][li + 1]
       }
       rows[[length(rows) + 1L]] <- list(subject = s, item = t, labels = labels, cvals = cvals)
     }
@@ -234,49 +255,52 @@ simulate_design <- function(spec, validate = TRUE) {
   n_rows <- length(rows)
   pred_latent <- list(); pred_observed <- list(); pred_unit <- list()
   for (p in predictors) {
-    unit <- p$varies_by
+    pname <- p[["name"]]
+    unit <- p[["varies_by"]]
     if (identical(unit, "item") && !has_item)
-      stop("predictor '", p$name, "' varies_by item but design has no items", call. = FALSE)
+      stop("predictor '", pname, "' varies_by item but design has no items", call. = FALSE)
     n_unit <- if (identical(unit, "subject")) S
       else if (identical(unit, "item")) I
       else if (identical(unit, "observation")) n_rows
-      else stop("predictor '", p$name, "' has varies_by '", unit,
+      else stop("predictor '", pname, "' has varies_by '", unit,
                 "'; expected 'subject', 'item' or 'observation'", call. = FALSE)
-    dist <- if (is.null(p$dist)) "normal" else p$dist
+    dist <- .orelse(p[["dist"]], "normal")
+    pmin <- p[["min"]]; pmax <- p[["max"]]
     # Population moments of the latent variable, needed by the reliability contamination.
     if (identical(dist, "uniform")) {
-      pmean <- (p$min + p$max) / 2; psd <- (p$max - p$min) / sqrt(12)
+      pmean <- (pmin + pmax) / 2; psd <- (pmax - pmin) / sqrt(12)
     } else {
-      pmean <- if (is.null(p$mean)) 0 else p$mean; psd <- if (is.null(p$sd)) 1 else p$sd
+      pmean <- .orelse(p[["mean"]], 0); psd <- .orelse(p[["sd"]], 1)
     }
-    rho <- if (is.null(p$reliability)) 1 else p$reliability
+    rho <- .orelse(p[["reliability"]], 1)
     lat <- numeric(n_unit); obs <- numeric(n_unit)
     for (u in seq_len(n_unit)) {
-      lat[u] <- if (identical(dist, "uniform")) p$min + (p$max - p$min) * rng$uniform()
+      lat[u] <- if (identical(dist, "uniform")) pmin + (pmax - pmin) * rng$uniform()
                 else pmean + psd * rng$normal()
       obs[u] <- if (rho < 1) .attenuate(lat[u], pmean, psd, rho, rng$normal()) else lat[u]
     }
-    pred_latent[[p$name]] <- lat; pred_observed[[p$name]] <- obs; pred_unit[[p$name]] <- unit
+    pred_latent[[pname]] <- lat; pred_observed[[pname]] <- obs; pred_unit[[pname]] <- unit
   }
   if (length(predictors)) for (r_i in seq_along(rows)) for (p in predictors) {
-    pu <- pred_unit[[p$name]]
+    pname <- p[["name"]]
+    pu <- pred_unit[[pname]]
     u <- if (identical(pu, "subject")) rows[[r_i]]$subject
          else if (identical(pu, "item")) rows[[r_i]]$item
          else r_i
-    rows[[r_i]]$cvals[[p$name]] <- pred_latent[[p$name]][u]
-    rows[[r_i]]$obs[[p$name]] <- pred_observed[[p$name]][u]
+    rows[[r_i]]$cvals[[pname]] <- pred_latent[[pname]][u]
+    rows[[r_i]]$obs[[pname]] <- pred_observed[[pname]][u]
   }
 
   # ---- random effects (subject then item) ----
-  rs <- spec$random
+  rs <- spec[["random"]]
   b_subject <- list(); subj_cols <- character(0)
-  if (!is.null(rs$subject)) {
-    re <- .ranef(rs$subject, "subject"); subj_cols <- re$cols
+  if (!is.null(rs[["subject"]])) {
+    re <- .ranef(rs[["subject"]], "subject"); subj_cols <- re$cols
     for (s in 1:S) b_subject[[s]] <- .matvec(re$L, rng$normals(length(subj_cols)))
   }
   b_item <- list(); item_cols <- character(0)
-  if (has_item && !is.null(rs$item)) {
-    re <- .ranef(rs$item, "item"); item_cols <- re$cols
+  if (has_item && !is.null(rs[["item"]])) {
+    re <- .ranef(rs[["item"]], "item"); item_cols <- re$cols
     for (t in 1:I) b_item[[t]] <- .matvec(re$L, rng$normals(length(item_cols)))
   }
 
@@ -286,7 +310,7 @@ simulate_design <- function(spec, validate = TRUE) {
   extra_names <- setdiff(names(rs), c("subject", "item"))
   b_group <- list(); group_meta <- list()
   for (gname in extra_names) {
-    g <- rs[[gname]]; over <- g$over; K <- g$n
+    g <- rs[[gname]]; over <- g[["over"]]; K <- g[["n"]]
     n_over <- if (over == "subject") S else I
     re <- .ranef(g, gname)
     group_meta[[gname]] <- list(over = over, cols = re$cols,
@@ -296,17 +320,19 @@ simulate_design <- function(spec, validate = TRUE) {
   }
 
   # ---- linear predictor + response (residual draws here) ----
-  intercept <- spec$fixed$intercept
-  coeffs <- spec$fixed$coefficients
-  resp <- spec$response
-  family <- resp$family; yname <- resp$name
-  sigma <- resp$sigma; shift <- if (is.null(resp$shift)) 0 else resp$shift
-  thresholds <- resp$thresholds; ndp <- resp$round; beta_exg <- resp$beta
+  intercept <- spec[["fixed"]][["intercept"]]
+  coeffs <- spec[["fixed"]][["coefficients"]]
+  resp <- spec[["response"]]
+  family <- resp[["family"]]; yname <- resp[["name"]]
+  sigma <- resp[["sigma"]]; shift <- .orelse(resp[["shift"]], 0)
+  thresholds <- resp[["thresholds"]]; ndp <- resp[["round"]]; beta_exg <- resp[["beta"]]
+  phi <- .orelse(resp[["phi"]], 10)
 
   n <- length(rows)
   y <- numeric(n); subj_v <- integer(n); item_v <- integer(n)
-  label_cols <- vapply(factors, function(f) f$name, character(1))
-  pred_names <- if (length(predictors)) vapply(predictors, function(p) p$name, character(1)) else character(0)
+  label_cols <- vapply(factors, function(f) f[["name"]], character(1))
+  pred_names <- if (length(predictors))
+    vapply(predictors, function(p) p[["name"]], character(1)) else character(0)
   label_mat <- matrix("", n, length(label_cols), dimnames = list(NULL, label_cols))
   pred_mat <- matrix(0, n, length(pred_names), dimnames = list(NULL, pred_names))
   group_mat <- matrix(0L, n, length(extra_names), dimnames = list(NULL, extra_names))
@@ -357,7 +383,7 @@ simulate_design <- function(spec, validate = TRUE) {
       bernoulli         = if (rng$uniform() < .inv_logit(eta)) 1 else 0,
       poisson           = .poisson_inv(exp(eta), rng$uniform()),
       ordinal           = .ordinal_inv(eta, thresholds, rng$uniform()),
-      beta              = { mu <- .inv_logit(eta); phi <- if (is.null(resp$phi)) 10 else resp$phi
+      beta              = { mu <- .inv_logit(eta)
                             .beta_draw(rng, mu * phi, (1 - mu) * phi) },
       stop("unknown family: ", family))
     # Native round(), which the package's headline claim of exactly identical data for a rounded

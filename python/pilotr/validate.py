@@ -23,10 +23,25 @@ implementation from 0.3 onwards refuses what it does not understand.
 
 from __future__ import annotations
 
+import copy
 import math
 
 # The specification version this implementation writes and understands.
 SPEC_VERSION = "0.3"
+
+# The largest seed both twins read exactly. R's jsonlite reads a JSON integer as a double, which
+# holds every integer up to 2**53 - 1 and no longer every one beyond it, while Python's json reads
+# an exact integer of any size. A larger seed was therefore two different numbers in the two
+# readers, which then seeded different streams.
+MAX_EXACT_SEED = 9007199254740991
+
+_SEED_RANGE = ("'seed' must be a whole number between -9007199254740991 and 9007199254740991 "
+               "(2^53 - 1), the range in which R and Python read a JSON integer exactly")
+
+
+def _repeated_key_message(key) -> str:
+    return ("the specification repeats the key '%s' within one object; JSON leaves a repeated "
+            "key undefined, and R and Python read it differently" % key)
 
 # Response families and the parameters each one uses. Anything else supplied under `response` is
 # refused, because a leftover parameter from another family is usually a half-finished edit and
@@ -56,7 +71,14 @@ def _is_str(x) -> bool:
 
 def _is_num(x) -> bool:
     # bool is a subclass of int in Python, and a boolean where a number belongs is a mistake.
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        return False
+    # An integer too large for a double is infinite to R, which reads every JSON number as one,
+    # and math.isfinite() raises OverflowError on it where a refusal belongs.
+    try:
+        return math.isfinite(x)
+    except OverflowError:
+        return False
 
 
 def _is_whole(x) -> bool:
@@ -84,9 +106,16 @@ def _parse_version(v):
 
 def _features_0_3(spec) -> list:
     """Features introduced in 0.3. A specification using any of them is read differently by a
-    0.2 implementation, so it has to declare 0.3 or later."""
+    0.2 implementation, so it has to declare 0.3 or later.
+
+    Only well-formed parts are inspected. This scan runs before the per-field checks, so a
+    string-valued `response`, a list-valued `random` or a numeric `slopes` reached it first and
+    raised AttributeError or TypeError; skipping them here leaves each field's own check to raise
+    the ValueError the documentation promises.
+    """
     found = []
-    for p in spec.get("predictors") or []:
+    predictors = spec.get("predictors")
+    for p in predictors if isinstance(predictors, list) else []:
         if not isinstance(p, dict):
             continue
         if p.get("varies_by") == "observation":
@@ -94,16 +123,19 @@ def _features_0_3(spec) -> list:
         if p.get("dist") is not None:
             found.append("predictors dist")
         rel = p.get("reliability")
-        if rel is not None and rel != 1:
+        if rel is not None and not (_is_num(rel) and rel == 1):
             found.append("predictors reliability")
-    if (spec.get("response") or {}).get("family") == "exgaussian":
+    response = spec.get("response")
+    if isinstance(response, dict) and response.get("family") == "exgaussian":
         found.append('the "exgaussian" family')
-    for _g, re in (spec.get("random") or {}).items():
+    random_spec = spec.get("random")
+    for re in random_spec.values() if isinstance(random_spec, dict) else []:
         if not isinstance(re, dict):
             continue
         if re.get("correlated") is not None:
             found.append("random correlated")
-        if any(":" in k for k in (re.get("slopes") or {})):
+        slopes = re.get("slopes")
+        if isinstance(slopes, dict) and any(":" in k for k in slopes):
             found.append("interaction random slopes")
     return list(dict.fromkeys(found))
 
@@ -148,10 +180,21 @@ def validate_spec(spec, strict: bool = True):
     def unknown(msg):
         (problems if strict else soft).append(msg)
 
+    # A JSON null in an optional field means the field is absent, as it does to R's jsonlite, so
+    # every optional field below is tested with `is None`, never by its presence or truthiness.
+
     # ---- version ----
-    declared = spec.get("spec_version", "0.2")
-    dv, sv = _parse_version(declared), _parse_version(SPEC_VERSION)
-    if dv is None:
+    declared = spec.get("spec_version")
+    if declared is None:
+        declared = "0.2"
+    # A version is one string or one number. R stopped with a base error on an empty array or
+    # object and read a two-element array by its first element, so both twins refuse the lot.
+    is_scalar = _is_str(declared) or _is_num(declared)
+    dv = _parse_version(declared) if is_scalar else None
+    sv = _parse_version(SPEC_VERSION)
+    if not is_scalar:
+        bad("'spec_version' must be a single string of the form 'major.minor'")
+    elif dv is None:
         bad("spec_version '%s' is not of the form 'major.minor'" % declared)
     else:
         # The version as pilotr read it, so that the two engines report the same thing about a
@@ -176,8 +219,9 @@ def validate_spec(spec, strict: bool = True):
             bad("required top-level field '%s' is missing" % k)
     if spec.get("name") is not None and not _is_str(spec["name"]):
         bad("'name' must be a single string")
-    if spec.get("seed") is not None and not _is_whole(spec["seed"]):
-        bad("'seed' must be a single whole number")
+    seed = spec.get("seed")
+    if seed is not None and not (_is_whole(seed) and abs(seed) <= MAX_EXACT_SEED):
+        bad(_SEED_RANGE)
 
     # ---- units ----
     units = spec.get("units")
@@ -192,10 +236,11 @@ def validate_spec(spec, strict: bool = True):
             if units.get("subject") is None:
                 bad("'units.subject' is required")
             has_item = units.get("item") is not None
-            for nm in ("subject", "item"):
-                un = units.get(nm)
-                if un is None:
-                    continue
+            # In the order the file lists them, as R reports them, and a unit present as null
+            # is refused as R refuses it. Skipping a null `item` let it through to simulate(),
+            # which then failed on subscripting None.
+            for nm in [k for k in units if k in ("subject", "item")]:
+                un = units[nm]
                 if not isinstance(un, dict):
                     bad("'units.%s' must be an object" % nm)
                     continue
@@ -254,7 +299,7 @@ def validate_spec(spec, strict: bool = True):
                     # wrote. The reading is unambiguous and both engines already treat them alike.
                     if isinstance(vw, str):
                         vw = [vw]
-                    if not isinstance(vw, list) or not vw:
+                    if not isinstance(vw, list) or not vw or not all(_is_str(w) for w in vw):
                         bad("%s.vary_within must be a unit name or an array of unit names" % where)
                     else:
                         for w in vw:
@@ -295,11 +340,14 @@ def validate_spec(spec, strict: bool = True):
                     pred_names.append(p["name"])
                 vb = p.get("varies_by")
                 if vb not in ("subject", "item", "observation"):
+                    # Only a string is quoted back, as in R, which renders other values its own way.
                     bad("%s.varies_by must be 'subject', 'item' or 'observation'%s"
-                        % (where, (", not '%s'" % vb) if vb is not None else ""))
+                        % (where, (", not '%s'" % vb) if _is_str(vb) else ""))
                 elif vb == "item" and not has_item:
                     bad("%s.varies_by is 'item' but the design has no item unit" % where)
-                dist = p.get("dist", "normal")
+                dist = p.get("dist")
+                if dist is None:
+                    dist = "normal"
                 if dist not in ("normal", "uniform"):
                     bad("%s.dist must be 'normal' or 'uniform'" % where)
                 elif dist == "uniform":
@@ -362,7 +410,9 @@ def validate_spec(spec, strict: bool = True):
 
     # ---- random ----
     random_spec = spec.get("random")
-    if random_spec:
+    # Only an empty object or array means "none", as in R, where `"random": 0` or `false` is a
+    # malformed value and refused.
+    if random_spec is not None and not (isinstance(random_spec, (dict, list)) and not random_spec):
         if not isinstance(random_spec, dict):
             bad("'random' must be an object keyed by grouping factor")
         else:
@@ -433,12 +483,15 @@ def validate_spec(spec, strict: bool = True):
             bad("'response' must be an object")
         else:
             fam = r.get("family")
-            if fam not in FAMILY_PARAMS:
+            # The type test comes first: a list or an object is unhashable, and looking one up
+            # in FAMILY_PARAMS raised TypeError where a ValueError is promised.
+            known = _is_str(fam) and fam in FAMILY_PARAMS
+            if not known:
                 bad("'response.family' must be one of %s%s"
                     % (", ".join(FAMILY_PARAMS), (", not '%s'" % fam) if _is_str(fam) else ""))
             if not _is_str(r.get("name")) or not r["name"]:
                 bad("'response.name' must be a non-empty string")
-            if fam in FAMILY_PARAMS:
+            if known:
                 needed = FAMILY_PARAMS[fam]
                 allowed = ("family", "name", "round") + needed
                 for k in r:
@@ -475,3 +528,62 @@ def validate_spec(spec, strict: bool = True):
     if problems:
         raise ValueError("invalid design specification:\n  - " + "\n  - ".join(problems))
     return spec
+
+
+def _drop_nulls(x):
+    """Remove every None-valued entry from the objects nested in `x`, in place."""
+    if isinstance(x, dict):
+        for k in [k for k, v in x.items() if v is None]:
+            del x[k]
+        for v in x.values():
+            _drop_nulls(v)
+    elif isinstance(x, list):
+        for v in x:
+            _drop_nulls(v)
+
+
+def _as_int(d, key):
+    """Turn a whole-number float at d[key] into the int the engine counts with."""
+    v = d.get(key) if isinstance(d, dict) else None
+    if isinstance(v, float) and v.is_integer():
+        d[key] = int(v)
+
+
+def _normalise(spec):
+    """Return a copy of a validated specification in the one shape the engine reads.
+
+    Validation accepts what the schema and R accept, and the engine was written for one form of
+    each. Three readings bridge the two, applied once at every public entry point:
+
+    * A JSON null in an optional field means the field is absent, as it does to R, so it is
+      removed, and a missing `factors`, `predictors` or `random` becomes empty.
+    * A count written as a whole-number float, such as ``"n": 8.0``, becomes an int. Draft-07
+      counts 8.0 as an integer and R simulates it, while ``range()`` raised TypeError on it.
+    * A single threshold written as a bare number, which pilotr's own spec_json() wrote before
+      0.3, becomes a one-element list.
+    """
+    s = copy.deepcopy(spec)
+    if not isinstance(s, dict):
+        return s
+    _drop_nulls(s)
+    s.setdefault("factors", [])
+    s.setdefault("predictors", [])
+    s.setdefault("random", {})
+    if isinstance(s["random"], list) and not s["random"]:
+        s["random"] = {}
+    _as_int(s, "seed")
+    units = s.get("units")
+    if isinstance(units, dict):
+        for unit in units.values():
+            _as_int(unit, "n")
+            _as_int(unit, "per_subject")
+    if isinstance(s["random"], dict):
+        for entry in s["random"].values():
+            _as_int(entry, "n")
+    response = s.get("response")
+    if isinstance(response, dict):
+        _as_int(response, "round")
+        th = response.get("thresholds")
+        if _is_num(th):
+            response["thresholds"] = [th]
+    return s

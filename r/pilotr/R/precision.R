@@ -114,7 +114,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     stop("this specification has no fixed coefficients to analyse; name the focal effects explicitly",
          call. = FALSE)
 
-  seeds <- replicate_seeds(spec$seed, n_sims)
+  seeds <- replicate_seeds(spec[["seed"]], n_sims)
   # The shared replicate loop, with the cheaper fitter: a precision analysis needs estimates and
   # standard errors, and lmerTest's Satterthwaite p-values cost noticeably more than the plain fit.
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,

@@ -11,7 +11,9 @@ generator implemented identically in both languages.
 
 Uniforms come from L'Ecuyer's (1988) combined linear congruential generator. Every
 intermediate product stays below `2**53`, so the arithmetic is exact in IEEE-754 doubles
-and in Python integers alike. Normals use Wichura's (1988) Algorithm AS 241 inverse-CDF, the
+and in Python integers alike. That holds for seeds within ±(2^53 − 1), the range `validate_spec`
+accepts: R reads a JSON number as a double, so beyond that range the two readers would hold
+different seeds. Normals use Wichura's (1988) Algorithm AS 241 inverse-CDF, the
 same routine R's `qnorm` uses, so deviates agree to full double precision. Everything else
 (Cholesky-correlated random effects, inverse-CDF Poisson and ordinal draws, Marsaglia and
 Tsang gamma draws for the Beta family) derives from those two through a documented, identical

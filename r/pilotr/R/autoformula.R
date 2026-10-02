@@ -24,10 +24,12 @@
 #' head(model_data(spec, simulate_design(spec)))
 #' @export
 model_data <- function(spec, d) {
-  resp <- spec$response; shift <- if (is.null(resp$shift)) 0 else resp$shift
-  d$.y <- if (resp$family %in% c("lognormal", "shifted_lognormal")) log(d[[resp$name]] - shift) else d[[resp$name]]
-  for (f in spec$factors) for (col in names(f$contrasts))      # contrast columns from labels
-    d[[col]] <- f$contrasts[[col]][match(d[[f$name]], f$levels)]
+  resp <- spec[["response"]]; shift <- .orelse(resp[["shift"]], 0)
+  yname <- resp[["name"]]
+  d$.y <- if (resp[["family"]] %in% c("lognormal", "shifted_lognormal")) log(d[[yname]] - shift)
+          else d[[yname]]
+  for (f in spec[["factors"]]) for (col in names(f[["contrasts"]]))   # contrast columns from labels
+    d[[col]] <- f[["contrasts"]][[col]][match(d[[f[["name"]]]], f[["levels"]])]
   # Product columns for the union of the fixed-coefficient keys and every random-slope key.
   # Taking only the fixed keys left an interaction random slope with no column to sit on, so
   # the formula from model_formula() referred to a variable the modelling data did not have.
@@ -41,8 +43,9 @@ model_data <- function(spec, d) {
 # Every interaction key the analysis model needs a product column for: the fixed coefficients
 # and the random slopes of every grouping factor, de-duplicated and in first-seen order.
 .interaction_keys <- function(spec) {
-  keys <- names(spec$fixed$coefficients)
-  for (g in names(spec$random)) keys <- c(keys, names(spec$random[[g]]$slopes))
+  keys <- names(spec[["fixed"]][["coefficients"]])
+  rs <- spec[["random"]]
+  for (g in names(rs)) keys <- c(keys, names(rs[[g]][["slopes"]]))
   unique(keys[grepl(":", keys, fixed = TRUE)])
 }
 
@@ -66,16 +69,17 @@ model_data <- function(spec, d) {
 #' model_formula(spec)
 #' @export
 model_formula <- function(spec) {
-  fixed <- vapply(names(spec$fixed$coefficients), .us, character(1))
+  fixed <- vapply(names(spec[["fixed"]][["coefficients"]]), .us, character(1))
+  rs <- spec[["random"]]
   # `|` only when the process actually correlates the terms, `||` otherwise. Emitting `|`
   # unconditionally asked lmer to estimate a correlation that the specification had fixed at
   # zero, which spends degrees of freedom on a parameter known to be absent and makes a
   # boundary-singular fit the likely outcome. Since model_data() supplies numeric contrast
   # columns, with no factors among them, `||` does decorrelate here, without the partial-effect
   # caveat that applies to `||` on a factor.
-  re <- vapply(names(spec$random), function(g)
-    sprintf("(%s %s %s)", paste(c("1", vapply(names(spec$random[[g]]$slopes), .us, character(1))),
-                                collapse = " + "), .re_bar(spec$random[[g]]), g),
+  re <- vapply(names(rs), function(g)
+    sprintf("(%s %s %s)", paste(c("1", vapply(names(rs[[g]][["slopes"]]), .us, character(1))),
+                                collapse = " + "), .re_bar(rs[[g]]), g),
     character(1))
   # Anchor the formula in the global environment, away from this function's evaluation
   # frame. print.formula omits its `<environment: ...>` line only for the global

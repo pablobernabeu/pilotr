@@ -13,14 +13,13 @@ Usage: python tools/parity/run_py.py [output-dir]
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "python"))
 
-from pilotr.simulate import simulate  # noqa: E402  (needs the sys.path line above)
+from pilotr.simulate import load_spec, simulate  # noqa: E402  (needs the sys.path line above)
 
 
 def _check_formatter() -> None:
@@ -69,8 +68,9 @@ def main() -> None:
     for spec_dir, name in specs:
         base = name[:-len(".json")]
         for variant in ("asis", "noround"):
-            with open(os.path.join(spec_dir, name)) as f:
-                spec = json.load(f)
+            # load_spec, as run_r.R uses its own, so that both sides read the file the way a
+            # user's code would: as UTF-8, and validated.
+            spec = load_spec(os.path.join(spec_dir, name))
             if variant == "noround":
                 spec["response"].pop("round", None)
             _dump(simulate(spec), os.path.join(out_dir, "%s.%s.txt" % (base, variant)))

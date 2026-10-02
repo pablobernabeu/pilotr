@@ -1,0 +1,1 @@
+{"spec_version":"0.3","name":"auto_unbox ordinal","seed":7,"units":{"subject":{"n":20}},"factors":[{"name":"group","levels":["a","b"],"contrasts":{"effect":[-0.5,0.5]},"between":"subject"}],"fixed":{"intercept":0,"coefficients":{"effect":1}},"response":{"family":"ordinal","name":"rating","thresholds":0}}

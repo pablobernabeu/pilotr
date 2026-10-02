@@ -72,7 +72,7 @@
 # than the plain fit, so precision analysis, which needs only estimates and standard errors, asks
 # for the cheaper one.
 .design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE) {
-  s <- spec; s$seed <- seeds[i]
+  s <- spec; s[["seed"]] <- seeds[i]
   d <- prep(simulate_design(s, validate = FALSE))
   f <- .fit_lmer(formula, d, test = test)
   na <- stats::setNames(rep(NA_real_, length(fnames)), fnames)
@@ -105,15 +105,15 @@
 # A specification's interaction keys are written "a:b", while model_data() materialises them as
 # columns named "a_b", so the focal names have to follow the columns.
 .default_focal <- function(spec) {
-  vapply(names(spec$fixed$coefficients), .us, character(1), USE.NAMES = FALSE)
+  vapply(names(spec[["fixed"]][["coefficients"]]), .us, character(1), USE.NAMES = FALSE)
 }
 
 # Resolve the `focal` argument to a character vector of names and, where given, their true values.
 .resolve_focal <- function(focal, spec) {
   if (is.null(focal)) {
     nms <- .default_focal(spec)
-    true <- vapply(names(spec$fixed$coefficients), function(k) spec$fixed$coefficients[[k]],
-                   numeric(1), USE.NAMES = FALSE)
+    coeffs <- spec[["fixed"]][["coefficients"]]
+    true <- vapply(names(coeffs), function(k) coeffs[[k]], numeric(1), USE.NAMES = FALSE)
     return(list(names = nms, true = stats::setNames(true, nms)))
   }
   if (!is.null(names(focal)) && is.numeric(focal))

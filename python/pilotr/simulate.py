@@ -14,7 +14,7 @@ stream.
 from __future__ import annotations
 import json, math, itertools
 from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw
-from .validate import validate_spec
+from .validate import validate_spec, _normalise, _repeated_key_message
 
 
 class Dataset:
@@ -58,6 +58,90 @@ def _fmt(v):
     return repr(v) if isinstance(v, float) else str(v)
 
 
+def _refuse_duplicate_keys(pairs):
+    """object_pairs_hook for json: refuse an object that repeats a key.
+
+    JSON leaves a repeated key undefined (RFC 8259, section 4). Python's json keeps the last
+    value and R's jsonlite keeps every entry, so the twins read different specifications from
+    one file: a coefficient given twice was applied once at its second value here and twice at
+    its first in R.
+    """
+    seen = set()
+    for key, _value in pairs:
+        if key in seen:
+            raise ValueError(_repeated_key_message(key))
+        seen.add(key)
+    return dict(pairs)
+
+
+_ATOMIC = (str, int, float, bool)
+
+
+def _unbox(obj, keys):
+    """Replace a one-element array holding a single value by that value, at the given keys."""
+    if not isinstance(obj, dict):
+        return
+    for key in keys:
+        v = obj.get(key)
+        if isinstance(v, list) and len(v) == 1 and isinstance(v[0], _ATOMIC):
+            obj[key] = v[0]
+
+
+def _unbox_values(obj):
+    """The same for every value of an object keyed by column or term name."""
+    if isinstance(obj, dict):
+        _unbox(obj, list(obj))
+
+
+def _empty_object(obj, key):
+    """Read an empty array at obj[key] as the empty object R reads it as."""
+    if isinstance(obj, dict) and isinstance(obj.get(key), list) and not obj[key]:
+        obj[key] = {}
+
+
+def _read_like_jsonlite(spec):
+    """Read a parsed specification as R's jsonlite reads the same file.
+
+    jsonlite simplifies a one-element array to its value, so a file that
+    ``jsonlite::write_json()`` wrote with its defaults, ``"seed": [2024]`` and all, loads and
+    simulates in R. It also cannot tell an empty array from an empty object, so ``[]`` reads as
+    an empty ``coefficients``, ``slopes`` or ``correlations``. Both readings are applied here at
+    exactly the positions where the schema has a single value or an object, and nowhere else: R
+    refuses ``[]`` for ``units``, ``fixed``, ``response`` and ``contrasts``, and so does this
+    reader. jsonlite also turns a mixed array such as ``["a", 1]`` into strings; that reading is
+    R's alone and is not copied, so such levels stay refused here.
+    """
+    if not isinstance(spec, dict):
+        return spec
+    _unbox(spec, ("spec_version", "name", "seed"))
+    units = spec.get("units")
+    if isinstance(units, dict):
+        for unit in units.values():
+            _unbox(unit, ("n", "per_subject"))
+    factors = spec.get("factors")
+    for f in factors if isinstance(factors, list) else []:
+        _unbox(f, ("name", "between"))
+    predictors = spec.get("predictors")
+    for p in predictors if isinstance(predictors, list) else []:
+        _unbox(p, ("name", "varies_by", "mean", "sd", "dist", "min", "max", "reliability"))
+    fixed = spec.get("fixed")
+    if isinstance(fixed, dict):
+        _unbox(fixed, ("intercept",))
+        _empty_object(fixed, "coefficients")
+        _unbox_values(fixed.get("coefficients"))
+    random_spec = spec.get("random")
+    if isinstance(random_spec, dict):
+        for entry in random_spec.values():
+            if not isinstance(entry, dict):
+                continue
+            _unbox(entry, ("intercept_sd", "correlated", "over", "n"))
+            for key in ("slopes", "correlations"):
+                _empty_object(entry, key)
+                _unbox_values(entry.get(key))
+    _unbox(spec.get("response"), ("family", "name", "sigma", "shift", "beta", "phi", "round"))
+    return spec
+
+
 def load_spec(path, validate=True):
     """Load a JSON design specification from a file.
 
@@ -66,6 +150,13 @@ def load_spec(path, validate=True):
     silently sets that effect to zero, and a response parameter left over from another family is
     ignored. Validation also refuses a specification declaring a ``spec_version`` newer than this
     implementation understands, and never reads such a file in part.
+
+    The file is read as R's jsonlite reads it, so that one file means one design in both twins:
+    as UTF-8 with or without a byte-order mark, whatever the locale; with a one-element array
+    read as its value where the schema has a single value, and ``[]`` read as an empty
+    ``coefficients``, ``slopes`` or ``correlations`` object, both as ``jsonlite::write_json()``
+    writes them by default. A file that repeats a key within one object is refused whatever
+    `validate` says. See "Reading a specification" in spec/SPEC.md.
 
     Parameters
     ----------
@@ -80,12 +171,34 @@ def load_spec(path, validate=True):
     -------
     dict
         The parsed specification, ready for `simulate` or `power`.
+
+    Raises
+    ------
+    ValueError
+        If the file repeats a key within one object, or, when validating, if the specification
+        is invalid.
     """
-    with open(path) as f:
-        spec = json.load(f)
+    # utf-8-sig: the locale encoding read "fácil" as "fÃ¡cil" on Windows and could not read
+    # "Łatwy" at all, and plain utf-8 refuses the byte-order mark some editors add.
+    with open(path, encoding="utf-8-sig") as f:
+        spec = json.load(f, object_pairs_hook=_refuse_duplicate_keys)
+    spec = _read_like_jsonlite(spec)
     if validate is not False:
         validate_spec(spec, strict=validate is True)
     return spec
+
+
+def _as_spec(spec, validate=True):
+    """Resolve a specification argument to a validated, normalised copy.
+
+    Every public entry point calls this once, so that a path is read once and validation runs
+    once for a whole replicate loop, mirroring `.as_spec()` in the R twin.
+    """
+    if isinstance(spec, str):
+        spec = load_spec(spec, validate=validate)
+    elif validate is not False:
+        validate_spec(spec, strict=validate is True)
+    return _normalise(spec)
 
 
 def _ranef(unit_spec, label=None):
@@ -184,11 +297,15 @@ def simulate(spec, validate=True) -> Dataset:
         any grouping, factor, and continuous-predictor columns, and the response column named
         by ``spec["response"]["name"]``.
     """
-    if isinstance(spec, str):
-        spec = load_spec(spec, validate=validate)
-    elif validate is not False:
-        validate_spec(spec, strict=validate is True)
+    return _simulate(_as_spec(spec, validate))
 
+
+def _simulate(spec) -> Dataset:
+    """The engine behind `simulate`, for a specification already validated and normalised.
+
+    The replicate loops call it directly, since the specification they vary has been through
+    `_as_spec` once already.
+    """
     S = spec["units"]["subject"]["n"]
     has_item = "item" in spec["units"]
     I = spec["units"]["item"]["n"] if has_item else 1  # noqa: E741  S and I as in simulate.R

@@ -12,7 +12,12 @@
       "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, because a 0.2 implementation reads such a design differently and generates different data without reporting a problem."
     },
     "name": { "type": "string" },
-    "seed": { "type": "integer" },
+    "seed": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Master seed, within plus or minus (2^53 - 1): R reads a JSON number as a double, which holds every integer in that range exactly and not every one beyond it, while Python reads any integer exactly, so a larger seed would be two different numbers in the two implementations."
+    },
     "units": {
       "type": "object",
       "properties": {

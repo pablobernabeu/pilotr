@@ -57,7 +57,7 @@
   # A focal name that is not a fixed coefficient of this design produces a script that stops at
   # its first hypothesis test, which on a cluster is discovered hours into a queued run. Saying
   # so at emission time costs nothing.
-  avail <- names(spec$fixed$coefficients)
+  avail <- names(spec[["fixed"]][["coefficients"]])
   miss <- setdiff(nms, avail)
   if (length(miss))
     warning(sprintf(
@@ -92,7 +92,7 @@
   c(
     "#!/usr/bin/env Rscript",
     "# ---------------------------------------------------------------------------",
-    sprintf("# Bayesian design analysis for the pilotr design '%s'.", spec$name),
+    sprintf("# Bayesian design analysis for the pilotr design '%s'.", spec[["name"]]),
     "#",
     "# One run is one replicate. The script simulates from the specification embedded",
     "# below, fits the confirmatory model with brms, and decides about each focal",
@@ -295,7 +295,7 @@
     "#!/bin/bash",
     "# =============================================================================",
     "# SLURM array job: Bayesian design analysis for the pilotr design",
-    sprintf("# '%s'.", spec$name),
+    sprintf("# '%s'.", spec[["name"]]),
     "#",
     "# One array task per replicate. Each task simulates its own data set, fits the brms",
     "# model across its cores, and writes one RDS to $PROJECT_DIR/results, which",
@@ -564,7 +564,7 @@ generate_design_analysis <- function(spec, focal,
   lines <- if (identical(array, "none")) analysis else c(
     "# =============================================================================",
     sprintf("# Bayesian design analysis for the pilotr design '%s', as three files for a",
-            spec$name),
+            spec[["name"]]),
     "# SLURM array. Split this output at the 'FILE n of 3' banners below and save each",
     "# part under the name its banner gives. The first and third parts are R and run as",
     "# they stand. The middle part is bash, so it is not valid R and has to be separated",

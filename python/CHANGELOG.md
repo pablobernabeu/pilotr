@@ -13,6 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Python package version", although the two packages are released separately and their
   version numbers can differ. The BibTeX file the page offers for download says the same.
 - The 0.3.0 entry carries the date the release reached PyPI, 2026-08-27.
+- `load_spec` reads a specification as R's jsonlite does. A one-element array where a single
+  value belongs, `[]` for an empty `coefficients`, `slopes` or `correlations` object (both as
+  `jsonlite::write_json()` writes them by default) and a JSON `null` in an optional field are
+  read as the value, the empty object and an absent field. Each previously raised or was
+  refused.
+- A whole number written as a float, such as `"n": 64.0`, no longer raises `TypeError` in
+  `simulate`. The schema counts it as an integer and R simulates it.
+- `validate_spec` raises `ValueError` for every malformed shape, as documented. A list-valued
+  family raised `TypeError` and a string-valued `response` raised `AttributeError`.
+- `validate_spec` refuses `"item": null` among the units and a `random` of `0` or `false`, in
+  R's words. The first passed validation and then raised `TypeError` in `simulate`, and the
+  second was read as no random effects.
+- `load_spec` reads files as UTF-8 and accepts a byte-order mark, as R does. It used the locale
+  encoding, so on Windows the level "fácil" loaded as "fÃ¡cil" and "Łatwy" raised
+  `UnicodeDecodeError`.
+- `load_spec` refuses a repeated key within one object, and `validate_spec` a seed beyond
+  ±(2^53 − 1). Both used to give data that differed from R's.
 
 ## [0.3.0] - 2026-08-27
 

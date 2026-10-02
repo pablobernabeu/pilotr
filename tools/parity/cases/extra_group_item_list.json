@@ -1,0 +1,18 @@
+{
+  "name": "extra_group_item_list",
+  "seed": 5153,
+  "units": { "subject": { "n": 4 }, "item": { "n": 12 } },
+  "factors": [
+    {
+      "name": "condition",
+      "levels": ["a", "b"],
+      "contrasts": { "cond": [-0.5, 0.5] },
+      "vary_within": ["subject", "item"]
+    }
+  ],
+  "fixed": { "intercept": 10.0, "coefficients": { "cond": 0.5 } },
+  "random": {
+    "item_list": { "over": "item", "n": 3, "intercept_sd": 1.5 }
+  },
+  "response": { "family": "gaussian", "name": "score", "sigma": 1.0 }
+}

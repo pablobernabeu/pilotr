@@ -43,20 +43,21 @@ brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
                      # brms exgaussian(): mu is the mean, matching how the family is simulated.
                      exgaussian = "exgaussian()",
                      beta = "Beta()")  # brms Beta(): logit mu + precision phi, as simulated
-  family <- family_map[[spec$response$family]]
-  if (is.null(family)) stop("no brms family mapping for '", spec$response$family, "'")
+  resp <- spec[["response"]]
+  family <- family_map[[resp[["family"]]]]
+  if (is.null(family)) stop("no brms family mapping for '", resp[["family"]], "'")
 
-  fixed_terms <- names(spec$fixed$coefficients)
-  rs <- spec$random
+  fixed_terms <- names(spec[["fixed"]][["coefficients"]])
+  rs <- spec[["random"]]
   # `|` only for groups the specification actually correlates, `||` otherwise, matching what
   # simulate_design() generates. Emitting `|` unconditionally, together with an LKJ prior, told
   # Stan to estimate a correlation the process had fixed at zero.
   re_terms <- vapply(names(rs), function(g)
-    sprintf("(%s %s %s)", paste(c("1", names(rs[[g]]$slopes)), collapse = " + "),
+    sprintf("(%s %s %s)", paste(c("1", names(rs[[g]][["slopes"]])), collapse = " + "),
             .re_bar(rs[[g]]), g),
     character(1))
   rhs <- paste(c(fixed_terms, re_terms), collapse = " + ")
-  formula <- sprintf("%s ~ %s", spec$response$name, rhs)
+  formula <- sprintf("%s ~ %s", resp[["name"]], rhs)
 
   priors <- c('prior(normal(0, 2.5), class = "Intercept")')
   for (term in fixed_terms) {
@@ -67,7 +68,7 @@ brms_bridge <- function(spec, prior_scale = 0.5, interaction_scale = NULL) {
   # An LKJ prior only makes sense when some group has a correlation matrix to put it on. brms
   # rejects a prior on a parameter the model does not contain, so this has to track the bars.
   has_cor <- any(vapply(rs, function(g)
-    length(names(g$slopes)) > 0 && .re_correlated(g), logical(1)))
+    length(names(g[["slopes"]])) > 0 && .re_correlated(g), logical(1)))
   if (has_cor) priors <- c(priors, 'prior(lkj(2), class = "cor")')
 
   code <- paste0(

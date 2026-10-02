@@ -27,6 +27,11 @@ resolves to no column and so silently sets that effect to zero, and a response p
 left over from another family is ignored. Validation also refuses a specification declaring a
 \code{spec_version} newer than this implementation understands, and never reads such a file in
 part.
+
+The file is read as UTF-8, with or without a byte-order mark. A file that repeats a key
+within one JSON object is refused whatever \code{validate} says, because JSON leaves a repeated
+key undefined and the R and 'Python' readers settle it differently: one coefficient given
+twice was applied twice at its first value in R and once at its second in 'Python'.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

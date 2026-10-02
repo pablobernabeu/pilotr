@@ -137,7 +137,7 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     stop("this specification has no fixed coefficients to test; name the focal effects explicitly",
          call. = FALSE)
 
-  seeds <- replicate_seeds(spec$seed, n_sims)
+  seeds <- replicate_seeds(spec[["seed"]], n_sims)
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,
                    prep = prep, formula = formula, fnames = fnames, test = TRUE)
 

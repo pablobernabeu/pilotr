@@ -555,7 +555,7 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   # ---- assemble ----
   spec <- list(spec_version = .SPEC_VERSION,
                name = if (is.null(name)) "from_model" else name,
-               seed = as.integer(seed),
+               seed = .as_seed(seed),
                units = units)
   if (length(factors)) spec$factors <- factors
   if (length(predictors)) spec$predictors <- predictors

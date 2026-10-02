@@ -19,6 +19,16 @@ default_response_name <- function(family) {
          beta = "proportion", "outcome")
 }
 
+# A seed as a specification stores it. A whole seed inside R's integer range stays an integer, as
+# it always has been, so existing JSON and generated scripts are unchanged. A larger whole seed
+# stays a double, which as.integer() turned into NA with a coercion warning, although every seed
+# up to 2^53 - 1 is valid and spec_json() writes it exactly. Anything else is returned untouched,
+# for validate_spec() to refuse in its own words, where as.integer() truncated 1.5 to 1 in silence.
+.as_seed <- function(x) {
+  if (!.is_whole(x)) return(x)
+  if (abs(x) < 2^31) as.integer(x) else as.numeric(x)
+}
+
 #' Build a design specification from a flat list of design inputs
 #'
 #' Assemble a portable design specification (a plain list, serialisable with
@@ -61,7 +71,7 @@ build_spec <- function(p) {
 
   spec <- list(
     spec_version = .SPEC_VERSION,
-    name = p$name, seed = as.integer(p$seed),
+    name = p$name, seed = .as_seed(p$seed),
     units = units,
     factors = list(factor),
     fixed = list(intercept = p$intercept, coefficients = list(effect = p$effect))
