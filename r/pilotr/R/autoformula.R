@@ -28,8 +28,14 @@ model_data <- function(spec, d) {
   yname <- resp[["name"]]
   d$.y <- if (resp[["family"]] %in% c("lognormal", "shifted_lognormal")) log(d[[yname]] - shift)
           else d[[yname]]
-  for (f in spec[["factors"]]) for (col in names(f[["contrasts"]]))   # contrast columns from labels
-    d[[col]] <- f[["contrasts"]][[col]][match(d[[f[["name"]]]], f[["levels"]])]
+  # Contrast columns from labels. Every factor's level index is taken before any column is
+  # written, because a contrast column may carry its own factor's name, and writing it replaced
+  # the labels that the factor's later columns are matched against, which left them NA.
+  idx <- lapply(spec[["factors"]], function(f) match(d[[f[["name"]]]], f[["levels"]]))
+  for (i in seq_along(spec[["factors"]])) {
+    f <- spec[["factors"]][[i]]
+    for (col in names(f[["contrasts"]])) d[[col]] <- f[["contrasts"]][[col]][idx[[i]]]
+  }
   # Product columns for the union of the fixed-coefficient keys and every random-slope key.
   # Taking only the fixed keys left an interaction random slope with no column to sit on, so
   # the formula from model_formula() referred to a variable the modelling data did not have.

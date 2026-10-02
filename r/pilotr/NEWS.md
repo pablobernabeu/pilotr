@@ -75,6 +75,37 @@
   package found neither, so the documented launcher stopped with "no pilotr engine sources". The
   app now takes the functions from the package's namespace, without attaching the package.
 
+* `validate_spec()` refuses specifications whose names collide. Each of these validated and then
+  moved an effect, rescaled a variance or overwrote a column without a word: two columns with one
+  name (a factor called `subject`, a response named like a factor), a contrast column defined by
+  two factors or named like a predictor, a unit, a grouping factor, another factor or the
+  response, an interaction whose analysis column `a_b` already exists, a level listed twice, a
+  correlation pairing a term with itself or giving one pair twice, a factor both between and
+  within a unit, and a `random.item` entry in a design without items, which was dropped. Each
+  refusal reads the same in the Python twin. The rules are set out under Names in the
+  specification.
+
+* `validate_spec()` refuses a factor, predictor or extra grouping-factor name that is empty or
+  made only of spaces, and a response name made only of spaces (an empty one was already
+  refused). Such a name validated and then became a column with no visible name. An empty factor
+  name stopped `simulate_design()` with base R's "replacement has length zero", which does not
+  say which field is at fault, and a blank `random` key was reported as
+  `random. must be an object`.
+
+* Two refusals read as the Python twin's do. A `correlated` flag that is not a boolean must be
+  `true or false`, as the JSON file spells it, and `response.thresholds` must be "a number or a
+  non-empty numeric array".
+
+* `model_data()` no longer fills a factor's later contrast columns with `NA` when the first
+  contrast column carries the factor's own name. With three levels, every `power_mixed()`
+  replicate then failed to fit.
+
+## Deprecated
+
+* A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
+  validation alike. pilotr has always crossed a within factor with every unit, so the list
+  changed nothing. From spec version 0.4 such a list will be refused.
+
 ## Documentation
 
 * `citation("pilotr")` names the R package version alone. It read "R and Python package

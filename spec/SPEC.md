@@ -101,10 +101,16 @@ effect is misspelled generates exactly the data of a null design and reports suc
   (length = number of levels). Fixed coefficients and random slopes are keyed by these
   contrast-column names. This follows the convention used in `lme4` and in DeBruine and
   Barr (2021), where effects are coefficients on contrast-coded predictors.
-* `vary_within`: the factor is crossed *within* the listed units (a within-unit factor),
-  expanding each unit combination into one row per level.
+* `vary_within`: the factor varies *within* units (a within-unit factor), expanding each unit
+  combination into one row per level. pilotr crosses a within factor with every unit of the
+  design, whatever the list names, so in a design with items the list is `["subject", "item"]`.
+  A list that leaves a unit out has never changed the data. It is deprecated and draws a
+  warning, and from spec version 0.4 it will be refused. A factor whose levels are carried by
+  the items, each item appearing at one level only, is `"between": "item"` instead.
 * `between`: `"subject"` or `"item"`. The factor partitions that unit into equal blocks
   in level order (a between-unit factor that does not expand rows).
+
+A factor sets exactly one of `vary_within` and `between`, and lists each level once.
 
 ### Continuous predictors
 
@@ -254,6 +260,30 @@ columns), `+` subject random part `+` item random part `+` the random parts of a
 grouping factors. `name` sets the output column name. An optional `round` sets the decimal
 rounding of the response, and applies only to the families whose outcome is continuous, the others
 being integers already.
+
+### Names
+
+The names in a specification become columns, of the simulated data or of the analysis data that
+`model_data()` builds from it. `validate_spec()` refuses a specification in which two of them
+would land in one place. Each case below used to validate and then move an effect, rescale a
+variance or overwrite a column without a word. R replaced a column written twice where Python
+appended a second one under the same name, so the two implementations also exported different
+tables from one specification.
+
+1. The simulated data has these columns, in this order: `subject`, `item` when the design has
+   items, one per additional grouping factor, one per factor, one per continuous predictor and
+   the response. Their names are non-blank and all different.
+2. A contrast column belongs to one factor. Its name differs from every predictor, from
+   `subject`, from `item` when the design has items, from every additional grouping factor, from
+   every other factor and from the response. It may carry its own factor's name, as two-level
+   designs often do.
+3. The analysis column `a_b` that `model_data()` builds for an interaction key `a:b` does not
+   take the name of another column, another interaction's included.
+4. A factor lists each level once.
+5. A factor sets exactly one of `vary_within` and `between`.
+6. A correlation key names two different terms, and each pair is given once, in one order.
+7. `random.item` appears only in a design with an item unit. Without one it was dropped from the
+   simulated data, while `model_formula()` still put an item term into the analysis.
 
 ## Accumulation order (identical across all implementations)
 

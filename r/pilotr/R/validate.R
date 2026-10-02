@@ -98,6 +98,18 @@
 }
 
 .is_scalar_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
+
+# A name that reaches the data as a column name. A blank one passed .is_scalar_string(), and the
+# spec then failed inside simulate_design() with base R's "replacement has length zero", which
+# names neither the field nor the emptied control, where the twin wrote a column with no name.
+.is_name <- function(x) .is_scalar_string(x) && nzchar(trimws(x))
+
+# Joins names as "a", "a and b", "a, b and c".
+.name_list <- function(x) {
+  if (length(x) < 2L) return(paste0(x, collapse = ""))
+  paste0(paste(x[-length(x)], collapse = ", "), " and ", x[length(x)])
+}
+
 .is_scalar_number <- function(x) is.numeric(x) && length(x) == 1L && !is.na(x) && is.finite(x)
 .is_whole <- function(x) .is_scalar_number(x) && x == round(x)
 
@@ -143,6 +155,14 @@
 #' sets that effect to zero, which generates exactly the data of a null design and reports
 #' success. A response parameter left over from another family is ignored. Neither is
 #' detectable in the output, which is why they are refused here.
+#'
+#' Names are checked together as well as one by one. Two columns with one name, a contrast
+#' column defined by two factors or named like another column, an interaction whose analysis
+#' column already exists, a level listed twice, a correlation that pairs a term with itself or
+#' gives one pair twice, a factor both between and within a unit, and a `random.item` entry in a
+#' design without items each validated and then changed the data in silence. The rules are set
+#' out under Names in the specification. A within factor whose `vary_within` leaves out a unit of
+#' the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
 #'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
@@ -275,7 +295,7 @@ validate_spec <- function(spec, strict = TRUE) {
       if (!is.list(f) || is.null(names(f))) { bad(where, " must be an object"); next }
       for (k in setdiff(names(f), c("name", "levels", "contrasts", "vary_within", "between")))
         unknown("unknown field '", where, ".", k, "'")
-      if (!.is_scalar_string(f[["name"]])) bad(where, ".name must be a single string")
+      if (!.is_name(f[["name"]])) bad(where, ".name must be a non-empty string")
       levels <- f[["levels"]]
       nlev <- length(levels)
       # A JSON null among the levels arrives as NA, which R would have used as a level label.
@@ -331,7 +351,7 @@ validate_spec <- function(spec, strict = TRUE) {
       for (k in setdiff(names(p), c("name", "varies_by", "mean", "sd", "dist",
                                     "min", "max", "reliability")))
         unknown("unknown field '", where, ".", k, "'")
-      if (!.is_scalar_string(p[["name"]])) bad(where, ".name must be a single string")
+      if (!.is_name(p[["name"]])) bad(where, ".name must be a non-empty string")
       else pred_names <- c(pred_names, p[["name"]])
       vb <- p[["varies_by"]]
       # Only a string is quoted back: pasting in an array split the one problem into several,
@@ -405,6 +425,7 @@ validate_spec <- function(spec, strict = TRUE) {
     if (!is.list(rs) || is.null(names(rs)))
       bad("'random' must be an object keyed by grouping factor")
     else for (g in names(rs)) {
+      if (!.is_name(g)) { bad("a 'random' grouping factor must have a non-empty name"); next }
       re <- rs[[g]]; where <- paste0("random.", g)
       if (!is.list(re) || is.null(names(re))) { bad(where, " must be an object"); next }
       for (k in setdiff(names(re), c("intercept_sd", "slopes", "correlations", "correlated",
@@ -446,7 +467,7 @@ validate_spec <- function(spec, strict = TRUE) {
       # `"correlated": [null]` arrives as NA, a logical that isTRUE() then read as FALSE.
       if (!is.null(correlated) &&
           !(is.logical(correlated) && length(correlated) == 1L && !is.na(correlated)))
-        bad(where, ".correlated must be TRUE or FALSE")
+        bad(where, ".correlated must be true or false")
       if (isTRUE(identical(correlated, FALSE)) && length(cors))
         bad(where, " sets correlated = false but also supplies correlations; one of the two has to go")
       if (g %in% c("subject", "item")) {
@@ -473,8 +494,7 @@ validate_spec <- function(spec, strict = TRUE) {
       if (!.is_scalar_string(fam) || !fam %in% names(.family_params))
         bad("'response.family' must be one of ", paste(names(.family_params), collapse = ", "),
             if (.is_scalar_string(fam)) paste0(", not '", fam, "'") else "")
-      if (!.is_scalar_string(r[["name"]]) || !nzchar(r[["name"]]))
-        bad("'response.name' must be a non-empty string")
+      if (!.is_name(r[["name"]])) bad("'response.name' must be a non-empty string")
       if (.is_scalar_string(fam) && fam %in% names(.family_params)) {
         needed <- .family_params[[fam]]
         allowed <- c("family", "name", "round", needed)
@@ -491,7 +511,7 @@ validate_spec <- function(spec, strict = TRUE) {
         th <- r[["thresholds"]]
         if (!is.null(th)) {
           if (!is.numeric(th) || !length(th) || anyNA(th))
-            bad("'response.thresholds' must be a non-empty numeric array")
+            bad("'response.thresholds' must be a number or a non-empty numeric array")
           else if (length(th) > 1 && any(diff(th) <= 0))
             bad("'response.thresholds' must be strictly increasing")
         }
@@ -506,10 +526,176 @@ validate_spec <- function(spec, strict = TRUE) {
     }
   }
 
+  # ---- names and structure ----
+  found <- .check_names(spec, has_item, units_ok = is.list(u) && !is.null(names(u)))
+  problems <- c(problems, found$problems)
+  soft <- c(soft, found$soft)
+
   if (length(soft)) warning(paste0("in this design specification:\n  - ",
                                    paste(soft, collapse = "\n  - ")), call. = FALSE)
   if (length(problems))
     stop(paste0("invalid design specification:\n  - ", paste(problems, collapse = "\n  - ")),
          call. = FALSE)
   invisible(spec)
+}
+
+# The rules that look at a specification's names together, run after the per-field checks and
+# mirrored line for line by the twin's _check_names(). Each case they refuse used to validate
+# and then move an effect, rescale a variance or overwrite a column without a word. Where a
+# column was overwritten the twins also disagreed, R replacing the earlier column and Python
+# appending a second one under the same name, so one specification gave two different tables.
+# Only well-formed parts are inspected, since a malformed one is reported by its own check.
+# Returns the refusals and the warnings, in the order both twins report them.
+.check_names <- function(spec, has_item, units_ok) {
+  problems <- character(0); soft <- character(0)
+  bad <- function(...) problems <<- c(problems, paste0(...))
+  is_obj <- function(x) is.list(x) && !is.null(names(x))
+  is_arr <- function(x) is.list(x) && is.null(names(x))
+  factors <- if (is_arr(spec[["factors"]])) spec[["factors"]] else list()
+  predictors <- if (is_arr(spec[["predictors"]])) spec[["predictors"]] else list()
+  rs <- if (is_obj(spec[["random"]])) spec[["random"]] else list()
+  groups <- Filter(.is_name, names(rs))
+  r <- spec[["response"]]
+  # Repeats in the order of their first appearance, as the twin lists them.
+  repeats <- function(x) unique(x[x %in% x[duplicated(x)]])
+
+  # A level listed twice put the declared effect into the data, since the simulator works by
+  # position, while model_data(), which matches labels, gave every row the first level's value.
+  for (i in seq_along(factors)) {
+    f <- factors[[i]]
+    if (!is_obj(f)) next
+    lv <- f[["levels"]]
+    if (is.character(lv) && !anyNA(lv))
+      for (l in repeats(lv))
+        bad("factors[", i, "].levels repeats '", l, "'; each level needs its own label")
+    # With both fields each unit got one row per level, every one at the level that the between
+    # assignment chose.
+    if (!is.null(f[["vary_within"]]) && !is.null(f[["between"]]))
+      bad("factors[", i, "] sets both 'vary_within' and 'between'; a factor has to set exactly ",
+          "one of them")
+  }
+
+  # Every column of the simulated data, in the order the simulator writes them.
+  cols <- character(0); roles <- character(0)
+  claim <- function(nm, role) if (.is_name(nm)) {
+    cols <<- c(cols, nm); roles <<- c(roles, role)
+  }
+  if (units_ok) {
+    claim("subject", "the subject unit")
+    if (has_item) claim("item", "the item unit")
+  }
+  for (g in setdiff(groups, c("subject", "item"))) claim(g, paste0("random.", g))
+  for (i in seq_along(factors))
+    if (is_obj(factors[[i]])) claim(factors[[i]][["name"]], paste0("factors[", i, "]"))
+  for (i in seq_along(predictors))
+    if (is_obj(predictors[[i]])) claim(predictors[[i]][["name"]], paste0("predictors[", i, "]"))
+  if (is_obj(r)) claim(r[["name"]], "the response")
+  for (nm in repeats(cols)) {
+    who <- roles[cols == nm]
+    # Two predictors alone are already reported as a duplicated predictor name.
+    if (all(startsWith(who, "predictors["))) next
+    bad("the name '", nm, "' is used for more than one column (", .name_list(who), "); every ",
+        "unit, grouping factor, factor, predictor and the response needs a column of its own")
+  }
+
+  # Contrast columns are where the coefficients and slopes act. One defined by two factors
+  # carried only the later factor's effect, and one named like a predictor took the
+  # predictor's draws in place of the contrast. A contrast named after its own factor is
+  # allowed: two-level specifications use it, and the factor's name is checked above.
+  ccol <- character(0); cfac <- integer(0)
+  for (i in seq_along(factors)) {
+    cs <- if (is_obj(factors[[i]])) factors[[i]][["contrasts"]]
+    if (is_obj(cs)) { ccol <- c(ccol, names(cs)); cfac <- c(cfac, rep(i, length(cs))) }
+  }
+  for (cn in unique(ccol)) {
+    fs <- unique(cfac[ccol == cn])
+    if (length(fs) > 1L)
+      bad("the contrast column '", cn, "' is defined by more than one factor (",
+          .name_list(sprintf("factors[%d]", fs)), "); each contrast column has to belong to a ",
+          "single factor")
+  }
+  for (k in seq_along(ccol)) {
+    cn <- ccol[k]; i <- cfac[k]
+    if (identical(cn, factors[[i]][["name"]])) next
+    who <- roles[cols == cn]
+    if (length(who))
+      bad("the contrast column '", cn, "' of factors[", i, "] is also the name of ",
+          .name_list(who), "; a contrast column may share its own factor's name but no other ",
+          "column's")
+  }
+
+  # model_data() writes an interaction key "a:b" to a product column "a_b", over any column
+  # that already has that name.
+  fx <- spec[["fixed"]]
+  keys <- if (is_obj(fx) && is_obj(fx[["coefficients"]])) names(fx[["coefficients"]])
+  for (g in groups) {
+    re <- rs[[g]]
+    if (is_obj(re) && is_obj(re[["slopes"]])) keys <- c(keys, names(re[["slopes"]]))
+  }
+  keys <- unique(keys[grepl(":", keys, fixed = TRUE)])
+  for (j in seq_along(keys)) {
+    col <- .us(keys[j])
+    earlier <- keys[seq_len(j - 1L)]
+    who <- c(roles[cols == col],
+             sprintf("a contrast column of factors[%d]", unique(cfac[ccol == col])),
+             sprintf("the analysis column of the interaction '%s'",
+                     earlier[vapply(earlier, .us, character(1)) == col]))
+    if (length(who))
+      bad("the interaction '", keys[j], "' becomes the analysis column '", col,
+          "', which is already the name of ", .name_list(who))
+  }
+
+  # A term paired with itself overwrote the unit diagonal of the correlation matrix, which
+  # rescaled that term's variance, and a pair given twice kept whichever came later.
+  for (g in groups) {
+    re <- rs[[g]]
+    cors <- if (is_obj(re)) re[["correlations"]]
+    if (!is_obj(cors)) next
+    seen <- character(0); seen_key <- character(0)
+    for (k in names(cors)) {
+      parts <- trimws(strsplit(gsub("~", ",", k), ",")[[1]])
+      if (length(parts) != 2L) next
+      if (identical(parts[1], parts[2])) {
+        bad("random.", g, ".correlations key '", k, "' pairs '", parts[1], "' with itself; a ",
+            "term's correlation with itself is always 1")
+        next
+      }
+      # Both orders are looked up, which avoids sorting the pair, since R sorts by locale.
+      ab <- paste(parts, collapse = "\r"); ba <- paste(rev(parts), collapse = "\r")
+      hit <- match(c(ab, ba), seen)
+      hit <- hit[!is.na(hit)]
+      if (length(hit))
+        bad("random.", g, ".correlations keys '", seen_key[hit[1]], "' and '", k, "' name the ",
+            "same pair of terms; give each pair once")
+      else { seen <- c(seen, ab); seen_key <- c(seen_key, k) }
+    }
+  }
+
+  # The simulator drew no item effects without an item unit, while model_formula() still
+  # emitted an item term for the analysis.
+  if (units_ok && !has_item && !is.null(rs[["item"]]))
+    bad("random.item describes an item unit the design does not have; add units.item or ",
+        "remove random.item")
+
+  # pilotr crosses a within factor with every unit of the design, whatever vary_within lists,
+  # so an incomplete list has never changed the data. It is a warning until spec_version 0.4.
+  if (units_ok) {
+    design_units <- c("subject", if (has_item) "item")
+    for (i in seq_along(factors)) {
+      f <- factors[[i]]
+      if (!is_obj(f) || !is.null(f[["between"]])) next
+      vw <- f[["vary_within"]]
+      if (!is.character(vw) || !length(vw) || anyNA(vw) || !all(vw %in% design_units)) next
+      miss <- setdiff(design_units, vw)
+      if (length(miss))
+        soft <- c(soft, paste0(
+          "factors[", i, "].vary_within lists ", .name_list(sprintf("'%s'", unique(vw))),
+          " but not ", .name_list(sprintf("'%s'", miss)), ". pilotr crosses a within factor ",
+          "with every unit of the design, so it varies within ",
+          .name_list(sprintf("'%s'", miss)), " as well; list every unit, or make it between ",
+          "'item' if items carry it. From spec_version 0.4 this is an error."))
+    }
+  }
+
+  list(problems = problems, soft = soft)
 }

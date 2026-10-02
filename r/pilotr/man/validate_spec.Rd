@@ -28,6 +28,14 @@ sets that effect to zero, which generates exactly the data of a null design and 
 success. A response parameter left over from another family is ignored. Neither is
 detectable in the output, which is why they are refused here.
 
+Names are checked together as well as one by one. Two columns with one name, a contrast
+column defined by two factors or named like another column, an interaction whose analysis
+column already exists, a level listed twice, a correlation that pairs a term with itself or
+gives one pair twice, a factor both between and within a unit, and a \code{random.item} entry in a
+design without items each validated and then changed the data in silence. The rules are set
+out under Names in the specification. A within factor whose \code{vary_within} leaves out a unit of
+the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
+
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
 later. A specification declaring a version newer than this implementation is refused

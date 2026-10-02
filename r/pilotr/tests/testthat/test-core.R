@@ -173,7 +173,7 @@ test_that("power_mixed accepts more than one within-unit factor", {
                           family = "gaussian", resp_name = "", sigma = 0.3))
   spec$factors[[2]] <- list(name = "block", levels = c("x", "y"),
                             contrasts = list(blk = c(-0.5, 0.5)),
-                            vary_within = c("subject"))
+                            vary_within = c("subject", "item"))
   spec$fixed$coefficients$blk <- 0.03
   out <- power_mixed(spec, n_sims = 4)
   expect_setequal(names(out$power), c("effect", "blk"))

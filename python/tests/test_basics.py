@@ -179,7 +179,7 @@ def test_power_mixed_also_refuses_to_divide_by_a_zero_true_effect():
         "name": "null", "seed": 3,
         "units": {"subject": {"n": 10}, "item": {"n": 6}},
         "factors": [{"name": "cond", "levels": ["a", "b"],
-                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": ["subject", "item"]}],
         "fixed": {"intercept": 6, "coefficients": {"cond": 0.0}},
         "random": {"subject": {"intercept_sd": 0.12}, "item": {"intercept_sd": 0.08}},
         "response": {"family": "gaussian", "name": "y", "sigma": 0.3},

@@ -30,6 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `UnicodeDecodeError`.
 - `load_spec` refuses a repeated key within one object, and `validate_spec` a seed beyond
   ±(2^53 − 1). Both used to give data that differed from R's.
+- `validate_spec` refuses specifications whose names collide. Each of these validated and then
+  moved an effect, rescaled a variance or overwrote a column without a word: two columns with one
+  name (a factor called `subject`, a response named like a factor), a contrast column defined by
+  two factors or named like a predictor, a unit, a grouping factor, another factor or the
+  response, an interaction whose analysis column `a_b` already exists, a level listed twice, a
+  correlation pairing a term with itself or giving one pair twice, a factor both between and
+  within a unit, and a `random.item` entry in a design without items, which was dropped. Where a
+  column was overwritten, `simulate` wrote a second column under the same name while R replaced
+  the first, so the twins exported different tables. Each refusal reads the same in the R twin.
+- `validate_spec` refuses a factor, predictor or extra grouping-factor name that is empty or made
+  only of spaces, and a response name made only of spaces (an empty one was already refused).
+  Such a name validated and then became a column with no visible name.
+
+### Deprecated
+
+- A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
+  validation alike. pilotr has always crossed a within factor with every unit, so the list
+  changed nothing. From spec version 0.4 such a list will be refused.
 
 ## [0.3.0] - 2026-08-27
 

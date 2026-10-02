@@ -12,9 +12,10 @@ repeated keys, seeds beyond 2^53 and a byte-order mark. Where both twins accept 
 simulates it and the two dumps, in the 17-digit format of run_r.R and run_py.py, must hash alike.
 
 A case passes when both twins accept it, or both refuse it with the same message character for
-character. A Python exception other than ValueError, or an R error raised by base R rather than
-by the validator (which always stops with call. = FALSE), counts as a crash and fails the case
-whatever the other twin did.
+character. In the spec battery the warnings the two validators raise, such as the deprecation of
+an incomplete `vary_within`, must also match character for character. A Python exception other
+than ValueError, or an R error raised by base R rather than by the validator (which always stops
+with call. = FALSE), counts as a crash and fails the case whatever the other twin did.
 
 Usage: python tools/parity/validate_cross.py
 Exit status is 0 when the two agree on every case.
@@ -179,7 +180,83 @@ def cases():
                                        [{"name": "z", "varies_by": "subject", "reliability": 0.8}]),
                          s["fixed"]["coefficients"].__setitem__("z", 0.1)))),
     ]
+    out += name_cases()
     return out
+
+
+def _second_factor(s, **kw):
+    f = {"name": "block", "levels": ["p", "q"], "contrasts": {"blk": [-0.5, 0.5]},
+         "vary_within": ["subject", "item"]}
+    f.update(kw)
+    s["factors"].append(f)
+
+
+def name_cases():
+    """Names, columns and structure: each validated before and then changed the data in silence.
+
+    The last few are accepted with a warning, which the spec battery compares as text too.
+    """
+    item_less = lambda s: (s["units"].pop("item"),  # noqa: E731
+                           s["factors"][0].__setitem__("vary_within", ["subject"]))
+    return [
+        ("factor named like the subject column",
+         _mut(lambda s: s["factors"][0].__setitem__("name", "subject"))),
+        ("response named like the factor",
+         _mut(lambda s: s["response"].__setitem__("name", s["factors"][0]["name"]))),
+        ("grouping factor named like the response",
+         _mut(lambda s: (s["random"].__setitem__("site", {"intercept_sd": 0.5, "over": "subject",
+                                                          "n": 5}),
+                         s["response"].__setitem__("name", "site")))),
+        ("two factors sharing a contrast column",
+         _mut(lambda s: _second_factor(s, contrasts={"cond": [-0.5, 0.5]}))),
+        ("between factor reusing the within contrast",
+         _mut(lambda s: (_second_factor(s, contrasts={"cond": [-0.5, 0.5]}, between="subject"),
+                         s["factors"][1].pop("vary_within")))),
+        ("predictor named like a contrast column",
+         _mut(lambda s: s.__setitem__("predictors", [{"name": "cond", "varies_by": "subject"}]))),
+        ("contrast column named item",
+         _mut(lambda s: s["factors"][0]["contrasts"].__setitem__("item", [-0.5, 0.5]))),
+        ("contrast column named like another factor",
+         _mut(lambda s: _second_factor(s, contrasts={"condition": [-0.5, 0.5]}))),
+        ("interaction column named like a predictor",
+         _mut(lambda s: (s.__setitem__("predictors",
+                                       [{"name": "freq", "varies_by": "item"},
+                                        {"name": "cond_freq", "varies_by": "subject"}]),
+                         s["fixed"]["coefficients"].__setitem__("cond:freq", 0.01)))),
+        ("interaction column named like a contrast column",
+         _mut(lambda s: (s["factors"][0]["contrasts"].update(cond_blk=[1, -1]),
+                         _second_factor(s),
+                         s["fixed"]["coefficients"].__setitem__("cond:blk", 0.01)))),
+        ("a level listed twice",
+         _mut(lambda s: s["factors"][0].__setitem__("levels", ["x", "x"]))),
+        ("factor both between and within",
+         _mut(lambda s: s["factors"][0].__setitem__("between", "subject"))),
+        ("correlation pairing a term with itself",
+         _mut(lambda s: s["random"]["subject"].__setitem__("correlations", {"cond,cond": 0.25}))),
+        ("correlation pair given twice",
+         _mut(lambda s: s["random"]["subject"].__setitem__(
+             "correlations", {"intercept,cond": 0.9, "cond~intercept": -0.9}))),
+        ("random.item without an item unit", _mut(item_less)),
+        ("blank factor name", _mut(lambda s: s["factors"][0].__setitem__("name", "  "))),
+        ("blank grouping factor name",
+         _mut(lambda s: s["random"].__setitem__("", {"intercept_sd": 0.5, "over": "subject",
+                                                    "n": 5}))),
+        ("thresholds given as a string",
+         _mut(lambda s: _set_family(s, family="ordinal", name="r", thresholds="low"))),
+        ("correlated given as a string",
+         _mut(lambda s: (s.__setitem__("spec_version", "0.3"),
+                         s["random"]["subject"].pop("correlations"),
+                         s["random"]["subject"].__setitem__("correlated", "yes")))),
+        ("three levels, first contrast named after its factor",
+         _mut(lambda s: (s["factors"][0].update(name="cond", levels=["a", "b", "c"],
+                                                contrasts={"cond": [-1, 1, 0],
+                                                           "cond2": [-1, 0, 1]}),
+                         s["random"]["subject"]["slopes"].__setitem__("cond2", 0.01)))),
+        ("vary_within omitting the item unit (warns)",
+         _mut(lambda s: s["factors"][0].__setitem__("vary_within", ["subject"]))),
+        ("vary_within omitting the subject unit (warns)",
+         _mut(lambda s: s["factors"][0].__setitem__("vary_within", "item"))),
+    ]
 
 
 # ---- the file battery ---------------------------------------------------------------------
@@ -315,12 +392,21 @@ for (f in sort(list.files(src, pattern = "\\.R$", full.names = TRUE))) source(f)
 }
 
 # A refusal from pilotr carries no call, since every one is raised with call. = FALSE; an
-# error with a call came from base R or a package beneath, which is a crash.
-run <- function(expr) tryCatch({
-  suppressWarnings(expr)
-  list(verdict = "OK", message = "")
-}, error = function(e) list(verdict = if (is.null(conditionCall(e))) "ERROR" else "CRASH",
-                            message = enc2utf8(conditionMessage(e))))
+# error with a call came from base R or a package beneath, which is a crash. Warnings are
+# collected, joined into one string, so that the spec battery can compare them as text.
+run <- function(expr) {
+  warns <- character(0)
+  res <- tryCatch({
+    withCallingHandlers(expr, warning = function(w) {
+      warns <<- c(warns, enc2utf8(conditionMessage(w)))
+      invokeRestart("muffleWarning")
+    })
+    list(verdict = "OK", message = "")
+  }, error = function(e) list(verdict = if (is.null(conditionCall(e))) "ERROR" else "CRASH",
+                              message = enc2utf8(conditionMessage(e))))
+  res$warnings <- paste(warns, collapse = "\n")
+  res
+}
 
 if (mode == "spec") {
   specs <- jsonlite::fromJSON(payload, simplifyVector = TRUE, simplifyDataFrame = FALSE,
@@ -353,15 +439,17 @@ def _run_r(td, mode, payload):
 # ---- the Python side ----------------------------------------------------------------------
 
 def _py(fn):
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
             fn()
-        return {"verdict": "OK", "message": ""}
-    except ValueError as e:
-        return {"verdict": "ERROR", "message": str(e)}
-    except Exception as e:  # noqa: BLE001  anything but ValueError is the crash being looked for
-        return {"verdict": "CRASH", "message": "%s: %s" % (type(e).__name__, e)}
+            res = {"verdict": "OK", "message": ""}
+        except ValueError as e:
+            res = {"verdict": "ERROR", "message": str(e)}
+        except Exception as e:  # noqa: BLE001  anything but ValueError is the crash looked for
+            res = {"verdict": "CRASH", "message": "%s: %s" % (type(e).__name__, e)}
+    res["warnings"] = "\n".join(str(w.message) for w in caught)
+    return res
 
 
 def _sha256(path):
@@ -371,8 +459,11 @@ def _sha256(path):
 
 # ---- comparison ---------------------------------------------------------------------------
 
-def _compare(rv, pv, data=None):
-    """Return a list of problems with one case; empty when the twins agree."""
+def _compare(rv, pv, data=None, warned=False):
+    """Return a list of problems with one case; empty when the twins agree.
+
+    With `warned`, the warnings each twin raised must also match character for character.
+    """
     problems = []
     if "CRASH" in (rv["verdict"], pv["verdict"]):
         problems.append("crash")
@@ -380,6 +471,8 @@ def _compare(rv, pv, data=None):
         problems.append("verdict")
     elif rv["verdict"] == "ERROR" and rv["message"] != pv["message"]:
         problems.append("text")
+    if warned and not problems and rv.get("warnings", "") != pv.get("warnings", ""):
+        problems.append("warning text")
     if data is not None and not problems and rv["verdict"] == "OK":
         r_dump, p_dump = data
         if not os.path.exists(r_dump) or not os.path.exists(p_dump):
@@ -389,21 +482,22 @@ def _compare(rv, pv, data=None):
     return problems
 
 
-def _report(title, labels, r_res, p_res, data=None):
+def _report(title, labels, r_res, p_res, data=None, warned=False):
     print("\n" + title)
     print("%-52s %-6s %-6s %s" % ("case", "R", "Python", ""))
     print("-" * 96)
     failed = 0
     for i, label in enumerate(labels):
         rv, pv = r_res[i], p_res[i]
-        problems = _compare(rv, pv, data[i] if data else None)
+        problems = _compare(rv, pv, data[i] if data else None, warned)
         flag = "<== " + ", ".join(problems) if problems else ""
         print("%-52s %-6s %-6s %s" % (label[:52], rv["verdict"], pv["verdict"], flag))
         if problems:
             failed += 1
             for who, v in (("R", rv), ("Python", pv)):
-                if v["message"]:
-                    print("    %s: %s" % (who, v["message"].replace("\n", "\n      ")))
+                for kind in ("message", "warnings"):
+                    if v.get(kind):
+                        print("    %s %s: %s" % (who, kind, v[kind].replace("\n", "\n      ")))
     n_ok = sum(1 for v in p_res if v["verdict"] == "OK")
     print("%d cases: %d accepted by Python, %d refused, %d disagreements"
           % (len(labels), n_ok, len(labels) - n_ok, failed))
@@ -439,7 +533,7 @@ def main() -> int:
                   % (len(r_spec), len(r_files), len(battery), len(files)))
             return 1
         failed = _report("Spec battery: validate_spec() on the same parsed specification",
-                         [label for label, _s in battery], r_spec, py_spec)
+                         [label for label, _s in battery], r_spec, py_spec, warned=True)
         failed += _report("File battery: load_spec() on the same bytes, then simulate()",
                           [label for label, _r in files], r_files, py_files, data)
 

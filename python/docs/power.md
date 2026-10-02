@@ -115,7 +115,8 @@ spec_mixed = {
     "name": "priming", "seed": 1,
     "units": {"subject": {"n": 12}, "item": {"n": 8}},
     "factors": [{"name": "condition", "levels": ["related", "unrelated"],
-                 "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+                 "contrasts": {"cond": [-0.5, 0.5]},
+                 "vary_within": ["subject", "item"]}],
     "fixed": {"intercept": 6, "coefficients": {"cond": 0.1}},
     "random": {
         "subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04},

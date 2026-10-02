@@ -80,7 +80,7 @@ def test_power_mixed_parallel_matches_serial():
         "name": "parmix", "seed": 3,
         "units": {"subject": {"n": 10}, "item": {"n": 6}},
         "factors": [{"name": "cond", "levels": ["a", "b"],
-                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": ["subject", "item"]}],
         "fixed": {"intercept": 6, "coefficients": {"cond": 0.05}},
         "random": {
             "subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04},

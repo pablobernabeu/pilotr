@@ -147,7 +147,7 @@ test_that("a null correlated flag is refused and an array-valued varies_by repor
   s <- extra_group_spec("site")
   s$spec_version <- "0.3"
   s$random$site$correlated <- NA
-  expect_error(validate_spec(s), "random.site.correlated must be TRUE or FALSE", fixed = TRUE)
+  expect_error(validate_spec(s), "random.site.correlated must be true or false", fixed = TRUE)
 
   # The value was pasted into the message, which a two-element array turned into two problems.
   s <- reader_between()

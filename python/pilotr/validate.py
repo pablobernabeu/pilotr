@@ -69,6 +69,22 @@ def _is_str(x) -> bool:
     return isinstance(x, str)
 
 
+def _is_name(x) -> bool:
+    """A name that reaches the data as a column name.
+
+    A blank one passed ``_is_str``, and the spec then produced a column with no name at all,
+    where the R twin failed inside its simulator with a message naming neither the field nor the
+    emptied control.
+    """
+    return _is_str(x) and x.strip() != ""
+
+
+def _name_list(xs) -> str:
+    """Join names as 'a', 'a and b', 'a, b and c'."""
+    xs = list(xs)
+    return "".join(xs) if len(xs) < 2 else "%s and %s" % (", ".join(xs[:-1]), xs[-1])
+
+
 def _is_num(x) -> bool:
     # bool is a subclass of int in Python, and a boolean where a number belongs is a mistake.
     if isinstance(x, bool) or not isinstance(x, (int, float)):
@@ -147,6 +163,13 @@ def validate_spec(spec, strict: bool = True):
     schema cannot express, and checks that its declared ``spec_version`` is one this
     implementation understands. Called by ``load_spec`` by default.
 
+    Names are checked together as well as one by one. Two columns with one name, a contrast
+    column defined by two factors or named like another column, an interaction whose analysis
+    column already exists, a level listed twice, a correlation that pairs a term with itself or
+    gives one pair twice, a factor both between and within a unit, and a ``random.item`` entry in
+    a design without items each validated and then changed the data in silence. The rules are set
+    out under Names in the specification.
+
     Parameters
     ----------
     spec : dict
@@ -165,6 +188,13 @@ def validate_spec(spec, strict: bool = True):
     ------
     ValueError
         If the specification is invalid. All problems found are reported together.
+
+    Warns
+    -----
+    UserWarning
+        For an unrecognised field when ``strict`` is false, and in either mode for a within
+        factor whose ``vary_within`` leaves out a unit of the design, which pilotr crosses with
+        every unit anyway. From spec_version 0.4 the latter is an error.
     """
     import warnings
 
@@ -273,8 +303,8 @@ def validate_spec(spec, strict: bool = True):
                 for k in f:
                     if k not in ("name", "levels", "contrasts", "vary_within", "between"):
                         unknown("unknown field '%s.%s'" % (where, k))
-                if not _is_str(f.get("name")):
-                    bad("%s.name must be a single string" % where)
+                if not _is_name(f.get("name")):
+                    bad("%s.name must be a non-empty string" % where)
                 levels = f.get("levels")
                 nlev = len(levels) if isinstance(levels, list) else 0
                 if not isinstance(levels, list) or nlev < 2 or not all(_is_str(v) for v in levels):
@@ -334,8 +364,8 @@ def validate_spec(spec, strict: bool = True):
                     if k not in ("name", "varies_by", "mean", "sd", "dist", "min", "max",
                                  "reliability"):
                         unknown("unknown field '%s.%s'" % (where, k))
-                if not _is_str(p.get("name")):
-                    bad("%s.name must be a single string" % where)
+                if not _is_name(p.get("name")):
+                    bad("%s.name must be a non-empty string" % where)
                 else:
                     pred_names.append(p["name"])
                 vb = p.get("varies_by")
@@ -417,6 +447,9 @@ def validate_spec(spec, strict: bool = True):
             bad("'random' must be an object keyed by grouping factor")
         else:
             for g, re in random_spec.items():
+                if not _is_name(g):
+                    bad("a 'random' grouping factor must have a non-empty name")
+                    continue
                 where = "random.%s" % g
                 if not isinstance(re, dict):
                     bad("%s must be an object" % where)
@@ -489,7 +522,7 @@ def validate_spec(spec, strict: bool = True):
             if not known:
                 bad("'response.family' must be one of %s%s"
                     % (", ".join(FAMILY_PARAMS), (", not '%s'" % fam) if _is_str(fam) else ""))
-            if not _is_str(r.get("name")) or not r["name"]:
+            if not _is_name(r.get("name")):
                 bad("'response.name' must be a non-empty string")
             if known:
                 needed = FAMILY_PARAMS[fam]
@@ -523,11 +556,196 @@ def validate_spec(spec, strict: bool = True):
                         unknown("'response.round' has no effect for the %s family, whose outcome "
                                 "is already an integer" % fam)
 
+    # ---- names and structure ----
+    # An empty object is no object to R, which reads `{}` as an unnamed empty list.
+    found, found_soft = _check_names(spec, has_item,
+                                     units_ok=isinstance(units, dict) and len(units) > 0)
+    problems.extend(found)
+    soft.extend(found_soft)
+
     if soft:
         warnings.warn("in this design specification:\n  - " + "\n  - ".join(soft), stacklevel=2)
     if problems:
         raise ValueError("invalid design specification:\n  - " + "\n  - ".join(problems))
     return spec
+
+
+def _check_names(spec, has_item, units_ok):
+    """The rules that look at a specification's names together.
+
+    They run after the per-field checks and mirror the R twin's ``.check_names()`` line for line.
+    Each case they refuse used to validate and then move an effect, rescale a variance or
+    overwrite a column without a word. Where a column was overwritten the twins also disagreed,
+    R replacing the earlier column and Python appending a second one under the same name, so one
+    specification gave two different tables. Only well-formed parts are inspected, since a
+    malformed one is reported by its own check.
+
+    Returns the refusals and the warnings, in the order both twins report them.
+    """
+    problems: list[str] = []
+    soft: list[str] = []
+    bad = problems.append
+    factors = spec.get("factors") if isinstance(spec.get("factors"), list) else []
+    predictors = spec.get("predictors") if isinstance(spec.get("predictors"), list) else []
+    rs = spec.get("random") if isinstance(spec.get("random"), dict) else {}
+    groups = [g for g in rs if _is_name(g)]
+    r = spec.get("response")
+
+    def repeats(xs):
+        """Repeats in the order of their first appearance, as the R twin lists them."""
+        return [x for x in dict.fromkeys(xs) if xs.count(x) > 1]
+
+    # A level listed twice put the declared effect into the data, since the simulator works by
+    # position, while R's model_data(), which matches labels, gave every row the first level's
+    # value.
+    for i, f in enumerate(factors, start=1):
+        if not isinstance(f, dict):
+            continue
+        lv = f.get("levels")
+        if isinstance(lv, list) and all(_is_str(v) for v in lv):
+            for level in repeats(lv):
+                bad("factors[%d].levels repeats '%s'; each level needs its own label" % (i, level))
+        # With both fields each unit got one row per level, every one at the level that the
+        # between assignment chose.
+        if f.get("vary_within") is not None and f.get("between") is not None:
+            bad("factors[%d] sets both 'vary_within' and 'between'; a factor has to set exactly "
+                "one of them" % i)
+
+    # Every column of the simulated data, in the order the simulator writes them.
+    cols: list[str] = []
+    roles: list[str] = []
+
+    def claim(nm, role):
+        if _is_name(nm):
+            cols.append(nm)
+            roles.append(role)
+
+    if units_ok:
+        claim("subject", "the subject unit")
+        if has_item:
+            claim("item", "the item unit")
+    for g in groups:
+        if g not in ("subject", "item"):
+            claim(g, "random.%s" % g)
+    for i, f in enumerate(factors, start=1):
+        if isinstance(f, dict):
+            claim(f.get("name"), "factors[%d]" % i)
+    for i, p in enumerate(predictors, start=1):
+        if isinstance(p, dict):
+            claim(p.get("name"), "predictors[%d]" % i)
+    if isinstance(r, dict):
+        claim(r.get("name"), "the response")
+
+    def roles_of(nm):
+        return [w for c, w in zip(cols, roles) if c == nm]
+
+    for nm in repeats(cols):
+        who = roles_of(nm)
+        # Two predictors alone are already reported as a duplicated predictor name.
+        if all(w.startswith("predictors[") for w in who):
+            continue
+        bad("the name '%s' is used for more than one column (%s); every unit, grouping factor, "
+            "factor, predictor and the response needs a column of its own" % (nm, _name_list(who)))
+
+    # Contrast columns are where the coefficients and slopes act. One defined by two factors
+    # carried only the later factor's effect, and one named like a predictor took the
+    # predictor's draws in place of the contrast. A contrast named after its own factor is
+    # allowed: two-level specifications use it, and the factor's name is checked above.
+    contrasts: list[tuple[str, int]] = []
+    for i, f in enumerate(factors, start=1):
+        cs = f.get("contrasts") if isinstance(f, dict) else None
+        if isinstance(cs, dict):
+            contrasts.extend((cn, i) for cn in cs)
+    for cn in dict.fromkeys(c for c, _ in contrasts):
+        fs = list(dict.fromkeys(i for c, i in contrasts if c == cn))
+        if len(fs) > 1:
+            bad("the contrast column '%s' is defined by more than one factor (%s); each contrast "
+                "column has to belong to a single factor"
+                % (cn, _name_list("factors[%d]" % i for i in fs)))
+    for cn, i in contrasts:
+        if cn == factors[i - 1].get("name"):
+            continue
+        who = roles_of(cn)
+        if who:
+            bad("the contrast column '%s' of factors[%d] is also the name of %s; a contrast "
+                "column may share its own factor's name but no other column's"
+                % (cn, i, _name_list(who)))
+
+    # R's model_data() writes an interaction key "a:b" to a product column "a_b", over any column
+    # that already has that name.
+    fx = spec.get("fixed")
+    keys: list[str] = []
+    if isinstance(fx, dict) and isinstance(fx.get("coefficients"), dict):
+        keys.extend(fx["coefficients"])
+    for g in groups:
+        re = rs[g]
+        if isinstance(re, dict) and isinstance(re.get("slopes"), dict):
+            keys.extend(re["slopes"])
+    keys = [k for k in dict.fromkeys(keys) if ":" in k]
+    for j, key in enumerate(keys):
+        col = key.replace(":", "_")
+        who = (roles_of(col)
+               + ["a contrast column of factors[%d]" % i
+                  for i in dict.fromkeys(i for c, i in contrasts if c == col)]
+               + ["the analysis column of the interaction '%s'" % k
+                  for k in keys[:j] if k.replace(":", "_") == col])
+        if who:
+            bad("the interaction '%s' becomes the analysis column '%s', which is already the name "
+                "of %s" % (key, col, _name_list(who)))
+
+    # A term paired with itself overwrote the unit diagonal of the correlation matrix, which
+    # rescaled that term's variance, and a pair given twice kept whichever came later.
+    for g in groups:
+        re = rs[g]
+        cors = re.get("correlations") if isinstance(re, dict) else None
+        if not isinstance(cors, dict):
+            continue
+        seen: dict[tuple[str, str], str] = {}
+        for k in cors:
+            parts = [s.strip() for s in k.replace("~", ",").split(",")]
+            if len(parts) != 2:
+                continue
+            a, b = parts
+            if a == b:
+                bad("random.%s.correlations key '%s' pairs '%s' with itself; a term's correlation "
+                    "with itself is always 1" % (g, k, a))
+                continue
+            first = seen.get((a, b), seen.get((b, a)))
+            if first is not None:
+                bad("random.%s.correlations keys '%s' and '%s' name the same pair of terms; give "
+                    "each pair once" % (g, first, k))
+            else:
+                seen[(a, b)] = k
+
+    # The simulator drew no item effects without an item unit, while R's model_formula() still
+    # emitted an item term for the analysis.
+    if units_ok and not has_item and rs.get("item") is not None:
+        bad("random.item describes an item unit the design does not have; add units.item or "
+            "remove random.item")
+
+    # pilotr crosses a within factor with every unit of the design, whatever vary_within lists,
+    # so an incomplete list has never changed the data. It is a warning until spec_version 0.4.
+    if units_ok:
+        design_units = ["subject"] + (["item"] if has_item else [])
+        for i, f in enumerate(factors, start=1):
+            if not isinstance(f, dict) or f.get("between") is not None:
+                continue
+            vw = f.get("vary_within")
+            if isinstance(vw, str):
+                vw = [vw]
+            if not isinstance(vw, list) or not vw or not all(w in design_units for w in vw):
+                continue
+            miss = [u for u in design_units if u not in vw]
+            if miss:
+                quoted = _name_list("'%s'" % u for u in miss)
+                soft.append(
+                    "factors[%d].vary_within lists %s but not %s. pilotr crosses a within factor "
+                    "with every unit of the design, so it varies within %s as well; list every "
+                    "unit, or make it between 'item' if items carry it. From spec_version 0.4 "
+                    "this is an error."
+                    % (i, _name_list("'%s'" % w for w in dict.fromkeys(vw)), quoted, quoted))
+
+    return problems, soft
 
 
 def _drop_nulls(x):

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
-  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, and that a specification using a 0.3 feature declares 0.3.",
+  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, that a specification using a 0.3 feature declares 0.3, and that names do not collide (see Names in SPEC.md).",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "properties": {
@@ -32,9 +32,10 @@
       "items": {
         "type": "object",
         "required": ["name", "levels", "contrasts"],
+        "oneOf": [{ "required": ["vary_within"] }, { "required": ["between"] }],
         "properties": {
-          "name": { "type": "string" },
-          "levels": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+          "name": { "type": "string", "pattern": "\\S" },
+          "levels": { "type": "array", "items": { "type": "string" }, "minItems": 2, "uniqueItems": true },
           "contrasts": {
             "type": "object",
             "minProperties": 1,
@@ -53,7 +54,7 @@
         "type": "object",
         "required": ["name", "varies_by"],
         "properties": {
-          "name": { "type": "string" },
+          "name": { "type": "string", "pattern": "\\S" },
           "varies_by": {
             "type": "string",
             "enum": ["subject", "item", "observation"],
@@ -97,6 +98,7 @@
         "subject": { "$ref": "#/$defs/ranef" },
         "item": { "$ref": "#/$defs/ranef" }
       },
+      "propertyNames": { "pattern": "\\S" },
       "additionalProperties": { "$ref": "#/$defs/ranef" }
     },
     "response": {
@@ -108,7 +110,7 @@
           "enum": ["gaussian", "lognormal", "shifted_lognormal", "exgaussian", "bernoulli",
                    "poisson", "ordinal", "beta"]
         },
-        "name": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "sigma": { "type": "number", "exclusiveMinimum": 0 },
         "shift": { "type": "number" },
         "beta": {
@@ -158,7 +160,7 @@
         "correlations": {
           "type": "object",
           "additionalProperties": { "type": "number", "minimum": -1, "maximum": 1 },
-          "description": "Keyed \"a,b\" or \"a~b\", naming two of this group's random-effect terms, where the first term is always \"intercept\". The resulting covariance has to be positive definite; one that is not is an error rather than something to clamp."
+          "description": "Keyed \"a,b\" or \"a~b\", naming two different terms of this group's random effects: \"intercept\" or one of its slopes, in either order, so a pair of slopes is as valid as the intercept and a slope. Each pair is given once, in one order only. The resulting covariance has to be positive definite; one that is not is an error rather than something to clamp."
         },
         "correlated": {
           "type": "boolean",
