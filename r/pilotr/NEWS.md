@@ -2,6 +2,17 @@
 
 ## Read this first
 
+* `power_design()` refuses designs whose rows are correlated. It t-tests every row as an
+  independent observation, yet it accepted any Gaussian design with a two-level between factor.
+  That included designs crossed with items, designs with a within factor and subjects nested in
+  sites. Take 30 subjects crossed with 20 items, with by-subject and residual standard
+  deviations of 1 and a by-item one of 0.3. With no true effect, the row-wise t-test was
+  significant in 105 of 200 replicates, against 16 for a t-test of the subject means on the same
+  data. The power it reported was inflated and its Type M understated. It now takes one row per
+  subject and no clustering, and otherwise names the item unit, within factor or grouping factor
+  it found and points to `power_mixed()`. The no-code app, installed or in the browser, applies
+  the same rule.
+
 * `brms_bridge()` and `generate_design_analysis()` emit models that brms accepts, with priors on
   the data's scale. A prior on random-effect standard deviations was emitted for designs without
   random effects, which brms rejects, so four of the eight shipped examples failed before
@@ -99,6 +110,10 @@
 * `model_data()` no longer fills a factor's later contrast columns with `NA` when the first
   contrast column carries the factor's own name. With three levels, every `power_mixed()`
   replicate then failed to fit.
+
+* `power_design()` reports a true effect of 0, with Type S and Type M undefined (`NaN`), when the
+  specification has no coefficient for the factor's contrast, as with `"coefficients": {}`. It
+  stopped with "missing value where TRUE/FALSE needed".
 
 ## Deprecated
 

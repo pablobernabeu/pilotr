@@ -7,8 +7,8 @@ computed over the significant replicates.
 
 ## Two-group Gaussian power
 
-`power` handles the two-group Gaussian design with a two-sample t-test. It needs `scipy`
-(install the `power` extra):
+`power` handles the two-group Gaussian design with one row per subject, using a two-sample
+t-test. It needs `scipy` (install the `power` extra):
 
 ```python exec="true" session="pow"
 import sys; sys.path.insert(0, "docs")
@@ -36,6 +36,16 @@ print(table([{k: res[k] for k in (
 At roughly 50% power the Type M ratio is well above 1. Conditional on significance the
 estimated effect is exaggerated, even though the average estimate over all replicates is
 unbiased. This is the statistical-significance filter that design analysis is meant to expose.
+
+The t-test treats every row as an independent observation, which is valid only when each
+subject contributes one row and no rows share a cluster. Take 30 subjects crossed with 20
+items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3. With no
+true effect, a row-by-row test is significant in about half of all replicates, against the
+nominal 5%. `power` therefore refuses a design with an item unit, a within factor or a
+grouping factor besides `subject`, and its message names what it found. The R package's
+`power_mixed()` fits the model that such a design implies. Continuous predictors and
+by-subject random effects are allowed, since with one row per subject they vary independently
+from row to row.
 
 ## Power over sample size
 

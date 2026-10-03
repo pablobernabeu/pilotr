@@ -39,8 +39,8 @@
 #'
 #' Design analysis runs from that same specification.
 #' [power_design()] estimates power for a two-group Gaussian
-#' design, together with the Type S and Type M errors of Gelman and Carlin
-#' (2014). [power_mixed()] does the same for a crossed
+#' design with one row per subject, together with the Type S and Type M errors
+#' of Gelman and Carlin (2014). [power_mixed()] does the same for a crossed
 #' mixed-effects design, and [power_curve_mixed()] sweeps
 #' sample size to locate where a design becomes adequately powered.
 #' [precision_design()] and its curve counterpart

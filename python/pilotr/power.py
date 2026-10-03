@@ -9,9 +9,9 @@ replicates.
 * Type S (sign) error: P(estimate has the wrong sign | significant)
 * Type M (magnitude): E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
-The two-group Gaussian design uses a two-sample t-test (`power`). Crossed mixed-effects
-designs use a statsmodels MixedLM backend (`power_mixed`), which is conservative for
-random-slope designs; the R package's lme4 backend is the reference there.
+The two-group Gaussian design with one row per subject uses a two-sample t-test (`power`).
+Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which is
+conservative for random-slope designs; the R package's lme4 backend is the reference there.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
 processes. The replicate seeds are derived once from the specification's seed, so the
@@ -44,6 +44,50 @@ def _map_replicates(rep, seeds, executor):
     return list(executor.map(rep, seeds, chunksize=max(1, len(seeds) // (4 * n_workers))))
 
 
+# The refusal for a design whose rows are correlated, byte-identical in the R twin. It sends the
+# user of either twin to R's power_mixed(), since power_mixed() here fits a single within factor
+# crossed with items and refuses every between-subjects design.
+_CORRELATED_ROWS = (
+    "power_design() in R and power() in Python t-test every row as an independent observation, "
+    "which is valid only when each subject contributes one row and no rows share a cluster. "
+    "This design has %s, so its rows are correlated and the t-test would overstate power and "
+    "understate Type M. Use power_mixed() in the R package, which fits the model the "
+    "specification implies.")
+
+
+def _two_group_refusal(spec):
+    """Why the two-group backend cannot analyse a validated specification, or None when it can.
+
+    A t-test of every row needs independent rows. It used to be applied to any Gaussian design
+    with a two-level between factor, and under the null the test of 30 subjects crossed with 20
+    items was then significant in 105 of 200 replicates. An item unit, a within factor or an
+    extra grouping factor is therefore refused, the first found being named. Predictors and a
+    ``subject`` entry stay allowed, since with one row per subject they vary independently from
+    row to row. A between factor on items needs an item unit, so the item test covers it.
+    Mirrors ``.two_group_refusal()`` in power.R, message for message.
+    """
+    if spec["response"]["family"] != "gaussian":
+        return "The power backend currently handles only the gaussian two-group design."
+    factors = spec.get("factors") or []
+    between = [f for f in factors if f.get("between")]
+    if len(between) != 1 or len(between[0]["levels"]) != 2:
+        return "The power backend expects exactly one 2-level between factor."
+    # A factor can set `vary_within` alongside `between`, and it then varies within subjects.
+    within = [f for f in factors if f.get("vary_within")]
+    # The grouping factors _simulate() draws: an `item` entry without an item unit groups
+    # nothing, and with one the item unit is named first.
+    extra = [g for g in (spec.get("random") or {}) if g not in ("subject", "item")]
+    if "item" in spec["units"]:
+        what = "an item unit"
+    elif within:
+        what = "the within factor '%s'" % within[0]["name"]
+    elif extra:
+        what = "the grouping factor '%s'" % extra[0]
+    else:
+        return None
+    return _CORRELATED_ROWS % what
+
+
 def _power_replicate(seed, spec, fname, lev0, lev1, yname):
     """One two-group replicate: simulate at `seed`, t-test, return (estimate, p-value)."""
     from scipy import stats  # lazy: imported in each worker process on first use
@@ -63,10 +107,21 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     together with the Type S (sign) and Type M (magnitude) errors of Gelman and Carlin
     (2014), computed over the significant replicates.
 
+    The t-test treats every row as an independent observation, which is valid only when each
+    subject contributes one row and no rows share a cluster. `power` therefore takes a Gaussian
+    design with exactly one two-level factor between subjects and no item unit, within factor or
+    grouping factor besides ``subject``. Continuous predictors and by-subject random effects are
+    allowed, since with one row per subject they vary independently from row to row. Any other
+    design is refused with a message naming what makes its rows correlated. The R package's
+    ``power_mixed()`` fits the model that such a design implies. Take 30 subjects crossed with
+    20 items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3.
+    With no true effect, a t-test of every row is significant in about half of all replicates.
+
     Parameters
     ----------
     spec : dict or str
-        A two-group Gaussian design specification (dict or path to a JSON file).
+        A two-group Gaussian design specification with one row per subject (dict or path to a
+        JSON file).
     n_sims : int, optional
         Number of Monte Carlo replicates (default 1000).
     alpha : float, optional
@@ -83,11 +138,14 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
         `type_s`, `type_m`. Both design-analysis quantities are `nan` when no replicate
         reached significance and when the true effect is zero, as in a null condition:
         neither is defined without a true value to compare against, and Type M divides by it.
+        A specification with no coefficient for the factor's contrast has a true effect of 0.
 
     Raises
     ------
     NotImplementedError
-        If the design is not a single two-level between-subjects Gaussian factor.
+        If the design is not Gaussian, does not have exactly one two-level between factor, or
+        has rows that are correlated because of an item unit, a within factor or a grouping
+        factor besides ``subject``.
 
     Notes
     -----
@@ -108,18 +166,18 @@ def _power_impl(spec, n_sims, alpha, executor):
     """The replicate loop behind `power`, taking an optional executor so that sweep
     functions can start one process pool and reuse it across grid points."""
     spec = _as_spec(spec)
-    if spec["response"]["family"] != "gaussian":
-        raise NotImplementedError(
-            "The power backend currently handles only the gaussian two-group design.")
+    refusal = _two_group_refusal(spec)
+    if refusal is not None:
+        raise NotImplementedError(refusal)
 
-    between = [f for f in spec["factors"] if f.get("between")]
-    if len(between) != 1 or len(between[0]["levels"]) != 2:
-        raise NotImplementedError("The power backend expects exactly one 2-level between factor.")
-    factor = between[0]
+    factor = next(f for f in spec["factors"] if f.get("between"))
     fname = factor["name"]
     lev0, lev1 = factor["levels"]
     col, vals = next(iter(factor["contrasts"].items()))
-    true_effect = spec["fixed"]["coefficients"][col] * (vals[1] - vals[0])
+    # A specification may leave the contrast out of `coefficients`, `{}` included, and the
+    # simulator then generates no effect, so the true effect is 0. The lookup used to raise
+    # KeyError.
+    true_effect = spec["fixed"]["coefficients"].get(col, 0.0) * (vals[1] - vals[0])
     yname = spec["response"]["name"]
 
     base_seed = spec["seed"]
@@ -248,7 +306,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     fname = f["name"]
     col, vals = next(iter(f["contrasts"].items()))
     l2c = {f["levels"][i]: vals[i] for i in range(len(f["levels"]))}
-    beta = spec["fixed"]["coefficients"][col]
+    # No coefficient for the contrast means no effect, as in _power_impl.
+    beta = spec["fixed"]["coefficients"].get(col, 0.0)
     yname, fam = spec["response"]["name"], spec["response"]["family"]
     shift = spec["response"].get("shift", 0.0)
     base = spec["seed"]
@@ -289,7 +348,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
     Parameters
     ----------
     spec : dict or str
-        A two-group Gaussian design specification.
+        A two-group Gaussian design specification with one row per subject, as `power`
+        requires.
     subject_ns : iterable of int
         Subject counts to evaluate.
     n_sims : int, optional

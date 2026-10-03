@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `power` refuses designs whose rows are correlated, with the R twin's message. It t-tested
+  every row as an independent observation and accepted any Gaussian design with a two-level
+  between factor, including designs crossed with items, designs with a within factor and
+  subjects nested in sites. Take 30 subjects crossed with 20 items, with by-subject and
+  residual standard deviations of 1 and a by-item one of 0.3. With no true effect, the row-wise
+  t-test was significant in 105 of 200 replicates, against 16 for a t-test of the subject means
+  on the same data. It now takes one row per subject and no clustering, and otherwise raises
+  `NotImplementedError` naming the item unit, within factor or grouping factor it found.
+  `power_curve` refuses the same designs.
+- The replicates of `power`, `power_curve` and `power_mixed` skip validation, since the
+  specification is validated once before them. Each replicate used to validate it again.
+
 ### Fixed
 
 - The citation on the About page names the Python package version alone. It read "R and
@@ -42,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `validate_spec` refuses a factor, predictor or extra grouping-factor name that is empty or made
   only of spaces, and a response name made only of spaces (an empty one was already refused).
   Such a name validated and then became a column with no visible name.
+- `power` and `power_mixed` read a missing coefficient for the tested contrast as a true effect
+  of 0, with Type S and Type M undefined. They raised `KeyError`.
 
 ### Deprecated
 

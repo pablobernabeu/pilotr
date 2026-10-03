@@ -55,6 +55,60 @@ testServer(app = app_dir, {
   check("SyntaxPC" %in% names(di) && nrow(di) == 4000,
         "advanced paste-spec path simulates a continuous-predictor design")
 
+  # Power runs only where the t-test holds, with one row per subject and no shared cluster. The
+  # app writes power_design()'s rule out, since the installed app reaches only pilotr's exports,
+  # so the two are held together here. Testing the first factor alone let a pasted crossed design
+  # through to a t-test of its correlated rows, and let a three-level design stop the observer.
+  base <- build_spec(list(name = "b", seed = 1, design_kind = "between", n_subject = 30,
+                          factor_name = "group", lev1 = "a", lev2 = "b", intercept = 0,
+                          effect = 0.5, family = "gaussian", resp_name = "y", sigma = 1))
+  crossed <- base
+  crossed$units$item <- list(n = 20L)
+  crossed$random <- list(subject = list(intercept_sd = 1), item = list(intercept_sd = 0.3))
+  sites <- base
+  sites$random <- list(site = list(intercept_sd = 0.5, over = "subject", n = 6L))
+  within <- base
+  within$factors[[2]] <- list(name = "block", levels = c("x", "y"),
+                              contrasts = list(blk = c(-0.5, 0.5)), vary_within = "subject")
+  three <- base
+  three$factors[[1]]$levels <- c("a", "b", "c")
+  three$factors[[1]]$contrasts <- list(effect = c(-1, 0, 1))
+  two_by_two <- base
+  two_by_two$factors[[2]] <- list(name = "dose", levels = c("low", "high"),
+                                  contrasts = list(dose = c(-0.5, 0.5)), between = "subject")
+  by_subject <- base
+  by_subject$random <- list(subject = list(intercept_sd = 0.5))
+  # The last three reach the clauses the others miss. `lognormal` changes the family, and `both`
+  # makes the factor vary within subjects as well. `item_entry` adds an item entry, which groups
+  # nothing in a design without an item unit.
+  lognormal <- base
+  lognormal$response <- list(family = "lognormal", name = "y", sigma = 0.3)
+  both <- base
+  both$factors[[1]]$vary_within <- "subject"
+  item_entry <- base
+  item_entry$random <- list(item = list(intercept_sd = 0.3))
+  designs <- list(base = base, by_subject = by_subject, crossed = crossed, sites = sites,
+                  within = within, three = three, two_by_two = two_by_two,
+                  lognormal = lognormal, both = both, item_entry = item_entry)
+  agree <- vapply(designs, function(s)
+    identical(gaussian_two_group(s), is.null(.two_group_refusal(s))), logical(1))
+  check(all(agree), paste("the app's power check agrees with power_design()'s on",
+                          paste(names(designs), collapse = ", ")))
+  # Each refused design follows a power result, so a message left over from an observer that
+  # stopped cannot pass for the refusal.
+  session$setInputs(n_sims = 100)
+  clicks <- 4
+  for (nm in c("three", "by_subject", "crossed")) {
+    clicks <- clicks + 1
+    session$setInputs(spec_json_in = spec_json(designs[[nm]]), run_power = clicks)
+    if (identical(nm, "by_subject"))
+      check(grepl("Power *: ", output$power_out),
+            "a pasted design with one row per subject and a by-subject intercept runs")
+    else
+      check(grepl("The in-app power backend covers", output$power_out, fixed = TRUE),
+            sprintf("a pasted '%s' design gets the not-supported text", nm))
+  }
+
   # verified R-script export: run the design in a clean R subprocess and compare
   session$setInputs(spec_json_in = "", verify_code = 1)
   vo <- output$verify_out

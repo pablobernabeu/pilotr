@@ -98,9 +98,9 @@ guide <- card(
     tags$p(tags$b("pilotr"), " simulates experimental and behavioural data from a portable ",
            "design specification. This browser version runs entirely on your device, with no ",
            "server and nothing uploaded. It covers the light path. You can build a design, ",
-           "simulate data and inspect it, estimate two-group Gaussian power together with ",
-           "the sample size its curve solves to, and export a reproducible script or the ",
-           "specification itself."),
+           "simulate data and inspect it, and export a reproducible script or the specification ",
+           "itself. For a two-group Gaussian design with one row per subject, it also estimates ",
+           "power and the sample size its curve solves to."),
     tags$ol(
       tags$li("Describe the design in the left panel. This includes the sample sizes, the ",
               "factor and its two levels, the fixed intercept and effect, and a response ",
@@ -378,14 +378,17 @@ server <- function(input, output, session) {
   })
 
   # ---- power (two-group Gaussian) ----
-  gaussian_two_group <- function(spec) {
-    identical(spec$response$family, "gaussian") &&
-      length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
-  }
+  # power_design() t-tests every row, so it runs only for a Gaussian design with one two-level
+  # factor between subjects, one row per subject and no shared cluster. The browser build
+  # sources power.R, so the app calls power_design()'s own check, which the installed app has
+  # to write out because it reaches only pilotr's exports. Testing the first factor alone let a
+  # pasted crossed design through to a t-test of its correlated rows, and let a three-level or
+  # 2 x 2 design stop the observer.
+  gaussian_two_group <- function(spec) is.null(.two_group_refusal(spec))
   not_supported_msg <- paste0(
-    "The in-browser demo runs power only for the two-group Gaussian design.\n",
-    "This design needs the installed package. Download the spec with the Spec (.json)\n",
-    "button, then run one of the following.\n\n",
+    "The in-browser demo runs power only for the two-group Gaussian design with one row\n",
+    "per subject. This design needs the installed package. Download the spec with the\n",
+    "Spec (.json) button, then run one of the following.\n\n",
     "R (crossed mixed-effects power and a power curve, via lme4):\n",
     "    library(pilotr)\n",
     "    spec <- load_spec(\"design.json\")\n",

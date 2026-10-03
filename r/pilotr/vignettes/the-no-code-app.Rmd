@@ -47,7 +47,9 @@ standard deviations. Then read the tabs. 'Design spec' holds the exact JSON spec
 portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
 summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
 and Type M errors, together with a power curve over sample size and the sample size at which
-that curve reaches 0.80, with a confidence interval on it. 'R script' emits a self-contained,
+that curve reaches 0.80, with a confidence interval on it. The tab runs this analysis for a
+two-group Gaussian design with one row per subject, and for any other design it explains how to
+run it in the installed package. 'R script' emits a self-contained,
 reproducible R script, which the installed app can also verify by running it in a clean R
 session and confirming bit-for-bit reproduction.
 

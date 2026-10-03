@@ -107,13 +107,13 @@ guide_tab <- tabPanel(
            "designs beyond the point-and-click controls, such as continuous predictors, ",
            "interactions and nesting."),
     tags$h5("Power and design analysis"),
-    tags$p("The in-app backend estimates power for the two-group Gaussian design, reports the ",
-           "Type S and Type M errors of Gelman and Carlin (2014), and draws a power curve over ",
-           "sample size. It then solves that curve for the sample size at which power reaches ",
-           "0.80 and reports a confidence interval on it. The heavier analyses stay with the ",
-           "packages themselves: crossed mixed-effects power (via lme4) in R and in Python, and ",
-           "precision/ROPE design analysis in R. The specification you build here drives all ",
-           "three interfaces."),
+    tags$p("The in-app backend estimates power for the two-group Gaussian design with one row ",
+           "per subject. It reports the Type S and Type M errors of Gelman and Carlin (2014) and ",
+           "draws a power curve over sample size. It then solves that curve for the sample size ",
+           "at which power reaches 0.80 and reports a confidence interval on it. The heavier ",
+           "analyses stay with the packages themselves: crossed mixed-effects power (via lme4) ",
+           "in R and in Python, and precision/ROPE design analysis in R. The specification you ",
+           "build here drives all three interfaces."),
     tags$p(
       tags$a(href = "https://pablobernabeu.github.io/pilotr/", target = "_blank", "Documentation"), " · ",
       tags$a(href = "https://github.com/pablobernabeu/pilotr", target = "_blank", "Source (R and Python)")
@@ -202,7 +202,7 @@ ui <- fluidPage(
         tabPanel("Summary & plot", verbatimTextOutput("summary"), plotOutput("plot", height = "320px")),
         tabPanel("Power & design analysis",
           p("Simulation-based power with Type S / Type M (Gelman & Carlin, 2014), for the ",
-            "two-group Gaussian design."),
+            "two-group Gaussian design with one row per subject."),
           numericInput("n_sims", "Simulations (capped in-app)", N_SIMS_DEFAULT,
                        min = N_SIMS_MIN, max = MAX_SIMS, step = 100),
           div(class = "mb-3",
@@ -366,12 +366,24 @@ server <- function(input, output, session) {
   # ---- power: point estimate + curve, capped, async when installed (worker process) ----
   power_result     <- reactiveVal(NULL)
   power_curve_data <- reactiveVal(NULL)
-  gaussian_two_group <- function(spec)
-    identical(spec$response$family, "gaussian") &&
-      length(spec$factors) >= 1 && !is.null(spec$factors[[1]]$between)
+  # power_design() t-tests every row, so it runs only for a Gaussian design with one two-level
+  # factor between subjects, one row per subject and no shared cluster. That rules out an item
+  # unit and any grouping factor besides subject, while an item entry groups nothing without an
+  # item unit. This is power_design()'s own rule, written out because the installed app reaches
+  # only pilotr's exports. Testing the first factor alone let a pasted crossed design through to
+  # a t-test of its correlated rows, and let a three-level or 2 x 2 design stop the observer.
+  gaussian_two_group <- function(spec) {
+    factors <- spec[["factors"]]
+    identical(spec[["response"]][["family"]], "gaussian") && length(factors) == 1L &&
+      identical(factors[[1]][["between"]], "subject") &&
+      is.null(factors[[1]][["vary_within"]]) && length(factors[[1]][["levels"]]) == 2L &&
+      is.null(spec[["units"]][["item"]]) &&
+      all(names(spec[["random"]]) %in% c("subject", "item"))
+  }
   not_supported <- paste0(
-    "The in-app power backend covers the two-group Gaussian design. For a crossed\n",
-    "mixed-effects design, download the spec (the Design spec tab) and run it directly:\n\n",
+    "The in-app power backend covers the two-group Gaussian design with one row per\n",
+    "subject. For a crossed mixed-effects design, download the spec (the Design spec tab)\n",
+    "and run it directly:\n\n",
     "R (lme4; may take a few minutes):\n",
     "    library(pilotr)\n",
     "    spec <- load_spec(\"design.json\")\n",

@@ -3,7 +3,7 @@
 The two validators are the gate that decides whether a specification is usable, so a
 specification accepted by one implementation and refused by the other is itself a parity bug: it
 would mean a design that runs in R and fails in Python, or worse, one that runs in both but with
-different meaning. This script runs two batteries through both twins.
+different meaning. This script runs three batteries through both twins.
 
 The spec battery hands each twin's validate_spec() the same parsed specification. The file
 battery writes raw JSON text to a file and has each twin read it with its own load_spec(), which
@@ -11,11 +11,18 @@ is where the readers used to differ: one-element arrays, `[]`, JSON null, whole-
 repeated keys, seeds beyond 2^53 and a byte-order mark. Where both twins accept a file, each
 simulates it and the two dumps, in the 17-digit format of run_r.R and run_py.py, must hash alike.
 
+The power battery checks the two-group backend's refusal, which power_design() in R and power()
+in Python raise before drawing any replicate. Each twin validates the specification and applies
+its two-group check, the first two steps of both functions, so the battery needs neither scipy
+nor any simulation. The check refuses a design whose rows are correlated, naming the item unit,
+within factor or grouping factor that makes them so.
+
 A case passes when both twins accept it, or both refuse it with the same message character for
 character. In the spec battery the warnings the two validators raise, such as the deprecation of
 an incomplete `vary_within`, must also match character for character. A Python exception other
-than ValueError, or an R error raised by base R rather than by the validator (which always stops
-with call. = FALSE), counts as a crash and fails the case whatever the other twin did.
+than the one each battery expects (ValueError, and NotImplementedError from the two-group check),
+or an R error raised by base R rather than by pilotr (which always stops with call. = FALSE),
+counts as a crash and fails the case whatever the other twin did.
 
 Usage: python tools/parity/validate_cross.py
 Exit status is 0 when the two agree on every case.
@@ -36,7 +43,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "python"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from pilotr.simulate import load_spec, simulate  # noqa: E402
+from pilotr.power import _two_group_refusal  # noqa: E402
+from pilotr.simulate import _as_spec, load_spec, simulate  # noqa: E402
 from pilotr.validate import validate_spec  # noqa: E402
 from run_py import _dump  # noqa: E402  the dump format the parity harness compares
 
@@ -372,6 +380,68 @@ def file_cases():
     return out
 
 
+# ---- the power battery --------------------------------------------------------------------
+
+def _two_group(fn):
+    """The shipped two-group design, one row per subject, changed by `fn`."""
+    s = _between()
+    fn(s)
+    return s
+
+
+_BLOCK = {"name": "block", "levels": ["x", "y"], "contrasts": {"blk": [-0.5, 0.5]},
+          "vary_within": ["subject"]}
+_DOSE = {"name": "dose", "levels": ["low", "high"], "contrasts": {"dose": [-0.5, 0.5]},
+         "between": "subject"}
+
+
+def power_cases():
+    """(label, spec) pairs, each put through both twins' two-group check."""
+    out = []
+    for name in sorted(os.listdir(os.path.join(ROOT, "spec", "examples"))):
+        if name.endswith(".json"):
+            out.append(("shipped:" + name, _read("spec", "examples", name)))
+    for name in sorted(os.listdir(os.path.join(ROOT, "tools", "parity", "cases"))):
+        if name.endswith(".json"):
+            out.append(("case:" + name, _read("tools", "parity", "cases", name)))
+
+    out += [
+        ("crossed with an item unit",
+         _two_group(lambda s: (s["units"].__setitem__("item", {"n": 20}),
+                               s.__setitem__("random", {"subject": {"intercept_sd": 1},
+                                                        "item": {"intercept_sd": 0.3}})))),
+        ("between factor on items",
+         _two_group(lambda s: (s["units"].__setitem__("item", {"n": 10}),
+                               s["factors"][0].__setitem__("between", "item")))),
+        ("subjects nested in sites",
+         _two_group(lambda s: s.__setitem__("random", {"site": {"intercept_sd": 0.5,
+                                                                "over": "subject", "n": 8}}))),
+        ("a within factor", _two_group(lambda s: s["factors"].append(dict(_BLOCK)))),
+        ("a factor both between and within",
+         _two_group(lambda s: s["factors"][0].__setitem__("vary_within", ["subject"]))),
+        ("by-subject random effects and predictors",
+         _two_group(lambda s: (s.__setitem__("spec_version", "0.3"),
+                               s.__setitem__("random", {"subject": {"intercept_sd": 0.5}}),
+                               s.__setitem__("predictors", [
+                                   {"name": "age", "varies_by": "subject"},
+                                   {"name": "noise", "varies_by": "observation"}]),
+                               s["fixed"]["coefficients"].__setitem__("age", 0.2)))),
+        ("an item entry without an item unit",
+         _two_group(lambda s: s.__setitem__("random", {"item": {"intercept_sd": 0.3}}))),
+        ("coefficients {}", _two_group(lambda s: s["fixed"].__setitem__("coefficients", {}))),
+        ("three-level between factor",
+         _two_group(lambda s: s["factors"][0].update(levels=["a", "b", "c"],
+                                                     contrasts={"grp": [-1, 0, 1]}))),
+        ("two between factors", _two_group(lambda s: s["factors"].append(dict(_DOSE)))),
+        ("no factor", _two_group(lambda s: (s.__setitem__("factors", []),
+                                            s["fixed"].__setitem__("coefficients", {})))),
+        ("lognormal response",
+         _two_group(lambda s: s.__setitem__("response", {"family": "lognormal", "name": "RT",
+                                                         "sigma": 0.3}))),
+    ]
+    return out
+
+
 # ---- the R side ---------------------------------------------------------------------------
 
 R_DRIVER = r'''
@@ -408,10 +478,16 @@ run <- function(expr) {
   res
 }
 
-if (mode == "spec") {
+if (mode %in% c("spec", "power")) {
   specs <- jsonlite::fromJSON(payload, simplifyVector = TRUE, simplifyDataFrame = FALSE,
                               simplifyMatrix = FALSE)
-  res <- lapply(specs, function(s) run(validate_spec(s, strict = TRUE)))
+  # The power mode takes the first two steps of power_design(): validation, then the check that
+  # refuses a design the two-group t-test cannot analyse.
+  res <- if (mode == "spec") lapply(specs, function(s) run(validate_spec(s, strict = TRUE)))
+         else lapply(specs, function(s) run({
+           refusal <- .two_group_refusal(.as_spec(s))
+           if (!is.null(refusal)) stop(refusal, call. = FALSE)
+         }))
 } else {
   paths <- readLines(payload, encoding = "UTF-8")
   res <- lapply(paths, function(p) run(.dump(simulate_design(load_spec(p)), paste0(p, ".r.txt"))))
@@ -438,18 +514,28 @@ def _run_r(td, mode, payload):
 
 # ---- the Python side ----------------------------------------------------------------------
 
-def _py(fn):
+def _py(fn, refusals=(ValueError,)):
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         try:
             fn()
             res = {"verdict": "OK", "message": ""}
-        except ValueError as e:
+        except refusals as e:
             res = {"verdict": "ERROR", "message": str(e)}
-        except Exception as e:  # noqa: BLE001  anything but ValueError is the crash looked for
+        except Exception as e:  # noqa: BLE001  anything else is the crash looked for
             res = {"verdict": "CRASH", "message": "%s: %s" % (type(e).__name__, e)}
     res["warnings"] = "\n".join(str(w.message) for w in caught)
     return res
+
+
+def _py_power(spec):
+    """The first two steps of power(): validation, then the two-group check, which raises
+    NotImplementedError for a design the t-test cannot analyse."""
+    def check():
+        refusal = _two_group_refusal(_as_spec(copy.deepcopy(spec)))
+        if refusal is not None:
+            raise NotImplementedError(refusal)
+    return _py(check, refusals=(ValueError, NotImplementedError))
 
 
 def _sha256(path):
@@ -507,13 +593,19 @@ def _report(title, labels, r_res, p_res, data=None, warned=False):
 def main() -> int:
     battery = cases()
     files = file_cases()
+    powers = power_cases()
     py_spec = [_py(lambda s=s: validate_spec(copy.deepcopy(s), strict=True)) for _l, s in battery]
+    py_power = [_py_power(s) for _l, s in powers]
 
     with tempfile.TemporaryDirectory() as td:
         payload = os.path.join(td, "specs.json")
         with open(payload, "w", encoding="utf-8") as f:
             json.dump([s for _l, s in battery], f)
         r_spec = _run_r(td, "spec", payload)
+        power_payload = os.path.join(td, "power_specs.json")
+        with open(power_payload, "w", encoding="utf-8") as f:
+            json.dump([s for _l, s in powers], f)
+        r_power = _run_r(td, "power", power_payload)
 
         paths, data = [], []
         for i, (_label, raw) in enumerate(files, start=1):
@@ -528,14 +620,18 @@ def main() -> int:
             f.write("\n".join(p.replace("\\", "/") for p in paths) + "\n")
         r_files = _run_r(td, "file", listing)
 
-        if len(r_spec) != len(battery) or len(r_files) != len(files):
-            print("R returned %d and %d results for %d and %d cases"
-                  % (len(r_spec), len(r_files), len(battery), len(files)))
+        if (len(r_spec) != len(battery) or len(r_files) != len(files)
+                or len(r_power) != len(powers)):
+            print("R returned %d, %d and %d results for %d, %d and %d cases"
+                  % (len(r_spec), len(r_files), len(r_power),
+                     len(battery), len(files), len(powers)))
             return 1
         failed = _report("Spec battery: validate_spec() on the same parsed specification",
                          [label for label, _s in battery], r_spec, py_spec, warned=True)
         failed += _report("File battery: load_spec() on the same bytes, then simulate()",
                           [label for label, _r in files], r_files, py_files, data)
+        failed += _report("Power battery: the two-group check of power_design() and power()",
+                          [label for label, _s in powers], r_power, py_power)
 
     print("\n%d disagreement%s in all" % (failed, "" if failed == 1 else "s"))
     return 1 if failed else 0

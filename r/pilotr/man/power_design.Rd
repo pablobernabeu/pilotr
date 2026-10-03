@@ -7,7 +7,8 @@
 power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
 }
 \arguments{
-\item{spec}{A design specification (path or list) for a two-group Gaussian design.}
+\item{spec}{A design specification (path or list) for a two-group Gaussian design with one
+row per subject (see Details).}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
@@ -33,6 +34,20 @@ compare against, and Type M divides by it.
 Estimate power by repeatedly simulating from the specification and applying a two-sample
 t-test, alongside the Type S (sign) and Type M (magnitude) design-analysis errors of
 Gelman and Carlin (2014).
+}
+\details{
+The t-test treats every row as an independent observation, which is valid only when each
+subject contributes one row and no rows share a cluster. \code{power_design()} therefore takes a
+Gaussian design with exactly one two-level factor between subjects and no item unit, within
+factor or grouping factor besides \code{subject}. Continuous predictors and by-subject random
+effects are allowed, since with one row per subject they vary independently from row to row.
+Any other design is refused with a message naming what makes its rows correlated.
+\code{\link[=power_mixed]{power_mixed()}} fits the model that such a design implies. Take 30 subjects crossed with 20
+items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3. With
+no true effect, a t-test of every row is significant in about half of all replicates.
+
+A specification with no coefficient for the factor's contrast has a true effect of 0, so
+\code{type_s} and \code{type_m} are \code{NaN}.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
