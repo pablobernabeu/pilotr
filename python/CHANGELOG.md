@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subjects produced cells of 20, 0, 0 and 20, and the second effect and the interaction could
   not be estimated. The refusal names the encoding that works in every version, one between
   factor whose levels are the cells, and reads the same in the R twin.
+- The crossed mixed-effects example on the power page states that every subject sees every item
+  in both conditions. It points a counterbalanced study, which has half the observations and
+  lower power, to the two-list encoding of the specification, and says that its power comes from
+  the R package, since `power_mixed` refuses a design without a within factor.
 - The specification page states how units are allocated to levels and clusters, and gives
   worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
   randomisation within clusters. It also says that simulated data are complete, so expected

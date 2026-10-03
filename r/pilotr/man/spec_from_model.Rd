@@ -122,6 +122,42 @@ the factor partitions. Any renaming is reported by a message and recorded in the
 item unit gains a \code{per_subject} count, so that the recovered design keeps the partial crossing
 of the original.
 
+A factor that varies within both units is crossed with every subject-item pair, so the
+returned specification observes each pair at every level. A pilot run in counterbalanced
+lists, as priming studies usually are, showed each subject each item at one level only. The
+levels rotated across lists of subjects, so that every item appeared at each level. When
+every subject-item pair of the pilot holds one level of a factor, and every subject and every
+item holds two or more, a warning says so. The returned specification then has twice the
+pilot's observations per subject for a two-level factor and three times for a three-level one.
+Two two-level factors rotated together over four lists draw one warning, for four times the
+observations. The power computed from such a specification is too high. Take the variance
+components of the \code{crossed_mixed_rt} example, with 30 subjects, 24 items and an effect of 0.05
+on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
+for the crossed design and 0.55 for the counterbalanced one.
+The counterbalanced study needs about 1.8 times the subjects to match the crossed one. A
+counterbalanced design is written with a list factor between subjects and an item-set factor
+between items, as in the two-list example among the worked encodings of the specification
+(\code{spec/SPEC.md}).
+
+Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
+would not observe, through the \code{prep} argument of \code{\link[=power_mixed]{power_mixed()}} and \code{\link[=precision_design]{precision_design()}}.
+That function receives each simulated data set and returns the modelling data, so it ends by
+calling \code{\link[=model_data]{model_data()}}. With \code{workers > 1} it runs in worker processes that have not attached
+pilotr and cannot see the caller's variables, so it has to call \code{pilotr::model_data()} and
+carry the specification with it. A function made by another function carries it once that
+function has forced its argument, as in this rotation over two lists for the
+\code{crossed_mixed_rt} example, whose factor is \code{condition}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{counterbalance <- function(spec) \{
+  force(spec)
+  function(d) \{
+    level <- match(d$condition, spec$factors[[1]]$levels) - 1L
+    pilotr::model_data(spec, d[(d$subject \%\% 2L + d$item + level) \%\% 2L == 0L, ])
+  \}
+\}
+power_mixed(spec, prep = counterbalance(spec), workers = 4)
+}\if{html}{\out{</div>}}
+
 A boundary-singular pilot fit is carried across as it stands, which means a variance estimated
 at zero or a correlation estimated at exactly plus or minus one. Those are faithful readings
 of the fit, and no kind of defect, but they are also the sign that the random-effect
@@ -161,6 +197,10 @@ simulation. \emph{Advances in Methods and Practices in Psychological Science}, 4
 Green, P. and MacLeod, C. J. (2016). SIMR: an R package for power analysis of generalized
 linear mixed models by simulation. \emph{Methods in Ecology and Evolution}, 7(4), 493-498.
 \doi{10.1111/2041-210X.12504}
+
+Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random
+factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
+68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
 mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods}, 53,

@@ -134,6 +134,24 @@
   if (length(const)) list(between = const[[1]]) else list(vary_within = names(unit_group))
 }
 
+# Whether a factor placed within both units was counterbalanced in the pilot, meaning that every
+# observed subject-item pair holds one level and every subject and every item holds two or more.
+#
+# A priming study shows each subject each item once and rotates the levels across lists of
+# subjects, the counterbalanced design of Judd, Westfall and Kenny (2017). A `vary_within` factor
+# crosses every subject-item pair with every level, so the specification read off such a pilot
+# observes each pair at every level, which multiplies the observations and overstates power. A
+# crossed pilot keeps both levels in most pairs even when rows are missing, so one pair with two
+# levels is enough to rule the rotation out. Requiring two levels in each subject and each item
+# keeps a pilot in which some subjects or items met a single level from being described as a
+# rotation across lists.
+.counterbalanced <- function(v, subj, item) {
+  n_levels <- function(g) vapply(split(v, g, drop = TRUE),
+                                 function(x) length(unique(x)), integer(1))
+  pair <- paste(as.integer(subj), as.integer(item))
+  all(n_levels(pair) == 1L) && all(n_levels(subj) >= 2L) && all(n_levels(item) >= 2L)
+}
+
 # One value of `v` per level of `g`, for a unit-level variable whose moments are wanted per
 # unit. Averaging over rows would weight a unit by how many rows it contributed,
 # which distorts the mean and the standard deviation of an unbalanced design.
@@ -357,6 +375,43 @@
 #' item unit gains a `per_subject` count, so that the recovered design keeps the partial crossing
 #' of the original.
 #'
+#' A factor that varies within both units is crossed with every subject-item pair, so the
+#' returned specification observes each pair at every level. A pilot run in counterbalanced
+#' lists, as priming studies usually are, showed each subject each item at one level only. The
+#' levels rotated across lists of subjects, so that every item appeared at each level. When
+#' every subject-item pair of the pilot holds one level of a factor, and every subject and every
+#' item holds two or more, a warning says so. The returned specification then has twice the
+#' pilot's observations per subject for a two-level factor and three times for a three-level one.
+#' Two two-level factors rotated together over four lists draw one warning, for four times the
+#' observations. The power computed from such a specification is too high. Take the variance
+#' components of the `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05
+#' on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
+#' for the crossed design and 0.55 for the counterbalanced one.
+#' The counterbalanced study needs about 1.8 times the subjects to match the crossed one. A
+#' counterbalanced design is written with a list factor between subjects and an item-set factor
+#' between items, as in the two-list example among the worked encodings of the specification
+#' (`spec/SPEC.md`).
+#'
+#' Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
+#' would not observe, through the `prep` argument of [power_mixed()] and [precision_design()].
+#' That function receives each simulated data set and returns the modelling data, so it ends by
+#' calling [model_data()]. With `workers > 1` it runs in worker processes that have not attached
+#' pilotr and cannot see the caller's variables, so it has to call `pilotr::model_data()` and
+#' carry the specification with it. A function made by another function carries it once that
+#' function has forced its argument, as in this rotation over two lists for the
+#' `crossed_mixed_rt` example, whose factor is `condition`:
+#'
+#' ```r
+#' counterbalance <- function(spec) {
+#'   force(spec)
+#'   function(d) {
+#'     level <- match(d$condition, spec$factors[[1]]$levels) - 1L
+#'     pilotr::model_data(spec, d[(d$subject %% 2L + d$item + level) %% 2L == 0L, ])
+#'   }
+#' }
+#' power_mixed(spec, prep = counterbalance(spec), workers = 4)
+#' ```
+#'
 #' A boundary-singular pilot fit is carried across as it stands, which means a variance estimated
 #' at zero or a correlation estimated at exactly plus or minus one. Those are faithful readings
 #' of the fit, and no kind of defect, but they are also the sign that the random-effect
@@ -401,6 +456,10 @@
 #'   Green, P. and MacLeod, C. J. (2016). SIMR: an R package for power analysis of generalized
 #'   linear mixed models by simulation. \emph{Methods in Ecology and Evolution}, 7(4), 493-498.
 #'   \doi{10.1111/2041-210X.12504}
+#'
+#'   Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random
+#'   factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
+#'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 #'
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
 #'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods}, 53,
@@ -513,6 +572,11 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   predictors <- list()
   kinds <- character(0)
   used <- c(names(mf), gnames)
+  # The columns of factors that the pilot counterbalanced, with each factor's number of levels.
+  # The returned specification multiplies the observations per subject by their product.
+  rotated <- integer(0)
+  is_rotated <- function(v, const)
+    !length(const) && !is.null(itm) && .counterbalanced(v, flist[[subj]], flist[[itm]])
   for (cn in design_cols) {
     v <- mf[[cn]]
     const <- .constant_units(v, unit_group, flist)
@@ -527,6 +591,7 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
         list(name = cn, levels = levels(f), contrasts = contr), .placement(const, unit_group))
       used <- c(used, names(contr))
       kinds[cn] <- "factor"
+      if (is_rotated(v, const)) rotated[cn] <- nlevels(f)
     } else if (!is.numeric(v)) {
       stop("column '", cn, "' of the model frame is of class '",
            paste(class(v), collapse = "/"), "', which a specification has no field for. ",
@@ -540,6 +605,7 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
              contrasts = stats::setNames(list(as.numeric(vals)), cn)),
         .placement(const, unit_group))
       kinds[cn] <- "factor"
+      if (is_rotated(v, const)) rotated[cn] <- 2L
     } else {
       vb <- if (length(const)) const[[1L]] else "observation"
       vals <- if (identical(vb, "observation")) v else .unit_values(v, flist[[unit_group[[vb]]]])
@@ -612,5 +678,23 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   spec$random <- random
   spec$response <- .model_response(fit, family, round, yname)
   validate_spec(spec)
+  # A warning, where the readings above are messages, because this specification would plan a
+  # larger study than the pilot ran. The power computed from it would be too high, and nothing
+  # downstream would show it. Factors rotated together, as over the four lists of a 2 x 2 design,
+  # draw one warning with the product of their level counts. One warning per factor would say
+  # "doubling" twice, for a specification with four times the pilot's observations.
+  if (length(rotated)) {
+    one <- length(rotated) == 1L
+    times <- prod(rotated)
+    warning("spec_from_model(): in the pilot each subject saw each item under one ",
+            if (one) sprintf("level of '%s'", names(rotated))
+            else paste("combination of the levels of", .name_list(sprintf("'%s'", names(rotated)))),
+            " (a counterbalanced, Latin-square design), but the returned specification crosses ",
+            "every subject with every item under every ", if (one) "level" else "combination", ", ",
+            if (times == 2) "doubling the observations per subject"
+            else paste("multiplying the observations per subject by", times),
+            " and overstating power. Encode the design as list (between subject) x item set ",
+            "(between item), as in SPEC.md's two-list example.", call. = FALSE)
+  }
   structure(spec, group_mapping = mapping, column_kinds = kinds)
 }

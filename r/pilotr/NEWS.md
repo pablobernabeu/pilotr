@@ -42,6 +42,15 @@
   one unit off a fitted pilot, and says so in a message. It used to write a specification that
   left half the cells of a 2 × 2 pilot empty.
 
+* `spec_from_model()` warns when the pilot was counterbalanced, each subject seeing each item
+  under one condition, because the specification it returns crosses every subject with every
+  item under every condition. Planning a counterbalanced study that way doubles the observations
+  per subject and overstates power. By the formulas of Judd, Westfall and Kenny (2017), the
+  `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05 on the log scale,
+  has a power of about 0.80 crossed and 0.55 counterbalanced. The warning names the encoding
+  that plans a counterbalanced study, a list factor between subjects and an item-set factor
+  between items. The specification returned is unchanged.
+
 ## Fixes
 
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
@@ -157,6 +166,18 @@
   across the twins by the parity harness. The power vignette says that its priming example is
   fully crossed, and that simulated data are complete, so expected attrition is allowed for by
   recruiting N / (1 − p).
+
+* The precision vignette says that its priming example is fully crossed, and that a
+  counterbalanced study has half the observations and is planned with the two-list encoding.
+  `?spec_from_model` explains the counterbalancing warning and that encoding. It also shows a
+  `prep` function for `power_mixed()` and `precision_design()` that drops the rows a
+  counterbalanced study would not observe and runs in the worker processes of `workers > 1`.
+
+## References
+
+Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random factor:
+Designs, analytic models, and statistical power. *Annual Review of Psychology, 68*, 601-625.
+<doi:10.1146/annurev-psych-122414-033702>
 
 # pilotr 0.3.1
 

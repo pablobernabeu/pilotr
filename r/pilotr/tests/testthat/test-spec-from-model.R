@@ -156,6 +156,116 @@ test_that("factors between items combine too, keeping each cell's contrasts and 
                                      Bb3 = c(0, 0, 1, 0, 0, 1)))
 })
 
+# The crossed priming example, simulated in full and then cut down to the rows a pilot ran.
+# `keep` takes the data, whose `level` column holds each row's level index (0 or 1), and returns
+# the rows to keep. The pilot carries the outcome as the log of the shifted reaction time, which
+# is Gaussian under the example's shifted lognormal family. It carries the condition as a
+# -0.5/0.5 column, as a user's own pilot data would.
+sfm_priming_pilot <- function(keep) {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  d <- simulate_design(spec)
+  d$level <- match(d$condition, spec$factors[[1]]$levels) - 1L
+  d <- d[keep(d), ]
+  d$y <- log(d$RT - spec$response$shift)
+  d$cond <- d$level - 0.5
+  d
+}
+
+test_that("spec_from_model warns that a counterbalanced pilot comes back fully crossed", {
+  skip_if_not_installed("lme4")
+  # The pilot rotates two lists in a Latin square. Each subject sees each item once, and the
+  # level alternates over items within a subject and over subjects within an item, so every
+  # item appears in both conditions across subjects. This is how priming studies are run.
+  pilot <- sfm_priming_pilot(function(d) ((d$subject %% 2L) + d$item + d$level) %% 2L == 0L)
+  expect_identical(nrow(pilot), 30L * 24L)
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + (1 + cond | subject) + (1 + cond | item), data = pilot)))
+  expect_warning(
+    rec <- suppressMessages(spec_from_model(fit, n_subject = 30, n_item = 24)),
+    paste0("spec_from_model(): in the pilot each subject saw each item under one level of ",
+           "'cond' (a counterbalanced, Latin-square design), but the returned specification ",
+           "crosses every subject with every item under every level, doubling the observations ",
+           "per subject and overstating power. Encode the design as list (between subject) x ",
+           "item set (between item), as in SPEC.md's two-list example."),
+    fixed = TRUE)
+  # As the warning says, the specification crosses every pair with both levels, so it simulates
+  # twice the pilot's rows.
+  expect_setequal(rec$factors[[1]]$vary_within, c("subject", "item"))
+  expect_identical(nrow(simulate_design(rec)), 2L * nrow(pilot))
+})
+
+test_that("a crossed pilot with missing rows, or a factor between items, draws no such warning", {
+  skip_if_not_installed("lme4")
+  # Every tenth row dropped from the full crossing leaves most subject-item pairs with both
+  # levels, so the pilot was crossed, however incomplete.
+  crossed <- sfm_priming_pilot(function(d) seq_len(nrow(d)) %% 10L != 0L)
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + (1 + cond | subject) + (1 + cond | item), data = crossed)))
+  expect_no_warning(suppressMessages(spec_from_model(fit)))
+  # Here each item has one level for every subject, so the items carry the condition and the
+  # factor is placed between items.
+  by_item <- sfm_priming_pilot(function(d) (d$item + d$level) %% 2L == 0L)
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + (1 + cond | subject) + (1 | item), data = by_item)))
+  expect_no_warning(rec <- suppressMessages(spec_from_model(fit)))
+  expect_identical(rec$factors[[1]]$between, "item")
+})
+
+test_that("the counterbalancing warning counts the levels of a factor with more than two", {
+  skip_if_not_installed("lme4")
+  # Three primes rotate over three lists and are read from a character column. The
+  # specification crosses each subject-item pair with all three, three times the pilot's
+  # observations.
+  three <- list(name = "three", seed = 5,
+                units = list(subject = list(n = 18), item = list(n = 12)),
+                factors = list(list(name = "prime", levels = c("related", "neutral", "unrelated"),
+                                    contrasts = list(p2 = c(0, 1, 0), p3 = c(0, 0, 1)),
+                                    vary_within = c("subject", "item"))),
+                fixed = list(intercept = 6, coefficients = list(p2 = 0.03, p3 = 0.06)),
+                random = list(subject = list(intercept_sd = 0.1), item = list(intercept_sd = 0.05)),
+                response = list(family = "gaussian", name = "y", sigma = 0.3))
+  d <- simulate_design(three)
+  level <- match(d$prime, three$factors[[1]]$levels) - 1L
+  pilot <- d[(d$subject + d$item + level) %% 3L == 0L, ]
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ prime + (1 | subject) + (1 | item), data = pilot)))
+  w <- expect_warning(suppressMessages(spec_from_model(fit)), "one level of 'prime'",
+                      fixed = TRUE)
+  expect_match(conditionMessage(w),
+               "every level, multiplying the observations per subject by 3 and overstating power",
+               fixed = TRUE)
+})
+
+test_that("factors counterbalanced together draw one warning with their joint multiple", {
+  skip_if_not_installed("lme4")
+  # A 2 x 2 design rotated over four lists: each subject sees each item in one of the four cells.
+  # The specification crosses every pair with all four cells, four times the pilot's rows, which
+  # one warning per factor, each saying "doubling", would understate.
+  cells <- list(name = "cells", seed = 3,
+                units = list(subject = list(n = 16), item = list(n = 16)),
+                factors = list(
+                  list(name = "A", levels = c("a1", "a2"), contrasts = list(a = c(-0.5, 0.5)),
+                       vary_within = c("subject", "item")),
+                  list(name = "B", levels = c("b1", "b2"), contrasts = list(b = c(-0.5, 0.5)),
+                       vary_within = c("subject", "item"))),
+                fixed = list(intercept = 6, coefficients = list(a = 0.05, b = 0.05)),
+                random = list(subject = list(intercept_sd = 0.1), item = list(intercept_sd = 0.05)),
+                response = list(family = "gaussian", name = "y", sigma = 0.3))
+  d <- simulate_design(cells)
+  cell <- 2L * (match(d$A, c("a1", "a2")) - 1L) + match(d$B, c("b1", "b2")) - 1L
+  pilot <- d[(d$subject + d$item + cell) %% 4L == 0L, ]
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ A * B + (1 | subject) + (1 | item), data = pilot)))
+  w <- capture_warnings(rec <- suppressMessages(spec_from_model(fit)))
+  expect_length(w, 1L)
+  expect_match(w, paste0("each item under one combination of the levels of 'A' and 'B' (a ",
+                         "counterbalanced, Latin-square design), but the returned specification ",
+                         "crosses every subject with every item under every combination, ",
+                         "multiplying the observations per subject by 4 and overstating power."),
+               fixed = TRUE)
+  expect_identical(nrow(simulate_design(rec)), 4L * nrow(pilot))
+})
+
 test_that("spec_from_model refuses what it cannot read, saying what to do instead", {
   skip_if_not_installed("lme4")
   # No random effects: the part of a specification hardest to guess is missing.

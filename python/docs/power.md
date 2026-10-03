@@ -160,6 +160,13 @@ print(table([{k: res[k] for k in (
 )}]))
 ```
 
+The priming design above is fully crossed, so each of the 12 subjects sees all 8 items in both
+conditions, 192 trials in all. A counterbalanced study, in which each subject sees each item in
+one condition only, has half the observations and lower power. The specification writes it with
+the two-list encoding among the [worked encodings](specification.md#worked-encodings), which
+`simulate` produces exactly as the R package does. That encoding has no within factor, so
+`power_mixed` here refuses it, and its power comes from the R package's `power_mixed()`.
+
 `n_converged` reports how many replicates the mixed model actually fit. Convergence problems
 are common in small crossed designs, so this is a useful diagnostic in its own right, and it is
 the denominator of `power`, the significant proportion among the converged replicates.

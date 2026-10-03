@@ -45,7 +45,12 @@ probability.
 ## A worked design
 
 We reuse the crossed priming design, which represents a small priming effect on log reaction
-time.
+time. Every subject sees every item in both conditions. A counterbalanced study, in which each
+subject sees each item in one condition only, has half the observations and wider intervals, so
+it needs more subjects than the sweep below finds. Plan such a study with the two-list encoding
+among the
+[worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
+of the specification.
 
 ```{r}
 spec_c <- build_spec(list(
