@@ -90,6 +90,10 @@ def test_power_mixed_parallel_matches_serial():
         },
         "response": {"family": "shifted_lognormal", "name": "RT", "sigma": 0.3, "shift": 200},
     }
-    serial = power_mixed(spec, n_sims=4, workers=1)
-    parallel2 = power_mixed(spec, n_sims=4, workers=2)
+    with pytest.warns(UserWarning, match="random-effect correlations") as seen:
+        serial = power_mixed(spec, n_sims=4, workers=1)
+        parallel2 = power_mixed(spec, n_sims=4, workers=2)
     assert_identical(serial, parallel2)
+    # The independent components the backend fits leave the declared correlations out, so each
+    # call warns once, in the calling process, whatever the worker count.
+    assert sum("random-effect correlations" in str(w.message) for w in seen) == 2

@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
   randomisation within clusters. It also says that simulated data are complete, so expected
   attrition is allowed for by recruiting N / (1 − p).
+- `power_mixed` warns once per call when the specification declares anything its fixed model
+  `yv ~ cc` leaves out, and names each such term. These are non-zero coefficients other than the
+  tested contrast, between factors, predictors, slopes on other terms, correlations between
+  random effects and grouping factors besides `subject` and `item`. Its documentation states
+  what the model fits, independent by-subject and by-item intercept and slope components with a
+  test of the first contrast of the single within factor. The project README had put the two
+  languages at capability parity here.
 
 ### Fixed
 
@@ -68,6 +75,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Such a name validated and then became a column with no visible name.
 - `power` and `power_mixed` read a missing coefficient for the tested contrast as a true effect
   of 0, with Type S and Type M undefined. They raised `KeyError`.
+- `power_mixed` analyses a `lognormal` response on the log scale, as it already did for
+  `shifted_lognormal` and as the R twin does. It fitted the raw values, so the mean estimate came
+  out in the response's units. Take 12 subjects crossed with 8 items and a true effect of 0.1 on
+  the log scale. Six replicates gave a mean estimate of 53.1 and a Type M of 553, where the log
+  scale gives 0.136 and 1.36, as R does.
+- `power_mixed` returns no estimate for a replicate whose response has no logarithm, as the R
+  twin does, and `n_converged` leaves that replicate out. Such a response is a
+  `shifted_lognormal` value rounded down to the shift, or now a `lognormal` value rounded to 0.
+  The shifted family raised `ValueError: math domain error`, which ended the whole call.
 
 ### Deprecated
 

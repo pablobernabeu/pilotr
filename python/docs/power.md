@@ -115,8 +115,23 @@ value, so an effect-size sweep or a sweep over items is solved the same way, wit
 ## Crossed mixed-effects power
 
 `power_mixed` fits a crossed mixed model with `statsmodels` (needs `statsmodels` and
-`pandas`). The design has one within-subject factor and crossed by-subject and by-item random
-intercepts and slopes:
+`pandas`), and the model is the same whatever the specification declares. In statsmodels'
+notation it is `yv ~ cc`, which regresses the response on the first contrast of the design's
+single within factor, with independent by-subject and by-item random intercepts and slopes on
+that contrast. The response is analysed as `log(y)` for the `lognormal` family and as
+`log(y - shift)` for `shifted_lognormal`, whose coefficients are on the log scale, as in the R
+package. Every other family is analysed on its own scale.
+
+Only that contrast is tested, and a specification that declares anything the model leaves out
+draws a warning that names each such term. In the fixed part, that is a non-zero coefficient
+other than the tested contrast, a between factor or a predictor. In the random part, it is a
+slope on another term, a correlation between random effects or a grouping factor besides
+`subject` and `item`. The R package's `power_mixed()` fits the model the specification implies
+and tests every coefficient.
+
+The design below has one within-subject factor and crossed by-subject and by-item random
+intercepts and slopes. It also declares a correlation between each unit's intercept and slope,
+which the independent components leave out, so the call below warns about the correlations.
 
 ```python exec="true" source="material-block" session="pow"
 from pilotr import power_mixed

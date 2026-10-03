@@ -130,6 +130,25 @@ test_that("build_spec carries sigma through for the lognormal family", {
   expect_true(all(d$RT > 0))
 })
 
+test_that("model_data() analyses both lognormal families on the log scale", {
+  # The two families draw the same eta + sigma * z, so the analysis response is one column
+  # whichever is declared. Python's power_mixed() follows the same rule, and it fitted a
+  # lognormal response on its raw scale until it did.
+  spec <- build_spec(list(name = "ln", seed = 1, design_kind = "within",
+                          include_items = TRUE, n_subject = 12, n_item = 8,
+                          factor_name = "cond", lev1 = "a", lev2 = "b",
+                          intercept = 6, effect = 0.1, subj_int_sd = 0.12,
+                          subj_slope_sd = 0, item_int_sd = 0.08, item_slope_sd = 0,
+                          family = "lognormal", resp_name = "", sigma = 0.3))
+  shifted <- spec
+  shifted$response$family <- "shifted_lognormal"
+  shifted$response$shift <- 200
+  d <- simulate_design(spec)
+  y <- model_data(spec, d)$.y
+  expect_identical(y, log(d$RT))
+  expect_equal(model_data(shifted, simulate_design(shifted))$.y, y, tolerance = 1e-9)
+})
+
 test_that("per_subject must lie between 1 and the number of items", {
   spec <- build_spec(list(name = "pc", seed = 1, design_kind = "within",
                           include_items = TRUE, n_subject = 2, n_item = 3,

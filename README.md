@@ -236,9 +236,14 @@ Rscript r/pilotr/examples/validate_recovery.R
 Rscript r/pilotr/examples/precision_design_analysis.R
 ```
 
-Python runs crossed mixed-effects power through statsmodels, so the two languages are at
-capability parity here, though not at numerical parity. The note closing the Quick start
-explains where the two estimators diverge.
+Python runs crossed mixed-effects power through statsmodels for a narrower class of designs. Its
+`power_mixed` fits the same model whatever the specification declares. That model, `yv ~ cc`,
+regresses the response (logged for the two lognormal families) on the first contrast of the
+single within factor, with independent by-subject and by-item intercepts and slopes. Only that
+contrast is tested, and a warning names anything else the specification declares that the model
+leaves out, such as another non-zero coefficient, a predictor or a correlation between random
+effects. The R package's `power_mixed()` fits the model the specification implies and tests every
+coefficient. The note closing the Quick start explains where the two estimators diverge.
 
 ```bash
 python python/examples/power_mixed_demo.py

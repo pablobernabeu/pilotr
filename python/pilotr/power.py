@@ -20,9 +20,10 @@ functions are module-level so that they pickle under the Windows spawn start met
 """
 
 from __future__ import annotations
-import copy, functools, math, statistics
+import copy, functools, math, statistics, warnings
 from .simulate import _simulate, _as_spec, load_spec
 from .core import replicate_seeds
+from .validate import _name_list
 
 
 def _check_workers(workers):
@@ -208,6 +209,51 @@ def _power_impl(spec, n_sims, alpha, executor):
     }
 
 
+# What power_mixed() fits, stated whenever a specification declares more. The model is written
+# into _power_mixed_replicate() and ignores the rest of the specification, so whatever else the
+# specification declared used to drop out of the analysis without a word. The R twin builds its
+# model from the specification, through model_formula().
+_LEFT_OUT = (
+    "power_mixed() in Python fits 'yv ~ cc' with independent by-subject and by-item intercept "
+    "and slope components, testing the first contrast of the within factor only. This "
+    "specification also declares %s, which the fitted model leaves out. The R package's "
+    "power_mixed() fits the model the specification implies.")
+
+
+def _left_out_of_model(spec, col):
+    """What a validated specification declares beyond the model ``yv ~ cc``, as phrases.
+
+    `col` is the tested contrast. Each phrase names one kind of term and lists its members in
+    the specification's order, and an empty list means that the model leaves nothing out. A
+    coefficient counts only when it is not zero, since a zero effect left out of the fixed part
+    is still the effect simulated. Correlations count as the R twin's model_formula() reads
+    them, when ``correlated`` is true or is absent alongside ``correlations``, and only for a
+    group with a slope to correlate with its intercept.
+    """
+    rs = spec["random"]
+
+    def correlated(u):
+        return bool(u.get("slopes")) and u.get("correlated", bool(u.get("correlations")))
+
+    found = [
+        ("another coefficient", "other coefficients",
+         [k for k, v in spec["fixed"]["coefficients"].items() if k != col and v != 0]),
+        ("a between factor", "between factors",
+         [f["name"] for f in spec["factors"] if f.get("between")]),
+        ("a predictor", "predictors", [p["name"] for p in spec["predictors"]]),
+        ("a by-subject slope", "by-subject slopes",
+         [k for k in rs.get("subject", {}).get("slopes", {}) if k != col]),
+        ("a by-item slope", "by-item slopes",
+         [k for k in rs.get("item", {}).get("slopes", {}) if k != col]),
+        ("random-effect correlations", "random-effect correlations",
+         [g for g in ("subject", "item") if g in rs and correlated(rs[g])]),
+        ("an extra grouping factor", "extra grouping factors",
+         [g for g in rs if g not in ("subject", "item")]),
+    ]
+    return ["%s (%s)" % (one if len(names) == 1 else many, ", ".join("'%s'" % n for n in names))
+            for one, many, names in found if names]
+
+
 def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
     """One mixed-model replicate: simulate at `seed`, fit MixedLM, return (estimate,
     p-value), or None when the fit fails."""
@@ -219,8 +265,19 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
            "item_i": "0 + C(item)", "item_s": "0 + C(item):cc"}
     df = pd.DataFrame(_simulate(dict(spec, seed=seed)).rows)
     df["cc"] = df[fname].map(l2c)
-    df["yv"] = ([math.log(v - shift) for v in df[yname]]
-                if fam == "shifted_lognormal" else list(df[yname]))
+    # Both lognormal families are analysed on the log scale, where their coefficients are, as
+    # model_data() does in the R twin. The plain lognormal has no shift, so `shift` is 0 for it.
+    # Only the shifted family used to be logged, so the estimate for a lognormal response came
+    # out in the response's own units.
+    if fam in ("lognormal", "shifted_lognormal"):
+        # A response rounded down to the shift has no logarithm. R's log() gives -Inf for it and
+        # lmer() refuses the fit, so the replicate returns no estimate here too. math.log()
+        # raised ValueError on it, which ended the whole call.
+        if any(v - shift <= 0 for v in df[yname]):
+            return None
+        df["yv"] = [math.log(v - shift) for v in df[yname]]
+    else:
+        df["yv"] = list(df[yname])
     df["grp"] = 1
     try:
         with warnings.catch_warnings():
@@ -234,6 +291,22 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
 def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     """Crossed mixed-effects simulation-based power in Python, via statsmodels MixedLM with
     by-subject and by-item random intercepts and slopes as (independent) variance components.
+
+    The model is the same whatever the specification declares, and it tests one effect. It is
+    ``yv ~ cc``, which regresses the response on ``cc``, the first contrast of the design's
+    single within factor, with four independent variance components: by-subject and by-item
+    intercepts and slopes on ``cc``. The response is analysed as ``log(y)`` for the
+    ``lognormal`` family and as ``log(y - shift)`` for ``shifted_lognormal``, whose
+    coefficients are on the log scale, as in the R twin's ``model_data()``. Every other family
+    is analysed on its own scale. A replicate whose response rounds to 0, or to the shift, has
+    no logarithm and returns no estimate, as in the R twin.
+
+    A specification that declares anything this model leaves out draws one warning per call
+    naming each such term. In the fixed part, that is a non-zero coefficient other than
+    the tested contrast, a between factor or a predictor. In the random part, it is a
+    by-subject or by-item slope on another term, a correlation between random effects or a
+    grouping factor besides ``subject`` and ``item``. The R package's ``power_mixed()`` fits
+    the model the specification implies and tests every coefficient.
 
     This is pilotr's own simulation loop over the portable design specification, not a
     wrapper around an existing power package. It covers territory pioneered by simr (Green
@@ -286,6 +359,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     NotImplementedError
         If the design does not have exactly one within-unit factor.
 
+    Warns
+    -----
+    UserWarning
+        Once per call, when the specification declares a term that the fitted model leaves
+        out. The message names every such term.
+
     Notes
     -----
     Requires the `mixed` extra (`statsmodels` and `pandas`, imported lazily in each worker
@@ -311,6 +390,10 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     yname, fam = spec["response"]["name"], spec["response"]["family"]
     shift = spec["response"].get("shift", 0.0)
     base = spec["seed"]
+    # The warning is raised here, once per call, since the replicates may run in other processes.
+    left_out = _left_out_of_model(spec, col)
+    if left_out:
+        warnings.warn(_LEFT_OUT % _name_list(left_out), UserWarning, stacklevel=2)
 
     rep = functools.partial(_power_mixed_replicate, spec=spec, fname=fname, l2c=l2c,
                             yname=yname, fam=fam, shift=shift)
