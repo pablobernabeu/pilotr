@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `power_curve` refuses the same designs.
 - The replicates of `power`, `power_curve` and `power_mixed` skip validation, since the
   specification is validated once before them. Each replicate used to validate it again.
+- `validate_spec` refuses a specification with two or more factors between the same unit.
+  pilotr assigns the levels of each between factor to blocks of units on its own, so two such
+  factors fell into the same or overlapping blocks. A 2 × 2 between-subjects design over 40
+  subjects produced cells of 20, 0, 0 and 20, and the second effect and the interaction could
+  not be estimated. The refusal names the encoding that works in every version, one between
+  factor whose levels are the cells, and reads the same in the R twin.
+- The specification page states how units are allocated to levels and clusters, and gives
+  worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
+  randomisation within clusters. It also says that simulated data are complete, so expected
+  attrition is allowed for by recruiting N / (1 − p).
 
 ### Fixed
 

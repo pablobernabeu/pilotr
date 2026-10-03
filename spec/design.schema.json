@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
-  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, that a specification using a 0.3 feature declares 0.3, and that names do not collide (see Names in SPEC.md).",
+  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, that a specification using a 0.3 feature declares 0.3, that names do not collide (see Names in SPEC.md), and that no two factors are between the same unit (see Factors in SPEC.md).",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "properties": {

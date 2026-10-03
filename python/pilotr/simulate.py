@@ -417,7 +417,8 @@ def _simulate(spec) -> Dataset:
 
     # ---- additional grouping factors (e.g. units nested in higher-level clusters) ----
     # Any random-effect entry other than subject/item declares `over` (which unit it groups)
-    # and `n` (number of groups). Units are assigned to groups in equal blocks.
+    # and `n` (number of groups). Units are assigned to groups in consecutive blocks, which are
+    # equal when the number of units is a multiple of the number of groups.
     extra = [(k, v) for k, v in random_spec.items() if k not in ("subject", "item")]
     b_group, group_meta = {}, {}
     for gname, gspec in extra:

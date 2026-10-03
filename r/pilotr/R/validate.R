@@ -164,6 +164,13 @@
 #' out under Names in the specification. A within factor whose `vary_within` leaves out a unit of
 #' the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
 #'
+#' At most one factor may be between each unit. pilotr assigns the levels of each between factor
+#' to blocks of its unit on its own, so two between factors over one unit fall into the same or
+#' overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
+#' and 20, and its effects could not be estimated apart. Such a design is written as one between
+#' factor whose levels are the cells, as the specification shows under Worked encodings, and
+#' [spec_from_model()] builds that factor from a fitted pilot.
+#'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
 #' later. A specification declaring a version newer than this implementation is refused
@@ -573,6 +580,28 @@ validate_spec <- function(spec, strict = TRUE) {
     if (!is.null(f[["vary_within"]]) && !is.null(f[["between"]]))
       bad("factors[", i, "] sets both 'vary_within' and 'between'; a factor has to set exactly ",
           "one of them")
+  }
+
+  # The simulator assigns the levels of each between factor to blocks of its unit on its own, so
+  # two such factors over one unit fell into the same or overlapping blocks. A 2 x 2
+  # between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and neither the
+  # second effect nor the interaction could then be estimated. One factor whose levels are the
+  # cells keeps every cell, and spec_from_model() writes that encoding for a fitted pilot.
+  for (unit in c("subject", if (has_item) "item")) {
+    on_unit <- character(0)
+    for (f in factors)
+      if (is_obj(f) && is.null(f[["vary_within"]]) && .is_name(f[["name"]]) &&
+          identical(f[["between"]], unit))
+        on_unit <- c(on_unit, f[["name"]])
+    if (length(on_unit) > 1L)
+      bad("the factors ", .name_list(sprintf("'%s'", on_unit)), " are ",
+          if (length(on_unit) == 2L) "both" else "all", " between '", unit, "'. pilotr assigns ",
+          "the levels of each between factor to blocks of ", unit, "s on its own, so the blocks ",
+          "of these factors coincide or overlap, which leaves some combinations of their levels ",
+          "without ", unit, "s and confounds their effects. Encode the design as one between ",
+          "factor whose levels are the cells, give it the contrast columns of these factors and ",
+          "key each interaction as 'a:b', as spec_from_model() in R does for a fitted pilot. ",
+          "Specification version 0.4 will allocate several between factors jointly.")
   }
 
   # Every column of the simulated data, in the order the simulator writes them.

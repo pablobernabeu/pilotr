@@ -71,6 +71,13 @@ spec_c <- build_spec(list(
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
 ```
 
+The priming design above is fully crossed, so each of the 24 participants sees all 18 items in
+both conditions, 864 trials in all. A counterbalanced study, in which each participant sees
+each item in one condition only, has half the observations and lower power. Plan such a study
+with the two-list encoding among the
+[worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
+of the specification.
+
 ```{r, eval = FALSE}
 # A tiny replicate count keeps the vignette fast. Use 200 or more for real planning.
 pm <- power_mixed(spec_c, n_sims = 20)
@@ -184,6 +191,14 @@ The shaded horizontal band along the curve is the Monte Carlo interval, the bino
 error of each power estimate over its converged replicates widened to a 95% envelope. The
 vertical band is the solved sample size and its own interval, which is what the dashed target
 line invites the reader to guess at.
+
+The solved size counts the participants whose data are analysed. Simulated data are complete,
+with no attrition or exclusions. A study that expects to lose a proportion *p* of its
+participants therefore recruits *N* / (1 − *p*), which is 67 for 60 analysed at 10% attrition.
+Losses unrelated to the outcome cost power without biasing the estimates, and recruiting the
+extra participants largely restores that power. Missingness that depends on the outcomes that
+would have been observed, which pilotr does not simulate, can bias the estimates as well
+([Rubin, 1976](https://doi.org/10.1093/biomet/63.3.581)).
 
 ## Parallel execution
 

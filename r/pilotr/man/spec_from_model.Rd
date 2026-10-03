@@ -95,6 +95,15 @@ effect and once as a numeric contrast for a random slope, gives two separate spe
 terms, because the two columns are separate columns in the model frame and nothing in the fit
 ties them together.
 
+Two or more factors placed between the same unit become one factor whose levels are their
+cells, and a message says so. The first-listed factor varies slowest, and each label joins the
+components' labels with \code{"."}. Two between factors over one unit would confound their effects,
+because pilotr assigns the levels of each between factor to blocks of its unit on its own, and
+\code{\link[=validate_spec]{validate_spec()}} refuses them. The combined factor carries every component's contrast columns
+under the names the fit gave them, so each coefficient the fit estimated, interactions
+included, still names a column. Every cell then receives units, in equal numbers whenever the
+number of units is a multiple of the number of cells.
+
 Interactions need one further step. lme4 writes the interaction of two model-frame columns as
 \code{a:b}, which is already the specification's convention, but \code{\link[=model_data]{model_data()}} gives an
 interaction its own product column named \code{a_b}, so a specification built from a fit of

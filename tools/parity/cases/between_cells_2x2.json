@@ -1,0 +1,20 @@
+{
+  "spec_version": "0.3",
+  "name": "between_cells_2x2",
+  "seed": 7341,
+  "units": { "subject": { "n": 40 }, "item": { "n": 6 } },
+  "factors": [
+    {
+      "name": "cell",
+      "levels": ["a1.b1", "a1.b2", "a2.b1", "a2.b2"],
+      "contrasts": { "a": [-0.5, -0.5, 0.5, 0.5], "b": [-0.5, 0.5, -0.5, 0.5] },
+      "between": "subject"
+    }
+  ],
+  "fixed": { "intercept": 10.0, "coefficients": { "a": 0.5, "b": 0.3, "a:b": 0.2 } },
+  "random": {
+    "subject": { "intercept_sd": 1.0 },
+    "item": { "intercept_sd": 0.5 }
+  },
+  "response": { "family": "gaussian", "name": "score", "sigma": 1.0 }
+}

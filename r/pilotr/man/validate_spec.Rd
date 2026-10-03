@@ -36,6 +36,13 @@ design without items each validated and then changed the data in silence. The ru
 out under Names in the specification. A within factor whose \code{vary_within} leaves out a unit of
 the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
 
+At most one factor may be between each unit. pilotr assigns the levels of each between factor
+to blocks of its unit on its own, so two between factors over one unit fall into the same or
+overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
+and 20, and its effects could not be estimated apart. Such a design is written as one between
+factor whose levels are the cells, as the specification shows under Worked encodings, and
+\code{\link[=spec_from_model]{spec_from_model()}} builds that factor from a fitted pilot.
+
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
 later. A specification declaring a version newer than this implementation is refused

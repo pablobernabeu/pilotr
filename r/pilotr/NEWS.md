@@ -33,6 +33,15 @@
   interaction two keys, such as `cond:age` and `age:cond`, since brms estimates one coefficient
   for both. A coefficient whose column does not vary is reported in a warning.
 
+* A specification with two or more factors between the same unit is refused. pilotr assigns the
+  levels of each between factor to blocks of units on its own, so two such factors fell into the
+  same or overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells of
+  20, 0, 0 and 20, and the second effect and the interaction could not be estimated. The refusal
+  names the encoding that works in every version, one between factor whose levels are the
+  cells. `spec_from_model()` now builds that factor itself when it reads two factors between
+  one unit off a fitted pilot, and says so in a message. It used to write a specification that
+  left half the cells of a 2 × 2 pilot empty.
+
 ## Fixes
 
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
@@ -140,6 +149,14 @@
   index unless `x` names another column. Both pages show the sweep to use for a single effect,
   `sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed)`. It keeps the other
   coefficients, and `solve_curve()` returns a minimum detectable effect from its curve.
+
+* The specification states how units are allocated: the block rule for between factors and
+  extra grouping factors, the nesting of a between factor within clusters that follows from it,
+  and the full crossing of within factors. It gives worked encodings for a 2 × 2 between design,
+  a two-list counterbalanced design and randomisation within clusters, each held bit-identical
+  across the twins by the parity harness. The power vignette says that its priming example is
+  fully crossed, and that simulated data are complete, so expected attrition is allowed for by
+  recruiting N / (1 − p).
 
 # pilotr 0.3.1
 

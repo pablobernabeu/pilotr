@@ -106,11 +106,25 @@ effect is misspelled generates exactly the data of a null design and reports suc
   design, whatever the list names, so in a design with items the list is `["subject", "item"]`.
   A list that leaves a unit out has never changed the data. It is deprecated and draws a
   warning, and from spec version 0.4 it will be refused. A factor whose levels are carried by
-  the items, each item appearing at one level only, is `"between": "item"` instead.
-* `between`: `"subject"` or `"item"`. The factor partitions that unit into equal blocks
-  in level order (a between-unit factor that does not expand rows).
+  the items, each item appearing at one level only, is `"between": "item"` instead. Since a
+  within factor is crossed with every unit, each subject–item pair of the design is observed at
+  every level. A counterbalanced design, which shows each subject each item at one level only,
+  is written with a list factor between subjects and an item-set factor between items, as in the
+  [worked encodings](#worked-encodings) below.
+* `between`: `"subject"` or `"item"`. The factor assigns each unit one level and does not
+  expand rows. With `N` units and `L` levels, unit `u` (counted from 1) takes the level with
+  index `⌊(u − 1)·L/N⌋` (counted from 0), so the units fall into `L` consecutive blocks in level
+  order. The blocks are equal when `N` is a multiple of `L` and otherwise differ in size by one.
 
 A factor sets exactly one of `vary_within` and `between`, and lists each level once.
+
+Each between factor is allocated by that rule on its own, so two between factors over the same
+unit would fall into the same or overlapping blocks. Over 40 subjects, two two-level factors
+would give cells of 20, 0, 0 and 20, and neither the second effect nor the interaction could be
+estimated. A specification in which two or more factors are between the same unit is therefore
+refused. A factorial between design is written as one factor whose levels are the cells, as in
+the first of the [worked encodings](#worked-encodings). Specification version 0.4 will allocate
+several between factors jointly.
 
 ### Continuous predictors
 
@@ -212,7 +226,10 @@ contradictory and is refused.
 
 Any `random` entry whose name is not `subject` or `item` is an extra grouping factor. It
 adds `over` (the unit it groups, either `"subject"` or `"item"`) and `n` (the number of groups).
-The units are assigned to groups in equal blocks. For example, subjects nested in clusters:
+The units are assigned to groups by the block rule of a between factor. With `N` units and `K`
+groups, unit `u` joins group `⌊(u − 1)·K/N⌋`, counted from 0 and written to the data counted
+from 1. The groups are therefore equal when `N` is a multiple of `K`. For example, subjects
+nested in clusters:
 
 ```json
 "site": { "over": "subject", "n": 12, "intercept_sd": 0.5, "slopes": { ... } }
@@ -221,6 +238,92 @@ The units are assigned to groups in equal blocks. For example, subjects nested i
 Each group draws a random-effect vector (intercept + any slopes) applied to all rows of the
 units in that group, and the simulated data gains a column with the group id. Useful for
 hierarchical designs (e.g. participants within sites, schools or languages).
+
+A between factor and a grouping factor over the same unit follow the same rule, so they nest.
+When `K` is a multiple of the factor's `L` levels, each group lies wholly in one level. With 120
+subjects in 12 sites and a two-level between factor, sites 1 to 6 are all in the first
+condition and sites 7 to 12 in the second, which randomises whole clusters. When `L` is a
+multiple of `K`, each level lies wholly in one group, and otherwise a group can straddle two
+levels. A design randomised within clusters, each cluster holding both conditions, is written
+with a between factor whose levels nest in the groups, as in the last of the
+[worked encodings](#worked-encodings).
+
+### Worked encodings
+
+Three common designs have no field of their own and are written with the fields above. Each is
+also a case of the parity harness in `tools/parity/cases/`, so its data are held bit-identical
+across the two implementations and anchored by a recorded hash.
+
+A 2 × 2 between-subjects design is one between factor whose four levels are the cells. Its
+contrast columns carry the two main effects, and the coefficient keyed `a:b` the interaction, as
+in [`between_cells_2x2.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/between_cells_2x2.json):
+
+```json
+"factors": [
+  { "name": "cell",
+    "levels": ["a1.b1", "a1.b2", "a2.b1", "a2.b2"],
+    "contrasts": { "a": [-0.5, -0.5, 0.5, 0.5], "b": [-0.5, 0.5, -0.5, 0.5] },
+    "between": "subject" }
+],
+"fixed": { "intercept": 10, "coefficients": { "a": 0.5, "b": 0.3, "a:b": 0.2 } }
+```
+
+The file's 40 subjects fall into four blocks of 10, one per cell. A factor with more levels
+takes one contrast column per degree of freedom, and its interaction with another factor one key
+per pair of columns. `spec_from_model()` in R writes this encoding itself when it reads two
+factors between the same unit off a fitted pilot.
+
+A two-list counterbalanced design shows each subject each item once, at one of two levels, and
+swaps the levels between two lists of subjects. It is written with a list factor between
+subjects and an item-set factor between items, whose contrasts multiply to the condition. With
+`l` at −1 and 1 and `g` at −0.5 and 0.5, the product `l·g` is −0.5 or 0.5, so the condition
+effect and its random slopes are keyed `l:g`, as in
+[`two_list_counterbalanced.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/two_list_counterbalanced.json):
+
+```json
+"factors": [
+  { "name": "list", "levels": ["list1", "list2"], "contrasts": { "l": [-1, 1] },
+    "between": "subject" },
+  { "name": "item_set", "levels": ["setA", "setB"], "contrasts": { "g": [-0.5, 0.5] },
+    "between": "item" }
+],
+"fixed": { "intercept": 6, "coefficients": { "l:g": 0.06 } },
+"random": {
+  "subject": { "intercept_sd": 0.12, "slopes": { "l:g": 0.04 } },
+  "item": { "intercept_sd": 0.08, "slopes": { "l:g": 0.02 } }
+}
+```
+
+Random slopes keyed on an interaction are a 0.3 feature, so the file declares
+`"spec_version": "0.3"`. With 24 subjects and 18 items it gives 432 rows, one for each
+subject–item pair, half the 864 of the fully crossed design with a within factor. Every subject
+sees nine items in each condition, and every item appears in both conditions across the two
+lists. In R, `model_formula()` gives `.y ~ l_g + (1 + l_g | subject) + (1 + l_g | item)`, where
+`l_g` is the condition column that `model_data()` builds. The encoding suits two conditions,
+since with three or more each condition is a combination of several product columns and the
+analysis model has to be written by hand.
+
+Randomisation within clusters, with both conditions in every cluster, is written with a between
+factor whose levels nest in the clusters. With 120 subjects in 12 sites, a factor of 24 levels
+gives each level a block of five subjects and each site two levels. A contrast that alternates
+across the levels then puts five subjects in each condition at every site, as in
+[`within_cluster_randomised.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/within_cluster_randomised.json):
+
+```json
+"factors": [
+  { "name": "arm",
+    "levels": ["s01_control", "s01_treatment", "s02_control", ..., "s12_treatment"],
+    "contrasts": { "trt": [-0.5, 0.5, -0.5, ..., 0.5] },
+    "between": "subject" }
+],
+"random": {
+  "site": { "over": "subject", "n": 12, "intercept_sd": 3, "slopes": { "trt": 1 } }
+}
+```
+
+The labels name the site each level falls in, which holds because 24 is a multiple of 12. Since
+every site holds both conditions, the by-site slope on `trt`, a treatment effect that varies
+between sites, can be estimated.
 
 ### Response families
 
@@ -382,8 +485,8 @@ itself, and every implementation must follow the sequence below exactly.
 
 Step 5 iterates the observations as nested loops, outermost first,
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
-listed order, levels in listed order): emit row`. Between-unit factors assign a level to
-each unit by equal blocks in level order and do not expand rows.
+listed order, levels in listed order): emit row`. A between factor assigns each unit a level by
+the block rule under [Factors](#factors) and does not expand rows.
 
 ### Extending the draw order
 
@@ -431,6 +534,14 @@ either set `round` or stay with `gaussian`.
 The stricter guarantee within one language is unconditional: the same implementation, specification
 and seed always produce the same data.
 
+pilotr simulates no attrition, exclusion or missing response, so every data set is complete and
+the sample size in a specification is the number of units analysed. A study that expects to lose a
+proportion `p` of its participants recruits `N/(1 − p)` to analyse `N`, so 60 analysed at 10%
+attrition means recruiting 67. Missingness that depends only on what is observed, such as the
+condition a participant was assigned to, is ignorable for likelihood-based inference (Rubin,
+1976), so it costs power and balance without biasing the estimates. Missingness that depends on
+the values that would have been observed, which pilotr does not simulate, can bias them as well.
+
 ## References
 
 * L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
@@ -449,3 +560,5 @@ and seed always produce the same data.
 * Neumaier, A. (1974). Rundungsfehleranalyse einiger Verfahren zur Summation endlicher Summen.
   *Zeitschrift für Angewandte Mathematik und Mechanik, 54*(1), 39–51.
   https://doi.org/10.1002/zamm.19740540106
+* Rubin, D. B. (1976). Inference and missing data. *Biometrika, 63*(3), 581–592.
+  https://doi.org/10.1093/biomet/63.3.581

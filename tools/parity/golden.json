@@ -2,6 +2,8 @@
   "hashes": {
     "between_2group_gaussian.asis.txt": "61e61cbd768a13f6cd628568bc4aa576d1a7ef8e77b21cfd1ffe2c6889b03941",
     "between_2group_gaussian.noround.txt": "b9699134b9454cb1e40d1b46b31f877fc14f93537209675013a759fe19a2a85b",
+    "between_cells_2x2.asis.txt": "096b4f4baacf0b84c0e06b2406f3e343dba0770ed24d4f7e7236f7a3cbb5bc2d",
+    "between_cells_2x2.noround.txt": "096b4f4baacf0b84c0e06b2406f3e343dba0770ed24d4f7e7236f7a3cbb5bc2d",
     "control_rt_as_gaussian.asis.txt": "02cf6f7cffd021b1ac878306148b440e188787c591a5a27571ff8ea9f8a3fbf6",
     "control_rt_as_gaussian.noround.txt": "02cf6f7cffd021b1ac878306148b440e188787c591a5a27571ff8ea9f8a3fbf6",
     "extra_group_item_list.asis.txt": "22e8e165af6bedfa5103c4cdd3fddc40fc224646cf733da378eb623910bacec9",
@@ -17,7 +19,11 @@
     "stress_interaction_slopes.asis.txt": "94976a0d18cf2c0ae30632d798109466d88733a5522267f844fb3ebac4f125ee",
     "stress_interaction_slopes.noround.txt": "94976a0d18cf2c0ae30632d798109466d88733a5522267f844fb3ebac4f125ee",
     "stress_v03_gaussian.asis.txt": "6adeeb4a3869c10b4ee1fe5ad68fa3682ea8f01aceb5f58164bfc4302b4ab998",
-    "stress_v03_gaussian.noround.txt": "6adeeb4a3869c10b4ee1fe5ad68fa3682ea8f01aceb5f58164bfc4302b4ab998"
+    "stress_v03_gaussian.noround.txt": "6adeeb4a3869c10b4ee1fe5ad68fa3682ea8f01aceb5f58164bfc4302b4ab998",
+    "two_list_counterbalanced.asis.txt": "e209973a1ecca10fcdb6972b6ab0e14e56d956bc6ebc36bf618ce0901a7f603c",
+    "two_list_counterbalanced.noround.txt": "e209973a1ecca10fcdb6972b6ab0e14e56d956bc6ebc36bf618ce0901a7f603c",
+    "within_cluster_randomised.asis.txt": "b60926620f79001cb879bff0bb70231a37e8408f041d30bb85980b42ea5ab7f1",
+    "within_cluster_randomised.noround.txt": "b60926620f79001cb879bff0bb70231a37e8408f041d30bb85980b42ea5ab7f1"
   },
   "note": "SHA-256 of the IEEE-exact (non-transcendental) R dumps in tools/parity/out/r; regenerate with `python tools/parity/compare.py --update`"
 }

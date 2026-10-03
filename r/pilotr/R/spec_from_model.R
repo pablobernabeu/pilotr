@@ -169,6 +169,45 @@
   if (is.null(s)) format(z) else s
 }
 
+# The factors placed between the same unit, merged into a single factor of cells.
+#
+# pilotr assigns the levels of each between factor to blocks of its unit on its own, so two
+# factors read as between subjects fell into the same or overlapping blocks. A balanced 2 x 2
+# between-subjects pilot came back as cells of 40, 0, 0 and 40 at 80 subjects, and its refit
+# dropped the second effect and the interaction. A factor of cells keeps every cell. Its contrast
+# columns are the components' columns under their fitted names, so every coefficient key the fit
+# produced still names a column, an interaction such as Aa2:Bb2 included. The cells run in
+# .product_indices() order, the first-listed factor varying slowest, and their labels join the
+# components' labels with ".".
+.combine_between <- function(factors, used) {
+  for (unit in c("subject", "item")) {
+    at <- which(vapply(factors, function(f) identical(f[["between"]], unit), logical(1)))
+    if (length(at) < 2L) next
+    parts <- factors[at]
+    nms <- vapply(parts, function(f) f[["name"]], character(1))
+    cells <- .product_indices(vapply(parts, function(f) length(f[["levels"]]), integer(1)))
+    labels <- vapply(cells, function(ix) paste(vapply(seq_along(parts), function(k)
+      parts[[k]][["levels"]][ix[k] + 1L], character(1)), collapse = "."), character(1))
+    contr <- list()
+    for (k in seq_along(parts)) for (cn in names(parts[[k]][["contrasts"]]))
+      contr[[cn]] <- vapply(cells, function(ix) parts[[k]][["contrasts"]][[cn]][ix[k] + 1L],
+                            numeric(1))
+    name <- .unique_name(paste(nms, collapse = "_"), used)
+    used <- c(used, name)
+    message("spec_from_model() combined the factors ", .name_list(sprintf("'%s'", nms)), ", ",
+            if (length(nms) == 2L) "both" else "all", " constant within ", unit,
+            ", into one factor '", name, "' whose levels are their cells, because pilotr would ",
+            "otherwise assign them to the same or overlapping blocks of ", unit, "s and confound ",
+            "their effects.")
+    # make.unique() matters only when a label itself contains ".", which could give two cells
+    # one label.
+    factors[[at[1L]]] <- list(name = name, levels = make.unique(labels), contrasts = contr,
+                              between = unit)
+    factors <- factors[-at[-1L]]
+  }
+  factors
+}
+
 # One grouping factor's random-effect entry, merged across the VarCorr blocks that belong to it.
 #
 # A `||` term splits one grouping factor across several VarCorr blocks, named "g", "g.1" and so
@@ -290,6 +329,15 @@
 #' effect and once as a numeric contrast for a random slope, gives two separate specification
 #' terms, because the two columns are separate columns in the model frame and nothing in the fit
 #' ties them together.
+#'
+#' Two or more factors placed between the same unit become one factor whose levels are their
+#' cells, and a message says so. The first-listed factor varies slowest, and each label joins the
+#' components' labels with `"."`. Two between factors over one unit would confound their effects,
+#' because pilotr assigns the levels of each between factor to blocks of its unit on its own, and
+#' [validate_spec()] refuses them. The combined factor carries every component's contrast columns
+#' under the names the fit gave them, so each coefficient the fit estimated, interactions
+#' included, still names a column. Every cell then receives units, in equal numbers whenever the
+#' number of units is a multiple of the number of cells.
 #'
 #' Interactions need one further step. lme4 writes the interaction of two model-frame columns as
 #' `a:b`, which is already the specification's convention, but [model_data()] gives an
@@ -519,6 +567,7 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
             paste(sprintf("'%s' as the interaction '%s'", names(products),
                           vapply(names(products), .spec_key, character(1),
                                  products = products)), collapse = ", "), ".")
+  factors <- .combine_between(factors, c(used, yname))
 
   # ---- fixed effects ----
   fe <- lme4::fixef(fit)

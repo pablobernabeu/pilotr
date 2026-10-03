@@ -57,7 +57,8 @@ def main() -> None:
     # shipped examples do not: long random-effect vectors (so the Cholesky and matrix-vector
     # inner products run to three terms or more, where the two languages' built-in reductions
     # diverge), long linear predictors, interaction random slopes, and a Gaussian response, so
-    # that no libm transcendental masks or manufactures a difference.
+    # that no libm transcendental masks or manufactures a difference. It also holds the worked
+    # encodings of spec/SPEC.md, so that the designs the specification teaches are anchored too.
     spec_dirs = [os.path.join(ROOT, "spec", "examples"),
                  os.path.join(ROOT, "tools", "parity", "cases")]
     specs = [(d, n) for d in spec_dirs if os.path.isdir(d)

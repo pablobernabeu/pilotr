@@ -189,6 +189,7 @@ def cases():
                          s["fixed"]["coefficients"].__setitem__("z", 0.1)))),
     ]
     out += name_cases()
+    out += allocation_cases()
     return out
 
 
@@ -264,6 +265,31 @@ def name_cases():
          _mut(lambda s: s["factors"][0].__setitem__("vary_within", ["subject"]))),
         ("vary_within omitting the subject unit (warns)",
          _mut(lambda s: s["factors"][0].__setitem__("vary_within", "item"))),
+    ]
+
+
+def _between_factor(name, unit, contrasts):
+    """A between factor with one level for each value of its contrasts."""
+    n_levels = len(next(iter(contrasts.values())))
+    return {"name": name, "levels": ["%s%d" % (name.lower(), k) for k in range(1, n_levels + 1)],
+            "contrasts": contrasts, "between": unit}
+
+
+def allocation_cases():
+    """Factors between one unit, which pilotr assigns to the same or overlapping blocks of it.
+
+    The last is accepted: a factor between subjects and another between items do not alias.
+    """
+    a = _between_factor("A", "subject", {"a": [-0.5, 0.5]})
+    b = _between_factor("B", "subject", {"b": [-0.5, 0.5]})
+    c = _between_factor("C", "subject", {"c1": [-1, 1, 0], "c2": [-1, 0, 1]})
+    return [
+        ("two factors between subject", _mut(lambda s: s["factors"].extend([a, b]))),
+        ("three factors between subject", _mut(lambda s: s["factors"].extend([a, b, c]))),
+        ("two factors between item",
+         _mut(lambda s: s["factors"].extend([dict(a, between="item"), dict(b, between="item")]))),
+        ("one factor between subject and one between item",
+         _mut(lambda s: s["factors"].extend([a, dict(b, between="item")]))),
     ]
 
 

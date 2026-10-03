@@ -88,6 +88,74 @@ test_that("spec_from_model re-keys a product column to its interaction", {
   expect_identical(rec$response$family, "lognormal")
 })
 
+test_that("spec_from_model combines factors between one unit into one factor of cells", {
+  skip_if_not_installed("lme4")
+  # A balanced 2 x 2 between-subjects pilot, 10 subjects per cell, simulated from the encoding
+  # that keeps every cell. Read back as two factors between subjects, it used to give cells of
+  # 40, 0, 0 and 40 at 80 subjects, and a refit that dropped B and the interaction.
+  pilot <- list(name = "pilot", seed = 11,
+                units = list(subject = list(n = 40), item = list(n = 6)),
+                factors = list(list(name = "cell", levels = c("a1.b1", "a1.b2", "a2.b1", "a2.b2"),
+                                    contrasts = list(a = c(-0.5, -0.5, 0.5, 0.5),
+                                                     b = c(-0.5, 0.5, -0.5, 0.5)),
+                                    between = "subject")),
+                fixed = list(intercept = 10, coefficients = list(a = 0.5, b = 0.3, "a:b" = 0.2)),
+                random = list(subject = list(intercept_sd = 1), item = list(intercept_sd = 0.5)),
+                response = list(family = "gaussian", name = "y", sigma = 1))
+  d <- simulate_design(pilot)
+  d$A <- factor(substr(d$cell, 1, 2))
+  d$B <- factor(substr(d$cell, 4, 5))
+  fit <- lme4::lmer(y ~ A * B + (1 | subject) + (1 | item), data = d)
+
+  said <- character(0)
+  keep <- function(m) { said <<- c(said, conditionMessage(m)); invokeRestart("muffleMessage") }
+  rec <- withCallingHandlers(spec_from_model(fit, n_subject = 80), message = keep)
+  expect_true(any(grepl(paste0(
+    "spec_from_model() combined the factors 'A' and 'B', both constant within subject, into one ",
+    "factor 'A_B' whose levels are their cells, because pilotr would otherwise assign them to the ",
+    "same or overlapping blocks of subjects and confound their effects."), said, fixed = TRUE)))
+
+  # One factor of cells, the first-listed factor varying slowest, carrying both factors' fitted
+  # contrast columns, so that every coefficient key the fit produced still names a column.
+  expect_length(rec$factors, 1L)
+  f <- rec$factors[[1]]
+  expect_identical(f$name, "A_B")
+  expect_identical(f$between, "subject")
+  expect_identical(f$levels, c("a1.b1", "a1.b2", "a2.b1", "a2.b2"))
+  expect_identical(f$contrasts, list(Aa2 = c(0, 0, 1, 1), Bb2 = c(0, 1, 0, 1)))
+  expect_setequal(names(rec$fixed$coefficients), c("Aa2", "Bb2", "Aa2:Bb2"))
+
+  d2 <- simulate_design(rec)
+  expect_identical(as.vector(table(d2$A_B[!duplicated(d2$subject)])), rep(20L, 4))
+  said <- character(0)
+  refit <- withCallingHandlers(lme4::lmer(model_formula(rec), data = model_data(rec, d2)),
+                               message = keep)
+  expect_false(any(grepl("rank deficient", said, fixed = TRUE)))
+  fe <- lme4::fixef(refit)
+  expect_identical(names(fe), c("(Intercept)", "Aa2", "Bb2", "Aa2_Bb2"))
+  expect_false(anyNA(fe))
+})
+
+test_that("factors between items combine too, keeping each cell's contrasts and a free name", {
+  facs <- list(
+    list(name = "A", levels = c("a1", "a2"), contrasts = list(Aa2 = c(0, 1)), between = "item"),
+    list(name = "cond", levels = c("x", "y"), contrasts = list(cond = c(-0.5, 0.5)),
+         vary_within = c("subject", "item")),
+    list(name = "B", levels = c("b1", "b2", "b3"),
+         contrasts = list(Bb2 = c(0, 1, 0), Bb3 = c(0, 0, 1)), between = "item"))
+  expect_message(out <- .combine_between(facs, used = c("A", "B", "cond", "A_B")),
+                 paste0("combined the factors 'A' and 'B', both constant within item, into one ",
+                        "factor 'A_B_'"), fixed = TRUE)
+  # The combined factor takes the first component's place, and the within factor is untouched.
+  expect_identical(vapply(out, function(f) f$name, character(1)), c("A_B_", "cond"))
+  expect_identical(out[[2]], facs[[2]])
+  f <- out[[1]]
+  expect_identical(f$between, "item")
+  expect_identical(f$levels, c("a1.b1", "a1.b2", "a1.b3", "a2.b1", "a2.b2", "a2.b3"))
+  expect_identical(f$contrasts, list(Aa2 = c(0, 0, 0, 1, 1, 1), Bb2 = c(0, 1, 0, 0, 1, 0),
+                                     Bb3 = c(0, 0, 1, 0, 0, 1)))
+})
+
 test_that("spec_from_model refuses what it cannot read, saying what to do instead", {
   skip_if_not_installed("lme4")
   # No random effects: the part of a specification hardest to guess is missing.

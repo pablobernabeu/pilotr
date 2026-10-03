@@ -170,6 +170,12 @@ def validate_spec(spec, strict: bool = True):
     a design without items each validated and then changed the data in silence. The rules are set
     out under Names in the specification.
 
+    At most one factor may be between each unit. pilotr assigns the levels of each between factor
+    to blocks of its unit on its own, so two between factors over one unit fall into the same or
+    overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
+    and 20, and its effects could not be estimated apart. Such a design is written as one between
+    factor whose levels are the cells, as the specification shows under Worked encodings.
+
     Parameters
     ----------
     spec : dict
@@ -610,6 +616,26 @@ def _check_names(spec, has_item, units_ok):
         if f.get("vary_within") is not None and f.get("between") is not None:
             bad("factors[%d] sets both 'vary_within' and 'between'; a factor has to set exactly "
                 "one of them" % i)
+
+    # The simulator assigns the levels of each between factor to blocks of its unit on its own,
+    # so two such factors over one unit fell into the same or overlapping blocks. A 2 x 2
+    # between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and neither the
+    # second effect nor the interaction could then be estimated. One factor whose levels are the
+    # cells keeps every cell, and R's spec_from_model() writes that encoding for a fitted pilot.
+    for unit in ["subject"] + (["item"] if has_item else []):
+        on_unit = [f["name"] for f in factors
+                   if isinstance(f, dict) and f.get("vary_within") is None
+                   and _is_name(f.get("name")) and f.get("between") == unit]
+        if len(on_unit) > 1:
+            bad("the factors %s are %s between '%s'. pilotr assigns the levels of each between "
+                "factor to blocks of %ss on its own, so the blocks of these factors coincide or "
+                "overlap, which leaves some combinations of their levels without %ss and "
+                "confounds their effects. Encode the design as one between factor whose levels "
+                "are the cells, give it the contrast columns of these factors and key each "
+                "interaction as 'a:b', as spec_from_model() in R does for a fitted pilot. "
+                "Specification version 0.4 will allocate several between factors jointly."
+                % (_name_list("'%s'" % n for n in on_unit),
+                   "both" if len(on_unit) == 2 else "all", unit, unit, unit))
 
     # Every column of the simulated data, in the order the simulator writes them.
     cols: list[str] = []

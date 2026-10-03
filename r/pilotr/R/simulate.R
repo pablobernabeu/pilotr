@@ -306,7 +306,8 @@ simulate_design <- function(spec, validate = TRUE) {
 
   # ---- additional grouping factors (e.g. units nested in higher-level clusters) ----
   # Any random entry other than subject/item declares `over` (the unit it groups) and `n`
-  # (the number of groups). Units are assigned to groups in equal blocks.
+  # (the number of groups). Units are assigned to groups in consecutive blocks, which are equal
+  # when the number of units is a multiple of the number of groups.
   extra_names <- setdiff(names(rs), c("subject", "item"))
   b_group <- list(); group_meta <- list()
   for (gname in extra_names) {
