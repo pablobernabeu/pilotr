@@ -185,9 +185,11 @@ def test_power_mixed_also_refuses_to_divide_by_a_zero_true_effect():
         "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
     }
     r = power_mixed(spec, n_sims=4)
-    assert r["n_converged"] > 0  # so the NaNs below are the guard, not a failed fit
+    assert r["n_returned"] > 0  # so the NaNs below are the guard, not a failed fit
     assert math.isnan(r["type_s"])
     assert math.isnan(r["type_m"])
+    # Power is the significant share of the replicates that returned a fit, as in the R twin.
+    assert r["n_significant"] == round(r["power"] * r["n_returned"])
 
 
 def test_additional_grouping_column_present():

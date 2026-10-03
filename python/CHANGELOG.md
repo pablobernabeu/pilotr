@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what the model fits, independent by-subject and by-item intercept and slope components with a
   test of the first contrast of the single within factor. The project README had put the two
   languages at capability parity here.
+- `n_converged` from `power_mixed` counts the fits that converged without a warning and without
+  a singular variance component, as in the R twin. It counted every fit that returned, which is
+  now `n_returned`. `n_attempted`, `n_singular` and `n_warning` are new, and power is still taken
+  over the returned fits. A fit is singular when a variance component's standard deviation is
+  below 1e-4 of the residual one, lme4's test. statsmodels' notice that a fit may be on the
+  boundary counts against no fit, since every fit on the log scale draws it. Its notice of a
+  Hessian that is not positive definite counts only against a fit that is not singular, since a
+  component at zero can draw it by itself. On the 12 × 8 design of the power guide, the five
+  counts equal those of the R twin's `power_mixed()` given the same model.
+- The `power_mixed` backend names its test, a Wald z. With few subjects or items, a Wald z
+  rejects more readily than the R twin's Satterthwaite tests, so in small designs Python's power
+  tends to exceed R's on the same data: 6 of 12 replicates against 4 of 12 on the 12 × 8 design
+  of the power guide. With 8 subjects, 6 items, random intercepts alone and no true effect, it
+  rejected in 0.043 of 300 replicates (Monte Carlo standard error 0.012). lme4's Satterthwaite
+  test of the same model rejected in 0.030 on the same data.
 
 ### Fixed
 
@@ -85,9 +100,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the log scale. Six replicates gave a mean estimate of 53.1 and a Type M of 553, where the log
   scale gives 0.136 and 1.36, as R does.
 - `power_mixed` returns no estimate for a replicate whose response has no logarithm, as the R
-  twin does, and `n_converged` leaves that replicate out. Such a response is a
+  twin does, and `n_returned` leaves that replicate out. Such a response is a
   `shifted_lognormal` value rounded down to the shift, or now a `lognormal` value rounded to 0.
   The shifted family raised `ValueError: math domain error`, which ended the whole call.
+- `power_mixed` fits with Powell's method followed by L-BFGS. statsmodels' default chain of
+  optimisers stopped short of the REML optimum in most crossed fits, which the documentation had
+  described as statsmodels overstating random-slope variance. Over the first 12 replicates of the
+  crossed reaction-time example, the standard error of the effect averaged 0.0278 against lme4's
+  0.0190, and 2 replicates were significant against lme4's 6. The standard errors now match those
+  of lme4's uncorrelated model to four decimal places in 11 of the 12, and the same 6 replicates
+  are significant. A replicate whose Powell fit raises is fitted again with the default chain
+  and counts as a fit with a warning.
 
 ### Deprecated
 

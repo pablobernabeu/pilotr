@@ -88,10 +88,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install with the power extra
+      # The mixed extra adds statsmodels and pandas to the power extra's scipy. With the power extra
+      # alone, every power_mixed test skipped here and ran only in the minimum-versions job below,
+      # so only the oldest supported statsmodels release was tested.
+      - name: Install with the mixed extra
         run: |
           python -m pip install --upgrade pip pytest pytest-cov
-          pip install -e "./python[power]"
+          pip install -e "./python[mixed]"
 
       - name: Run the test suite
         working-directory: python

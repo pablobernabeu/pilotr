@@ -61,4 +61,4 @@ providing the confirmatory Bayesian layer.
 | Gap | Note |
 |---|---|
 | Full Bayesian fit in-toolkit (HDI, LKJ priors, posterior precision) | use the `brms_bridge()` output. The built-in precision analysis is a fast frequentist analogue |
-| Crossed-random-slope power in Python | `statsmodels` overstates slope variance (conservative). R/`lme4` is the reference |
+| Python power for the model the specification implies | Python's `power_mixed` fits `yv ~ cc` with independent variance components and tests with a Wald z, which with few subjects or items rejects more readily than R's Satterthwaite tests. R's `power_mixed()` fits the specification's model, correlations included |

@@ -10,8 +10,10 @@ replicates.
 * Type M (magnitude): E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
 The two-group Gaussian design with one row per subject uses a two-sample t-test (`power`).
-Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which is
-conservative for random-slope designs; the R package's lme4 backend is the reference there.
+Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which fits
+independent variance components by REML and tests the effect with a Wald z. The R package's
+lme4 backend fits the model the specification implies and tests with Satterthwaite's
+approximation.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
 processes. The replicate seeds are derived once from the specification's seed, so the
@@ -254,9 +256,76 @@ def _left_out_of_model(spec, col):
             for one, many, names in found if names]
 
 
+# The ConvergenceWarnings that statsmodels raises about a MixedLM fit which may still be at the
+# optimum. It flags a fit as possibly on the boundary whenever a variance component is below 0.01
+# in absolute terms. On the log scale of a reaction time that is every fit, so singularity is
+# judged from the estimates instead. It also reports each optimiser in its chain that gives way to
+# the next, though the next may converge. A failure of the last one has a notice of its own.
+# Every other ConvergenceWarning makes the replicate a fit with a warning, with the one exception
+# below. Counting only a list of known failures would let a reworded failure pass unseen, whereas
+# a reworded notice from this list shows up at once, as fits that never converge.
+_NOTICES_THAT_PASS = ("The MLE may be on the boundary",
+                      "Retrying MixedLM optimization",
+                      "Maximum Likelihood optimization failed to converge")
+
+# statsmodels also warns that the Hessian is not positive definite whenever an entry on its
+# diagonal is not negative. It takes the Hessian with respect to the variances, and at a component
+# held at zero the maximum is set by the boundary, so the curvature there need not be negative. In
+# the 164 singular fits that drew this notice over five designs, only components at zero failed
+# the check. In a singular fit the notice is therefore left to n_singular, as the R twin leaves
+# lme4's notice of a singular fit to isSingular(). Given this model as its formula, the R twin's
+# power_mixed() then reports the same five counts as this one on the 12 x 8 design of the Python
+# power guide, with no fit warned. Counted there, the notice made 3 of those 12 fits warned.
+_HESSIAN_NOTICE = "The Hessian matrix at the estimated parameter values is not positive definite"
+
+# What a replicate fitted by the fallback records against its fit.
+_FELL_BACK = "Powell's method raised, so statsmodels' default optimisers fitted the replicate."
+
+
+def _notices(caught):
+    """The messages of the warnings recorded during a MixedLM fit that may count against it."""
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+    return [str(w.message) for w in caught if issubclass(w.category, ConvergenceWarning)
+            and not str(w.message).startswith(_NOTICES_THAT_PASS)]
+
+
+def _fit_mixed(model):
+    """Fit a MixedLM by REML and return ``(result, notices)``, or None when no fit returned.
+
+    ``notices`` lists the messages that may count against the fit, which the caller weighs once
+    it knows whether the fit is singular. Powell's method runs first, and L-BFGS takes over if it
+    does not converge. statsmodels' default chain of BFGS, L-BFGS and CG stopped short of the REML
+    optimum in most crossed fits. On the first replicate of the crossed_mixed_rt example, it ended
+    at a REML log-likelihood of -406.4, where lme4 reaches -389.8, and gave the effect a standard
+    error of 0.0345 against lme4's 0.0186. That chain now serves only when Powell's method raises,
+    and the replicate then counts as a fit with a warning. A fit is never repeated because of a
+    warning or of its ``converged`` flag, since the boundary notice comes with every fit on the
+    log scale, and a default fit flagged as converged could still fall short of the optimum.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            m = model.fit(reml=True, method=["powell", "lbfgs"])
+        except Exception:
+            m = None
+    if m is not None:
+        return m, _notices(caught)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the fallback already makes this a fit with a warning
+        try:
+            return model.fit(reml=True), [_FELL_BACK]
+        except Exception:
+            return None
+
+
 def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
-    """One mixed-model replicate: simulate at `seed`, fit MixedLM, return (estimate,
-    p-value), or None when the fit fails."""
+    """One mixed-model replicate: simulate at `seed` and fit MixedLM.
+
+    Returns a dict with the estimate and Wald z p-value of ``cc`` and the fit's flags,
+    ``singular``, ``warned`` and ``converged``, or None when no fit returned a finite estimate and
+    p-value.
+    """
     import math, warnings
     import pandas as pd
     import statsmodels.formula.api as smf
@@ -279,13 +348,29 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
     else:
         df["yv"] = list(df[yname])
     df["grp"] = 1
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            m = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf).fit()  # REML (default)
-        return float(m.fe_params["cc"]), float(m.pvalues["cc"])
-    except Exception:
+    # Building the model is kept out of the fits' error handling, so that a fault there stops the
+    # call where it used to leave every replicate without a fit and power undefined.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf)
+    fit = _fit_mixed(model)
+    if fit is None:
         return None
+    m, notices = fit
+    est, p = float(m.fe_params["cc"]), float(m.pvalues["cc"])
+    # A Hessian that is not positive definite can leave the effect without a standard error, and
+    # such a replicate has no test to count towards power.
+    if not (math.isfinite(est) and math.isfinite(p)):
+        return None
+    # lme4's isSingular(): a variance component whose standard deviation is below 1e-4 of the
+    # residual one. For independent components that ratio is lme4's theta, and on Powell fits the
+    # test agreed with lme4 in each of 24 replicates. It is squared here, so that no variance needs
+    # a square root.
+    singular = any(v < 1e-8 * m.scale for v in m.vcomp)
+    # See _HESSIAN_NOTICE: in a singular fit, the component at zero explains that notice.
+    warned = any(not (singular and n.startswith(_HESSIAN_NOTICE)) for n in notices)
+    return {"est": est, "p": p, "singular": singular, "warned": warned,
+            "converged": bool(m.converged) and not singular and not warned}
 
 
 def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
@@ -316,17 +401,24 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     parallelisation via `workers` (default 1, serial), which returns results identical to a
     serial run for any worker count.
 
-    Accuracy caveat (verified behaviour, not a bug). statsmodels fits crossed random effects
-    as independent variance components and, in our tests, substantially overstates random-slope
-    variance (for example, a by-subject slope SD of about 0.12 estimated against 0.04 true).
-    This inflates the fixed-effect standard error. For designs with by-subject or by-item random
-    slopes, the backend is therefore markedly conservative. On the crossed RT design it
-    reports power around 0.48, against the R/lme4 reference of about 0.73. It still recovers the
-    fixed effect (mean estimate about 0.048 against 0.05 true) and the Type S and Type M
-    quantities correctly, and it is reliable for random-intercept designs. We recommend treating
-    its output as a conservative lower bound and using the R/lme4 `power_mixed` as the reference
-    whenever random slopes or random-effect correlations matter. Data generation is identical
-    across R and Python. This discrepancy arises solely in the Python LMM estimator.
+    Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if Powell's does
+    not converge. statsmodels' default chain of optimisers stopped short of the REML optimum in
+    most crossed fits, which earlier versions described as statsmodels overstating random-slope
+    variance. Over the first 12 replicates of the crossed_mixed_rt example, the standard error of
+    the effect now matches the one from lme4's uncorrelated model, ``(1 + cc || subject) +
+    (1 + cc || item)``, to four decimal places in 11. The same 6 replicates are significant in
+    both. A replicate whose Powell fit raises is fitted again with the default chain and counts
+    as a fit with a warning.
+
+    The p-values are Wald z tests. A Wald z treats the estimate over its standard error as normal
+    and so ignores the uncertainty in the variance components. With few subjects or items, it
+    rejects more readily than a test with Satterthwaite's degrees of freedom (Luke, 2017,
+    doi:10.3758/s13428-016-0809-y), which is the test of the R package's ``power_mixed()``. In
+    small designs, the power here therefore tends to exceed R's on the same data. On the 12 x 8
+    design of the documentation, 6 of 12 replicates are significant here and 4 of 12 in R. With
+    8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected the
+    null hypothesis in 0.043 of 300 replicates (Monte Carlo standard error 0.012). On the same
+    data, lme4's Satterthwaite test of the same model rejected in 0.030.
 
     Parameters
     ----------
@@ -346,11 +438,23 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     Returns
     -------
     dict
-        Keys: `backend` (the estimator used), `n_sims`, `n_converged` (how many replicates
-        the model fit), `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
-        `type_s`, `type_m`. `power` is the proportion of significant results among the
-        `n_converged` converged replicates, not among `n_sims`. `type_s` and `type_m` are
-        `nan` when no replicate reached significance and when the true effect is zero.
+        Keys: `backend` (the estimator and its test), `n_sims`, `alpha`, the fit counts
+        `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`, then `power`,
+        `n_significant`, `true_effect`, `mean_estimate`, `type_s` and `type_m`.
+
+        The fit counts mean what they mean in the R twin. `n_attempted` is `n_sims`, and
+        `n_returned` counts the replicates that returned an estimate and a p-value. `power` is
+        the proportion of significant results among those, not among `n_sims`. `n_singular`
+        counts fits with a variance component whose standard deviation is below 1e-4 of the
+        residual one, the test of lme4's ``isSingular()``. `n_warning` counts fits whose
+        optimisers did not converge, whose Powell fit raised or whose Hessian was not positive
+        definite. A component at zero can fail statsmodels' check of the Hessian by itself, so
+        that notice counts only against a fit that is not singular. `n_converged` counts the fits
+        that are neither singular nor warned. statsmodels' notice that a fit may be on the
+        boundary counts towards none of them, since it comes with every fit that has a variance
+        component below 0.01. Singular fits and fits with a warning stay in `power`, as in the R
+        twin. `type_s` and `type_m` are `nan` when no replicate reached significance and when the
+        true effect is zero.
 
     Raises
     ------
@@ -404,15 +508,22 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         from concurrent.futures import ProcessPoolExecutor
         with ProcessPoolExecutor(max_workers=workers) as executor:
             results = _map_replicates(rep, seeds, executor)
-    est = [r[0] for r in results if r is not None]
-    pv = [r[1] for r in results if r is not None]
+    fits = [r for r in results if r is not None]
+    est = [r["est"] for r in fits]
+    pv = [r["p"] for r in fits]
 
     sig = [i for i, p in enumerate(pv) if p < alpha]
     # See _power_impl: a zero true effect leaves both design-analysis quantities undefined.
     usable = bool(sig) and not math.isnan(beta) and beta != 0
     return {
-        "backend": "statsmodels MixedLM (crossed variance components, REML)",
-        "n_sims": n_sims, "n_converged": len(pv), "alpha": alpha,
+        "backend": "statsmodels MixedLM (crossed variance components, REML; Wald z tests)",
+        "n_sims": n_sims, "alpha": alpha,
+        # The R twin's fit counts, with its meanings. n_converged used to count every fit that
+        # returned, the count now called n_returned.
+        "n_attempted": n_sims, "n_returned": len(fits),
+        "n_converged": sum(r["converged"] for r in fits),
+        "n_singular": sum(r["singular"] for r in fits),
+        "n_warning": sum(r["warned"] for r in fits),
         "power": len(sig) / len(pv) if pv else float("nan"),
         "n_significant": len(sig), "true_effect": beta,
         "mean_estimate": statistics.mean(est) if est else float("nan"),

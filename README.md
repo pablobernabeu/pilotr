@@ -273,12 +273,18 @@ python -m pytest python/tests -q
 
 > A note on R and Python coverage. Data generation is bit-identical across languages (exactly,
 > or within the documented ulp tolerance for the unrounded `exp()`/`log()` families), and both
-> ecosystems run crossed mixed-effects power from the same spec. The LMM estimators, however,
-> differ. R (`lme4`/`lmerTest`, REML, correlated random effects) is the reference. Python
-> (`statsmodels` MixedLM, crossed variance components) overstates random-slope variance, so it is
-> conservative for random-slope designs (for the crossed design, power about 0.48 versus about
-> 0.73 from lme4), although it recovers fixed effects correctly (mean estimate about 0.048 versus
-> 0.05). The two-group Gaussian power backend is identical in both languages. For correlated
+> ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
+> however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
+> correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`
+> MixedLM, REML) fits independent variance components, reaching the optimum that `lme4` reaches
+> for the same components, and tests with a Wald z. With few subjects or items, a Wald z rejects
+> more readily than Satterthwaite's test
+> ([Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), so in small designs Python's power
+> tends to exceed R's on the same data. On the 12 × 8 design of the Python power guide, 6 of 12
+> replicates are significant in Python and 4 in R. With 8 subjects, 6 items, random intercepts
+> alone and no true effect, Python rejected in 0.043 of 300 replicates (Monte Carlo standard
+> error 0.012). On the same data, `lme4`'s Satterthwaite test of the same model rejected in
+> 0.030. The two-group Gaussian power backend is identical in both languages. For correlated
 > random slopes, R is the recommended choice.
 
 ## Citation

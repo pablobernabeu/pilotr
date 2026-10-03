@@ -156,7 +156,10 @@ spec_mixed = {
 # A tiny replicate count keeps the docs build fast. Use 200 or more for real planning.
 res = power_mixed(spec_mixed, n_sims=12)
 print(table([{k: res[k] for k in (
-    "power", "n_converged", "true_effect", "mean_estimate", "type_s", "type_m"
+    "n_attempted", "n_returned", "n_converged", "n_singular", "n_warning"
+)}]))
+print(table([{k: res[k] for k in (
+    "power", "true_effect", "mean_estimate", "type_s", "type_m"
 )}]))
 ```
 
@@ -167,15 +170,41 @@ the two-list encoding among the [worked encodings](specification.md#worked-encod
 `simulate` produces exactly as the R package does. That encoding has no within factor, so
 `power_mixed` here refuses it, and its power comes from the R package's `power_mixed()`.
 
-`n_converged` reports how many replicates the mixed model actually fit. Convergence problems
-are common in small crossed designs, so this is a useful diagnostic in its own right, and it is
-the denominator of `power`, the significant proportion among the converged replicates.
+The first table counts the fits as the R package does. `n_returned` counts the replicates that
+returned an estimate and a p-value, and `power` is the significant proportion among them.
+`n_singular` counts fits with a variance component on the boundary, judged by lme4's test of a
+standard deviation below 1e-4 of the residual one. `n_warning` counts fits whose optimisers did
+not converge or whose Hessian was not positive definite. A component at zero can fail
+statsmodels' check of the Hessian by itself, so in a singular fit that notice is left to
+`n_singular`. `n_converged` counts the fits that are neither singular nor warned. Given the
+model fitted here as its `formula`, the R package's `power_mixed()` reports the same five counts
+on this design. Here nearly every fit is singular, since 12 subjects and 8 items cannot support
+all four variance components when two of them are as small as these slopes. Such fits stay in
+`power`, as in the R package, because their fixed-effect estimates remain usable. statsmodels
+also notes that a fit may be on the boundary whenever a variance component is below 0.01. On
+the log scale every fit draws that notice, so it counts towards none of these.
 
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
-`true_effect`). The statsmodels variance-component fit overstates random-slope variance, so
-the power estimate is conservative for random-slope designs, and the R package's `lme4`-based
-`power_mixed` is the reference for them. Data generation is identical across the
-two languages, and the discrepancy is in the estimator alone.
+`true_effect`). Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if
+Powell's does not converge. statsmodels' default chain of optimisers stopped short of the
+optimum in most crossed fits, a failure that earlier versions of this page described as
+statsmodels overstating random-slope variance. Over the first 12 replicates of the crossed
+reaction-time example, the standard error of the effect now matches the one `lme4` gives for the
+same independent components to four decimal places in 11. The same 6 replicates are significant
+in both. A replicate whose Powell fit raises is fitted again with the default chain and counts
+in `n_warning`.
+
+The p-values are Wald z tests. A Wald z treats the estimate over its standard error as normal
+and so ignores the uncertainty in the variance components. With few subjects or items, it
+rejects more readily than a test with Satterthwaite's degrees of freedom
+([Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), and Satterthwaite's is the test the
+R package's `power_mixed()` applies. In small designs, the power here therefore tends to be
+higher than R's on the same data. In the example above, 6 of the 12 replicates are significant,
+against 4 in R. With 8 subjects, 6 items, random intercepts alone and no true effect, the test
+here rejected the null hypothesis in 0.043 of 300 replicates (Monte Carlo standard error 0.012).
+On the same data, `lme4`'s Satterthwaite test of the same model rejected in 0.030. Data
+generation is identical across the two languages, so these differences lie in the model and the
+test alone.
 
 `power_mixed` carries its own simulation loop over the portable specification, with no other
 power package underneath it. It covers territory pioneered by
