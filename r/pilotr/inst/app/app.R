@@ -380,23 +380,56 @@ server <- function(input, output, session) {
       is.null(spec[["units"]][["item"]]) &&
       all(names(spec[["random"]]) %in% c("subject", "item"))
   }
-  not_supported <- paste0(
-    "The in-app power backend covers the two-group Gaussian design with one row per\n",
-    "subject. For a crossed mixed-effects design, download the spec (the Design spec tab)\n",
-    "and run it directly:\n\n",
-    "R (lme4; may take a few minutes):\n",
-    "    library(pilotr)\n",
-    "    spec <- load_spec(\"design.json\")\n",
-    "    power_mixed(spec, n_sims = 200)\n",
-    "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)\n\n",
-    "Python (statsmodels backend):\n",
-    "    from pilotr import load_spec, power_mixed\n",
-    "    power_mixed(load_spec(\"design.json\"), n_sims=200)")
+  # What to run instead, chosen by what can fit the design. R's power_mixed() fits every family
+  # but two on the scale of its coefficients, by lmer() or glmer(), or lm() and glm() without
+  # random effects. Python's power_mixed() takes one within factor crossed with items and fits a
+  # linear model on the response's own scale. It is offered only for such a design, in a family
+  # whose coefficients are on that scale or on the log scale it analyses. Ordinal and Beta
+  # outcomes have no frequentist model here and go to the Bayesian design analysis. A single text
+  # used to send every design to both power_mixed() functions, including designs neither fits on
+  # the scale of their coefficients. The installed app reaches only pilotr's exports, so the rule
+  # is written out here, as it is in the browser build.
+  not_supported <- function(spec) {
+    family <- spec[["response"]][["family"]]
+    opening <- paste0(
+      "The in-app power backend covers the two-group Gaussian design with one row per\n",
+      "subject. ")
+    if (family %in% c("ordinal", "beta")) {
+      focal <- names(spec[["fixed"]][["coefficients"]])[1]
+      if (!length(focal) || is.na(focal)) focal <- "effect"
+      return(paste0(opening,
+        "pilotr has no frequentist model for ordinal or Beta outcomes yet, so the\n",
+        "analysis of this design is Bayesian, on the logit scale its coefficients are\n",
+        "written on. Download the spec (the Design spec tab) and run it in R:\n\n",
+        "    library(pilotr)\n",
+        "    spec <- load_spec(\"design.json\")\n",
+        "    brms_bridge(spec)   # the brms model, as code\n",
+        sprintf("    generate_design_analysis(spec, focal = \"%s\", file = \"design_analysis.R\")\n",
+                focal),
+        "\ngenerate_design_analysis() writes a script that simulates the design, fits that\n",
+        "model with brms and decides about the effect, replicate by replicate."))
+    }
+    within <- Filter(function(f) !is.null(f[["vary_within"]]), spec[["factors"]])
+    python <- length(within) == 1L && !is.null(spec[["units"]][["item"]]) &&
+      family %in% c("gaussian", "lognormal", "shifted_lognormal", "exgaussian")
+    paste0(opening,
+      "For this design, download the spec (the Design spec tab) and run it\n",
+      "directly:\n\n",
+      "R (lme4; may take a few minutes):\n",
+      "    library(pilotr)\n",
+      "    spec <- load_spec(\"design.json\")\n",
+      "    power_mixed(spec, n_sims = 200)\n",
+      "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)",
+      if (python) paste0(
+        "\n\nPython (statsmodels backend):\n",
+        "    from pilotr import load_spec, power_mixed\n",
+        "    power_mixed(load_spec(\"design.json\"), n_sims=200)"))
+  }
 
   observeEvent(input$run_power, {
     power_curve_data(NULL)
     spec <- current_spec()
-    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); return() }
+    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported(spec))); return() }
     n <- .n_sims_input(input$n_sims)
     if (.async_ok) {
       power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
@@ -411,7 +444,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$run_curve, {
     spec <- current_spec()
-    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported)); power_curve_data(NULL); return() }
+    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported(spec))); power_curve_data(NULL); return() }
     n <- .n_sims_input(input$n_sims)
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]

@@ -385,21 +385,55 @@ server <- function(input, output, session) {
   # pasted crossed design through to a t-test of its correlated rows, and let a three-level or
   # 2 x 2 design stop the observer.
   gaussian_two_group <- function(spec) is.null(.two_group_refusal(spec))
-  not_supported_msg <- paste0(
-    "The in-browser demo runs power only for the two-group Gaussian design with one row\n",
-    "per subject. This design needs the installed package. Download the spec with the\n",
-    "Spec (.json) button, then run one of the following.\n\n",
-    "R (crossed mixed-effects power and a power curve, via lme4):\n",
-    "    library(pilotr)\n",
-    "    spec <- load_spec(\"design.json\")\n",
-    "    power_mixed(spec, n_sims = 200)\n",
-    "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)\n\n",
-    "Python (statsmodels backend):\n",
-    "    from pilotr import load_spec, power_mixed\n",
-    "    power_mixed(load_spec(\"design.json\"), n_sims=200)\n\n",
-    "Install:\n",
-    "    install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # R, from CRAN, with the lme4 backend\n",
-    "    pip install \"pilotr[mixed]\"                          # Python, from PyPI, with the statsmodels backend")
+  # What to run instead, chosen by what can fit the design, by the installed app's rule. R's
+  # power_mixed() fits every family but two on the scale of its coefficients, by lmer() or
+  # glmer(), or lm() and glm() without random effects. Python's power_mixed() takes one within
+  # factor crossed with items and fits a linear model on the response's own scale. It is offered
+  # only for such a design, in a family whose coefficients are on that scale or on the log scale
+  # it analyses. Ordinal and Beta outcomes have no frequentist model here and go to the Bayesian
+  # design analysis. A single text used to send every design to both power_mixed() functions,
+  # including designs neither fits on the scale of their coefficients.
+  not_supported_msg <- function(spec) {
+    family <- spec[["response"]][["family"]]
+    opening <- paste0(
+      "The in-browser demo runs power only for the two-group Gaussian design with one row\n",
+      "per subject. This design needs the installed package. Download the spec with the\n",
+      "Spec (.json) button, then run")
+    if (family %in% c("ordinal", "beta")) {
+      focal <- names(spec[["fixed"]][["coefficients"]])[1]
+      if (!length(focal) || is.na(focal)) focal <- "effect"
+      return(paste0(opening, " the following in R. pilotr has no frequentist model for\n",
+        "ordinal or Beta outcomes yet, so the analysis of this design is Bayesian, on the logit\n",
+        "scale its coefficients are written on.\n\n",
+        "    library(pilotr)\n",
+        "    spec <- load_spec(\"design.json\")\n",
+        "    brms_bridge(spec)   # the brms model, as code\n",
+        sprintf("    generate_design_analysis(spec, focal = \"%s\", file = \"design_analysis.R\")\n",
+                focal),
+        "\ngenerate_design_analysis() writes a script that simulates the design, fits that\n",
+        "model with brms and decides about the effect, replicate by replicate.\n\n",
+        "Install:\n",
+        "    install.packages(c(\"pilotr\", \"brms\"))   # R, from CRAN, with brms to run the script"))
+    }
+    within <- Filter(function(f) !is.null(f[["vary_within"]]), spec[["factors"]])
+    python <- length(within) == 1L && !is.null(spec[["units"]][["item"]]) &&
+      family %in% c("gaussian", "lognormal", "shifted_lognormal", "exgaussian")
+    paste0(opening, if (python) " one of the following.\n\n" else " the following.\n\n",
+      "R (mixed-effects power and a power curve, via lme4):\n",
+      "    library(pilotr)\n",
+      "    spec <- load_spec(\"design.json\")\n",
+      "    power_mixed(spec, n_sims = 200)\n",
+      "    power_curve_mixed(spec, subject_ns = c(20, 40, 60), n_sims = 200)\n\n",
+      if (python) paste0(
+        "Python (statsmodels backend):\n",
+        "    from pilotr import load_spec, power_mixed\n",
+        "    power_mixed(load_spec(\"design.json\"), n_sims=200)\n\n"),
+      "Install:\n",
+      "    install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # R, from CRAN, with the lme4 backend",
+      if (python) paste0(
+        "\n    pip install \"pilotr[mixed]\"                          ",
+        "# Python, from PyPI, with the statsmodels backend"))
+  }
 
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
   power_plot <- reactiveVal(NULL)
@@ -407,7 +441,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_power, {
     spec <- current_spec()
     if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); return() }
-    if (!gaussian_two_group(spec)) { power_out(not_supported_msg); power_plot(NULL); return() }
+    if (!gaussian_two_group(spec)) { power_out(not_supported_msg(spec)); power_plot(NULL); return() }
     ns <- nsims(); r <- power_design(spec, n_sims = ns)
     power_out(sprintf(
       "Power: %.3f   |   Type S: %.4f   |   Type M: %.3f\nTrue effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
@@ -417,7 +451,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_curve, {
     spec <- current_spec()
     if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); power_plot(NULL); return() }
-    if (!gaussian_two_group(spec)) { power_out(not_supported_msg); power_plot(NULL); return() }
+    if (!gaussian_two_group(spec)) { power_out(not_supported_msg(spec)); power_plot(NULL); return() }
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
     grid <- grid[grid >= 4]

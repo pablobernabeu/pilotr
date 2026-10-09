@@ -34,9 +34,9 @@ identical to a serial run.}
 \value{
 A data frame with one row per sample size and focal effect, with columns \code{n_subject},
 \code{effect}, \code{true}, \code{power}, \code{power_mcse}, \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{type_s},
-\code{type_m}, and the \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning} fit
-counts. \code{n_singular} typically falls as the sample size rises, so reading it down the sweep
-shows where the model becomes supportable.
+\code{type_m}, the \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning} fit
+counts, and \code{fitter}, as in \code{\link[=power_mixed]{power_mixed()}}. \code{n_singular} typically falls as the sample size
+rises, so reading it down the sweep shows where the model becomes supportable.
 }
 \description{
 Sweep the number of subjects and compute mixed-effects power at each. Pass the result to

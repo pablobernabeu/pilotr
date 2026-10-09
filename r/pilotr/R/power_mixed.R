@@ -13,9 +13,11 @@
 #' Simulation-based power and design analysis for a mixed-effects design
 #'
 #' For each replicate, simulate from the ground-truth specification, fit the model the
-#' specification implies with `lmerTest`, and test each focal fixed effect using Satterthwaite
-#' p-values. Reports power together with the Type S and Type M errors of Gelman and Carlin (2014).
-#' Requires the `lme4` and `lmerTest` packages.
+#' specification implies and test each focal fixed effect. The fitter follows the response family:
+#' `lmerTest::lmer()` with Satterthwaite p-values for the continuous families, and `lme4::glmer()`
+#' with a Wald z for accuracy and count responses (see Details). Reports power together with the
+#' Type S and Type M errors of Gelman and Carlin (2014). Requires the `lme4` and `lmerTest`
+#' packages.
 #'
 #' @details
 #' `power_mixed()` is not a wrapper around an existing power package: it runs pilotr's own
@@ -33,6 +35,39 @@
 #' can still be given directly, which is what to do when a deliberately different analysis model is
 #' the point, as when checking how a misspecified model behaves.
 #'
+#' The fitter follows the response family, so that the estimates are on the scale of the
+#' specification's coefficients. A `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian`
+#' response is fitted by `lmerTest::lmer()`, the two lognormal families on the log scale to which
+#' [model_data()] takes them, and each effect is tested with Satterthwaite's degrees of freedom. A
+#' `bernoulli` or `poisson` response is fitted by `lme4::glmer()` with the binomial or Poisson
+#' family, on the logit or log scale, and each effect is tested with a Wald z. A model with no
+#' random terms, such as that of a between-subjects design with one row per subject, is fitted by
+#' `stats::lm()` or `stats::glm()` in the same way. The result's `fitter` names the fitter and the
+#' test. A Wald z treats the estimate over its standard error as normal and so ignores the
+#' uncertainty in the variance components. Bolker et al. (2009) recommend it for the fixed effects
+#' of a GLMM without overdispersion, which these models are, but it rejects too often when the
+#' clusters are few. In binary GLMMs with fewer than 30 clusters, a test with as many degrees of
+#' freedom as observations, close to a z test, rejected more often than its nominal level (Li and
+#' Redden, 2015). The power of a `bernoulli` or `poisson` design with few subjects or items is
+#' therefore somewhat overstated.
+#'
+#' pilotr has no frequentist model for an `ordinal` or `beta` response yet. Such a response is
+#' fitted by the linear model on its own scale, while the specification's coefficients are on the
+#' logit scale. The function therefore warns, and withholds the mean estimate and Type M (`NA`),
+#' since both would compare the two scales. Type S compares signs alone, and the link keeps the
+#' sign of a main effect unless an interaction reverses that effect between the levels of another
+#' factor. It does not keep the sign of an interaction. A bounded response compresses differences
+#' near the ends of its range, so an interaction that is positive on the logit scale can be
+#' negative on the response scale. Type S is therefore withheld for an interaction as well. Power
+#' is the rate at which the linear model's test rejects. [generate_design_analysis()] writes a
+#' Bayesian design analysis on the link scale, with the model [brms_bridge()] derives.
+#'
+#' A `formula` given here is fitted as written, by `lmerTest::lmer()`, or by `stats::lm()` when
+#' it has no random terms, whatever the family, since only its author knows the scale of its
+#' response. With such a formula, or a `prep` that changes the response, and `focal = NULL`, the
+#' true values still come from the specification and are on its scale, which need not be the
+#' model's. A named numeric `focal` gives the true values on the model's scale.
+#'
 #' Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 #' proportion over a finite number of replicates is an estimate rather than a fact. At the default
 #' 100 replicates a power near 0.5 has a standard error of 0.05.
@@ -45,7 +80,8 @@
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name
 #'   `a_b`.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
-#'   [model_formula()].
+#'   [model_formula()], and the response family chooses the fitter. A formula given here is
+#'   fitted as a linear model whatever the family (see Details).
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL` it
 #'   is derived via [model_data()].
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
@@ -58,10 +94,14 @@
 #'   specification's seed, any worker count returns results identical to a serial run. The
 #'   mixed-model fits dominate the cost, so the speed-up is close to linear in the number of cores.
 #' @return An object of class `pilotr_power`, a list whose per-run elements are `n_sims`,
-#'   `alpha`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`, and whose
-#'   per-effect elements are vectors named by focal effect: `power`, `power_mcse`, `power_lo`,
-#'   `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s` and `type_m`. With a
-#'   single focal effect each of those has length one, so `result$power` reads as it always has.
+#'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
+#'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
+#'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s` and
+#'   `type_m`. With a single focal effect each of those has length one, so `result$power` reads as
+#'   it always has. `fitter` names the fitter and its test, such as
+#'   `"lme4::glmer (binomial), Wald z"`. `mean_estimate` and `type_m` are `NA` for an `ordinal` or
+#'   `beta` response fitted on its own scale, and so is the `type_s` of an interaction (see
+#'   Details).
 #'
 #'   `power` is the proportion of significant results among the replicates that returned an
 #'   estimate for that effect, not among `n_sims`. The counts report the fit outcomes separately,
@@ -92,6 +132,16 @@
 #'   Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
 #'   Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
 #'   94, 305-315. \doi{10.1016/j.jml.2017.01.001}
+#'
+#'   Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H.
+#'   and White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology
+#'   and evolution. \emph{Trends in Ecology & Evolution}, 24(3), 127-135.
+#'   \doi{10.1016/j.tree.2008.10.008}
+#'
+#'   Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for
+#'   the generalized linear mixed model in analyzing binary outcome in small sample
+#'   cluster-randomized trials. \emph{BMC Medical Research Methodology}, 15, 38.
+#'   \doi{10.1186/s12874-015-0026-x}
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE) &&
@@ -129,17 +179,31 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 # The replicate loop behind power_mixed(), taking an optional PSOCK cluster so that sweep
 # functions can create one cluster and reuse it across grid points.
 .power_mixed_impl <- function(spec, focal, formula, prep, n_sims, alpha, cl = NULL) {
-  if (is.null(formula)) formula <- model_formula(spec)
+  auto <- is.null(formula)
+  if (auto) formula <- model_formula(spec)
   if (is.null(prep)) prep <- .default_prep(spec)
   fo <- .resolve_focal(focal, spec)
   fnames <- fo$names
   if (!length(fnames))
     stop("this specification has no fixed coefficients to test; name the focal effects explicitly",
          call. = FALSE)
+  family <- spec[["response"]][["family"]]
+  # An ordinal or beta response is fitted on its own scale while the true values are on the logit
+  # scale, so the comparisons between the two are withheld. The warning is raised here, once per
+  # call, since the replicates may run in other processes.
+  withheld <- .linear_on_link(family, auto)
+  if (withheld)
+    warning(sprintf(.LINEAR_POWER, family, .LINK_SCALE[[family]]), call. = FALSE)
+  # The link keeps the sign of a difference between two cells, but not that of an interaction, a
+  # difference of differences. A bounded response compresses differences near the ends of its
+  # range, so a positive interaction on the logit scale can be negative on the response scale.
+  # On a beta response with cell means of 0.525, 0.802, 0.802 and 0.957, a logit-scale interaction
+  # of 0.4 is -0.122 on the response scale, and Type S read 1 in every replicate.
+  interactions <- if (withheld) .us(.interaction_keys(spec)) else character(0)
 
   seeds <- replicate_seeds(spec[["seed"]], n_sims)
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,
-                   prep = prep, formula = formula, fnames = fnames, test = TRUE)
+                   prep = prep, formula = formula, fnames = fnames, test = TRUE, auto = auto)
 
   n_returned <- sum(vapply(res, function(r) isTRUE(r$fitted), logical(1)))
   coef_names <- NULL
@@ -161,19 +225,23 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     power[f] <- rate$power; mcse[f] <- rate$power_mcse
     lo[f] <- rate$power_lo; hi[f] <- rate$power_hi
     n_sig[f] <- length(sig)
-    mean_est[f] <- mean(est[ok])
+    if (!withheld) mean_est[f] <- mean(est[ok])
     beta <- fo$true[[f]]
     # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
-    # stay NA when the true effect is unknown or zero rather than reporting an infinity.
+    # stay NA when the true effect is unknown or zero rather than reporting an infinity. Type S
+    # compares signs alone, which a monotone link keeps for a main effect, so it survives a fit on
+    # the response scale except for an interaction. Type M compares magnitudes, which the link
+    # changes.
     if (length(sig) && !is.na(beta) && beta != 0) {
-      type_s[f] <- mean((est[sig] > 0) != (beta > 0))
-      type_m[f] <- mean(abs(est[sig]) / abs(beta))
+      if (!(f %in% interactions)) type_s[f] <- mean((est[sig] > 0) != (beta > 0))
+      if (!withheld) type_m[f] <- mean(abs(est[sig]) / abs(beta))
     }
   }
   .warn_no_fits(res, n_returned, formula)
   .warn_absent_focal(seen, n_returned, coef_names)
 
-  out <- c(list(n_sims = n_sims, alpha = alpha),
+  out <- c(list(n_sims = n_sims, alpha = alpha,
+                fitter = .fitter_label(formula, family, test = TRUE, auto = auto)),
            .fit_counts(res, n_sims, n_returned),
            list(power = power, power_mcse = mcse, power_lo = lo, power_hi = hi,
                 n_significant = n_sig, true_effect = fo$true[fnames],
@@ -195,6 +263,8 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 #' @export
 print.pilotr_power <- function(x, digits = 3, ...) {
   cat(sprintf("Simulation-based power over %d replicates (alpha = %g)\n", x$n_sims, x$alpha))
+  # A result saved by a version that did not record its fitter prints as it did.
+  if (!is.null(x$fitter)) cat(sprintf("  fitter: %s\n", x$fitter))
   cat(sprintf("  fits: %d attempted, %d returned, %d converged cleanly, %d singular, %d with warnings\n",
               x$n_attempted, x$n_returned, x$n_converged, x$n_singular, x$n_warning))
   if (x$n_singular > 0.25 * max(x$n_attempted, 1))
@@ -249,9 +319,9 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   identical to a serial run.
 #' @return A data frame with one row per sample size and focal effect, with columns `n_subject`,
 #'   `effect`, `true`, `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `type_s`,
-#'   `type_m`, and the `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning` fit
-#'   counts. `n_singular` typically falls as the sample size rises, so reading it down the sweep
-#'   shows where the model becomes supportable.
+#'   `type_m`, the `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning` fit
+#'   counts, and `fitter`, as in [power_mixed()]. `n_singular` typically falls as the sample size
+#'   rises, so reading it down the sweep shows where the model becomes supportable.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
 #'   of generalized linear mixed models by simulation. \emph{Methods in Ecology and
 #'   Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
@@ -297,5 +367,6 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
     type_s = unname(x$type_s), type_m = unname(x$type_m),
     n_attempted = x$n_attempted, n_returned = x$n_returned, n_converged = x$n_converged,
     n_singular = x$n_singular, n_warning = x$n_warning,
+    fitter = if (is.null(x$fitter)) NA_character_ else x$fitter,
     row.names = NULL, stringsAsFactors = FALSE)
 }

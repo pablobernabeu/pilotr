@@ -1,6 +1,7 @@
 # Headless test of the live Shiny reactive graph via shiny::testServer (no browser). Drives
 # the real server in the installed-package app dir: sets inputs, checks the JSON output,
-# triggers Simulate and the (synchronous, from-source) power analysis.
+# triggers Simulate and the (synchronous, from-source) power analysis. A staged copy of the
+# browser build is then driven for the text it gives the designs its power tab cannot analyse.
 
 library(shiny)
 args <- commandArgs(trailingOnly = FALSE)
@@ -9,6 +10,54 @@ app_dir <- file.path(here, "..", "inst", "app")
 
 ok <- TRUE
 check <- function(cond, msg) { cat(if (cond) "  [PASS] " else "  [FAIL] ", msg, "\n", sep = ""); ok <<- ok && cond }
+
+# The designs whose not-supported text both apps route, built with the app's own build_spec().
+# They are crossed reaction times and crossed accuracy with one within factor, a Likert and a
+# proportion design between subjects, and a Gaussian design crossed with items that has no within
+# factor.
+route_designs <- function(build_spec) {
+  rt <- build_spec(list(name = "rt", seed = 1, design_kind = "within", include_items = TRUE,
+                        n_subject = 12, n_item = 8, factor_name = "cond", lev1 = "a",
+                        lev2 = "b", intercept = 6, effect = 0.1, subj_int_sd = 0.1,
+                        subj_slope_sd = 0, item_int_sd = 0.1, item_slope_sd = 0,
+                        family = "shifted_lognormal", resp_name = "", sigma = 0.3,
+                        shift = 200))
+  acc <- rt
+  acc$response <- list(family = "bernoulli", name = "accuracy")
+  acc$fixed$intercept <- 1
+  between <- function(family, ...)
+    build_spec(list(name = family, seed = 1, design_kind = "between", n_subject = 40,
+                    factor_name = "group", lev1 = "a", lev2 = "b", intercept = 0,
+                    effect = 0.8, family = family, resp_name = "", ...))
+  crossed <- between("gaussian", sigma = 1)
+  crossed$units$item <- list(n = 20L)
+  crossed$random <- list(subject = list(intercept_sd = 1), item = list(intercept_sd = 0.3))
+  list(rt = rt, acc = acc, likert = between("ordinal", thresholds = "-1, 0, 1"),
+       prop = between("beta", phi = 8), crossed = crossed)
+}
+
+# The not-supported text sends each design to the analysis that fits it. power_mixed() in R fits
+# every family but ordinal and Beta, which go to the Bayesian design analysis. Python's
+# power_mixed() takes one within factor crossed with items and fits a linear model on the
+# response's own scale. Its lines are offered only for such a design, in a family whose
+# coefficients are on that scale (gaussian, ex-Gaussian) or on the log scale it analyses. `out`
+# holds each design's text, `opening` the sentence each text starts from.
+check_routes <- function(out, opening, app) {
+  check(all(vapply(out, grepl, logical(1), pattern = opening, fixed = TRUE)),
+        sprintf("%s: every routed design opens with the app's own scope", app))
+  check(grepl("power_mixed(spec", out$rt, fixed = TRUE) && grepl("Python", out$rt, fixed = TRUE),
+        sprintf("%s: a crossed reaction-time design with one within factor is sent to both packages", app))
+  check(grepl("power_mixed(spec", out$acc, fixed = TRUE) && !grepl("Python", out$acc, fixed = TRUE),
+        sprintf("%s: a crossed accuracy design is sent to R's power_mixed() alone", app))
+  for (nm in c("likert", "prop"))
+    check(grepl("generate_design_analysis(", out[[nm]], fixed = TRUE) &&
+            grepl("brms_bridge(", out[[nm]], fixed = TRUE) &&
+            !grepl("power_mixed(", out[[nm]], fixed = TRUE),
+          sprintf("%s: a '%s' design is sent to the Bayesian design analysis", app, nm))
+  check(grepl("power_mixed(spec", out$crossed, fixed = TRUE) &&
+          !grepl("Python", out$crossed, fixed = TRUE),
+        sprintf("%s: a design with no within factor is sent to R's power_mixed() alone", app))
+}
 
 testServer(app = app_dir, {
   session$setInputs(
@@ -109,11 +158,42 @@ testServer(app = app_dir, {
             sprintf("a pasted '%s' design gets the not-supported text", nm))
   }
 
+  routes <- route_designs(build_spec)
+  out <- list()
+  for (nm in names(routes)) {
+    clicks <- clicks + 1
+    session$setInputs(spec_json_in = spec_json(routes[[nm]]), run_power = clicks)
+    out[[nm]] <- output$power_out
+  }
+  check_routes(out, "The in-app power backend covers", "installed app")
+
   # verified R-script export: run the design in a clean R subprocess and compare
   session$setInputs(spec_json_in = "", verify_code = 1)
   vo <- output$verify_out
   check(grepl("reproduces identically", vo, ignore.case = TRUE), "verify: clean R session reproduces the data bit-for-bit")
   cat("  verify:", gsub("\n", " ", vo), "\n")
+})
+
+# The browser build writes the same routing out in its own copy of the text. It is staged as
+# build_shinylive.R stages it, with the engine files app-lite/engine-files.txt names beside
+# app-lite/app.R, and each design is pasted in as a specification.
+lite <- file.path(tempdir(), "pilotr-lite")
+unlink(lite, recursive = TRUE)
+dir.create(lite)
+lite_src <- file.path(here, "..", "..", "..", "app-lite")
+engine <- trimws(sub("#.*$", "", readLines(file.path(lite_src, "engine-files.txt"))))
+engine <- engine[nzchar(engine)]
+stopifnot(all(file.copy(file.path(here, "..", "R", engine), lite)),
+          file.copy(file.path(lite_src, "app.R"), lite))
+testServer(app = lite, {
+  routes <- route_designs(build_spec)
+  session$setInputs(n_sims = 100, use_pasted = TRUE)
+  out <- list()
+  for (i in seq_along(routes)) {
+    session$setInputs(pasted = spec_json(routes[[i]]), run_power = i)
+    out[[names(routes)[i]]] <- output$power_out
+  }
+  check_routes(out, "runs power only for the two-group Gaussian design", "browser app")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")

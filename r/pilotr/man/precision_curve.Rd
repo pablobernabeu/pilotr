@@ -24,7 +24,7 @@ specification.}
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived via
-\code{\link[=model_formula]{model_formula()}}.}
+\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter, as in \code{\link[=precision_design]{precision_design()}}.}
 
 \item{prep}{Optional data-preparation function; if \code{NULL} it is derived via
 \code{\link[=model_data]{model_data()}}.}

@@ -23,7 +23,10 @@ lets you describe that whole design and then generates the data the design would
 Before collecting anything, you can see how often the planned analysis would detect the effect
 and, when an estimate does reach significance, how far it would be exaggerated (a Type M error)
 or take the wrong sign (a Type S error). It turns a design on paper into evidence about whether
-the design is worth running.
+the design is worth running. For accuracy and counts, the R package fits logistic and Poisson
+mixed models, so Type M is measured on the logit or log scale on which the effect is written.
+Likert ratings and proportions are analysed through a Bayesian design analysis, on the logit
+scale of their model.
 
 ## How it works
 

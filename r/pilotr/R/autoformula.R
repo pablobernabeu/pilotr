@@ -1,9 +1,9 @@
 # Auto-derive the analysis model (data and lmer formula) from a design spec, so that design
 # analysis and power can run from a spec alone, without a hand-coded formula. Interactions
 # "a:b" become product columns named "a_b". Categorical factors become their numeric contrast
-# columns. The response is log-transformed for the (shifted_)lognormal families. This targets
-# the lmer-fittable families (gaussian, lognormal, shifted_lognormal). Other families require
-# glmer with the appropriate link.
+# columns. The response is log-transformed for the (shifted_)lognormal families. The same formula
+# serves every family: .fit_model() in lmer_fits.R fits it by lmer for the continuous families and
+# by glmer, with the binomial or Poisson link, for bernoulli and poisson.
 
 .us <- function(k) gsub(":", "_", k, fixed = TRUE)   # "a:b" -> "a_b"
 

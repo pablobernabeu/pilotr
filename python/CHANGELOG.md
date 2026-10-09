@@ -56,6 +56,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of the power guide. With 8 subjects, 6 items, random intercepts alone and no true effect, it
   rejected in 0.043 of 300 replicates (Monte Carlo standard error 0.012). lme4's Satterthwaite
   test of the same model rejected in 0.030 on the same data.
+- `power_mixed` fits `bernoulli`, `poisson`, `ordinal` and `beta` responses with a linear model
+  on the response scale. It now warns for them and withholds the mean estimate and Type M,
+  returning both as `nan`, since they compared that scale with a true value on the link scale. A
+  linear model of a 0/1 response estimates a difference in probability, which says nothing about
+  how far a logit-scale effect is exaggerated. Type S, which compares signs alone, and power are
+  kept. The warning reads as the R twin's, whose `power_mixed()` now fits `bernoulli` and
+  `poisson` responses with `lme4::glmer()` on their link scale.
+- The power guide sets each response family against the model each `power_mixed` fits, and
+  against the R package's `precision_design()`.
 
 ### Fixed
 

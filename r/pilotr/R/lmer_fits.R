@@ -13,19 +13,100 @@
 # precision. They are counted and reported instead, which tells the user something actionable,
 # namely that the model being fitted is richer than the data can support.
 
-# Fit one mixed model and record what the fitter reported. Returns the fit (NULL if it failed
-# outright), whether it is boundary-singular, any warning or convergence messages other than the
-# singular-fit notice, and a strict `converged` flag that is TRUE only when there were neither.
-.fit_lmer <- function(formula, data, test = FALSE) {
+# The fitter follows the response family. Earlier versions fitted every replicate by lmer(),
+# whatever the family. A bernoulli or poisson specification writes its coefficients on the logit
+# or log scale, and a linear model of the 0/1 or count response estimates a difference on the
+# response scale instead. Compared with the true value, that difference made Type M read 0.21 on a
+# crossed accuracy design that a logistic model shows exaggerating, at 1.12, and set ROPE intervals
+# on one scale against a region on another. Power hardly moved, since the two tests agree on the
+# sign and nearly always on significance. glmer() fits those two families on their own link scale,
+# with a Wald z test. A model with no random terms, such as that of every shipped
+# between-subjects example, made lmer() stop with "No random effects terms specified in formula"
+# in every replicate. Such a model is fitted by lm() or glm().
+#
+# Ordinal and beta responses have no frequentist model here yet, since a proportional-odds or
+# Beta mixed model would need a package beyond lme4. They are fitted by the linear fallback on
+# the response scale. The callers withhold the quantities that compare that scale with the
+# specification's link scale, and raise the warnings below.
+
+# The families whose coefficients are on a link scale, with the scale's name.
+.LINK_SCALE <- c(bernoulli = "logit", poisson = "log", ordinal = "logit", beta = "logit")
+
+# The two of those that lme4 and stats fit on that scale, with the family object's name.
+.GLM_FAMILY <- c(bernoulli = "binomial", poisson = "poisson")
+
+# The warnings for a family fitted by the linear fallback. power_mixed() in the Python twin raises
+# the first word for word, for every family in .LINK_SCALE, since it has no other model.
+.LINEAR_POWER <- paste0(
+  "power_mixed() fits a linear model to the %s response on its own scale, while the ",
+  "specification's coefficients are on the %s scale, so the mean estimate and Type M are ",
+  "withheld (NA) and Type S compares signs only. For a model on the link scale, use ",
+  "generate_design_analysis() or brms_bridge() in the R package.")
+.LINEAR_PRECISION <- paste0(
+  "precision_design() fits a linear model to the %s response on its own scale, while the ",
+  "region of practical equivalence and the specification's coefficients are on the %s scale, ",
+  "so the decision probabilities are withheld (NA). For a decision on the link scale, use ",
+  "generate_design_analysis() in the R package.")
+
+# Whether a model formula has a random-effects term, a `|` or `||` call anywhere on its right-hand
+# side, which is where lme4 looks for one. lme4::findbars() answers the same question, but lme4
+# 2.0 moved it to the reformulas package and warns when it is called through lme4. The fitter
+# needs to know only whether there is such a term. lmer() also takes a formula written as text,
+# which is read as a formula first. Taken as it came, the text showed no such term, and lm() then
+# fitted the model without its random effects.
+.has_bars <- function(formula) {
+  formula <- stats::as.formula(formula)
+  walk <- function(x) is.call(x) &&
+    (identical(x[[1L]], as.name("|")) || identical(x[[1L]], as.name("||")) ||
+       any(vapply(as.list(x)[-1L], walk, logical(1))))
+  walk(formula[[length(formula)]])
+}
+
+# Which model a fit takes: the GLM family name (NULL for a linear model) and whether the formula
+# has random terms. The family chooses only for the model pilotr derives (`auto`). A formula the
+# user writes is fitted as a linear model, as it always was, since only its author knows the
+# scale its response is on.
+.model_kind <- function(formula, family, auto) {
+  glm_family <- if (isTRUE(auto) && family %in% names(.GLM_FAMILY)) .GLM_FAMILY[[family]]
+  list(glm_family = glm_family, has_re = .has_bars(formula))
+}
+
+# Whether a call fits the linear fallback to a response whose coefficients are on a link scale,
+# which is when the scale-dependent quantities are withheld.
+.linear_on_link <- function(family, auto) {
+  isTRUE(auto) && family %in% setdiff(names(.LINK_SCALE), names(.GLM_FAMILY))
+}
+
+# The fitter and the test behind a run's estimates, as the result reports them, for example
+# "lme4::glmer (binomial), Wald z". With `test = FALSE`, the only inference made is the interval
+# precision_design() builds, the estimate plus or minus 1.96 standard errors, a Wald z interval.
+.fitter_label <- function(formula, family, test, auto) {
+  k <- .model_kind(formula, family, auto)
+  fitter <- if (!is.null(k$glm_family))
+    sprintf("%s (%s)", if (k$has_re) "lme4::glmer" else "stats::glm", k$glm_family)
+  else if (k$has_re) { if (test) "lmerTest::lmer" else "lme4::lmer" }
+  else "stats::lm"
+  inference <- if (!test || !is.null(k$glm_family)) "Wald z"
+    else if (k$has_re) "Satterthwaite t" else "t"
+  paste(fitter, inference, sep = ", ")
+}
+
+# Fit one replicate's model and record what the fitter reported. Returns the fit (NULL if it
+# failed outright), whether it is boundary-singular, any warning or convergence messages other than
+# the singular-fit notice, and a strict `converged` flag that is TRUE only when there were neither.
+# `family` is the specification's response family, and `auto` says whether pilotr derived the
+# formula. Together, they choose the fitter, as .model_kind() describes.
+.fit_model <- function(formula, data, family = "gaussian", test = FALSE, auto = TRUE) {
+  k <- .model_kind(formula, family, auto)
+  fam <- if (!is.null(k$glm_family)) switch(k$glm_family, binomial = stats::binomial(),
+                                            poisson = stats::poisson())
   msgs <- character(0)
   # By default lme4 stores its boundary (singular) fit notice with the optimiser's messages, which
   # are read below. Every singular fit was then also counted as a fit with warnings, and n_warning
   # could never differ from n_singular. The check is switched off here, and singularity is taken
   # from isSingular(), whose default tolerance matches this one. Filtering the notice by its text
-  # would break whenever lme4 rewords it, as it did in 1.1-21.
-  ctrl <- lme4::lmerControl(
-    calc.derivs = FALSE,
-    check.conv.singular = lme4::.makeCC(action = "ignore", tol = 1e-4))
+  # would break whenever lme4 rewords it, as it did in 1.1-21. glmer() takes the same settings.
+  singular_cc <- lme4::.makeCC(action = "ignore", tol = 1e-4)
   # The fitter's own error message is kept and passed on. A model that lme4 refuses
   # outright, most often because the random-effects structure is unidentifiable at that sample
   # size, otherwise produced a result of NA with nothing to explain it, which leaves the user with
@@ -33,10 +114,22 @@
   fit <- withCallingHandlers(
     tryCatch(
       suppressMessages(
-        if (test)
-          lmerTest::lmer(formula, data = data, control = ctrl)
+        if (k$has_re && !is.null(fam))
+          lme4::glmer(formula, data = data, family = fam,
+                      control = lme4::glmerControl(calc.derivs = FALSE,
+                                                   check.conv.singular = singular_cc))
+        else if (k$has_re && test)
+          lmerTest::lmer(formula, data = data,
+                         control = lme4::lmerControl(calc.derivs = FALSE,
+                                                     check.conv.singular = singular_cc))
+        else if (k$has_re)
+          lme4::lmer(formula, data = data,
+                     control = lme4::lmerControl(calc.derivs = FALSE,
+                                                 check.conv.singular = singular_cc))
+        else if (!is.null(fam))
+          stats::glm(formula, data = data, family = fam)
         else
-          lme4::lmer(formula, data = data, control = ctrl)),
+          stats::lm(formula, data = data)),
       error = function(e) { msgs <<- c(msgs, conditionMessage(e)); NULL }),
     warning = function(w) {
       msgs <<- c(msgs, conditionMessage(w))
@@ -44,13 +137,27 @@
     })
   if (is.null(fit))
     return(list(fit = NULL, singular = FALSE, messages = msgs, converged = FALSE))
-  # The optimiser records its own convergence messages separately from the R warning
-  # condition, so both have to be consulted.
-  opt_msgs <- tryCatch(fit@optinfo$conv$lme4$messages, error = function(e) NULL)
-  singular <- isTRUE(tryCatch(lme4::isSingular(fit), error = function(e) FALSE))
+  if (inherits(fit, "merMod")) {
+    # The optimiser records its own convergence messages separately from the R warning
+    # condition, so both have to be consulted.
+    opt_msgs <- tryCatch(fit@optinfo$conv$lme4$messages, error = function(e) NULL)
+    singular <- isTRUE(tryCatch(lme4::isSingular(fit), error = function(e) FALSE))
+  } else {
+    # lm() and glm() estimate no variance component, so neither fit can be singular. glm() also
+    # records in the fit whether its iterations converged, beside the warning it raises. The
+    # message below is glm.fit's own, so that unique() keeps one of the two.
+    opt_msgs <- if (inherits(fit, "glm") && !isTRUE(fit$converged))
+      "glm.fit: algorithm did not converge"
+    singular <- FALSE
+  }
   msgs <- unique(c(msgs, opt_msgs))
   list(fit = fit, singular = singular, messages = msgs,
        converged = length(msgs) == 0L && !singular)
+}
+
+# A model formula fitted by lmer(), or by lm() when it has no random terms, whatever the family.
+.fit_lmer <- function(formula, data, test = FALSE) {
+  .fit_model(formula, data, family = "gaussian", test = test, auto = FALSE)
 }
 
 # The empty per-replicate record, returned when a fit fails outright.
@@ -68,13 +175,14 @@
 #
 # Kept at top level so that only the arguments travel to PSOCK workers.
 #
-# `test` chooses the fitter. Satterthwaite p-values come from lmerTest and cost noticeably more
-# than the plain fit, so precision analysis, which needs only estimates and standard errors, asks
-# for the cheaper one.
-.design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE) {
+# `test` chooses between the linear fitters. Satterthwaite p-values come from lmerTest and cost
+# noticeably more than the plain fit, so precision analysis, which needs only estimates and standard
+# errors, asks for the cheaper one. `auto` says whether pilotr derived the formula, which lets the
+# response family choose the fitter (see .fit_model()).
+.design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE, auto = TRUE) {
   s <- spec; s[["seed"]] <- seeds[i]
   d <- prep(simulate_design(s, validate = FALSE))
-  f <- .fit_lmer(formula, d, test = test)
+  f <- .fit_model(formula, d, family = spec[["response"]][["family"]], test = test, auto = auto)
   na <- stats::setNames(rep(NA_real_, length(fnames)), fnames)
   absent <- stats::setNames(logical(length(fnames)), fnames)
   if (is.null(f$fit))
@@ -83,18 +191,22 @@
              .fit_record_failed()))
 
   co <- if (test) tryCatch(summary(f$fit)$coefficients, error = function(e) NULL) else NULL
-  est <- lme4::fixef(f$fit)
+  # The test's column is named for its reference distribution: Pr(>|t|) for lmerTest's
+  # Satterthwaite test and for lm(), Pr(>|z|) for the Wald z of glm() and glmer().
+  pcol <- if (is.null(co)) NA_character_ else intersect(c("Pr(>|t|)", "Pr(>|z|)"), colnames(co))[1]
+  est <- if (inherits(f$fit, "merMod")) lme4::fixef(f$fit) else stats::coef(f$fit)
   se <- sqrt(diag(as.matrix(stats::vcov(f$fit))))
   present <- stats::setNames(fnames %in% names(est), fnames)
   e <- na; s_e <- na; pv <- na
   for (fn in fnames[present]) {
     e[fn] <- est[[fn]]
     s_e[fn] <- se[[fn]]
-    # lmerTest's Satterthwaite column is the p-value the power functions test against. When the
-    # cheaper fitter was used, or the column is missing, the p-value stays NA and the caller
-    # reports the effect as untested, and assumes nothing about it.
-    if (!is.null(co) && fn %in% rownames(co) && "Pr(>|t|)" %in% colnames(co))
-      pv[fn] <- co[fn, "Pr(>|t|)"]
+    # That column holds the p-value the power functions test against. When the cheaper fitter was
+    # used, or the column is missing, the p-value stays NA and the caller reports the effect as
+    # untested, and assumes nothing about it. A coefficient that lm() could not estimate, whose
+    # row summary() leaves out, is treated in the same way.
+    if (!is.na(pcol) && fn %in% rownames(co))
+      pv[fn] <- co[fn, pcol]
   }
   list(present = present, est = e, se = s_e, p = pv, coef_names = names(est), fitted = TRUE,
        singular = f$singular, warned = length(f$messages) > 0L, converged = f$converged)

@@ -48,6 +48,17 @@ test_that("the singularity note is part of the same block", {
   expect_true(note < length(out))
 })
 
+test_that("the fitter and its test are printed with the fit counts", {
+  x <- fake_power()
+  x$fitter <- "lme4::glmer (binomial), Wald z"
+  out <- capture.output(print(x))
+  line <- grep("lme4::glmer (binomial), Wald z", out, fixed = TRUE)
+  expect_length(line, 1L)
+  expect_true(line < grep("198 returned", out))
+  # A result saved by an earlier version has no fitter, and prints as it did.
+  expect_false(any(grepl("fitter", capture.output(print(fake_power())))))
+})
+
 test_that("printing returns its input invisibly", {
   x <- fake_power()
   con <- file(nullfile(), open = "wt")

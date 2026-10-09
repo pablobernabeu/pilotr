@@ -172,7 +172,11 @@ written on.
 | Proportions in (0, 1) | `beta` | logit (mean) |
 
 These match the families that researchers fit in `lme4`, `glmmTMB` and `brms`, so a design
-simulated here corresponds to the model that will later be fit. The point-and-click application
+simulated here corresponds to the model that will later be fit. pilotr's own `power_mixed()` and
+`precision_design()` fit the continuous families with `lmer()` and accuracy and counts with
+`glmer()`, so their estimates are on the scale in the table's last column. Ordinal and Beta
+outcomes have no frequentist model there yet, and their design analysis runs in brms through
+`generate_design_analysis()`. The point-and-click application
 exposes six of the eight families. The full engine, including the plain lognormal, the
 ex-Gaussian, continuous predictors, interactions, nesting and partial crossing, is reached by
 writing the specification directly, as the last section of this vignette shows.

@@ -62,3 +62,4 @@ providing the confirmatory Bayesian layer.
 |---|---|
 | Full Bayesian fit in-toolkit (HDI, LKJ priors, posterior precision) | use the `brms_bridge()` output. The built-in precision analysis is a fast frequentist analogue |
 | Python power for the model the specification implies | Python's `power_mixed` fits `yv ~ cc` with independent variance components and tests with a Wald z, which with few subjects or items rejects more readily than R's Satterthwaite tests. R's `power_mixed()` fits the specification's model, correlations included |
+| Frequentist power for ordinal and Beta outcomes, and a GLM backend in Python | R's `power_mixed()` and `precision_design()` fit accuracy and counts with `glmer()`, but fit ordinal and Beta outcomes with a linear model on the response scale, warn and withhold Type M and the ROPE decisions. Python's `power_mixed` does the same for all four families. `generate_design_analysis()` analyses them on the link scale |

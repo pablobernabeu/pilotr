@@ -120,7 +120,13 @@ notation it is `yv ~ cc`, which regresses the response on the first contrast of 
 single within factor, with independent by-subject and by-item random intercepts and slopes on
 that contrast. The response is analysed as `log(y)` for the `lognormal` family and as
 `log(y - shift)` for `shifted_lognormal`, whose coefficients are on the log scale, as in the R
-package. Every other family is analysed on its own scale.
+package. Every other family is analysed on its own scale. For `bernoulli`, `poisson`, `ordinal`
+and `beta` responses, that is not the scale the coefficients are written on, which is the logit
+scale, or the log scale for `poisson`. A linear model of a 0/1 response estimates a difference in
+probability, for instance, and setting it against the true coefficient says nothing about
+exaggeration. For these families, `power_mixed` warns and returns `mean_estimate` and `type_m`
+as `nan`. `type_s` compares signs alone, which the link preserves, and power is the rate at
+which the linear model's test rejects.
 
 Only that contrast is tested, and a specification that declares anything the model leaves out
 draws a warning that names each such term. In the fixed part, that is a non-zero coefficient
@@ -212,6 +218,29 @@ power package underneath it. It covers territory pioneered by
 [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021).
 pilotr differs in being driven by the portable cross-language specification, in reporting
 Type S and Type M errors alongside power and in built-in parallelisation.
+
+## Which model each family gets
+
+The table sets each response family against the model fitted by this package's `power_mixed`
+and by the R package's `power_mixed()` and `precision_design()`. The R package chooses the
+fitter by the family, so that its estimates are on the scale the coefficients are written on. It
+fits a design without random effects, such as a between-subjects design with one row per
+subject, with `lm()` or `glm()`.
+
+| Family | R `power_mixed()` | R `precision_design()` | Python `power_mixed` |
+|---|---|---|---|
+| `gaussian`, `exgaussian` | `lmerTest::lmer()`, Satterthwaite *t* | `lme4::lmer()`, Wald interval | MixedLM, Wald *z* |
+| `lognormal`, `shifted_lognormal` | as above, on the log scale | as above, on the log scale | MixedLM on the log scale, Wald *z* |
+| `bernoulli` | `lme4::glmer()`, binomial, Wald *z* | `lme4::glmer()`, Wald interval on the logit scale | linear model on the response scale, a warning, no mean estimate or Type M |
+| `poisson` | `lme4::glmer()`, Poisson, Wald *z* | `lme4::glmer()`, Wald interval on the log scale | as for `bernoulli` |
+| `ordinal`, `beta` | linear model on the response scale, a warning, no mean estimate or Type M, and no Type S for an interaction | linear model on the response scale, a warning, no ROPE decisions (the interval width stays) | as for `bernoulli` |
+
+A Wald *z* with few subjects or items rejects more often than its nominal level
+([Li and Redden, 2015](https://doi.org/10.1186/s12874-015-0026-x);
+[Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), so the power of a small accuracy or
+count design is somewhat overstated in either package. For ordinal and Beta outcomes,
+the R package's `generate_design_analysis()` writes a Bayesian design analysis on the logit scale
+of their coefficients.
 
 ## Parallel execution
 

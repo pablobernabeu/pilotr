@@ -6,9 +6,11 @@ independent by-subject and by-item intercept and slope components, and tests the
 the single within factor. It fitted a `lognormal` response on its raw scale, while the R twin and
 its own `shifted_lognormal` path analyse the log, and it said nothing when a specification declared
 terms that its model leaves out. Its fits stopped short of the REML optimum in most crossed
-replicates, and it counted every fit that returned as converged.
+replicates, and it counted every fit that returned as converged. For an accuracy, count, ordinal or
+proportion response, it compared an estimate on the response scale with a true value on the link
+scale, and reported the mean estimate and Type M of that comparison without a word.
 """
-import math, os, sys, warnings
+import math, os, re, sys, warnings
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
@@ -316,3 +318,62 @@ def test_a_replicate_whose_powell_fit_raises_is_refitted_and_counts_as_a_warning
     r = power_mixed(_clean(), n_sims=2)
     assert (r["n_attempted"], r["n_returned"]) == (2, 0)
     assert math.isnan(r["power"])
+
+
+# The warning for a family whose coefficients are on a link scale, word for word as the R twin's
+# power_mixed() raises it for the ordinal and Beta families.
+_LINEAR = ("power_mixed() fits a linear model to the %s response on its own scale, while the "
+           "specification's coefficients are on the %s scale, so the mean estimate and Type M are "
+           "withheld (NA) and Type S compares signs only. For a model on the link scale, use "
+           "generate_design_analysis() or brms_bridge() in the R package.")
+
+
+def _one_within(family, **response):
+    """A 12 x 8 crossed design with one within factor and random intercepts, in `family`."""
+    return {
+        "name": family, "seed": 3,
+        "units": {"subject": {"n": 12}, "item": {"n": 8}},
+        "factors": [{"name": "condition", "levels": ["a", "b"],
+                     "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": ["subject", "item"]}],
+        "fixed": {"intercept": 0.5, "coefficients": {"cond": 0.8}},
+        "random": {"subject": {"intercept_sd": 0.5}, "item": {"intercept_sd": 0.3}},
+        "response": dict({"family": family, "name": "y"}, **response),
+    }
+
+
+def _scale_warnings(fn):
+    """Call `fn` and return its result with the messages of the scale warnings it raised."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = fn()
+    return result, [str(w.message) for w in caught
+                    if issubclass(w.category, UserWarning)
+                    and str(w.message).startswith("power_mixed() fits a linear model")]
+
+
+def test_a_bernoulli_response_warns_and_withholds_the_mean_estimate_and_type_m():
+    # A linear model of the 0/1 response estimates a difference in probability, which was set
+    # against a true value on the logit scale, so the mean estimate and Type M compared two
+    # scales. On the R twin's crossed accuracy design, a linear mixed model gave a Type M of 0.21
+    # where a logistic one gives 1.12, so a design that exaggerates read as one that underestimates.
+    with pytest.warns(UserWarning, match=re.escape(_LINEAR % ("bernoulli", "logit"))):
+        r = power_mixed(_one_within("bernoulli"), n_sims=2)
+    assert math.isnan(r["mean_estimate"]) and math.isnan(r["type_m"])
+    assert r["n_returned"] == 2 and not math.isnan(r["power"])
+
+
+@pytest.mark.parametrize("family, scale, response", [
+    ("bernoulli", "logit", {}),
+    ("poisson", "log", {}),
+    ("ordinal", "logit", {"thresholds": [-1, 0, 1]}),
+    ("beta", "logit", {"phi": 8}),
+    ("gaussian", None, {"sigma": 1}),
+])
+def test_each_family_on_a_link_scale_warns_once_with_its_scale(family, scale, response):
+    r, warned = _scale_warnings(lambda: power_mixed(_one_within(family, **response), n_sims=1))
+    if scale is None:
+        # The response's own scale is the coefficients' scale, so nothing is withheld.
+        assert warned == [] and not math.isnan(r["mean_estimate"])
+    else:
+        assert warned == [_LINEAR % (family, scale)]
+        assert math.isnan(r["mean_estimate"]) and math.isnan(r["type_m"])

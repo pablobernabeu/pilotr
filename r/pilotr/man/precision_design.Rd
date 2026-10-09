@@ -23,7 +23,8 @@ to their true values, and a character vector names them without their true value
 effects follow the model's column naming, so a specification key \code{a:b} is the focal name \code{a_b}.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
-\code{\link[=model_formula]{model_formula()}}.}
+\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
+fitted as a linear model whatever the family (see Details).}
 
 \item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL}
 it is derived via \code{\link[=model_data]{model_data()}}, which log-transforms the outcome and
@@ -49,12 +50,14 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 A data frame with one row per focal effect and columns \code{param}, \code{true},
 \code{mean_ci_width}, \code{p_meaningful}, \code{p_meaningful_mcse}, \code{p_meaningful_lo},
 \code{p_meaningful_hi}, \code{p_equivalent}, \code{p_equivalent_mcse}, \code{p_equivalent_lo},
-\code{p_equivalent_hi}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular}, and
-\code{n_warning}. Each decision proportion is reported with its Monte Carlo standard
+\code{p_equivalent_hi}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular},
+\code{n_warning} and \code{fitter}. Each decision proportion is reported with its Monte Carlo standard
 error (\verb{*_mcse}) and Wilson interval bounds (\verb{*_lo}, \verb{*_hi}), because a proportion
 over a finite number of replicates is an estimate rather than a fact. The interval
 behind \code{mean_ci_width} and the ROPE decisions is the Wald approximation described in
-Details.
+Details. \code{fitter} names the fitter and the interval, such as
+\code{"lme4::glmer (binomial), Wald z"}. For an \code{ordinal} or \code{beta} response fitted on its own
+scale, the decision columns are \code{NA} (see Details).
 
 The decision proportions are taken over \code{n_returned}, the replicates that
 produced an estimate. The remaining counts separate the fit outcomes, because a
@@ -81,6 +84,32 @@ from the model's variance-covariance matrix. This fixed-z interval is chosen for
 for comparability across replicates; in small samples it is somewhat narrower than a
 Satterthwaite t interval, so \code{p_meaningful} and \code{mean_ci_width} are slightly optimistic
 at small sample sizes.
+
+The fitter follows the response family, as in \code{\link[=power_mixed]{power_mixed()}}. Since no p-value is needed, a
+\code{gaussian}, \code{lognormal}, \code{shifted_lognormal} or \code{exgaussian} response is fitted by
+\code{lme4::lmer()}. A \code{bernoulli} or \code{poisson} response is fitted by \code{lme4::glmer()} with the
+binomial or Poisson family, and a model with no random terms by \code{stats::lm()} or
+\code{stats::glm()}. The interval is therefore on the scale of the specification's coefficients,
+and so is the region of practical equivalence that \code{rope} sets. That is the log scale for the
+lognormal families and \code{poisson}, and the logit scale for \code{bernoulli}. A \code{glmer()} fit has the
+Wald interval that Bolker et al. (2009) recommend for a GLMM without overdispersion. With few
+subjects or items, it is likewise narrower than it should be, since the test it inverts rejects
+too often when the clusters are few (Li and Redden, 2015). The \code{fitter} column names the
+fitter.
+
+pilotr has no frequentist model for an \code{ordinal} or \code{beta} response yet. Such a response is
+fitted by the linear model on its own scale, where a region of practical equivalence set on
+the logit scale of the coefficients means nothing. The function warns, and withholds the
+decision probabilities with their Monte Carlo standard errors and bounds (\code{NA}).
+\code{mean_ci_width} stays, as the width of an interval on the response scale.
+\code{\link[=generate_design_analysis]{generate_design_analysis()}} applies an interval-and-ROPE rule on the link scale, in a
+Bayesian model.
+
+A \code{formula} given here is fitted as written, by \code{lme4::lmer()}, or by \code{stats::lm()} when it
+has no random terms, whatever the family. With such a formula, or a \code{prep} that changes the
+response, and \code{focal = NULL}, the true values still come from the specification and are on its
+scale, which need not be the model's. A named numeric \code{focal} gives the true values on the
+model's scale.
 }
 \examples{
 \donttest{
@@ -103,4 +132,14 @@ models. \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
 Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
 Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
 94, 305-315. \doi{10.1016/j.jml.2017.01.001}
+
+Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H.
+and White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology
+and evolution. \emph{Trends in Ecology & Evolution}, 24(3), 127-135.
+\doi{10.1016/j.tree.2008.10.008}
+
+Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for
+the generalized linear mixed model in analyzing binary outcome in small sample
+cluster-randomized trials. \emph{BMC Medical Research Methodology}, 15, 38.
+\doi{10.1186/s12874-015-0026-x}
 }

@@ -3,7 +3,7 @@
 The two validators are the gate that decides whether a specification is usable, so a
 specification accepted by one implementation and refused by the other is itself a parity bug: it
 would mean a design that runs in R and fails in Python, or worse, one that runs in both but with
-different meaning. This script runs three batteries through both twins.
+different meaning. This script runs four batteries through both twins.
 
 The spec battery hands each twin's validate_spec() the same parsed specification. The file
 battery writes raw JSON text to a file and has each twin read it with its own load_spec(), which
@@ -16,6 +16,12 @@ in Python raise before drawing any replicate. Each twin validates the specificat
 its two-group check, the first two steps of both functions, so the battery needs neither scipy
 nor any simulation. The check refuses a design whose rows are correlated, naming the item unit,
 within factor or grouping factor that makes them so.
+
+The scale battery compares, for every response family, the warning power_mixed() raises when it
+fits a linear model to a response whose coefficients are on a link scale. The R twin raises it for
+ordinal and beta responses, and fits bernoulli and poisson ones with glmer() instead, while the
+Python twin raises it for all four. The battery therefore compares the wording and the scale
+each twin gives a family, not whether a given call raises it, and needs no model fit.
 
 A case passes when both twins accept it, or both refuse it with the same message character for
 character. In the spec battery the warnings the two validators raise, such as the deprecation of
@@ -43,7 +49,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "python"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from pilotr.power import _two_group_refusal  # noqa: E402
+from pilotr.power import _LINEAR_ON_LINK, _LINK_SCALE, _two_group_refusal  # noqa: E402
 from pilotr.simulate import _as_spec, load_spec, simulate  # noqa: E402
 from pilotr.validate import validate_spec  # noqa: E402
 from run_py import _dump  # noqa: E402  the dump format the parity harness compares
@@ -468,6 +474,14 @@ def power_cases():
     return out
 
 
+# ---- the scale battery --------------------------------------------------------------------
+
+# Every family a specification may declare. A family whose coefficients are on the scale its
+# response is fitted on has no warning in either twin.
+FAMILIES = ["gaussian", "lognormal", "shifted_lognormal", "exgaussian",
+            "bernoulli", "poisson", "ordinal", "beta"]
+
+
 # ---- the R side ---------------------------------------------------------------------------
 
 R_DRIVER = r'''
@@ -514,6 +528,13 @@ if (mode %in% c("spec", "power")) {
            refusal <- .two_group_refusal(.as_spec(s))
            if (!is.null(refusal)) stop(refusal, call. = FALSE)
          }))
+} else if (mode == "scale") {
+  # The wording power_mixed() gives the warning for a family fitted on a scale other than its
+  # coefficients', compared as warning text.
+  families <- jsonlite::fromJSON(payload)
+  res <- lapply(families, function(f) list(
+    verdict = "OK", message = "",
+    warnings = if (f %in% names(.LINK_SCALE)) sprintf(.LINEAR_POWER, f, .LINK_SCALE[[f]]) else ""))
 } else {
   paths <- readLines(payload, encoding = "UTF-8")
   res <- lapply(paths, function(p) run(.dump(simulate_design(load_spec(p)), paste0(p, ".r.txt"))))
@@ -562,6 +583,13 @@ def _py_power(spec):
         if refusal is not None:
             raise NotImplementedError(refusal)
     return _py(check, refusals=(ValueError, NotImplementedError))
+
+
+def _py_scale(family):
+    """The wording of power_mixed()'s warning for `family`, empty for a family it fits on the
+    scale of its coefficients."""
+    text = _LINEAR_ON_LINK % (family, _LINK_SCALE[family]) if family in _LINK_SCALE else ""
+    return {"verdict": "OK", "message": "", "warnings": text}
 
 
 def _sha256(path):
@@ -632,6 +660,10 @@ def main() -> int:
         with open(power_payload, "w", encoding="utf-8") as f:
             json.dump([s for _l, s in powers], f)
         r_power = _run_r(td, "power", power_payload)
+        scale_payload = os.path.join(td, "families.json")
+        with open(scale_payload, "w", encoding="utf-8") as f:
+            json.dump(FAMILIES, f)
+        r_scale = _run_r(td, "scale", scale_payload)
 
         paths, data = [], []
         for i, (_label, raw) in enumerate(files, start=1):
@@ -647,10 +679,10 @@ def main() -> int:
         r_files = _run_r(td, "file", listing)
 
         if (len(r_spec) != len(battery) or len(r_files) != len(files)
-                or len(r_power) != len(powers)):
-            print("R returned %d, %d and %d results for %d, %d and %d cases"
-                  % (len(r_spec), len(r_files), len(r_power),
-                     len(battery), len(files), len(powers)))
+                or len(r_power) != len(powers) or len(r_scale) != len(FAMILIES)):
+            print("R returned %d, %d, %d and %d results for %d, %d, %d and %d cases"
+                  % (len(r_spec), len(r_files), len(r_power), len(r_scale),
+                     len(battery), len(files), len(powers), len(FAMILIES)))
             return 1
         failed = _report("Spec battery: validate_spec() on the same parsed specification",
                          [label for label, _s in battery], r_spec, py_spec, warned=True)
@@ -658,6 +690,8 @@ def main() -> int:
                           [label for label, _r in files], r_files, py_files, data)
         failed += _report("Power battery: the two-group check of power_design() and power()",
                           [label for label, _s in powers], r_power, py_power)
+        failed += _report("Scale battery: power_mixed()'s warning for a family on a link scale",
+                          FAMILIES, r_scale, [_py_scale(f) for f in FAMILIES], warned=True)
 
     print("\n%d disagreement%s in all" % (failed, "" if failed == 1 else "s"))
     return 1 if failed else 0

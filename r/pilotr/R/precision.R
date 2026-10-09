@@ -24,13 +24,40 @@
 #' Satterthwaite t interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic
 #' at small sample sizes.
 #'
+#' The fitter follows the response family, as in [power_mixed()]. Since no p-value is needed, a
+#' `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian` response is fitted by
+#' `lme4::lmer()`. A `bernoulli` or `poisson` response is fitted by `lme4::glmer()` with the
+#' binomial or Poisson family, and a model with no random terms by `stats::lm()` or
+#' `stats::glm()`. The interval is therefore on the scale of the specification's coefficients,
+#' and so is the region of practical equivalence that `rope` sets. That is the log scale for the
+#' lognormal families and `poisson`, and the logit scale for `bernoulli`. A `glmer()` fit has the
+#' Wald interval that Bolker et al. (2009) recommend for a GLMM without overdispersion. With few
+#' subjects or items, it is likewise narrower than it should be, since the test it inverts rejects
+#' too often when the clusters are few (Li and Redden, 2015). The `fitter` column names the
+#' fitter.
+#'
+#' pilotr has no frequentist model for an `ordinal` or `beta` response yet. Such a response is
+#' fitted by the linear model on its own scale, where a region of practical equivalence set on
+#' the logit scale of the coefficients means nothing. The function warns, and withholds the
+#' decision probabilities with their Monte Carlo standard errors and bounds (`NA`).
+#' `mean_ci_width` stays, as the width of an interval on the response scale.
+#' [generate_design_analysis()] applies an interval-and-ROPE rule on the link scale, in a
+#' Bayesian model.
+#'
+#' A `formula` given here is fitted as written, by `lme4::lmer()`, or by `stats::lm()` when it
+#' has no random terms, whatever the family. With such a formula, or a `prep` that changes the
+#' response, and `focal = NULL`, the true values still come from the specification and are on its
+#' scale, which need not be the model's. A named numeric `focal` gives the true values on the
+#' model's scale.
+#'
 #' @param spec A design specification (path or list).
 #' @param focal The focal effects. `NULL`, the default, analyses every coefficient in the
 #'   specification and takes the true values from it. A named numeric vector maps coefficient names
 #'   to their true values, and a character vector names them without their true values. Interaction
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name `a_b`.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
-#'   [model_formula()].
+#'   [model_formula()], and the response family chooses the fitter. A formula given here is
+#'   fitted as a linear model whatever the family (see Details).
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL`
 #'   it is derived via [model_data()], which log-transforms the outcome and
 #'   builds the contrast and interaction columns, so focal names follow the
@@ -50,12 +77,14 @@
 #' @return A data frame with one row per focal effect and columns `param`, `true`,
 #'   `mean_ci_width`, `p_meaningful`, `p_meaningful_mcse`, `p_meaningful_lo`,
 #'   `p_meaningful_hi`, `p_equivalent`, `p_equivalent_mcse`, `p_equivalent_lo`,
-#'   `p_equivalent_hi`, `n_attempted`, `n_returned`, `n_converged`, `n_singular`, and
-#'   `n_warning`. Each decision proportion is reported with its Monte Carlo standard
+#'   `p_equivalent_hi`, `n_attempted`, `n_returned`, `n_converged`, `n_singular`,
+#'   `n_warning` and `fitter`. Each decision proportion is reported with its Monte Carlo standard
 #'   error (`*_mcse`) and Wilson interval bounds (`*_lo`, `*_hi`), because a proportion
 #'   over a finite number of replicates is an estimate rather than a fact. The interval
 #'   behind `mean_ci_width` and the ROPE decisions is the Wald approximation described in
-#'   Details.
+#'   Details. `fitter` names the fitter and the interval, such as
+#'   `"lme4::glmer (binomial), Wald z"`. For an `ordinal` or `beta` response fitted on its own
+#'   scale, the decision columns are `NA` (see Details).
 #'
 #'   The decision proportions are taken over `n_returned`, the replicates that
 #'   produced an estimate. The remaining counts separate the fit outcomes, because a
@@ -74,6 +103,16 @@
 #'   Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
 #'   Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
 #'   94, 305-315. \doi{10.1016/j.jml.2017.01.001}
+#'
+#'   Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H.
+#'   and White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology
+#'   and evolution. \emph{Trends in Ecology & Evolution}, 24(3), 127-135.
+#'   \doi{10.1016/j.tree.2008.10.008}
+#'
+#'   Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for
+#'   the generalized linear mixed model in analyzing binary outcome in small sample
+#'   cluster-randomized trials. \emph{BMC Medical Research Methodology}, 15, 38.
+#'   \doi{10.1186/s12874-015-0026-x}
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE)) {
@@ -106,19 +145,27 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 # The replicate loop behind precision_design(), taking an optional PSOCK cluster so that
 # precision_curve() can create one cluster and reuse it across grid points.
 .precision_design_impl <- function(spec, focal, formula, prep, rope, n_sims, cl = NULL) {
-  if (is.null(formula)) formula <- model_formula(spec)
+  auto <- is.null(formula)
+  if (auto) formula <- model_formula(spec)
   if (is.null(prep)) prep <- .default_prep(spec)
   fo <- .resolve_focal(focal, spec)
   fnames <- fo$names
   if (!length(fnames))
     stop("this specification has no fixed coefficients to analyse; name the focal effects explicitly",
          call. = FALSE)
+  family <- spec[["response"]][["family"]]
+  # An ordinal or beta response is fitted on its own scale, where the region of practical
+  # equivalence, set on the coefficients' logit scale, means nothing, so the decisions are
+  # withheld. The interval width stays, on the scale of the fitted model.
+  withheld <- .linear_on_link(family, auto)
+  if (withheld)
+    warning(sprintf(.LINEAR_PRECISION, family, .LINK_SCALE[[family]]), call. = FALSE)
 
   seeds <- replicate_seeds(spec[["seed"]], n_sims)
   # The shared replicate loop, with the cheaper fitter: a precision analysis needs estimates and
   # standard errors, and lmerTest's Satterthwaite p-values cost noticeably more than the plain fit.
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,
-                   prep = prep, formula = formula, fnames = fnames, test = FALSE)
+                   prep = prep, formula = formula, fnames = fnames, test = FALSE, auto = auto)
 
   n_returned <- sum(vapply(res, function(r) isTRUE(r$fitted), logical(1)))
   coef_names <- NULL
@@ -137,6 +184,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     if (!length(ok)) next
     lo <- est[ok] - .Z95 * se[ok]; hi <- est[ok] + .Z95 * se[ok]
     width[f] <- mean(hi - lo)
+    if (withheld) next
     n_out <- sum(lo > rope | hi < -rope)
     n_ins <- sum(lo > -rope & hi < rope)
     ro <- .rate_with_error(n_out, length(ok), "p")
@@ -157,7 +205,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     p_equivalent_lo = unname(ins_lo), p_equivalent_hi = unname(ins_hi),
     n_attempted = cnt$n_attempted, n_returned = cnt$n_returned,
     n_converged = cnt$n_converged, n_singular = cnt$n_singular, n_warning = cnt$n_warning,
-    row.names = NULL)
+    fitter = .fitter_label(formula, family, test = FALSE, auto = auto),
+    row.names = NULL, stringsAsFactors = FALSE)
 }
 
 # The default data-preparation function, built in its own small frame so that only the
@@ -187,7 +236,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   specification.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived via
-#'   [model_formula()].
+#'   [model_formula()], and the response family chooses the fitter, as in [precision_design()].
 #' @param prep Optional data-preparation function; if `NULL` it is derived via
 #'   [model_data()].
 #' @param rope Half-width of the region of practical equivalence. Set it clearly narrower than

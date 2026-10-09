@@ -25,7 +25,8 @@ effects follow the model's column naming, so a specification key \code{a:b} is t
 \code{a_b}.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
-\code{\link[=model_formula]{model_formula()}}.}
+\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
+fitted as a linear model whatever the family (see Details).}
 
 \item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL} it
 is derived via \code{\link[=model_data]{model_data()}}.}
@@ -44,10 +45,14 @@ mixed-model fits dominate the cost, so the speed-up is close to linear in the nu
 }
 \value{
 An object of class \code{pilotr_power}, a list whose per-run elements are \code{n_sims},
-\code{alpha}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning}, and whose
-per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse}, \code{power_lo},
-\code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s} and \code{type_m}. With a
-single focal effect each of those has length one, so \code{result$power} reads as it always has.
+\code{alpha}, \code{fitter}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning},
+and whose per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse},
+\code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s} and
+\code{type_m}. With a single focal effect each of those has length one, so \code{result$power} reads as
+it always has. \code{fitter} names the fitter and its test, such as
+\code{"lme4::glmer (binomial), Wald z"}. \code{mean_estimate} and \code{type_m} are \code{NA} for an \code{ordinal} or
+\code{beta} response fitted on its own scale, and so is the \code{type_s} of an interaction (see
+Details).
 
 \code{power} is the proportion of significant results among the replicates that returned an
 estimate for that effect, not among \code{n_sims}. The counts report the fit outcomes separately,
@@ -63,9 +68,11 @@ richer than the design can support at that sample size, which is common in cross
 }
 \description{
 For each replicate, simulate from the ground-truth specification, fit the model the
-specification implies with \code{lmerTest}, and test each focal fixed effect using Satterthwaite
-p-values. Reports power together with the Type S and Type M errors of Gelman and Carlin (2014).
-Requires the \code{lme4} and \code{lmerTest} packages.
+specification implies and test each focal fixed effect. The fitter follows the response family:
+\code{lmerTest::lmer()} with Satterthwaite p-values for the continuous families, and \code{lme4::glmer()}
+with a Wald z for accuracy and count responses (see Details). Reports power together with the
+Type S and Type M errors of Gelman and Carlin (2014). Requires the \code{lme4} and \code{lmerTest}
+packages.
 }
 \details{
 \code{power_mixed()} is not a wrapper around an existing power package: it runs pilotr's own
@@ -82,6 +89,39 @@ design with more than one factor was refused. The formula now comes from \code{\
 the data from \code{\link[=model_data]{model_data()}}, so the analysis matches the process that generated the data. Both
 can still be given directly, which is what to do when a deliberately different analysis model is
 the point, as when checking how a misspecified model behaves.
+
+The fitter follows the response family, so that the estimates are on the scale of the
+specification's coefficients. A \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} or \code{exgaussian}
+response is fitted by \code{lmerTest::lmer()}, the two lognormal families on the log scale to which
+\code{\link[=model_data]{model_data()}} takes them, and each effect is tested with Satterthwaite's degrees of freedom. A
+\code{bernoulli} or \code{poisson} response is fitted by \code{lme4::glmer()} with the binomial or Poisson
+family, on the logit or log scale, and each effect is tested with a Wald z. A model with no
+random terms, such as that of a between-subjects design with one row per subject, is fitted by
+\code{stats::lm()} or \code{stats::glm()} in the same way. The result's \code{fitter} names the fitter and the
+test. A Wald z treats the estimate over its standard error as normal and so ignores the
+uncertainty in the variance components. Bolker et al. (2009) recommend it for the fixed effects
+of a GLMM without overdispersion, which these models are, but it rejects too often when the
+clusters are few. In binary GLMMs with fewer than 30 clusters, a test with as many degrees of
+freedom as observations, close to a z test, rejected more often than its nominal level (Li and
+Redden, 2015). The power of a \code{bernoulli} or \code{poisson} design with few subjects or items is
+therefore somewhat overstated.
+
+pilotr has no frequentist model for an \code{ordinal} or \code{beta} response yet. Such a response is
+fitted by the linear model on its own scale, while the specification's coefficients are on the
+logit scale. The function therefore warns, and withholds the mean estimate and Type M (\code{NA}),
+since both would compare the two scales. Type S compares signs alone, and the link keeps the
+sign of a main effect unless an interaction reverses that effect between the levels of another
+factor. It does not keep the sign of an interaction. A bounded response compresses differences
+near the ends of its range, so an interaction that is positive on the logit scale can be
+negative on the response scale. Type S is therefore withheld for an interaction as well. Power
+is the rate at which the linear model's test rejects. \code{\link[=generate_design_analysis]{generate_design_analysis()}} writes a
+Bayesian design analysis on the link scale, with the model \code{\link[=brms_bridge]{brms_bridge()}} derives.
+
+A \code{formula} given here is fitted as written, by \code{lmerTest::lmer()}, or by \code{stats::lm()} when
+it has no random terms, whatever the family, since only its author knows the scale of its
+response. With such a formula, or a \code{prep} that changes the response, and \code{focal = NULL}, the
+true values still come from the specification and are on its scale, which need not be the
+model's. A named numeric \code{focal} gives the true values on the model's scale.
 
 Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 proportion over a finite number of replicates is an estimate rather than a fact. At the default
@@ -121,6 +161,16 @@ Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed mo
 Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
 Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
 94, 305-315. \doi{10.1016/j.jml.2017.01.001}
+
+Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H.
+and White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology
+and evolution. \emph{Trends in Ecology & Evolution}, 24(3), 127-135.
+\doi{10.1016/j.tree.2008.10.008}
+
+Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for
+the generalized linear mixed model in analyzing binary outcome in small sample
+cluster-randomized trials. \emph{BMC Medical Research Methodology}, 15, 38.
+\doi{10.1186/s12874-015-0026-x}
 }
 \seealso{
 \code{\link[=precision_design]{precision_design()}} for the interval-width and ROPE analogue, and \code{\link[=sweep_spec]{sweep_spec()}} to

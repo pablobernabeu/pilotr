@@ -51,7 +51,45 @@
   that plans a counterbalanced study, a list factor between subjects and an item-set factor
   between items. The specification returned is unchanged.
 
+* `power_mixed()` and `precision_design()` fit the model each family needs. They fitted a linear
+  mixed model to every response, so for `bernoulli` and `poisson` outcomes the estimate was a
+  difference on the response scale, compared with a true value on the link scale. Take 20
+  subjects crossed with 16 items and an effect of 0.5 on the logit scale. Over 30 replicates, the
+  mean estimate was 0.090 and Type M 0.21, where a logistic mixed model of the same replicates
+  gives 0.47 and 1.12, so real exaggeration read as underestimation. Against a region of
+  practical equivalence of 0.1, the interval was 0.14 wide and fell outside the region in none of
+  the replicates, against 0.71 wide and 17 of 30 on the logit scale. Counts on the same crossing,
+  with an effect of 0.3 on the log scale, gave a mean estimate of 0.90 and Type M 3.01 over 20
+  replicates, against 0.31 and 1.02. Bernoulli and Poisson designs are now fitted with
+  `lme4::glmer()` and tested with a Wald z, so Type M, mean estimates, interval widths and ROPE
+  decisions change materially. Power barely moves: 22 of the 30 accuracy replicates are
+  significant under either model. A Wald z is the test Bolker et al. (2009) recommend for such a
+  model. With few subjects or items, it rejects more often than its nominal level (Li and Redden,
+  2015).
+
+* A design without random effects, which failed every replicate with "No random effects terms
+  specified in formula", is fitted with `lm()` or `glm()`, so every between-subjects example has
+  a power path. That includes the shipped `poisson_counts_between`, `ordinal_likert_between` and
+  `beta_proportion`, which had none in either language.
+
+* For `ordinal` and `beta` outcomes, which have no frequentist backend here yet, both functions
+  warn, withhold the mean estimate, Type M and the ROPE decisions, and point to
+  `generate_design_analysis()`. A later release will refuse them or fit a proportional-odds and a
+  Beta model. Type S, which compares signs, is kept for main effects and withheld for
+  interactions. A bounded response compresses differences near the ends of its range, so an
+  interaction that is positive on the logit scale can be negative on the response scale.
+
+* Results name the fitter and the test. `power_mixed()` returns them as `fitter` and prints them,
+  and `precision_design()` and the sweeps carry them as a column. A formula given by the user is
+  fitted as written, by `lmer()`, or by `lm()` when it has no random terms, whatever the family.
+
 ## Fixes
+
+* The no-code app, installed or in the browser, sends a design its power tab cannot analyse to
+  the analysis that fits it. It sent every such design to the `power_mixed()` of both packages.
+  The Python one is now offered only for one within factor crossed with items, in a family whose
+  coefficients are on the scale it analyses, and ordinal and Beta designs are sent to
+  `generate_design_analysis()` and `brms_bridge()`.
 
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
   records its singular-fit notice among the optimiser's messages, so every singular fit was also
@@ -175,9 +213,17 @@
 
 ## References
 
+Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H. and
+White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology and
+evolution. *Trends in Ecology & Evolution, 24*(3), 127-135. <doi:10.1016/j.tree.2008.10.008>
+
 Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random factor:
 Designs, analytic models, and statistical power. *Annual Review of Psychology, 68*, 601-625.
 <doi:10.1146/annurev-psych-122414-033702>
+
+Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
+generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
+trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
 
 # pilotr 0.3.1
 

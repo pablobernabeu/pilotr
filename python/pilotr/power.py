@@ -13,7 +13,8 @@ The two-group Gaussian design with one row per subject uses a two-sample t-test 
 Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which fits
 independent variance components by REML and tests the effect with a Wald z. The R package's
 lme4 backend fits the model the specification implies and tests with Satterthwaite's
-approximation.
+approximation. For accuracy and count responses, it fits a logistic or Poisson model and tests
+with a Wald z.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
 processes. The replicate seeds are derived once from the specification's seed, so the
@@ -222,6 +223,21 @@ _LEFT_OUT = (
     "power_mixed() fits the model the specification implies.")
 
 
+# The families whose coefficients are on a link scale, with the scale's name. power_mixed() here
+# fits a linear model to every response on its own scale, which for these families is not the
+# scale the true effect is written on.
+_LINK_SCALE = {"bernoulli": "logit", "poisson": "log", "ordinal": "logit", "beta": "logit"}
+
+# Raised for those families, word for word as the R twin raises it for the ordinal and beta
+# families, which it fits in the same way. The R twin fits bernoulli and poisson responses with
+# glmer() on their link scale.
+_LINEAR_ON_LINK = (
+    "power_mixed() fits a linear model to the %s response on its own scale, while the "
+    "specification's coefficients are on the %s scale, so the mean estimate and Type M are "
+    "withheld (NA) and Type S compares signs only. For a model on the link scale, use "
+    "generate_design_analysis() or brms_bridge() in the R package.")
+
+
 def _left_out_of_model(spec, col):
     """What a validated specification declares beyond the model ``yv ~ cc``, as phrases.
 
@@ -386,6 +402,16 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     is analysed on its own scale. A replicate whose response rounds to 0, or to the shift, has
     no logarithm and returns no estimate, as in the R twin.
 
+    For ``bernoulli``, ``poisson``, ``ordinal`` and ``beta``, that scale is not the one the
+    coefficients are written on, which is the logit scale, or the log scale for ``poisson``. The
+    estimate of a linear model is then a difference on the response scale, such as a difference in
+    the probability of a correct response, and comparing it with the true coefficient says nothing
+    about exaggeration. For these families, `power_mixed` warns and returns `mean_estimate` and
+    `type_m` as `nan`. `type_s` compares signs alone, which the link preserves, and power is the
+    rate at which the linear model's test rejects. The R package's ``power_mixed()`` fits
+    ``bernoulli`` and ``poisson`` responses with ``lme4::glmer()`` on their link scale, and its
+    ``generate_design_analysis()`` writes a Bayesian design analysis for any family.
+
     A specification that declares anything this model leaves out draws one warning per call
     naming each such term. In the fixed part, that is a non-zero coefficient other than
     the tested contrast, a between factor or a predictor. In the random part, it is a
@@ -454,7 +480,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         boundary counts towards none of them, since it comes with every fit that has a variance
         component below 0.01. Singular fits and fits with a warning stay in `power`, as in the R
         twin. `type_s` and `type_m` are `nan` when no replicate reached significance and when the
-        true effect is zero.
+        true effect is zero. `mean_estimate` and `type_m` are also `nan` for a ``bernoulli``,
+        ``poisson``, ``ordinal`` or ``beta`` response, whose true effect is on a link scale.
 
     Raises
     ------
@@ -468,6 +495,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     UserWarning
         Once per call, when the specification declares a term that the fitted model leaves
         out. The message names every such term.
+    UserWarning
+        Once per call, for a ``bernoulli``, ``poisson``, ``ordinal`` or ``beta`` response,
+        saying that the linear model is fitted on the response's own scale and that the mean
+        estimate and Type M are withheld. The R twin raises the same words for the families it
+        fits in that way.
 
     Notes
     -----
@@ -494,10 +526,18 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     yname, fam = spec["response"]["name"], spec["response"]["family"]
     shift = spec["response"].get("shift", 0.0)
     base = spec["seed"]
-    # The warning is raised here, once per call, since the replicates may run in other processes.
+    # The warnings are raised here, once per call, since the replicates may run in other
+    # processes.
     left_out = _left_out_of_model(spec, col)
     if left_out:
         warnings.warn(_LEFT_OUT % _name_list(left_out), UserWarning, stacklevel=2)
+    # A linear model of a 0/1, count, rating or proportion response estimates a difference on the
+    # response scale, which used to be set against the true value on the link scale. On the R
+    # twin's crossed accuracy design, such a model gave Type M 0.21 where a logistic one gives
+    # 1.12. Type S survives, since a monotone link keeps the sign of an effect but not its size.
+    withheld = fam in _LINK_SCALE
+    if withheld:
+        warnings.warn(_LINEAR_ON_LINK % (fam, _LINK_SCALE[fam]), UserWarning, stacklevel=2)
 
     rep = functools.partial(_power_mixed_replicate, spec=spec, fname=fname, l2c=l2c,
                             yname=yname, fam=fam, shift=shift)
@@ -526,11 +566,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         "n_warning": sum(r["warned"] for r in fits),
         "power": len(sig) / len(pv) if pv else float("nan"),
         "n_significant": len(sig), "true_effect": beta,
-        "mean_estimate": statistics.mean(est) if est else float("nan"),
+        "mean_estimate": statistics.mean(est) if est and not withheld else float("nan"),
         "type_s": (sum(1 for i in sig if (est[i] > 0) != (beta > 0)) / len(sig))
                   if usable else float("nan"),
         "type_m": statistics.mean(abs(est[i]) / abs(beta) for i in sig)
-                  if usable else float("nan"),
+                  if usable and not withheld else float("nan"),
     }
 
 

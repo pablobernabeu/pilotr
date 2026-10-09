@@ -106,6 +106,36 @@ power package underneath it. It covers territory pioneered by
 differs in being driven by the cross-language specification, in reporting Type S and Type M
 errors alongside power and in built-in parallelisation.
 
+## Which model each family gets
+
+`power_mixed()` and `precision_design()` choose the fitter by the response family, so that the
+estimates are on the scale the specification's coefficients are written on. The mean estimate,
+Type M and the region of practical equivalence then compare like with like. A model without
+random effects, such as that of a between-subjects design with one row per subject, is fitted by
+`lm()` or `glm()`. Each result names its fitter and test in `fitter`.
+
+| Family | R `power_mixed()` | R `precision_design()` | Python `power_mixed` |
+|---|---|---|---|
+| `gaussian`, `exgaussian` | `lmerTest::lmer()`, Satterthwaite *t* | `lme4::lmer()`, Wald interval | MixedLM, Wald *z* |
+| `lognormal`, `shifted_lognormal` | as above, on the log scale | as above, on the log scale | MixedLM on the log scale, Wald *z* |
+| `bernoulli` | `lme4::glmer()`, binomial, Wald *z* | `lme4::glmer()`, Wald interval on the logit scale | linear model on the response scale, a warning, no mean estimate or Type M |
+| `poisson` | `lme4::glmer()`, Poisson, Wald *z* | `lme4::glmer()`, Wald interval on the log scale | as for `bernoulli` |
+| `ordinal`, `beta` | linear model on the response scale, a warning, no mean estimate or Type M, and no Type S for an interaction | linear model on the response scale, a warning, no ROPE decisions (the interval width stays) | as for `bernoulli` |
+
+A Wald *z* treats the variance components as known. It is the test
+[Bolker et al. (2009)](https://doi.org/10.1016/j.tree.2008.10.008) recommend for the fixed
+effects of a GLMM without overdispersion. With few subjects or items, however, it rejects more
+often than its nominal level ([Li and Redden, 2015](https://doi.org/10.1186/s12874-015-0026-x)),
+so the power of a small accuracy or count design is somewhat overstated.
+
+Ordinal and Beta outcomes have no frequentist model here yet, so their power is that of the
+linear model's test and their Type S compares signs alone. A bounded response compresses
+differences near the ends of its range, so an interaction can change sign between the two
+scales, and its Type S is withheld. `generate_design_analysis()` writes a Bayesian design
+analysis for them, on the logit scale of their coefficients. Python's `power_mixed` takes one
+within factor crossed with items and fits the same model whatever else the specification
+declares, as its own guide describes.
+
 ## A power curve
 
 The following sweep over the number of subjects reports power at each size.
