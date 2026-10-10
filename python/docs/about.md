@@ -58,7 +58,9 @@ print("```")
 
 [Download the BibTeX entry](pilotr.bib){ download="pilotr.bib" }
 
-In R, `citation("pilotr")` returns the same reference.
+In R, `citation("pilotr")` returns the R package's reference, which gives the DOI that CRAN
+assigned to the R package, [10.32614/CRAN.package.pilotr](https://doi.org/10.32614/CRAN.package.pilotr),
+in place of the Zenodo DOI above.
 
 ## The developer
 

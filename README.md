@@ -298,13 +298,16 @@ used.
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
 > specification*. https://doi.org/10.5281/zenodo.21266313
 
-The R and Python packages are released separately, so their version numbers can differ. In R,
-`citation("pilotr")` gives the reference with the installed version. The About page of each
-documentation site gives it with that package's version and a BibTeX entry, for
-[the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
-[the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
-ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*
-button.
+That is Zenodo's concept DOI, which archives every GitHub release of both packages. The R
+package's own reference gives the DOI that CRAN assigned to it on publication,
+[10.32614/CRAN.package.pilotr](https://doi.org/10.32614/CRAN.package.pilotr), which names the R
+package across its versions. The R and Python packages are released separately, so their
+version numbers can differ. In R, `citation("pilotr")` gives the reference with the installed
+version. The About page of each documentation site gives it with that package's version and a
+BibTeX entry, for [the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html)
+and for [the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub
+builds a ready-made citation from [`CITATION.cff`](CITATION.cff), which records both DOIs,
+through its *Cite this repository* button.
 
 ## Licence
 

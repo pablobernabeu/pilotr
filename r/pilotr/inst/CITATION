@@ -2,17 +2,22 @@ citHeader("To cite pilotr in publications, please use:")
 
 # The R and Python packages are released separately, so the note names the R package
 # alone: meta$Version is this package's version, which the Python package need not share.
+# The doi and url fields hold the DOI CRAN assigned on publication and the package's
+# canonical CRAN page, the same pair utils::citation() generates for a copy installed from
+# CRAN that has no CITATION file. The DOI names the R package across all its versions, so
+# the version in the note identifies the release cited. Zenodo archives every GitHub
+# release of the repository, which carries the Python package as well.
 bibentry(
   bibtype = "Manual",
   title   = "pilotr: Simulate experimental and behavioural data from a portable design specification",
   author  = person("Pablo", "Bernabeu", comment = c(ORCID = "0000-0003-1083-2460")),
   year    = "2026",
   note    = sprintf("R package version %s", meta$Version),
-  doi     = "10.5281/zenodo.21266313",
-  url     = "https://doi.org/10.5281/zenodo.21266313",
+  doi     = "10.32614/CRAN.package.pilotr",
+  url     = "https://CRAN.R-project.org/package=pilotr",
   textVersion = sprintf(paste0(
     "Bernabeu, P. (2026). pilotr: Simulate experimental and behavioural data ",
     "from a portable design specification. R package version %s. ",
-    "https://doi.org/10.5281/zenodo.21266313"
+    "https://doi.org/10.32614/CRAN.package.pilotr"
   ), meta$Version)
 )

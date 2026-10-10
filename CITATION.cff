@@ -15,7 +15,18 @@ authors:
 # First public on CRAN, 2026-09-20 (R package, while PyPI stays at 0.3.0).
 version: "0.3.1"
 date-released: "2026-09-20"
+# This file describes both packages, so its DOI is the Zenodo concept DOI, which archives
+# every GitHub release of the repository and resolves to the latest.
 doi: "10.5281/zenodo.21266313"
+# Both DOIs, since doi holds one. The R package's own citation, in citation("pilotr") and
+# on its website, gives the DOI CRAN assigned to it, which names the R package alone.
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21266313"
+    description: "Every GitHub release of the repository, with both packages, archived on Zenodo."
+  - type: doi
+    value: "10.32614/CRAN.package.pilotr"
+    description: "The R package on CRAN, across all its versions."
 license: MIT
 repository-code: "https://github.com/pablobernabeu/pilotr"
 url: "https://pablobernabeu.github.io/pilotr/"
