@@ -15,18 +15,27 @@ authors:
 # First public on CRAN, 2026-09-20 (R package, while PyPI stays at 0.3.0).
 version: "0.3.1"
 date-released: "2026-09-20"
-# This file describes both packages, so its DOI is the Zenodo concept DOI, which archives
-# every GitHub release of the repository and resolves to the latest.
+# This file describes the repository, which holds both packages, so its DOI is Zenodo's
+# concept DOI, which archives every GitHub release of both and favours neither. Each
+# package's own citation gives that package's identifier: the R package's gives the DOI CRAN
+# assigned to it, and the Python package's gives this one, since PyPI assigns no DOI.
 doi: "10.5281/zenodo.21266313"
-# Both DOIs, since doi holds one. The R package's own citation, in citation("pilotr") and
-# on its website, gives the DOI CRAN assigned to it, which names the R package alone.
+# Each identifier, marked with the package it names. CFF's repository-artifact holds a
+# single address, which would favour one distribution, so CRAN and PyPI are both listed here
+# instead.
 identifiers:
   - type: doi
     value: "10.5281/zenodo.21266313"
-    description: "Every GitHub release of the repository, with both packages, archived on Zenodo."
+    description: "Both packages: every GitHub release of the repository, archived on Zenodo. The Python package's citation gives this DOI."
   - type: doi
     value: "10.32614/CRAN.package.pilotr"
-    description: "The R package on CRAN, across all its versions."
+    description: "The R package: the DOI CRAN assigned to it, across all its versions. The R package's citation gives this DOI."
+  - type: url
+    value: "https://CRAN.R-project.org/package=pilotr"
+    description: "The R package on CRAN."
+  - type: url
+    value: "https://pypi.org/project/pilotr/"
+    description: "The Python package on PyPI."
 license: MIT
 repository-code: "https://github.com/pablobernabeu/pilotr"
 url: "https://pablobernabeu.github.io/pilotr/"

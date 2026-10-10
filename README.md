@@ -292,22 +292,27 @@ python -m pytest python/tests -q
 
 ## Citation
 
-If pilotr contributes to published work, please cite it, with the version of the package you
-used.
+If pilotr contributes to published work, please cite the package you used, with its version.
+The R package's reference gives the DOI that CRAN assigned to it on publication, which names the
+R package across its versions:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification*. https://doi.org/10.5281/zenodo.21266313
+> specification* [R package]. https://doi.org/10.32614/CRAN.package.pilotr
 
-That is Zenodo's concept DOI, which archives every GitHub release of both packages. The R
-package's own reference gives the DOI that CRAN assigned to it on publication,
-[10.32614/CRAN.package.pilotr](https://doi.org/10.32614/CRAN.package.pilotr), which names the R
-package across its versions. The R and Python packages are released separately, so their
-version numbers can differ. In R, `citation("pilotr")` gives the reference with the installed
-version. The About page of each documentation site gives it with that package's version and a
-BibTeX entry, for [the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html)
-and for [the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub
-builds a ready-made citation from [`CITATION.cff`](CITATION.cff), which records both DOIs,
-through its *Cite this repository* button.
+The Python package's reference gives the concept DOI of the Zenodo archive, which holds every
+GitHub release of both packages, since PyPI assigns no DOI:
+
+> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
+> specification* [Python package]. https://doi.org/10.5281/zenodo.21266313
+
+The R and Python packages are released separately, so their version numbers can differ. In R,
+`citation("pilotr")` gives the reference with the installed version. The About page of each
+documentation site gives it with that package's version and a BibTeX entry, for
+[the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
+[the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
+ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*
+button. That file describes both packages, so it gives the Zenodo DOI, which favours neither,
+and lists each package's identifiers.
 
 ## Licence
 
