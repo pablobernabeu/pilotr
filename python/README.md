@@ -5,7 +5,7 @@
 [![python-tests](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+[![DOI 10.5281/zenodo.21266313](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
 <!-- badges: end -->
 
 Python implementation of pilotr. It simulates experimental and behavioural data from a
@@ -77,7 +77,7 @@ If pilotr contributes to published work, please cite it, with the version of the
 used (`pilotr.__version__`).
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
-> design specification*. https://doi.org/10.5281/zenodo.21266313
+> design specification*. <https://doi.org/10.5281/zenodo.21266313>
 
 The [About page](https://pablobernabeu.github.io/pilotr/python/about/) carries the same citation
 with the Python package's version and a BibTeX entry, and a short note on the developer. The R

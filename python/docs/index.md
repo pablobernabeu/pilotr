@@ -41,4 +41,6 @@ that the two languages agree.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.
 
-Archived on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+If pilotr contributes to published work, please [cite it](about.md#citing-pilotr). Its citation
+gives the concept DOI <https://doi.org/10.5281/zenodo.21266313>, which resolves to the latest
+release archived on Zenodo.

@@ -24,7 +24,7 @@ bibtex = (
     "  year   = {2026},\n"
     f"  note   = {{Python package version {version}}},\n"
     "  doi    = {10.5281/zenodo.21266313},\n"
-    "  url    = {https://doi.org/10.5281/zenodo.21266313},\n"
+    "  url    = {https://pypi.org/project/pilotr/},\n"
     "}\n"
 )
 
@@ -44,7 +44,7 @@ if on_disk != bibtex:
 
 print("> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable")
 print(f"> design specification* (Python package version {version}).")
-print("> https://doi.org/10.5281/zenodo.21266313")
+print("> <https://doi.org/10.5281/zenodo.21266313>")
 print()
 print("```bibtex")
 print(bibtex, end="")
@@ -59,7 +59,7 @@ print("```")
 [Download the BibTeX entry](pilotr.bib){ download="pilotr.bib" }
 
 In R, `citation("pilotr")` returns the R package's reference, which gives the DOI that CRAN
-assigned to the R package, [10.32614/CRAN.package.pilotr](https://doi.org/10.32614/CRAN.package.pilotr),
+assigned to the R package, <https://doi.org/10.32614/CRAN.package.pilotr>,
 in place of the Zenodo DOI above.
 
 ## The developer
@@ -83,7 +83,7 @@ and the design specification alike.
 ## Versioning and archival
 
 Each release is tagged on GitHub and archived on Zenodo. The concept DOI,
-[10.5281/zenodo.21266313](https://doi.org/10.5281/zenodo.21266313), always resolves to the
+<https://doi.org/10.5281/zenodo.21266313>, always resolves to the
 latest archived version, so a citation stays current without naming a version. The
 [changelog](changelog.md) records what changed in each release.
 

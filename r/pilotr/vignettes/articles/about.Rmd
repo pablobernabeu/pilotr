@@ -9,7 +9,7 @@ If you use pilotr in published work, please cite it.
 ```{r citation, echo = FALSE, results = "asis"}
 ver <- as.character(utils::packageVersion("pilotr"))
 cat(sprintf(
-"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R package version %s). https://doi.org/10.32614/CRAN.package.pilotr\n",
+"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R package version %s). <https://doi.org/10.32614/CRAN.package.pilotr>\n",
   ver))
 ```
 
@@ -85,11 +85,11 @@ Python packages, the no-code app and the design specification alike.
 ## Versioning and archival
 
 CRAN assigned the package the DOI
-[10.32614/CRAN.package.pilotr](https://doi.org/10.32614/CRAN.package.pilotr) on publication.
+<https://doi.org/10.32614/CRAN.package.pilotr> on publication.
 It names the R package across all its versions, so the version in the citation identifies the
 release used. Releases of the repository, which carry the Python package as well, are tagged on
 GitHub and archived on Zenodo, where the concept DOI
-[10.5281/zenodo.21266313](https://doi.org/10.5281/zenodo.21266313) resolves to the latest
+<https://doi.org/10.5281/zenodo.21266313> resolves to the latest
 archived release and each release has a DOI of its own. The [changelog](../news/index.html)
 records what changed in each release.
 

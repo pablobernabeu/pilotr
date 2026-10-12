@@ -11,6 +11,8 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License:
 MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
+[![DOI
+10.32614/CRAN.package.pilotr](https://img.shields.io/badge/DOI-10.32614%2FCRAN.package.pilotr-blue.svg)](https://doi.org/10.32614/CRAN.package.pilotr)
 <!-- badges: end -->
 
 Simulate experimental and behavioural data from a portable design
@@ -114,6 +116,10 @@ is at <https://github.com/pablobernabeu/pilotr>.
 ``` r
 citation("pilotr")
 ```
+
+The DOI that CRAN assigned to the package is
+<https://doi.org/10.32614/CRAN.package.pilotr>, and it covers every
+version.
 
 The [About
 page](https://pablobernabeu.github.io/pilotr/r/articles/about.html)

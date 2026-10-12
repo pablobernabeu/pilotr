@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The home page gives the Zenodo concept DOI as a full link,
+  <https://doi.org/10.5281/zenodo.21266313>, in place of the Zenodo badge, and the About
+  page links every DOI the same way, so its reference line can be clicked. The BibTeX
+  entry's `url`, on the page and in `docs/pilotr.bib`, gives the PyPI page, so a style that
+  prints both fields no longer shows the DOI twice.
 - `power` refuses designs whose rows are correlated, with the R twin's message. It t-tested
   every row as an independent observation and accepted any Gaussian design with a two-level
   between factor, including designs crossed with items, designs with a within factor and

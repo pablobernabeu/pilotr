@@ -184,12 +184,16 @@
   separately. It also gives the author's ORCID iD now.
 
 * `citation("pilotr")` and the website give the DOI that CRAN assigned to the package,
-  10.32614/CRAN.package.pilotr, in place of the Zenodo concept DOI. It names the R package
-  across all its versions, and it is the DOI that the CRAN page and the citation R generates
-  for a CRAN package already gave, so the R package no longer circulates under two.
+  <https://doi.org/10.32614/CRAN.package.pilotr>, in place of the Zenodo concept DOI. It names
+  the R package across all its versions, and it is the DOI that the CRAN page and the citation
+  R generates for a CRAN package already gave, so the R package no longer circulates under two.
   `CITATION.cff` describes both packages, so it keeps the Zenodo DOI, which archives every
   GitHub release of both alike, and now lists each package's identifiers, marked with the
   package they name. The repository's `README.md` gives a reference for each package.
+  The CRAN DOI and the Zenodo DOI are shown as full links on the website and in the `README.md`
+  files. The R package's `README.md` gains a badge for the DOI CRAN assigned, for GitHub and
+  CRAN, which the home page leaves out of its sidebar, where the DOI is already given under
+  Citation.
 
 * The 0.3.0 and 0.3.1 entries below no longer give release dates. Both gave dates on which
   neither version reached CRAN, and the site already prints the CRAN date beside each entry.

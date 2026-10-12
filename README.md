@@ -9,7 +9,7 @@
 [![PyPI](https://img.shields.io/pypi/v/pilotr.svg)](https://pypi.org/project/pilotr/)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
+[![DOI 10.5281/zenodo.21266313](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
 <!-- badges: end -->
 
 `pilotr` lets researchers pilot a study before they run it.
@@ -297,13 +297,13 @@ The R package's reference gives the DOI that CRAN assigned to it on publication,
 R package across its versions:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification* [R package]. https://doi.org/10.32614/CRAN.package.pilotr
+> specification* [R package]. <https://doi.org/10.32614/CRAN.package.pilotr>
 
 The Python package's reference gives the concept DOI of the Zenodo archive, which holds every
 GitHub release of both packages, since PyPI assigns no DOI:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification* [Python package]. https://doi.org/10.5281/zenodo.21266313
+> specification* [Python package]. <https://doi.org/10.5281/zenodo.21266313>
 
 The R and Python packages are released separately, so their version numbers can differ. In R,
 `citation("pilotr")` gives the reference with the installed version. The About page of each
