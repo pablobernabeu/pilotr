@@ -186,12 +186,29 @@ def _shared_between(factors, units) -> dict:
 
 def _features_0_4(spec) -> list:
     """Features introduced in 0.4. A specification using any of them is read differently by an
-    earlier implementation, so it has to declare 0.4 or later. One declaring less is refused by
-    `_check_names`, in words that name both remedies. Only well-formed parts are inspected, as for
-    the 0.3 features.
+    earlier implementation, so it has to declare 0.4 or later. One with several between factors on
+    one unit that declares less is refused by `_check_names`, in words that name both remedies,
+    and one with a field new in 0.4 by `validate_spec`. Only well-formed parts are inspected, as
+    for the 0.3 features.
     """
+    found = []
     if _shared_between(spec.get("factors"), ("subject", "item")):
-        return ["several between factors on one unit"]
+        found.append("several between factors on one unit")
+    return found + _fields_0_4(spec)
+
+
+def _fields_0_4(spec) -> list:
+    """The fields introduced in 0.4.
+
+    A release that reads no version above 0.3 refuses such a field as unknown, or ignores it when
+    validation is lenient, as releases before 0.3 always do. Ignored, ``counterbalance`` leaves
+    every subject-item pair crossed with every level. It counts whatever its value, since
+    ``false`` is as unknown to those releases as ``true``.
+    """
+    factors = spec.get("factors")
+    if isinstance(factors, list) and any(isinstance(f, dict) and f.get("counterbalance")
+                                         is not None for f in factors):
+        return ["factors counterbalance"]
     return []
 
 
@@ -229,6 +246,13 @@ def validate_spec(spec, strict: bool = True):
     Every version reads the same design written as one between factor whose levels are the cells,
     as the specification shows under Worked encodings.
 
+    From version 0.4, a within factor that sets ``counterbalance`` shows each subject each item at
+    one level, rotating the levels over subjects and items as a Latin square does. It needs an item
+    unit, and it is refused with ``per_subject``, since every subject has to see every item. A
+    warning says when the subjects or the items are not a multiple of the number of lists, which
+    is the number of combinations of the counterbalanced factors' levels, so that the lists are
+    unequal.
+
     Version negotiation covers the other direction. A specification that uses a feature introduced
     in 0.3 must declare 0.3 or later, and one that uses a feature introduced in 0.4 must declare
     0.4. A specification declaring a version newer than `SPEC_VERSION` is refused outright, and
@@ -261,7 +285,9 @@ def validate_spec(spec, strict: bool = True):
     UserWarning
         For an unrecognised field when ``strict`` is false, and in either mode for a within
         factor whose ``vary_within`` leaves out a unit of the design, which pilotr crosses with
-        every unit anyway. From spec_version 0.4 the latter is an error.
+        every unit anyway. From spec_version 0.4 the latter is an error. Also in either mode for
+        counterbalanced factors whose lists are unequal, because the subjects or the items are
+        not a multiple of their number.
     """
     import warnings
 
@@ -310,6 +336,11 @@ def validate_spec(spec, strict: bool = True):
             bad('this specification uses %s, which requires spec_version "0.3", but declares %s; '
                 "a 0.2 implementation would read it differently and silently generate different "
                 "data" % (", ".join(used), shown))
+        used = _fields_0_4(spec)
+        if used and dv < (0, 4):
+            bad('this specification uses %s, which requires spec_version "0.4", but declares %s. '
+                "An implementation that reads no version above 0.3 refuses such a field or ignores "
+                "it, and ignoring it generates different data." % (", ".join(used), shown))
 
     # ---- top level ----
     for k in spec:
@@ -362,6 +393,10 @@ def validate_spec(spec, strict: bool = True):
 
     # ---- factors ----
     contrast_cols: list[str] = []
+    # Whether each subject sees a sample of the items, over which no factor can be
+    # counterbalanced.
+    sampled = (has_item and isinstance(units.get("item"), dict)
+               and units["item"].get("per_subject") is not None)
     factors = spec.get("factors")
     if factors is not None:
         if not isinstance(factors, list):
@@ -373,7 +408,8 @@ def validate_spec(spec, strict: bool = True):
                     bad("%s must be an object" % where)
                     continue
                 for k in f:
-                    if k not in ("name", "levels", "contrasts", "vary_within", "between"):
+                    if k not in ("name", "levels", "contrasts", "vary_within", "between",
+                                 "counterbalance"):
                         unknown("unknown field '%s.%s'" % (where, k))
                 if not _is_name(f.get("name")):
                     bad("%s.name must be a non-empty string" % where)
@@ -419,6 +455,22 @@ def validate_spec(spec, strict: bool = True):
                         bad("%s.between is 'item' but the design has no item unit" % where)
                 if vw is None and bt is None:
                     bad("%s must set either 'vary_within' or 'between'" % where)
+                # counterbalance (new in 0.4) shows each subject each item at one level, rotating
+                # the levels over subjects and items, so it needs a within factor, an item unit and
+                # every item for every subject. false means the same as leaving it out.
+                cb = f.get("counterbalance")
+                if cb is not None:
+                    if not isinstance(cb, bool):
+                        bad("%s.counterbalance must be true or false" % where)
+                    elif cb and vw is None:
+                        bad("%s.counterbalance applies only to a within factor, one that sets "
+                            "vary_within" % where)
+                    elif cb and not has_item:
+                        bad("%s.counterbalance rotates the levels over items, but the design has "
+                            "no item unit" % where)
+                    elif cb and sampled:
+                        bad("%s.counterbalance needs every subject to see every item, so it cannot "
+                            "be combined with units.item.per_subject" % where)
 
     # ---- predictors ----
     pred_names: list[str] = []
@@ -856,6 +908,40 @@ def _check_names(spec, has_item, units_ok, version=None):
                 bad(text + " This specification declares %d.%d, which refuses it." % version)
             else:
                 soft.append(text + " From spec_version 0.4 this is an error.")
+
+    # Counterbalanced factors rotate the C combinations of their levels over C lists, subject s
+    # following list (s - 1) mod C. The lists balance only when the subjects and the items are
+    # both multiples of C, and otherwise differ by one subject or one item. That draws a warning,
+    # not a refusal, since the rotation simulates such a design as written, and a sweep over item
+    # counts passes through it. Partial crossing is refused above, so it is not warned about here.
+    units = spec.get("units")
+    rot = [f for f in factors
+           if isinstance(f, dict) and f.get("counterbalance") is True
+           and f.get("vary_within") is not None and f.get("between") is None
+           and _is_name(f.get("name")) and isinstance(f.get("levels"), list)
+           and len(f["levels"]) >= 2 and all(_is_str(v) for v in f["levels"])]
+    if (rot and units_ok and has_item and isinstance(units.get("subject"), dict)
+            and isinstance(units.get("item"), dict) and units["item"].get("per_subject") is None):
+        n_subject, n_item = units["subject"].get("n"), units["item"].get("n")
+        lists = math.prod(len(f["levels"]) for f in rot)
+        if _is_whole(n_subject) and n_subject >= 1 and _is_whole(n_item) and n_item >= 1:
+            reasons = []
+            if n_subject % lists != 0:
+                reasons.append(" The %d subjects are not a multiple of %d, so the lists differ in "
+                               "size by one subject, and an item is seen in some conditions by one "
+                               "subject more than in others." % (n_subject, lists))
+            if n_item % lists != 0:
+                reasons.append(" The %d items are not a multiple of %d, so each list shows some "
+                               "conditions on one item more than others." % (n_item, lists))
+            names_rot = _name_list("'%s'" % f["name"] for f in rot)
+            if len(rot) == 1:
+                lead = ("the counterbalanced factor %s rotates its %d levels over %d lists"
+                        % (names_rot, lists, lists))
+            else:
+                lead = ("the counterbalanced factors %s rotate the %d combinations of their levels "
+                        "over %d lists" % (names_rot, lists, lists))
+            if reasons:
+                soft.append(lead + ", and the lists are unequal." + "".join(reasons))
 
     return problems, soft
 

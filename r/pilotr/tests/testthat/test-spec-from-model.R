@@ -399,13 +399,18 @@ test_that("spec_from_model warns that a counterbalanced pilot comes back fully c
     paste0("spec_from_model(): in the pilot each subject saw each item under one level of ",
            "'cond' (a counterbalanced, Latin-square design), but the returned specification ",
            "crosses every subject with every item under every level, doubling the observations ",
-           "per subject and overstating power. Encode the design as list (between subject) x ",
-           "item set (between item), as in SPEC.md's two-list example."),
+           "per subject and overstating power. To plan the pilot's design, set counterbalance to ",
+           "true on 'cond' and declare spec_version \"0.4\" (see Counterbalanced lists in ",
+           "SPEC.md). For a release that reads no version above 0.3, encode it as list (between ",
+           "subject) x item set (between item), as in SPEC.md's two-list example."),
     fixed = TRUE)
   # As the warning says, the specification crosses every pair with both levels, so it simulates
-  # twice the pilot's rows.
+  # twice the pilot's rows. Changed as the warning advises, it simulates as many as the pilot had.
   expect_setequal(rec$factors[[1]]$vary_within, c("subject", "item"))
   expect_identical(nrow(simulate_design(rec)), 2L * nrow(pilot))
+  rec$spec_version <- "0.4"
+  rec$factors[[1]]$counterbalance <- TRUE
+  expect_identical(nrow(simulate_design(rec)), nrow(pilot))
 })
 
 test_that("a crossed pilot with missing rows, or a factor between items, draws no such warning", {
@@ -443,11 +448,18 @@ test_that("the counterbalancing warning counts the levels of a factor with more 
   pilot <- d[(d$subject + d$item + level) %% 3L == 0L, ]
   fit <- suppressMessages(suppressWarnings(
     lme4::lmer(y ~ prime + (1 | subject) + (1 | item), data = pilot)))
-  w <- expect_warning(suppressMessages(spec_from_model(fit)), "one level of 'prime'",
+  w <- expect_warning(rec <- suppressMessages(spec_from_model(fit)), "one level of 'prime'",
                       fixed = TRUE)
   expect_match(conditionMessage(w),
                "every level, multiplying the observations per subject by 3 and overstating power",
                fixed = TRUE)
+  # The two-list encoding writes two levels only, so the warning names the field alone.
+  expect_true(endsWith(conditionMessage(w), paste0(
+    "To plan the pilot's design, set counterbalance to true on 'prime' and declare spec_version ",
+    "\"0.4\" (see Counterbalanced lists in SPEC.md).")))
+  rec$spec_version <- "0.4"
+  rec$factors[[1]]$counterbalance <- TRUE
+  expect_identical(nrow(simulate_design(rec)), nrow(pilot))
 })
 
 test_that("factors counterbalanced together draw one warning with their joint multiple", {
@@ -475,9 +487,18 @@ test_that("factors counterbalanced together draw one warning with their joint mu
   expect_match(w, paste0("each item under one combination of the levels of 'A' and 'B' (a ",
                          "counterbalanced, Latin-square design), but the returned specification ",
                          "crosses every subject with every item under every combination, ",
-                         "multiplying the observations per subject by 4 and overstating power."),
+                         "multiplying the observations per subject by 4 and overstating power. ",
+                         "To plan the pilot's design, set counterbalance to true on 'A' and 'B' ",
+                         "and declare spec_version \"0.4\" (see Counterbalanced lists in ",
+                         "SPEC.md)."),
                fixed = TRUE)
+  expect_false(grepl("two-list", w, fixed = TRUE))
   expect_identical(nrow(simulate_design(rec)), 4L * nrow(pilot))
+  # Counterbalanced together, the two factors rotate over the four lists, one cell per pair.
+  rec$spec_version <- "0.4"
+  expect_identical(vapply(rec$factors, `[[`, "", "name"), c("A", "B"))
+  for (k in 1:2) rec$factors[[k]]$counterbalance <- TRUE
+  expect_identical(nrow(simulate_design(rec)), nrow(pilot))
 })
 
 test_that("spec_from_model refuses what it cannot read, saying what to do instead", {

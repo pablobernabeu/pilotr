@@ -57,9 +57,10 @@
   item under every condition. Planning a counterbalanced study that way doubles the observations
   per subject and overstates power. By the formulas of Judd, Westfall and Kenny (2017), the
   `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05 on the log scale,
-  has a power of about 0.80 crossed and 0.55 counterbalanced. The warning names the encoding
-  that plans a counterbalanced study, a list factor between subjects and an item-set factor
-  between items. The specification returned is unchanged.
+  has a power of about 0.80 crossed and 0.55 counterbalanced. The warning names the field that
+  plans a counterbalanced study, `counterbalance` in specification version 0.4. For a two-level
+  factor it also names the encoding that earlier releases read, a list factor between subjects
+  and an item-set factor between items. The specification returned is unchanged.
 
 * `power_mixed()` and `precision_design()` fit the model each family needs. They fitted a linear
   mixed model to every response, so for `bernoulli` and `poisson` outcomes the estimate was a
@@ -150,6 +151,21 @@
   records the choice in its `effects` attribute. By default, the coefficients are the pilot's
   estimates, as before. `?spec_from_model` explains when each choice fits, and that a named
   `focal` in `power_mixed()` leaves the simulated effect as it is.
+
+* `counterbalance` on a within factor gives each subject one condition per item, rotating the
+  lists across subjects and items, as in a Latin-square design. Planning such a study with a
+  fully crossed specification doubled the observations per participant and overstated power.
+  Subject s meets item t in condition ((s − 1) + (t − 1)) mod C, where C counts the conditions,
+  or the combinations of levels when several factors are counterbalanced, and nothing is drawn.
+  The field belongs to specification version 0.4, needs an item unit and is refused with
+  `per_subject`. A warning says when the lists are unequal, because the subjects or the items are
+  not a multiple of C. `model_formula()` and `model_data()` are unchanged, since with at least C
+  subjects and C items every subject meets every condition across items and every item every
+  condition across subjects. `build_spec()` gains `counterbalance = TRUE`, and the no-code app,
+  installed or in the browser, offers it as "Counterbalanced lists" for a within design with
+  items. `spec_from_model()` names the field when it warns that a pilot was counterbalanced. The
+  two-list encoding of the specification suits two conditions only, and it stays documented for
+  releases that read no version above 0.3.
 
 ## Fixes
 
@@ -377,10 +393,11 @@
   recruiting N / (1 − p).
 
 * The precision vignette says that its priming example is fully crossed, and that a
-  counterbalanced study has half the observations and is planned with the two-list encoding.
-  `?spec_from_model` explains the counterbalancing warning and that encoding. It also shows a
-  `prep` function for `power_mixed()` and `precision_design()` that drops the rows a
-  counterbalanced study would not observe and runs in the worker processes of `workers > 1`.
+  counterbalanced study has half the observations and is planned with `counterbalance = TRUE` in
+  `build_spec()` or with the two-list encoding. `?spec_from_model` explains the counterbalancing
+  warning, the field and that encoding. It also shows a `prep` function for `power_mixed()` and
+  `precision_design()` that drops the rows a counterbalanced study would not observe and runs in
+  the worker processes of `workers > 1`.
 
 * The cross-language guarantee is stated as it holds, in the specification, the README files,
   `DESCRIPTION`, the vignettes, the apps' guides and the landing page. R and Python produce

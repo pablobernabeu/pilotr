@@ -135,7 +135,7 @@ def _read_like_jsonlite(spec):
             _unbox(unit, ("n", "per_subject"))
     factors = spec.get("factors")
     for f in factors if isinstance(factors, list) else []:
-        _unbox(f, ("name", "between"))
+        _unbox(f, ("name", "between", "counterbalance"))
     predictors = spec.get("predictors")
     for p in predictors if isinstance(predictors, list) else []:
         _unbox(p, ("name", "varies_by", "mean", "sd", "dist", "min", "max", "reliability"))
@@ -330,6 +330,14 @@ def _simulate(spec) -> Dataset:
     predictors = spec.get("predictors", [])
     within = [f for f in factors if f.get("vary_within")]
     between = [f for f in factors if f.get("between")]
+    # From version 0.4, a within factor may be counterbalanced. Each subject then meets each item
+    # at one combination of the counterbalanced factors' levels, rotated over subjects and items,
+    # so only the other within factors expand rows. Without the field, every within factor expands
+    # rows, as it always has.
+    rotated = [f for f in within if f.get("counterbalance") is True]
+    within = [f for f in within if f.get("counterbalance") is not True]
+    rotated_sizes = [len(f["levels"]) for f in rotated]
+    n_lists = math.prod(rotated_sizes)
     # The between factors of each unit, in listed order, with their level counts and the number
     # of cells, the combinations of their levels. Version 0.4 allocates the factors of one unit
     # jointly, one block of units per cell. Up to 0.3, each was allocated on its own, which
@@ -357,8 +365,18 @@ def _simulate(spec) -> Dataset:
     for s in range(1, S + 1):
         items_s = _sample_items(rng, I, per_subject) if per_subject else range(1, I + 1)
         for t in items_s:
+            # Subject s meets item t at combination ((s - 1) + (t - 1)) mod C of the
+            # counterbalanced factors' levels, read like a cell of the between factors below, the
+            # first-listed factor varying slowest. Subject s therefore follows list (s - 1) mod C,
+            # and nothing is drawn.
+            rotated_idx = {}
+            if rotated:
+                combination = ((s - 1) + (t - 1)) % n_lists
+                for f, size in zip(reversed(rotated), reversed(rotated_sizes)):
+                    rotated_idx[f["name"]] = combination % size
+                    combination //= size
             for combo in (itertools.product(*within_level_ranges) if within else [()]):
-                level_idx = {}
+                level_idx = dict(rotated_idx)
                 for f, li in zip(within, combo):
                     level_idx[f["name"]] = li
                 # Unit u of N takes cell floor((u - 1) * C / N) of the C cells. A cell is read as

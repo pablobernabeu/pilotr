@@ -47,6 +47,13 @@ Every version reads the same design written as one between factor whose levels a
 as the specification shows under Worked encodings, and \code{\link[=spec_from_model]{spec_from_model()}} builds that factor
 from a fitted pilot.
 
+From version 0.4, a within factor that sets \code{counterbalance} shows each subject each item at
+one level, rotating the levels over subjects and items as a Latin square does. It needs an item
+unit, and it is refused with \code{per_subject}, since every subject has to see every item. A
+warning says when the subjects or the items are not a multiple of the number of lists, which is
+the number of combinations of the counterbalanced factors' levels, so that the lists are
+unequal.
+
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
 later, and one that uses a feature introduced in 0.4 must declare 0.4. A specification

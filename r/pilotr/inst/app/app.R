@@ -146,7 +146,9 @@ guide_tab <- tabPanel(
               "levels, the fixed intercept and effect, and a response family. Changing the ",
               "family resets the intercept and effect to sensible values for that family's ",
               "scale. For within-subjects and crossed designs, add by-subject and by-item ",
-              "random effects."),
+              "random effects. ", tags$b("Counterbalanced lists"), " show each subject each item ",
+              "in one condition, rotating the conditions over subjects and items, which halves ",
+              "the trials of the crossed design."),
       tags$li("Select ", tags$b("Simulate"), ", then read the tabs: the JSON specification, ",
               "the simulated data, a summary and plot, a simulation-based power analysis, and ",
               "a reproducible R script that you can verify in a clean R session."),
@@ -194,7 +196,11 @@ ui <- fluidPage(
       ),
       conditionalPanel("input.design_kind == 'within'",
         checkboxInput("include_items", "Crossed with items (by-item random effects)", TRUE),
-        conditionalPanel("input.include_items", numericInput("n_item", "N items", 24, min = 2))
+        conditionalPanel("input.include_items",
+          numericInput("n_item", "N items", 24, min = 2),
+          checkboxInput("counterbalance",
+                        "Counterbalanced lists (each subject sees each item in one condition)",
+                        FALSE))
       ),
       tags$hr(),
       fluidRow(
@@ -317,6 +323,7 @@ server <- function(input, output, session) {
     build_spec(list(
       name = input$name, seed = input$seed, n_subject = input$n_subject,
       include_items = input$include_items, n_item = input$n_item,
+      counterbalance = input$counterbalance,
       design_kind = input$design_kind, factor_name = input$factor_name,
       lev1 = input$lev1, lev2 = input$lev2, intercept = input$intercept, effect = input$effect,
       subj_int_sd = input$subj_int_sd, subj_slope_sd = input$subj_slope_sd, subj_corr = input$subj_corr,

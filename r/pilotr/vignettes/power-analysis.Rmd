@@ -76,9 +76,13 @@ spec_c <- build_spec(list(
 The priming design above is fully crossed, so each of the 24 participants sees all 18 items in
 both conditions, 864 trials in all. A counterbalanced study, in which each participant sees
 each item in one condition only, has half the observations and lower power. Plan such a study
-with the two-list encoding among the
+by adding `counterbalance = TRUE` to the `build_spec()` call above. The factor `condition` then
+sets `counterbalance`, a field of specification version 0.4 that rotates the conditions over
+participants and items as a Latin square does (see
+[counterbalanced lists](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#counterbalanced-lists)).
+The two-list encoding among the
 [worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
-of the specification.
+of the specification writes the same design for releases that read no version above 0.3.
 
 The model fitted to each replicate is the one the specification implies, here the maximal model
 for the design, with by-subject and by-item intercepts and slopes for the condition.

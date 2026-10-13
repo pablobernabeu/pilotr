@@ -126,7 +126,9 @@ guide <- card(
               "factor and its two levels, the fixed intercept and effect, and a response ",
               "family. Changing the family resets the intercept and effect to reasonable ",
               "values for that family's scale. For within-subjects and crossed designs, you ",
-              "can add random effects."),
+              "can add random effects. ", tags$b("Counterbalanced lists"), " show each subject ",
+              "each item in one condition, rotating the conditions over subjects and items, ",
+              "which halves the trials of the crossed design."),
       tags$li("Select ", tags$b("Simulate"), ", then read the tabs. These show the exact JSON ",
               "design specification, the simulated data, a summary and plot, a ",
               "simulation-based power analysis, and a reproducible R script."),
@@ -191,7 +193,11 @@ ui <- page_sidebar(
     conditionalPanel(
       "input.design_kind == 'within'",
       checkboxInput("include_items", "Crossed with items", TRUE),
-      conditionalPanel("input.include_items", numericInput("n_item", "N items", 24, min = 2)),
+      conditionalPanel("input.include_items",
+                       numericInput("n_item", "N items", 24, min = 2),
+                       checkboxInput("counterbalance",
+                                     "Counterbalanced lists (one condition per subject-item pair)",
+                                     FALSE)),
       tags$small(tags$b("By-subject random effects")),
       fluidRow(
         column(4, numericInput("subj_int_sd", "Int SD", 0.12, min = 0)),
@@ -316,7 +322,8 @@ server <- function(input, output, session) {
       parse_error(NULL)
       build_spec(list(
         name = input$name, seed = input$seed, n_subject = input$n_subject,
-        include_items = input$include_items, n_item = input$n_item, design_kind = input$design_kind,
+        include_items = input$include_items, n_item = input$n_item,
+        counterbalance = input$counterbalance, design_kind = input$design_kind,
         factor_name = input$factor_name, lev1 = input$lev1, lev2 = input$lev2,
         intercept = input$intercept, effect = input$effect,
         subj_int_sd = input$subj_int_sd, subj_slope_sd = input$subj_slope_sd, subj_corr = input$subj_corr,

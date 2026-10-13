@@ -102,6 +102,14 @@ def _site(**kw):
     return lambda s: s["random"].__setitem__("site", dict({"intercept_sd": 0.5}, **kw))
 
 
+def _counterbalanced(value):
+    """Set counterbalance on the first factor, in a specification declaring 0.4."""
+    def fn(s):
+        s["spec_version"] = "0.4"
+        s["factors"][0]["counterbalance"] = value
+    return fn
+
+
 RT, TWO = "crossed_mixed_rt", "between_2group_gaussian"
 
 # (label, specification, whether strict validation accepts it)
@@ -153,6 +161,12 @@ CASES = [(name, _example(name), True) for name in pilotr_example()] + [
                           s["random"]["subject"].__setitem__("correlated", False))), False),
     ("an empty vary_within", _with(RT, lambda s: s["factors"][0].__setitem__("vary_within", [])),
      False),
+    ("a counterbalanced within factor declaring 0.4", _with(RT, _counterbalanced(True)), True),
+    ("counterbalance false declaring 0.4", _with(RT, _counterbalanced(False)), True),
+    ("counterbalance given as a string", _with(RT, _counterbalanced("yes")), False),
+    ("counterbalance on a between factor",
+     _with(TWO, lambda s: (s["units"].__setitem__("item", {"n": 4}),
+                           _counterbalanced(True)(s))), False),
 ]
 
 

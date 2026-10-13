@@ -510,10 +510,13 @@
 #' components of the `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05
 #' on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
 #' for the crossed design and 0.55 for the counterbalanced one.
-#' The counterbalanced study needs about 1.8 times the subjects to match the crossed one. A
-#' counterbalanced design is written with a list factor between subjects and an item-set factor
-#' between items, as in the two-list example among the worked encodings of the specification
-#' (`spec/SPEC.md`).
+#' The counterbalanced study needs about 1.8 times the subjects to match the crossed one. To plan
+#' it, set `counterbalance` to `TRUE` on each factor the warning names, and `spec_version` to
+#' `"0.4"` in the returned specification. Specification version 0.4 then rotates the levels over
+#' subjects and items, as described under Counterbalanced lists in the specification
+#' (`spec/SPEC.md`). A release that reads no version above 0.3 takes a two-level design written
+#' with a list factor between subjects and an item-set factor between items, as in the two-list
+#' example among the worked encodings of the specification.
 #'
 #' Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 #' would not observe, through the `prep` argument of [power_mixed()] and [precision_design()].
@@ -887,7 +890,9 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   # larger study than the pilot ran. The power computed from it would be too high, and nothing
   # downstream would show it. Factors rotated together, as over the four lists of a 2 x 2 design,
   # draw one warning with the product of their level counts. One warning per factor would say
-  # "doubling" twice, for a specification with four times the pilot's observations.
+  # "doubling" twice, for a specification with four times the pilot's observations. The warning
+  # names the field of version 0.4 that writes the pilot's design, and for one factor of two levels
+  # also the two-list encoding, the only one that releases reading 0.3 take.
   if (length(rotated)) {
     one <- length(rotated) == 1L
     times <- prod(rotated)
@@ -898,8 +903,13 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
             "every subject with every item under every ", if (one) "level" else "combination", ", ",
             if (times == 2) "doubling the observations per subject"
             else paste("multiplying the observations per subject by", times),
-            " and overstating power. Encode the design as list (between subject) x item set ",
-            "(between item), as in SPEC.md's two-list example.", call. = FALSE)
+            " and overstating power. To plan the pilot's design, set counterbalance to true on ",
+            .name_list(sprintf("'%s'", names(rotated))), " and declare spec_version \"0.4\" (see ",
+            "Counterbalanced lists in SPEC.md).",
+            if (times == 2) paste0(" For a release that reads no version above 0.3, encode it as ",
+                                   "list (between subject) x item set (between item), as in ",
+                                   "SPEC.md's two-list example."),
+            call. = FALSE)
   }
   structure(spec, group_mapping = mapping, column_kinds = kinds,
             effects = list(method = effects,

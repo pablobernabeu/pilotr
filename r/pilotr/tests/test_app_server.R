@@ -382,6 +382,31 @@ testServer(app = app_dir, {
         "installed app: a pasted three-level design plots its three groups")
 })
 
+# Counterbalanced lists, offered for a within design with items, write the specification 0.4 field.
+# A box that a change of design hides keeps its value, so build_spec() ignores it where it cannot
+# apply. tests/test_app_lite_server.R makes the same checks of the browser build.
+within_inputs <- list(
+  design_kind = "within", include_items = TRUE, n_subject = 12, n_item = 8, intercept = 6,
+  effect = 0.1, sigma = 0.3, subj_int_sd = 0.1, subj_slope_sd = 0.05, subj_corr = 0,
+  item_int_sd = 0.1, item_slope_sd = 0.05, item_corr = 0)
+testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  do.call(session$setInputs, within_inputs)
+  session$setInputs(counterbalance = TRUE, simulate = 1)
+  json <- shown(output$json)
+  check(grepl("\"counterbalance\": true", json, fixed = TRUE) &&
+          grepl("\"spec_version\": \"0.4\"", json, fixed = TRUE),
+        "installed app: Counterbalanced lists writes the field and declares 0.4")
+  d <- sim()$data
+  check(nrow(d) == 12 * 8 && anyDuplicated(d[c("subject", "item")]) == 0,
+        "installed app: a counterbalanced design has one row per subject-item pair")
+  session$setInputs(design_kind = "between")
+  json <- shown(output$json)
+  check(!grepl("counterbalance", json, fixed = TRUE) &&
+          grepl("\"spec_version\": \"0.3\"", json, fixed = TRUE),
+        "installed app: a between design leaves out the hidden, ticked Counterbalanced lists")
+})
+
 # The browser build writes the same routing out in its own copy of the text. It is staged as
 # build_shinylive.R stages it, with the engine files app-lite/engine-files.txt names beside
 # app-lite/app.R, and each design is pasted in as a specification.

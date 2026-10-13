@@ -189,10 +189,15 @@ print(table([{k: res[k] for k in (
 
 The priming design above is fully crossed, so each of the 12 subjects sees all 8 items in both
 conditions, 192 trials in all. A counterbalanced study, in which each subject sees each item in
-one condition only, has half the observations and lower power. The specification writes it with
-the two-list encoding among the [worked encodings](specification.md#worked-encodings), which
-`simulate` produces exactly as the R package does. That encoding has no within factor, so
-`power_mixed` here refuses it, and its power comes from the R package's `power_mixed()`.
+one condition only, has half the observations and lower power. From specification version 0.4,
+the specification writes it with `"counterbalance": true` on the condition, which rotates the
+conditions over subjects and items (see
+[counterbalanced lists](specification.md#counterbalanced-lists)). The condition stays a within
+factor, so `power_mixed` here analyses the design as it does the crossed one. Releases that read
+no version above 0.3 take the two-list encoding among the
+[worked encodings](specification.md#worked-encodings), which `simulate` produces exactly as the R
+package does. That encoding has no within factor, so `power_mixed` here refuses it, and its
+power comes from the R package's `power_mixed()`.
 
 The first table counts the fits as the R package does. `n_returned` counts the replicates that
 returned an estimate and a p-value, and `power` is the significant proportion among them.

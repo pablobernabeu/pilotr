@@ -218,6 +218,7 @@ def cases():
     ]
     out += name_cases()
     out += allocation_cases()
+    out += counterbalance_cases()
     return out
 
 
@@ -343,6 +344,57 @@ def allocation_cases():
     ]
 
 
+_PRIME = {"name": "prime", "levels": ["p1", "p2"], "contrasts": {"pr": [-0.5, 0.5]},
+          "vary_within": ["subject", "item"], "counterbalance": True}
+
+
+def counterbalance_cases():
+    """Counterbalanced lists, new in 0.4, which show each subject each item at one level.
+
+    The field is refused in a specification declaring less than 0.4, whatever its value, and
+    with a between factor, without items or with per_subject. Subjects or items that are not a
+    multiple of the number of lists draw a warning, which the spec battery compares as text.
+    """
+    def counterbalanced(version="0.4", value=True, fn=None):
+        def mutate(s):
+            if version is not None:
+                s["spec_version"] = version
+            s["factors"][0]["counterbalance"] = value
+            if fn is not None:
+                fn(s)
+        return _mut(mutate)
+
+    return [
+        ("counterbalanced condition, declaring 0.4", counterbalanced()),
+        ("counterbalance false, declaring 0.4", counterbalanced(value=False)),
+        ("counterbalanced condition, declaring 0.3", counterbalanced("0.3")),
+        ("counterbalance false, declaring 0.3", counterbalanced("0.3", False)),
+        ("counterbalanced condition, no spec_version", counterbalanced(None)),
+        ("counterbalance given as a string", counterbalanced(value="yes")),
+        ("counterbalance on a factor between items",
+         counterbalanced(fn=lambda s: (s["factors"][0].pop("vary_within"),
+                                       s["factors"][0].__setitem__("between", "item")))),
+        ("counterbalanced without an item unit",
+         counterbalanced(fn=lambda s: (s["units"].pop("item"), s["random"].pop("item"),
+                                       s["factors"][0].__setitem__("vary_within", ["subject"])))),
+        ("counterbalanced with per_subject",
+         counterbalanced(fn=lambda s: s["units"]["item"].__setitem__("per_subject", 12))),
+        ("counterbalanced over 31 subjects (warns)",
+         counterbalanced(fn=lambda s: s["units"]["subject"].__setitem__("n", 31))),
+        ("counterbalanced over 25 items (warns)",
+         counterbalanced(fn=lambda s: s["units"]["item"].__setitem__("n", 25))),
+        ("two counterbalanced factors over 32 subjects",
+         counterbalanced(fn=lambda s: (s["factors"].append(dict(_PRIME)),
+                                       s["units"]["subject"].__setitem__("n", 32),
+                                       s["fixed"]["coefficients"].__setitem__("pr", 0.02)))),
+        ("two counterbalanced factors over 30 subjects (warns)",
+         counterbalanced(fn=lambda s: (s["factors"].append(dict(_PRIME)),
+                                       s["fixed"]["coefficients"].__setitem__("pr", 0.02)))),
+        ("counterbalanced beside a crossed within factor",
+         counterbalanced(fn=_second_factor)),
+    ]
+
+
 # ---- the file battery ---------------------------------------------------------------------
 
 def _gaussian():
@@ -387,6 +439,14 @@ def _with(base, fn):
     s = base()
     fn(s)
     return _text(s)
+
+
+def _counterbalance(value):
+    """Set counterbalance on the first factor, in a specification declaring 0.4."""
+    def fn(s):
+        s["spec_version"] = "0.4"
+        s["factors"][0]["counterbalance"] = value
+    return fn
 
 
 def _fixture(name):
@@ -482,6 +542,14 @@ def file_cases():
          _with(_between, lambda s: (s.__setitem__("spec_version", "0.4"),
                                     s["factors"].append(dict(_DOSE)),
                                     s["fixed"]["coefficients"].__setitem__("dose", 2.0)))),
+        # Counterbalanced lists, new in 0.4. jsonlite reads [true] as true and [null] as NA, and a
+        # null means the field is absent.
+        ("counterbalance [true]", _with(g, _counterbalance([True]))),
+        ("counterbalance null", _with(g, _counterbalance(None))),
+        ("counterbalance [null]", _with(g, _counterbalance([None]))),
+        ("counterbalanced over 31 subjects",
+         _with(g, lambda s: (_counterbalance(True)(s),
+                             s["units"]["subject"].__setitem__("n", 31)))),
         # The Poisson cap is a refusal raised while simulating, below and above 708.4.
         ("poisson mean 700",
          _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(700)))),

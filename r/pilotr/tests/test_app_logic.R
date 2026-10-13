@@ -56,5 +56,18 @@ check(min(d3$RT) > 200, "RTs above the 200 ms shift")
 check(grepl("# pow <- power_mixed(spec, n_sims = 200)", generate_r_script(spec2), fixed = TRUE),
       "the exported script of a crossed design suggests power_mixed()")
 
+# Counterbalanced lists show each subject each item in one condition, rotated over subjects and
+# items. They are a feature of specification version 0.4, which the engine subset reads.
+spec3 <- build_spec(utils::modifyList(p_within, list(name = "ui_counterbalanced",
+                                                     counterbalance = TRUE)))
+d4 <- simulate_design(spec3)
+cat("=== within crossed, counterbalanced lists ===\n")
+check(identical(spec3$spec_version, "0.4") && isTRUE(spec3$factors[[1]]$counterbalance),
+      "the counterbalanced option sets the field and declares 0.4")
+check(nrow(d4) == 30 * 24 && anyDuplicated(d4[c("subject", "item")]) == 0,
+      "720 rows (one per subject-item pair)")
+tmp3 <- tempfile(fileext = ".json"); writeLines(spec_json(spec3), tmp3)
+check(identical(simulate_design(load_spec(tmp3)), d4), "JSON round-trip reproduces identical data")
+
 cat(if (ok) "\nALL APP-LOGIC CHECKS PASSED\n" else "\nSOME CHECKS FAILED\n")
 quit(status = if (ok) 0 else 1)

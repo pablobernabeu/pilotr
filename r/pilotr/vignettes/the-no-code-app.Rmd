@@ -43,7 +43,10 @@ curve solves to, and export.
 
 Describe the design in the left panel: the sample sizes, the factor and its two levels, the
 fixed intercept and effect, a response family, and for crossed designs the random-effect
-standard deviations. Then read the tabs. 'Design spec' holds the exact JSON specification, the
+standard deviations. A within design crossed with items can use counterbalanced lists, which
+show each subject each item in one condition and rotate the conditions over subjects and items,
+and its specification then declares version 0.4.
+Then read the tabs. 'Design spec' holds the exact JSON specification, the
 portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
 summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
 and Type M errors, together with a power curve over sample size and the sample size at which

@@ -78,12 +78,27 @@
 }
 
 # Features introduced in 0.4. A specification using any of them is read differently by an earlier
-# implementation, so it has to declare 0.4 or later. One declaring less is refused by
-# .check_names(), in words that name both remedies. Only well-formed parts are inspected, as for
-# the 0.3 features.
+# implementation, so it has to declare 0.4 or later. One with several between factors on one unit
+# that declares less is refused by .check_names(), in words that name both remedies, and one with
+# a field new in 0.4 by validate_spec(). Only well-formed parts are inspected, as for the 0.3
+# features.
 .spec_0_4_features <- function(spec) {
-  if (length(.shared_between(spec[["factors"]], c("subject", "item"))))
-    "several between factors on one unit" else character(0)
+  c(if (length(.shared_between(spec[["factors"]], c("subject", "item"))))
+      "several between factors on one unit",
+    .spec_0_4_fields(spec))
+}
+
+# The fields introduced in 0.4. A release that reads no version above 0.3 refuses such a field as
+# unknown, or ignores it when validation is lenient, as releases before 0.3 always do. Ignored,
+# `counterbalance` leaves every subject-item pair crossed with every level. It counts whatever its
+# value, since `false` is as unknown to those releases as `true`.
+.spec_0_4_fields <- function(spec) {
+  factors <- spec[["factors"]]
+  if (is.list(factors) && is.null(names(factors)))
+    for (f in factors)
+      if (is.list(f) && !is.null(names(f)) && !is.null(f[["counterbalance"]]))
+        return("factors counterbalance")
+  character(0)
 }
 
 # The lowest specification version that reads `spec` as written, never below 0.3. build_spec() and
@@ -213,6 +228,13 @@
 #' as the specification shows under Worked encodings, and [spec_from_model()] builds that factor
 #' from a fitted pilot.
 #'
+#' From version 0.4, a within factor that sets `counterbalance` shows each subject each item at
+#' one level, rotating the levels over subjects and items as a Latin square does. It needs an item
+#' unit, and it is refused with `per_subject`, since every subject has to see every item. A
+#' warning says when the subjects or the items are not a multiple of the number of lists, which is
+#' the number of combinations of the counterbalanced factors' levels, so that the lists are
+#' unequal.
+#'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
 #' later, and one that uses a feature introduced in 0.4 must declare 0.4. A specification
@@ -286,6 +308,13 @@ validate_spec <- function(spec, strict = TRUE) {
       bad("this specification uses ", paste(used, collapse = ", "),
           ", which requires spec_version \"0.3\", but declares ", shown,
           "; a 0.2 implementation would read it differently and silently generate different data")
+    # Below 0.4 in the twin's tuple order, major version first.
+    used <- .spec_0_4_fields(spec)
+    if (length(used) && (dv[1] < 0L || (dv[1] == 0L && dv[2] < 4L)))
+      bad("this specification uses ", paste(used, collapse = ", "),
+          ", which requires spec_version \"0.4\", but declares ", shown, ". An implementation ",
+          "that reads no version above 0.3 refuses such a field or ignores it, and ignoring it ",
+          "generates different data.")
   }
 
   # ---- top level ----
@@ -339,6 +368,8 @@ validate_spec <- function(spec, strict = TRUE) {
 
   # ---- factors ----
   contrast_cols <- character(0)
+  # Whether each subject sees a sample of the items, over which no factor can be counterbalanced.
+  sampled <- has_item && is.list(u[["item"]]) && !is.null(u[["item"]][["per_subject"]])
   factors <- spec[["factors"]]
   if (!is.null(factors)) {
     if (!is.list(factors) || !is.null(names(factors)))
@@ -346,7 +377,8 @@ validate_spec <- function(spec, strict = TRUE) {
     else for (i in seq_along(factors)) {
       f <- factors[[i]]; where <- paste0("factors[", i, "]")
       if (!is.list(f) || is.null(names(f))) { bad(where, " must be an object"); next }
-      for (k in setdiff(names(f), c("name", "levels", "contrasts", "vary_within", "between")))
+      for (k in setdiff(names(f), c("name", "levels", "contrasts", "vary_within", "between",
+                                    "counterbalance")))
         unknown("unknown field '", where, ".", k, "'")
       if (!.is_name(f[["name"]])) bad(where, ".name must be a non-empty string")
       levels <- f[["levels"]]
@@ -389,6 +421,23 @@ validate_spec <- function(spec, strict = TRUE) {
       }
       if (is.null(vw) && is.null(bt))
         bad(where, " must set either 'vary_within' or 'between'")
+      # counterbalance (new in 0.4) shows each subject each item at one level, rotating the levels
+      # over subjects and items, so it needs a within factor, an item unit and every item for
+      # every subject. false means the same as leaving it out. `"counterbalance": [null]` arrives
+      # as NA.
+      cb <- f[["counterbalance"]]
+      if (!is.null(cb)) {
+        if (!is.logical(cb) || length(cb) != 1L || is.na(cb))
+          bad(where, ".counterbalance must be true or false")
+        else if (cb && is.null(vw))
+          bad(where, ".counterbalance applies only to a within factor, one that sets vary_within")
+        else if (cb && !has_item)
+          bad(where, ".counterbalance rotates the levels over items, but the design has no item ",
+              "unit")
+        else if (cb && sampled)
+          bad(where, ".counterbalance needs every subject to see every item, so it cannot be ",
+              "combined with units.item.per_subject")
+      }
     }
   }
 
@@ -786,6 +835,41 @@ validate_spec <- function(spec, strict = TRUE) {
         bad(text, " This specification declares ", version[1], ".", version[2],
             ", which refuses it.")
       else soft <- c(soft, paste0(text, " From spec_version 0.4 this is an error."))
+    }
+  }
+
+  # Counterbalanced factors rotate the C combinations of their levels over C lists, subject s
+  # following list (s - 1) mod C. The lists balance only when the subjects and the items are both
+  # multiples of C, and otherwise differ by one subject or one item. That draws a warning, not a
+  # refusal, since the rotation simulates such a design as written, and a sweep over item counts
+  # passes through it. Partial crossing is refused above, so it is not warned about here.
+  un <- spec[["units"]]
+  rot <- Filter(function(f)
+    is_obj(f) && isTRUE(f[["counterbalance"]]) && !is.null(f[["vary_within"]]) &&
+      is.null(f[["between"]]) && .is_name(f[["name"]]) && is.character(f[["levels"]]) &&
+      length(f[["levels"]]) >= 2L && !anyNA(f[["levels"]]), factors)
+  if (length(rot) && units_ok && has_item && is_obj(un[["subject"]]) && is_obj(un[["item"]]) &&
+      is.null(un[["item"]][["per_subject"]])) {
+    n_subject <- un[["subject"]][["n"]]
+    n_item <- un[["item"]][["n"]]
+    lists <- prod(vapply(rot, function(f) length(f[["levels"]]), integer(1)))
+    if (.is_whole(n_subject) && n_subject >= 1 && .is_whole(n_item) && n_item >= 1) {
+      reasons <- c(
+        if (n_subject %% lists != 0) sprintf(paste0(
+          " The %.0f subjects are not a multiple of %.0f, so the lists differ in size by one ",
+          "subject, and an item is seen in some conditions by one subject more than in others."),
+          n_subject, lists),
+        if (n_item %% lists != 0) sprintf(paste0(
+          " The %.0f items are not a multiple of %.0f, so each list shows some conditions on one ",
+          "item more than others."), n_item, lists))
+      names_rot <- .name_list(sprintf("'%s'", vapply(rot, function(f) f[["name"]], character(1))))
+      lead <- if (length(rot) == 1L)
+        sprintf("the counterbalanced factor %s rotates its %.0f levels over %.0f lists", names_rot,
+                lists, lists)
+      else sprintf(paste0("the counterbalanced factors %s rotate the %.0f combinations of their ",
+                          "levels over %.0f lists"), names_rot, lists, lists)
+      if (length(reasons))
+        soft <- c(soft, paste0(lead, ", and the lists are unequal.", paste(reasons, collapse = "")))
     }
   }
 

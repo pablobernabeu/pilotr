@@ -44,7 +44,8 @@ default_response_name <- function(family) {
 #'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`,
 #'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
 #'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
-#'   `item_corr`.
+#'   `item_corr`. `counterbalance = TRUE` counterbalances the factor of a
+#'   within design with items, and is ignored in any other design.
 #' @details
 #' A response of the Gaussian, lognormal or shifted lognormal family is rounded to four
 #' decimals, and a `beta` response is left unrounded. Rounding moves every proportion near 0 or 1
@@ -54,8 +55,14 @@ default_response_name <- function(family) {
 #' specification describes. They can then differ between R and 'Python' in their last bits where
 #' the two do not share a maths library, as the cross-language vignette sets out.
 #'
-#' The specification declares the lowest `spec_version` that reads it, and nothing built here
-#' needs a version above 0.3, so the releases of either package that read 0.3 read it too.
+#' Counterbalanced lists show each subject each item at one level of the factor, rotating the
+#' levels over subjects and items as a Latin square does, so a design has half the rows of the
+#' fully crossed one. They set `counterbalance` on the factor, a field of specification version
+#' 0.4 described under Counterbalanced lists in the specification.
+#'
+#' The specification declares the lowest `spec_version` that reads it. Only counterbalanced lists
+#' need a version above 0.3, so the releases of either package that read 0.3 read every other
+#' design built here.
 #' @return A design specification as a nested list, ready for
 #'   [simulate_design()], [spec_json()], or the
 #'   power and precision functions.
@@ -71,6 +78,9 @@ build_spec <- function(p) {
                  contrasts = list(effect = c(-0.5, 0.5)))
   if (identical(p$design_kind, "within")) {
     factor$vary_within <- if (isTRUE(p$include_items)) c("subject", "item") else c("subject")
+    # Counterbalanced lists rotate the levels over items, so they need items. The apps hide the
+    # box without them, and a hidden box keeps its value, so it is read only where it applies.
+    if (isTRUE(p$include_items) && isTRUE(p$counterbalance)) factor$counterbalance <- TRUE
   } else {
     factor$between <- "subject"
   }
@@ -112,7 +122,7 @@ build_spec <- function(p) {
   spec$response <- resp
   # The lowest version that reads the specification, first, where spec_json() has always written
   # it. Stamping .SPEC_VERSION would make every specification the apps export unreadable by the
-  # releases that read 0.3, although nothing built here needs 0.4.
+  # releases that read 0.3, although only counterbalanced lists need 0.4.
   c(list(spec_version = .required_spec_version(spec)), spec)
 }
 

@@ -42,7 +42,8 @@ def test_this_release_reads_specification_version_0_4_and_refuses_a_later_one():
             "version of pilotr understands; please upgrade pilotr") in str(e.value)
 
 
-def test_a_specification_needs_0_4_only_for_several_between_factors_on_one_unit():
+def test_a_specification_needs_0_4_for_several_between_factors_on_one_unit():
+    # The other 0.4 feature, a counterbalanced factor, is tested in test_counterbalance.py.
     s = _ex("between_2group_gaussian")
     assert _features_0_4(s) == []
     assert _required_spec_version(s) == "0.3"

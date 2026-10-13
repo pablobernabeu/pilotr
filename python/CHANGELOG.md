@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `build_spec()` and `spec_from_model()` declare the lowest version a specification needs, so
   the specifications the no-code app exports stay readable by pilotr 0.3.0 unless they use a 0.4
   feature.
+- `counterbalance` on a within factor gives each subject one condition per item, rotating the
+  lists across subjects and items, as in a Latin-square design. Planning such a study with a
+  fully crossed specification doubled the observations per participant and overstated power.
+  Subject s meets item t in condition ((s − 1) + (t − 1)) mod C, where C counts the conditions,
+  or the combinations of levels when several factors are counterbalanced, and nothing is drawn.
+  The field belongs to specification version 0.4, needs an item unit and is refused with
+  `per_subject`. A warning, in the R twin's words, says when the lists are unequal, because the
+  subjects or the items are not a multiple of C. The condition stays a within factor, so
+  `power_mixed` analyses a counterbalanced design. It refuses the two-list encoding, which has no
+  within factor and stays documented for releases that read no version above 0.3.
 - Every rate carries its Monte Carlo error. `power` and `power_mixed` gain `power_mcse`,
   `power_lo` and `power_hi`, the standard error and 95% Wilson interval of power. Both also gain
   `type_m_mcse`, the standard error of Type M, and a Wilson interval for Type S, `type_s_lo` and
@@ -67,8 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the cells, and reads the same in the R twin.
 - The crossed mixed-effects example on the power page states that every subject sees every item
   in both conditions. It points a counterbalanced study, which has half the observations and
-  lower power, to the two-list encoding of the specification, and says that its power comes from
-  the R package, since `power_mixed` refuses a design without a within factor.
+  lower power, to the `counterbalance` field of specification version 0.4, which `power_mixed`
+  analyses. For earlier releases it points to the two-list encoding of the specification, and
+  says that its power comes from the R package, since `power_mixed` refuses a design without a
+  within factor.
 - The specification page states how units are allocated to levels and clusters, and gives
   worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
   randomisation within clusters. It also says that simulated data are complete, so expected

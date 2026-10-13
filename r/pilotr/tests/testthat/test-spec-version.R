@@ -17,7 +17,8 @@ test_that("this release reads specification version 0.4 and refuses a later one"
     "pilotr understands; please upgrade pilotr"), fixed = TRUE)
 })
 
-test_that("a specification needs 0.4 only for several between factors on one unit", {
+test_that("a specification needs 0.4 for several between factors on one unit", {
+  # The other 0.4 feature, a counterbalanced factor, is tested in test-counterbalance.R.
   s <- two_group()
   expect_identical(.spec_0_4_features(s), character(0))
   expect_identical(.required_spec_version(s), "0.3")

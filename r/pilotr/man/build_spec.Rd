@@ -13,7 +13,8 @@ build_spec(p)
 \code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift},
 \code{thresholds}, or \code{phi}; within-design random effects use \code{subj_int_sd},
 \code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
-\code{item_corr}.}
+\code{item_corr}. \code{counterbalance = TRUE} counterbalances the factor of a
+within design with items, and is ignored in any other design.}
 }
 \value{
 A design specification as a nested list, ready for
@@ -37,8 +38,14 @@ dominate a Beta likelihood (see \code{\link[=brms_bridge]{brms_bridge()}}). Unro
 specification describes. They can then differ between R and 'Python' in their last bits where
 the two do not share a maths library, as the cross-language vignette sets out.
 
-The specification declares the lowest \code{spec_version} that reads it, and nothing built here
-needs a version above 0.3, so the releases of either package that read 0.3 read it too.
+Counterbalanced lists show each subject each item at one level of the factor, rotating the
+levels over subjects and items as a Latin square does, so a design has half the rows of the
+fully crossed one. They set \code{counterbalance} on the factor, a field of specification version
+0.4 described under Counterbalanced lists in the specification.
+
+The specification declares the lowest \code{spec_version} that reads it. Only counterbalanced lists
+need a version above 0.3, so the releases of either package that read 0.3 read every other
+design built here.
 }
 \examples{
 build_spec(list(name = "demo", seed = 1, design_kind = "between",

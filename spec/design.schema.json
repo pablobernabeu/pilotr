@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
-  "description": "Version 0.4. A specification with no spec_version field is a 0.2 specification. The schema states which fields each object may hold and their types, ranges and allowed values. It also states which parameters each response family requires and refuses. The R and Python implementations enforce the same rules through validate_spec() in strict mode, its default, and add the rules that relate one value to another or to the implementation. Every coefficient and random-slope key names a contrast column or a predictor, a contrast has one value per level and thresholds increase. A uniform predictor's min lies below its max, per_subject does not exceed the number of items, and a unit named by a factor, a predictor, a grouping factor or random.item exists. A correlation key names two terms of its group and gives each pair once. A specification using a 0.3 feature declares 0.3 or later and one using a 0.4 feature 0.4 or later. None declares a version newer than the implementation. Names do not collide (see Names in SPEC.md). Below version 0.4, no two factors are between the same unit, and from 0.4 a within factor lists every unit of the design (see Factors in SPEC.md).",
+  "description": "Version 0.4. A specification with no spec_version field is a 0.2 specification. The schema states which fields each object may hold and their types, ranges and allowed values. It also states which parameters each response family requires and refuses. The R and Python implementations enforce the same rules through validate_spec() in strict mode, its default, and add the rules that relate one value to another or to the implementation. Every coefficient and random-slope key names a contrast column or a predictor, a contrast has one value per level and thresholds increase. A uniform predictor's min lies below its max, per_subject does not exceed the number of items, and a unit named by a factor, a predictor, a grouping factor or random.item exists. A correlation key names two terms of its group and gives each pair once. A specification using a 0.3 feature declares 0.3 or later and one using a 0.4 feature 0.4 or later. None declares a version newer than the implementation. Names do not collide (see Names in SPEC.md). Below version 0.4, no two factors are between the same unit, and from 0.4 a within factor lists every unit of the design (see Factors in SPEC.md). A counterbalanced factor needs an item unit and no per_subject (see Counterbalanced lists in SPEC.md).",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "additionalProperties": false,
@@ -10,7 +10,7 @@
     "spec_version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+$",
-      "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, and \"0.4\" or later by one with several between factors on one unit, which 0.4 allocates jointly. An earlier implementation reads such a design differently and generates different data without reporting a problem. pilotr writes the lowest version a design needs, never below 0.3, so that the releases reading 0.3 read it unless it uses a 0.4 feature."
+      "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, and \"0.4\" or later by one with several between factors on one unit, which 0.4 allocates jointly, or with a factor that sets counterbalance. An earlier implementation reads such a design differently and generates different data without reporting a problem. pilotr writes the lowest version a design needs, never below 0.3, so that the releases reading 0.3 read it unless it uses a 0.4 feature."
     },
     "name": { "type": "string" },
     "seed": {
@@ -50,9 +50,15 @@
             ],
             "description": "The units the factor varies within. pilotr crosses a within factor with every unit of the design, so a list that leaves a unit out draws a warning, and from 0.4 a refusal. A single unit name is read as a one-element array, the form pilotr's spec_json() wrote before 0.3."
           },
-          "between": { "type": "string", "enum": ["subject", "item"] }
+          "between": { "type": "string", "enum": ["subject", "item"] },
+          "counterbalance": {
+            "type": "boolean",
+            "description": "New in 0.4. true on a within factor shows each subject each item at one level, rotated over subjects and items as in a Latin square: subject s meets item t at combination ((s - 1) + (t - 1)) mod C of the counterbalanced factors' levels, the first-listed factor varying slowest. Only the other within factors expand rows. It needs an item unit and is refused with per_subject, and false means the same as leaving it out. Earlier versions do not know the field, so a design that sets it declares 0.4 or later."
+          }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "if": { "properties": { "counterbalance": { "const": true } }, "required": ["counterbalance"] },
+        "then": { "required": ["vary_within"] }
       }
     },
     "predictors": {

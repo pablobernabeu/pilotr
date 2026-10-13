@@ -191,10 +191,13 @@ observations. The power computed from such a specification is too high. Take the
 components of the \code{crossed_mixed_rt} example, with 30 subjects, 24 items and an effect of 0.05
 on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
 for the crossed design and 0.55 for the counterbalanced one.
-The counterbalanced study needs about 1.8 times the subjects to match the crossed one. A
-counterbalanced design is written with a list factor between subjects and an item-set factor
-between items, as in the two-list example among the worked encodings of the specification
-(\code{spec/SPEC.md}).
+The counterbalanced study needs about 1.8 times the subjects to match the crossed one. To plan
+it, set \code{counterbalance} to \code{TRUE} on each factor the warning names, and \code{spec_version} to
+\code{"0.4"} in the returned specification. Specification version 0.4 then rotates the levels over
+subjects and items, as described under Counterbalanced lists in the specification
+(\code{spec/SPEC.md}). A release that reads no version above 0.3 takes a two-level design written
+with a list factor between subjects and an item-set factor between items, as in the two-list
+example among the worked encodings of the specification.
 
 Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 would not observe, through the \code{prep} argument of \code{\link[=power_mixed]{power_mixed()}} and \code{\link[=precision_design]{precision_design()}}.

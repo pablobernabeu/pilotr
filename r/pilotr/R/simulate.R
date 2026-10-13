@@ -200,7 +200,15 @@ simulate_design <- function(spec, validate = TRUE) {
   predictors <- spec[["predictors"]]
   within <- Filter(function(f) !is.null(f[["vary_within"]]), factors)
   between <- Filter(function(f) !is.null(f[["between"]]), factors)
+  # From version 0.4, a within factor may be counterbalanced. Each subject then meets each item at
+  # one combination of the counterbalanced factors' levels, rotated over subjects and items, so
+  # only the other within factors expand rows. Without the field, every within factor expands
+  # rows, as it always has.
+  rotated <- Filter(function(f) isTRUE(f[["counterbalance"]]), within)
+  within <- Filter(function(f) !isTRUE(f[["counterbalance"]]), within)
   within_sizes <- vapply(within, function(f) length(f[["levels"]]), integer(1))
+  rotated_sizes <- vapply(rotated, function(f) length(f[["levels"]]), integer(1))
+  n_lists <- prod(rotated_sizes)
   # The between factors of each unit, in listed order, with their level counts and the number of
   # cells, the combinations of their levels. Version 0.4 allocates the factors of one unit jointly,
   # one block of units per cell. Up to 0.3, each was allocated on its own, which put two
@@ -231,8 +239,19 @@ simulate_design <- function(spec, validate = TRUE) {
   for (s in 1:S) {
     items_s <- if (!is.null(per_subject)) .sample_items(rng, I, per_subject) else 1:I
     for (t in items_s) {
+    # Subject s meets item t at combination ((s - 1) + (t - 1)) mod C of the counterbalanced
+    # factors' levels, read like a cell of the between factors below, the first-listed factor
+    # varying slowest. Subject s therefore follows list (s - 1) mod C, and nothing is drawn.
+    rotated_idx <- list()
+    if (length(rotated)) {
+      combination <- ((s - 1) + (t - 1)) %% n_lists
+      for (k in rev(seq_along(rotated))) {
+        rotated_idx[[rotated[[k]][["name"]]]] <- combination %% rotated_sizes[k]
+        combination <- combination %/% rotated_sizes[k]
+      }
+    }
     for (combo in .product_indices(within_sizes)) {
-      level_idx <- list()
+      level_idx <- rotated_idx
       if (length(within)) for (m in seq_along(within))
         level_idx[[within[[m]][["name"]]]] <- combo[m]
       # Unit u of N takes cell floor((u - 1) * C / N) of the C cells. A cell is read as one level

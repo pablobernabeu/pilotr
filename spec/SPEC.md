@@ -27,8 +27,9 @@ terms of its group, and each pair is given once. A specification that uses a fea
 in 0.3 or 0.4 declares that version or later, and none may declare a version newer than the
 implementation. Names do not collide (see [Names](#names)). Below version 0.4, at most one factor
 is between each unit, and from 0.4 a within factor lists every unit of the design (see
-[Factors](#factors)). Lenient validation (`strict = FALSE`) reports an unknown field as a warning
-where the schema refuses it.
+[Factors](#factors)). A counterbalanced factor needs an item unit and no `per_subject` (see
+[Counterbalanced lists](#counterbalanced-lists)). Lenient validation (`strict = FALSE`) reports an
+unknown field as a warning where the schema refuses it.
 
 ## Versioning
 
@@ -42,12 +43,16 @@ The 0.3 features are observation-level predictors, `dist`, `reliability`, the `e
 the `correlated` flag and interaction random slopes. An implementation from 0.3 onwards refuses a
 specification declaring a version newer than it understands, and never reads it in part.
 
-Version 0.4 adds one feature, several between factors on one unit, which it allocates jointly (see
-[Factors](#factors)). Up to 0.3, each between factor was allocated on its own, so two over one
-unit fell into the same or overlapping blocks. A specification that has them and declares an
-earlier version is therefore refused. Version 0.4 also refuses a within factor whose
-`vary_within` leaves out a unit of the design, which draws only a warning in a specification
-declaring an earlier version.
+Version 0.4 adds two features. One is several between factors on one unit, which it allocates
+jointly (see [Factors](#factors)). Up to 0.3, each between factor was allocated on its own, so two
+over one unit fell into the same or overlapping blocks. The other is the field `counterbalance`,
+with which each subject meets each item at one level of a within factor (see
+[Counterbalanced lists](#counterbalanced-lists)). An implementation that reads no version above
+0.3 refuses the field as unknown, or ignores it, as lenient validation and releases before 0.3 do,
+and then crosses every subject–item pair with every level. A specification that uses either
+feature and declares an earlier version is therefore refused. Version 0.4 also refuses a within
+factor whose `vary_within` leaves out a unit of the design, which draws only a warning in a
+specification declaring an earlier version.
 
 An implementation that writes a specification declares the lowest version the specification
 needs, and never one below 0.3. The R package's `build_spec()` and `spec_from_model()` therefore
@@ -144,10 +149,14 @@ effect is misspelled generates exactly the data of a null design and reports suc
   A list that leaves a unit out has never changed the data. It draws a warning in a
   specification declaring a version below 0.4 and is refused from 0.4. A factor whose levels
   are carried by the items, each item appearing at one level only, is `"between": "item"`
-  instead. Since a within factor is crossed with every unit, each subject–item pair of the
-  design is observed at every level. A counterbalanced design, which shows each subject each
-  item at one level only, is written with a list factor between subjects and an item-set factor
+  instead. Unless it is counterbalanced, a within factor is crossed with every unit, so each
+  subject–item pair of the design is observed at every level. A counterbalanced design, which
+  shows each subject each item at one level only, is written with `counterbalance` from version
+  0.4. Earlier versions write it with a list factor between subjects and an item-set factor
   between items, as in the [worked encodings](#worked-encodings) below.
+* `counterbalance` (new in 0.4): `true` on a within factor rotates its levels over subjects and
+  items, so that a subject meets an item at one level in place of every level (see
+  [Counterbalanced lists](#counterbalanced-lists)). `false` means the same as leaving it out.
 * `between`: `"subject"` or `"item"`. The factor assigns each unit one level and does not
   expand rows. With `N` units and `L` levels, unit `u` (counted from 1) takes the level with
   index `⌊(u − 1)·L/N⌋` (counted from 0), so the units fall into `L` consecutive blocks in level
@@ -173,6 +182,42 @@ specification declaring a version earlier than 0.4. A factorial between design i
 as several between factors in a 0.4 specification or as one factor whose levels are the cells,
 which every version reads, as in the first of the [worked encodings](#worked-encodings). The two
 allocate the units alike and, given the same seed, draw the same responses.
+
+#### Counterbalanced lists
+
+A counterbalanced design, or Latin-square design, presents every item once to every subject, at
+one level of the condition, and rotates the levels so that every item appears at every level
+across subjects. From version 0.4, a within factor that sets `counterbalance` is rotated in this
+way:
+
+```json
+{ "name": "cond", "levels": ["related", "unrelated"], "contrasts": { "cond": [-0.5, 0.5] },
+  "vary_within": ["subject", "item"], "counterbalance": true }
+```
+
+The counterbalanced factors, in listed order with `L_1, …, L_k` levels, have `C = L_1·…·L_k`
+combinations of levels. Subject `s` meets item `t`, both counted from 1, at combination
+`((s − 1) + (t − 1)) mod C`, counted from 0. The combination is read as a cell is read above,
+the first-listed factor varying slowest. Subject `s` therefore follows list `(s − 1) mod C` of
+`C` lists, each of which moves on by one combination from one item to the next. The rotation is
+integer arithmetic and draws nothing. Only the within factors that are not counterbalanced
+expand rows, so each subject–item pair has one row for each combination of their levels. With
+two conditions and no other within factor, 24 subjects and 18 items give 432 rows, where the
+crossed design gives 864.
+
+When the `S` subjects and the `I` items are both multiples of `C`, every item appears at each
+combination for `S/C` subjects and every subject meets each combination on `I/C` items.
+Otherwise, the lists are unequal, by one subject or one item, and validation warns. It does not
+refuse, since the rotation simulates such a design as written. The field needs an item unit, over
+which the levels rotate, and it is refused with `per_subject`, since every subject has to see
+every item. Releases that read no version above 0.3 do not know the field, so a specification
+that sets it, to either value, declares 0.4.
+
+With at least `C` subjects and `C` items, each subject meets every combination across items and
+each item every combination across subjects. The by-subject and by-item slopes on the factor can
+then be estimated, and R's `model_formula()` gives the model of the crossed design. With three
+or more levels, the rotation writes a design that the two-list encoding among the
+[worked encodings](#worked-encodings) cannot.
 
 ### Continuous predictors
 
@@ -363,6 +408,17 @@ lists. In R, `model_formula()` gives `.y ~ l_g + (1 + l_g | subject) + (1 + l_g 
 `l_g` is the condition column that `model_data()` builds. The encoding suits two conditions,
 since with three or more each condition is a combination of several product columns and the
 analysis model has to be written by hand.
+
+From version 0.4, the same design is written with `counterbalance` on a within factor, as in
+[`counterbalanced_two_conditions.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/counterbalanced_two_conditions.json),
+whose design is that of the two-list file. Its subjects alternate between the two lists. The
+two-list encoding gives the first 12 subjects one list and the other 12 the other, so the two
+files assign different conditions and draw different data. Both have 432 rows, show every
+subject nine items in each condition and show every item in each condition to 12 subjects.
+`model_formula()` gives `.y ~ cond + (1 + cond | subject) + (1 + cond | item)`, with the
+condition's own contrast column. The field writes three or more conditions too.
+[`counterbalanced_three_conditions.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/counterbalanced_three_conditions.json)
+rotates three conditions over 18 subjects and 12 items, beside a within factor that is crossed.
 
 Randomisation within clusters, with both conditions in every cluster, is written with a between
 factor whose levels nest in the clusters. With 120 subjects in 12 sites, a factor of 24 levels
@@ -654,7 +710,10 @@ Step 5 iterates the observations as nested loops, outermost first,
 listed order, levels in listed order): emit row`. The level combinations run with the last
 within factor varying fastest. Under partial crossing, a subject's items run in ascending order.
 A between factor assigns each unit a level by the block rule under [Factors](#factors), jointly
-with any other between factor on the same unit, and does not expand rows.
+with any other between factor on the same unit, and does not expand rows. Nor does a
+counterbalanced factor, which takes its level for each subject–item pair from the rotation under
+[Counterbalanced lists](#counterbalanced-lists), so the level combinations run over the other
+within factors alone.
 
 ### Extending the draw order
 
@@ -663,7 +722,8 @@ written before it stays bit-identical. Each of the 0.3 additions is built that w
 observation-level predictor only appears when declared, a uniform draw costs the same as the
 normal it replaces, a `reliability` of 1 or absent draws nothing, and a family branch is
 reached only when that family is selected. The joint allocation of 0.4 draws nothing either, and
-with one between factor per unit it allocates as earlier versions did.
+with one between factor per unit it allocates as earlier versions did. Counterbalancing draws
+nothing as well, and without the field every within factor expands rows as before.
 
 ### Replicate seeds
 
@@ -718,6 +778,20 @@ levels, are allocated together. With one factor, the result is the level above.
 ```
 C ← L_1 · L_2 · … · L_k
 c ← ⌊(t − 1) · C / N⌋
+for j = k, k − 1, …, 1:
+    level_j ← c mod L_j
+    c ← ⌊c / L_j⌋
+```
+
+### Counterbalanced levels
+
+From version 0.4, the `k` counterbalanced factors, in listed order with `L_1, …, L_k` levels,
+give subject `s` and item `t`, both counted from 1, one level each. The levels are counted from
+0, and the rule is exact integer arithmetic that draws nothing.
+
+```
+C ← L_1 · L_2 · … · L_k
+c ← ((s − 1) + (t − 1)) mod C
 for j = k, k − 1, …, 1:
     level_j ← c mod L_j
     c ← ⌊c / L_j⌋
