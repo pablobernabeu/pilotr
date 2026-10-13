@@ -230,6 +230,18 @@
 #' whose fitted slope cannot be told from zero is refused too: the crossing is then compatible
 #' with any value at all, and an interval that said otherwise would be false.
 #'
+#' A curve over subjects in a crossed design need not rise towards 1. When an effect varies from
+#' item to item, as a by-item random slope says it does, power at a fixed number of items levels
+#' off below 1 (Westfall, Kenny and Judd, 2014; Judd, Westfall and Kenny, 2017). Adding subjects
+#' cannot lift it past that ceiling. The probit model rises towards 1 and cannot follow such a
+#' plateau. A curve that levels off near the target can then be solved far from the true crossing.
+#' One that levels off just below the target never crosses it, but Monte Carlo noise can lift a
+#' simulated rate over the target, and the curve can then be solved as though it crossed. To
+#' compare designs that trade subjects for items, solve curves over the number of items, one at
+#' each of a few subject counts, from [sweep_spec()] over `units$item$n`. Power over items levels
+#' off in the same way, at a ceiling set by the by-subject slope and the number of subjects. The
+#' subject counts must be large enough to put that ceiling well above the target.
+#'
 #' What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between the
 #' fitted shape and the true curve, and it treats the points of the curve as independent. Every
 #' sweep in pilotr now draws each point's replicates from a seed of its own (see [sweep_spec()]).
@@ -280,6 +292,14 @@
 #'   \doi{10.1111/j.2517-6161.1954.tb00159.x}
 #'
 #'   Finney, D. J. (1971). \emph{Probit analysis} (3rd ed.). Cambridge University Press.
+#'
+#'   Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random
+#'   factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
+#'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
+#'
+#'   Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
+#'   experiments in which samples of participants respond to samples of stimuli. \emph{Journal of
+#'   Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 #' @examples
 #' spec <- build_spec(list(name = "s", seed = 1, design_kind = "between", n_subject = 40,
 #'   factor_name = "group", lev1 = "a", lev2 = "b", intercept = 0, effect = 0.7,

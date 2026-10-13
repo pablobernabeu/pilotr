@@ -30,8 +30,10 @@ ratio.
 
 > The mixed-effects examples below use small `n_sims`, and their results were precomputed with
 > exactly the code shown and shipped with the package, so that the vignette builds quickly.
-> For real planning, we recommend `n_sims >= 200`, with more replicates for stable Type S and
-> Type M estimates.
+> `tools/vignette-caches.R` in the source repository regenerates them, and a test there fails if
+> the seeds, the simulated data or the code shown change and the results are not regenerated. For
+> real planning, we recommend `n_sims >= 200`, with more replicates for stable Type S and Type M
+> estimates.
 
 ## Two-group Gaussian
 
@@ -56,11 +58,11 @@ analysis is meant to expose.
 ## Crossed mixed-effects designs
 
 A feature that distinguishes pilotr from a marginal simulator is power estimation for crossed
-by-subject and by-item designs. The R interface fits the maximal model
-`y ~ cond + (1 + cond | subject) + (1 + cond | item)` with `lme4`/`lmerTest` and tests the
-fixed effect with Satterthwaite degrees of freedom.
+by-subject and by-item designs. The R interface derives the analysis model from the
+specification, fits it with `lme4`/`lmerTest` and tests each fixed effect with Satterthwaite
+degrees of freedom.
 
-```{r}
+```{r priming-spec}
 spec_c <- build_spec(list(
   name = "priming", seed = 1, design_kind = "within", include_items = TRUE,
   n_subject = 24, n_item = 18,
@@ -78,26 +80,44 @@ with the two-list encoding among the
 [worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
 of the specification.
 
-```{r, eval = FALSE}
+The model fitted to each replicate is the one the specification implies, here the maximal model
+for the design, with by-subject and by-item intercepts and slopes for the condition.
+
+```{r}
+model_formula(spec_c)
+```
+
+`effect` is the contrast column that `model_data()` adds for the condition, coded −0.5 for
+related and 0.5 for unrelated, so its coefficient is the unrelated condition minus the related
+one. `.y` is the response on the scale of the specification's coefficients, which for this
+shifted lognormal response is log(RT − `r spec_c$response$shift`), the logarithm of the reaction
+time less its shift.
+
+```{r power-mixed, eval = FALSE}
 # A tiny replicate count keeps the vignette fast. Use 200 or more for real planning.
 pm <- power_mixed(spec_c, n_sims = 20)
-unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+pm
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with
-# the package so that the vignette builds within CRAN's check-time budget.
-pm <- as.list(read.csv("power-mixed-cache.csv"))
+# The result of running exactly the chunk above, precomputed by tools/vignette-caches.R and
+# shipped with the package so that the vignette builds within CRAN's check-time budget.
+pm <- readRDS("power-mixed-cache.rds")
 ```
 
 ```{r, echo = FALSE}
-unlist(pm[c("power", "type_s", "type_m", "n_converged")])
+pm
 ```
 
-`n_converged` reports how many replicates the maximal model actually fit. This is a useful
-diagnostic in its own right, since convergence problems are common in small crossed designs,
-and it is the denominator of `power`, which is the significant proportion among the converged
-replicates.
+`power` is the proportion of significant results among the replicates that returned an
+estimate, which the result counts as `n_returned`, here `r pm$n_returned` of `r pm$n_sims`. The
+remaining counts describe the fits without entering `power`. `n_converged` counts the fits that
+returned an estimate with neither a warning nor a singular fit, `r pm$n_converged` here, and
+`n_singular` those whose variance estimates sat on a boundary, `r pm$n_singular` here. Singular
+and warning fits are kept in `power`, since their fixed-effect estimates remain interpretable
+and discarding them would bias the result. A large `n_singular` says that the model is richer
+than the design can support at this sample size, which is common in small crossed designs and
+worth reporting beside the power.
 
 `power_mixed()` carries its own simulation loop over the portable specification, with no other
 power package underneath it. It covers territory pioneered by
@@ -140,23 +160,30 @@ declares, as its own guide describes.
 
 The following sweep over the number of subjects reports power at each size.
 
-```{r, eval = FALSE}
+```{r power-curve, eval = FALSE}
 curve <- power_curve_mixed(
   spec_c,
   subject_ns = c(8, 12, 16, 24, 32, 44, 56),
   n_sims = 50)
-curve
+print(curve[, c("n_subject", "power", "power_lo", "power_hi", "type_m",
+                "n_returned", "n_converged", "n_singular")], digits = 3)
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with
-# the package so that the vignette builds within CRAN's check-time budget.
+# The result of running exactly the chunk above, precomputed by tools/vignette-caches.R and
+# shipped with the package so that the vignette builds within CRAN's check-time budget.
 curve <- read.csv("power-curve-cache.csv")
 ```
 
 ```{r, echo = FALSE}
-curve
+print(curve[, c("n_subject", "power", "power_lo", "power_hi", "type_m",
+                "n_returned", "n_converged", "n_singular")], digits = 3)
 ```
+
+The curve has a row for each sample size, with the power, Type S, Type M and fit counts that
+`power_mixed()` reports, and the table shows some of its columns. `power_lo` and `power_hi` bound
+the 95% Wilson interval of each power estimate, and the fit counts read as they do above, with
+`n_returned` the denominator of power.
 
 Each sample size draws its own replicates. Point *j* of a sweep over *J* sizes takes
 `replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers, as
@@ -193,10 +220,9 @@ Plotting the curve and the solved size together shows what the solve has done.
 # website's dark mode then inverts the figure's ink, so the axes and labels
 # follow the theme and the figure carries no opaque matte.
 library(ggplot2)
-# Each power estimate is a proportion over the converged replicates, so it
-# carries a binomial Monte Carlo standard error. The shaded band is the 95%
-# interval.
-curve$se <- sqrt(curve$power * (1 - curve$power) / curve$n_converged)
+# Each power estimate is a proportion over the replicates that returned an
+# estimate, and the curve carries its 95% Wilson interval, which the shaded
+# band draws.
 ggplot(curve, aes(n_subject, power)) +
   geom_hline(yintercept = 0.8, linetype = 2, colour = "grey60") +
   # The solved sample size and its interval. The dashed horizontal line marks
@@ -204,8 +230,7 @@ ggplot(curve, aes(n_subject, power)) +
   annotate("rect", xmin = solved$lo, xmax = solved$hi, ymin = -Inf, ymax = Inf,
            fill = "grey60", alpha = .15) +
   geom_vline(xintercept = solved$value, linetype = 2, colour = "grey60") +
-  geom_ribbon(aes(ymin = pmax(0, power - 1.96 * se),
-                  ymax = pmin(1, power + 1.96 * se)),
+  geom_ribbon(aes(ymin = power_lo, ymax = power_hi),
               alpha = .15, fill = "#2C6FB0") +
   geom_line(colour = "#2C6FB0", linewidth = 0.8) +
   geom_point(colour = "#2C6FB0", size = 2.6) +
@@ -222,10 +247,11 @@ ggplot(curve, aes(n_subject, power)) +
         panel.grid       = element_line(colour = "grey80"))
 ```
 
-The shaded horizontal band along the curve is the Monte Carlo interval, the binomial standard
-error of each power estimate over its converged replicates widened to a 95% envelope. The
-vertical band is the solved sample size and its own interval, which is what the dashed target
-line invites the reader to guess at.
+The shaded horizontal band along the curve is the Monte Carlo interval, the 95% Wilson interval
+of each power estimate over its `n_returned` replicates. Unlike a band of 1.96 standard errors
+either side, it stays between 0 and 1 and keeps a width where power reaches either. The vertical
+band is the solved sample size and its own interval, which is what the dashed target line
+invites the reader to guess at.
 
 The solved size counts the participants whose data are analysed. Simulated data are complete,
 with no attrition or exclusions. A study that expects to lose a proportion *p* of its
@@ -234,6 +260,66 @@ Losses unrelated to the outcome cost power without biasing the estimates, and re
 extra participants largely restores that power. Missingness that depends on the outcomes that
 would have been observed, which pilotr does not simulate, can bias the estimates as well
 ([Rubin, 1976](https://doi.org/10.1093/biomet/63.3.581)).
+
+## Subjects and items
+
+```{r, include = FALSE}
+# The quantities the paragraphs below quote, read from the specification. recipe_subjects holds
+# the subject counts that the recipe at the end of this section sweeps.
+n_item <- spec_c$units$item$n
+item_slope_sd <- spec_c$random$item$slopes$effect
+subj_slope_sd <- spec_c$random$subject$slopes$effect
+true_effect <- spec_c$fixed$coefficients$effect
+se_floor <- item_slope_sd / sqrt(n_item)
+recipe_subjects <- c(24, 36, 48)
+subj_floor <- subj_slope_sd / sqrt(min(recipe_subjects))
+```
+
+The curve above adds subjects and keeps `r n_item` items, and in a crossed design the number of
+items limits what more subjects can buy. When the effect of the condition varies from item to
+item, as the by-item slope in the specification says it does, part of the standard error of the
+effect comes from the items sampled. That part shrinks only as items are added. As subjects are
+added, the standard error therefore falls towards a floor set by the number of items. Power
+at a fixed number of items levels off below 1
+([Westfall, Kenny and Judd, 2014](https://doi.org/10.1037/xge0000014);
+[Judd, Westfall and Kenny, 2017](https://doi.org/10.1146/annurev-psych-122414-033702)). In the
+priming design, the floor is the by-item slope standard deviation over the square root of the
+number of items, `r item_slope_sd` / √`r n_item` ≈ `r signif(se_floor, 2)`. The effect of
+`r true_effect` is some `r round(true_effect / se_floor)` times that, so the ceiling lies far
+above any target.
+
+Where the ceiling is lower, a curve over subjects flattens towards it, and the probit curve that
+`target_n()` fits rises towards 1 and cannot bend into the plateau. A curve that levels off near
+the target can then be solved far from the true crossing. One that levels off just below the
+target never crosses it, but Monte Carlo noise can lift a simulated power over the target, and
+the curve can then be solved as though it crossed.
+
+To compare designs that trade subjects for items, sweep the number of items at a few subject
+counts and solve each of those curves for the number of items. Power over items levels off in the
+same way. As items are added, the standard error falls towards the by-subject slope standard
+deviation over the square root of the number of subjects, which at the smallest subject count
+below is `r subj_slope_sd` / √`r min(recipe_subjects)` ≈ `r signif(subj_floor, 2)`. The effect is
+some `r round(true_effect / subj_floor)` times that, so these curves too can rise well past the
+target.
+
+```{r, eval = FALSE}
+# Not run here, since it fits 3,000 models: three subject counts, five item counts and
+# 200 replicates at each. Each solve gives the number of items that reaches a power of
+# 0.8 with that many subjects.
+pairs <- lapply(c(24, 36, 48), function(n_subject) {
+  spec <- spec_c
+  spec$units$subject$n <- n_subject
+  items <- sweep_spec(spec, "units$item$n", c(8, 12, 18, 27, 40), power_mixed,
+                      n_sims = 200, .name = "n_item")
+  solved <- target_n(items, target = 0.8)
+  data.frame(n_subject = n_subject, n_item = solved$n,
+             n_item_lo = solved$n_lo, n_item_hi = solved$n_hi)
+})
+do.call(rbind, pairs)
+```
+
+The pairs trace how many items each number of subjects needs, and the cheapest of them, given
+what a subject and an item each cost, is the design to plan for.
 
 ## Parallel execution
 

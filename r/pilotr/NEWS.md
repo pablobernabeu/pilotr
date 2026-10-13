@@ -406,6 +406,21 @@
   and a longer warm-up changes only the step (Matsumoto et al., 2007). It said that consecutive
   replicates began a few steps apart in one sequence.
 
+* The power and precision vignettes show results produced by this version, with the denominator
+  of power stated correctly (`n_returned`), Wilson intervals taken from the returned columns and
+  the model that `power_mixed()` fits. Their cached results predated 0.3.0. The precision
+  vignette no longer says that every replicate converged, and it computes each figure it quotes
+  from the cached sweep. `tools/vignette-caches.R` in the source repository regenerates the
+  caches, and a test fails when the seeds, the generative engine or a cached chunk change and the
+  caches do not.
+
+* `?power_curve_mixed`, `?solve_curve` and the power vignette say that when an effect varies from
+  item to item, power at a fixed number of items levels off below 1, however many subjects are
+  added (Westfall, Kenny and Judd, 2014; Judd, Westfall and Kenny, 2017). A curve over subjects
+  that levels off near the target can then be solved far from the true crossing, or as though it
+  crossed when it never does. The vignette shows how to compare designs that trade subjects for
+  items, by sweeping the number of items at a few subject counts and solving each curve.
+
 ## References
 
 Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate

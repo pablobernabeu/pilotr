@@ -130,6 +130,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   correlate 0.95, and a longer warm-up changes only the step (Matsumoto et al., 2007,
   <https://doi.org/10.1145/1276927.1276928>). It said that consecutive replicates began a few
   steps apart in one sequence.
+- The `solve_curve` docstring says that when an effect varies from item to item, power at a
+  fixed number of items levels off below 1, however many subjects are added, as Westfall, Kenny
+  and Judd (2014) and Judd, Westfall and Kenny (2017) show. A curve over subjects that levels off
+  near the target can then be solved far from the true crossing, or as though it crossed when it
+  never does. The docstring points to curves over the number of items, one at each of a few
+  subject counts large enough to keep their own ceiling well above the target. The R twin's
+  `?solve_curve` says the same.
 
 ### Fixed
 

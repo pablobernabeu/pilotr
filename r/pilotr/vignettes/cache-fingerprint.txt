@@ -1,0 +1,6 @@
+Written-by: tools/vignette-caches.R
+Replicate-seeds: 1610247288 609468156 1875541569
+power-analysis-code: 47adad8ac6873e21a0744e424bae2fe1
+power-analysis-data: 31c645d7146eaa32c35764f60d1e3ee8
+precision-rope-code: b8487628d1abbc93d6cfec79c2e4dcd1
+precision-rope-data: a81d03616db4bde4242c4479b1fa336f

@@ -67,6 +67,21 @@ coefficient overrides for it.
 The curve is the input to \code{\link[=target_n]{target_n()}}, which is where the sample size a preregistration
 quotes should come from. Reading the crossing off a plot instead judges points whose Monte
 Carlo intervals overlap, and reports the answer without the interval that goes with it.
+
+In a crossed design, the number of items limits what more subjects can buy. When the effect of
+a condition varies from item to item, as a by-item random slope says it does, part of the
+standard error of the effect comes from the items sampled. That part shrinks only as items are
+added. As subjects are added, the standard error therefore falls towards a floor set by the
+number of items. Power at a fixed number of items levels off below 1 (Westfall, Kenny and Judd,
+2014; Judd, Westfall and Kenny, 2017). The probit curve that \code{\link[=target_n]{target_n()}} fits rises towards 1
+and cannot bend into such a plateau. A curve that levels off near the target can then be solved far
+from the true crossing. One that levels off just below the target never crosses it, but Monte
+Carlo noise can lift a simulated power over the target, and the curve can then be solved as
+though it crossed. To compare designs that trade subjects for items, sweep \code{units$item$n} with
+\code{\link[=sweep_spec]{sweep_spec()}} at each of a few subject counts and solve each curve for the number of items, as
+the power vignette shows. Power over items levels off in the same way, at a ceiling set by the
+by-subject slope and the number of subjects. The subject counts must be large enough to put that
+ceiling well above the target.
 }
 \examples{
 \donttest{
@@ -88,9 +103,17 @@ Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
 of generalized linear mixed models by simulation. \emph{Methods in Ecology and
 Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
 
+Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random
+factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
+68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
+
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+
+Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
+experiments in which samples of participants respond to samples of stimuli. \emph{Journal of
+Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 }
 \seealso{
 \code{\link[=target_n]{target_n()}} to solve the returned curve for a sample size, \code{\link[=sweep_spec]{sweep_spec()}} for any

@@ -52,7 +52,7 @@ among the
 [worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
 of the specification.
 
-```{r}
+```{r priming-spec}
 spec_c <- build_spec(list(
   name = "priming", seed = 1, design_kind = "within", include_items = TRUE,
   n_subject = 24, n_item = 18,
@@ -101,57 +101,82 @@ The same ROPE has to be carried into the sweep. Leaving `rope` at its default wo
 the interval against a region as wide as the effect itself, and the decision probability would
 then fall away as *N* grew, which is backwards.
 
-```{r, eval = FALSE}
+```{r precision-curve, eval = FALSE}
 prc <- precision_curve(spec_c, focal = c(effect = 0.05),
                        subject_ns = c(15, 30, 60, 100, 140, 180, 220, 260),
                        rope = 0.02, n_sims = 200)
-prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
-        "n_converged")]
+print(prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
+              "n_returned", "n_singular")], digits = 3)
 ```
 
 ```{r, include = FALSE}
-# The result of running exactly the chunk above, precomputed and shipped with
-# the package so that the vignette builds within CRAN's check-time budget. All
-# 200 replicates converged at every sample size.
+# The result of running exactly the chunk above, precomputed by tools/vignette-caches.R and
+# shipped with the package so that the vignette builds within CRAN's check-time budget.
 prc <- read.csv("precision-curve-cache.csv")
 ```
 
 ```{r, echo = FALSE}
-prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
-        "n_converged")]
+print(prc[, c("n_subject", "p_meaningful", "p_equivalent", "mean_ci_width",
+              "n_returned", "n_singular")], digits = 3)
+```
+
+```{r, include = FALSE}
+# The figures the paragraphs below quote, computed from the cached sweep.
+first <- prc[1, ]
+last <- prc[nrow(prc), ]
+returned <- unique(prc$n_returned)
+returned <- if (length(returned) == 1L) returned else
+  paste("between", min(returned), "and", max(returned))
+by_eye <- min(prc$n_subject[prc$p_meaningful >= 0.9])
 ```
 
 As *N* grows the interval tightens and `p_meaningful` rises, so the design reaches a determinate
 decision more reliably. That is a more informative criterion than power against a point null,
 because it asks whether the study can distinguish the effect from a negligible one, where power
-asks only whether it can be distinguished from zero. Each estimate rests on 200 replicates, all
-of which converged, so its Monte Carlo standard error is at most about 0.035, which the figure
-below shows as a band.
+asks only whether it can be distinguished from zero. Each probability is a proportion over the
+replicates that returned an estimate, `n_returned`, `r returned` at each size here, so its Monte
+Carlo standard error is at most `r round(max(prc$p_meaningful_mcse), 3)`. The figure below draws
+the Wilson interval of `p_meaningful` as a band.
+
+`n_singular` counts the fits whose variance estimates sat on a boundary, `r first$n_singular` at
+`r first$n_subject` subjects and `r last$n_singular` at `r last$n_subject`. `n_converged`, in the
+full result, counts those with neither a singular fit nor a warning. Singular fits are kept in
+the proportions, since their fixed-effect estimates remain interpretable and discarding them
+would bias the result. A large `n_singular` says that the model is richer than the design can
+support at that size.
 
 Scanning the table for the smallest simulated *N* that meets a target of
-'`p_meaningful` ≥ 0.90' puts this design at 220 subjects, but that answer is a property of where
-the grid points happen to fall. `solve_curve()` fits the decision probability against the sample
-size and inverts the fit, so all eight points inform the answer, where scanning the table uses
-only the two either side of the target.
+'`p_meaningful` ≥ 0.90' gives `r by_eye` subjects. That answer is a property of where the grid
+points happen to fall, and it comes without an interval. `solve_curve()` fits the decision
+probability against the sample size and inverts the fit, so all eight points inform the answer,
+where scanning the table uses only the two either side of the target.
 
 ```{r}
 solved <- solve_curve(prc, target = 0.9)
 unlist(solved[c("value", "lo", "hi", "dispersion")])
 ```
 
-The sweep read by eye therefore asks for some thirty-five subjects more than the fitted crossing
-does, and 220 sits outside the interval altogether. The fit is a binomial probit regression
-weighted by the replicates behind each point, and the interval is the delta-method interval that
-`MASS::dose.p()` computes for a fitted `glm`. The interval matters more here than the point it
-surrounds: with 200 replicates per point this design needs somewhere between about 165 and 207
-subjects to reach a determinate ROPE decision nine times in ten, and a preregistration quoting
-a single figure would be claiming more than the simulation supports.
+```{r, include = FALSE}
+# The interval as the paragraph below quotes it, rounded outwards to whole subjects, and where the
+# size read by eye falls against those rounded bounds, so that the two statements agree.
+shown <- c(floor(solved$lo), ceiling(solved$hi))
+where <- if (by_eye > shown[2]) "above" else if (by_eye < shown[1]) "below" else "inside"
+```
 
-The reported `dispersion` above 1 is part of that width. It says the eight points scatter about
-the fitted curve rather more than their replicate counts alone would explain, so the interval
-has been widened to match, which is the heterogeneity factor of classical probit analysis doing
-its work. Nothing is extrapolated either: a curve that never reaches the target within the sizes
-swept is refused, and the refusal reports the range the sweep did cover.
+The fitted crossing is `r round(solved$value)` subjects. With 200 replicates per point, this
+design needs somewhere between `r shown[1]` and `r shown[2]` subjects to reach a determinate ROPE
+decision nine times in ten. The `r by_eye` read by eye lies `r where` that interval. Only the
+interval says how far the answer could move, and a preregistration quoting a single figure would
+be claiming more than the simulation supports. The fit is a binomial probit regression weighted
+by the replicates behind each point, and the interval is the delta-method interval that
+`MASS::dose.p()` computes for a fitted `glm`.
+
+The `dispersion` is Pearson's chi-square over its degrees of freedom, floored at 1, and here it
+is `r round(solved$dispersion, 2)`. Above 1, it says the points scatter about the fitted curve
+more than their replicate counts alone would explain, and the interval is widened to match. That
+is the heterogeneity factor of classical probit analysis. Nothing is extrapolated either: a curve
+that never reaches the target within the sizes swept is refused, and the refusal reports the
+range the sweep did cover.
 
 `p_equivalent` stays at 0 throughout, and correctly so. The true effect of 0.05 lies outside
 the ROPE by construction, so no interval should ever land entirely inside it. The column earns
@@ -159,15 +184,13 @@ its place in designs where practical equivalence is the hypothesis of interest.
 
 ```{r, fig.width = 6.5, fig.height = 3.2, dev.args = list(bg = "transparent")}
 library(ggplot2)
-# Each probability is a proportion over the converged replicates, so it carries
-# a binomial Monte Carlo standard error, and the band is its 95% interval. The
-# two panels are on different scales, hence the free y axis.
-prc$se <- sqrt(prc$p_meaningful * (1 - prc$p_meaningful) / prc$n_converged)
+# Each probability is a proportion over the replicates that returned an
+# estimate, and the sweep carries its 95% Wilson interval, which the band draws.
+# The two panels are on different scales, hence the free y axis.
 panels <- c("P(CI outside the ROPE)", "Mean 95% CI width")
 long <- rbind(
   data.frame(n_subject = prc$n_subject, panel = panels[1], y = prc$p_meaningful,
-             lo = pmax(0, prc$p_meaningful - 1.96 * prc$se),
-             hi = pmin(1, prc$p_meaningful + 1.96 * prc$se)),
+             lo = prc$p_meaningful_lo, hi = prc$p_meaningful_hi),
   data.frame(n_subject = prc$n_subject, panel = panels[2],
              y = prc$mean_ci_width,
              lo = NA, hi = NA))
