@@ -17,6 +17,11 @@ Compute the standard-normal quantile for a probability using Wichura's (1988) Al
 AS 241 (the PPND16 routine), the same algorithm underlying
 \code{\link[stats:qnorm]{stats::qnorm()}}.
 }
+\details{
+The tail branch, which about 15\% of uniform draws reach, calls \code{log()}. Where R and 'Python'
+do not share a maths library, the two can therefore return different doubles for the same \code{p}.
+On Windows, 14 of 1,000,000 draws differed, by 1 to 3 units in the last place.
+}
 \examples{
 as241(0.975)   # about 1.959964
 }

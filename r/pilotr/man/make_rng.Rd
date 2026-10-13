@@ -17,8 +17,9 @@ numeric vector of standard-normal draws.
 \description{
 Build the combined linear congruential generator (L'Ecuyer 1988) used by both the R and
 Python implementations, so that a given specification and seed produce identical data in
-either language. The draw-order contract is documented in the specification at
-\url{https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md}.
+either language wherever the two share a maths library. The uniforms are exact everywhere.
+The draw-order contract, and where a value can differ in its last bits, are documented in the
+specification at \url{https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md}.
 }
 \examples{
 rng <- make_rng(1)

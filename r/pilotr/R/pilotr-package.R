@@ -30,7 +30,10 @@
 #' seed, and both languages draw from the combined generator built by
 #' [make_rng()] on top of the inverse-normal routine
 #' [as241()], so a given specification and seed produce identical data
-#' in either language.
+#' in either language wherever the two share a maths library, as on Linux.
+#' Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
+#' differ in its last bits, as `vignette("cross-language", package = "pilotr")`
+#' sets out.
 #'
 #' For analysis, [model_data()] adds the response column that the
 #' model expects, and [model_formula()] derives the maximal

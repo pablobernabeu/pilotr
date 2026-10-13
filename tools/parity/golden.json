@@ -27,5 +27,5 @@
     "within_cluster_randomised.asis.txt": "b60926620f79001cb879bff0bb70231a37e8408f041d30bb85980b42ea5ab7f1",
     "within_cluster_randomised.noround.txt": "b60926620f79001cb879bff0bb70231a37e8408f041d30bb85980b42ea5ab7f1"
   },
-  "note": "SHA-256 of the IEEE-exact (non-transcendental) R dumps in tools/parity/out/r; regenerate with `python tools/parity/compare.py --update`"
+  "note": "SHA-256 of the non-transcendental (Gaussian) R dumps in tools/parity/out/r, anchored on the agreement of AS 241's log() observed across platforms. Regenerate with `python tools/parity/compare.py --update`."
 }

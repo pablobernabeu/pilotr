@@ -136,7 +136,11 @@ guide_tab <- tabPanel(
     tags$p(tags$b("pilotr"), " builds a portable design specification and simulates ",
            "experimental and behavioural data from it. This is the no-code interface. The ",
            "same specification runs unchanged in the R and Python packages and reproduces ",
-           "the identical data."),
+           "the same data, bit for bit wherever the two share a maths library. Elsewhere, a ",
+           "value that passes through ", tags$code("exp()"), ", ", tags$code("log()"), " or ",
+           tags$code("pow()"), " can differ in its last bits, as the ",
+           tags$a(href = "https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html",
+                  target = "_blank", "cross-language guide"), " explains."),
     tags$ol(
       tags$li("Describe the design on the left: the sample sizes, the factor and its two ",
               "levels, the fixed intercept and effect, and a response family. Changing the ",
@@ -250,7 +254,7 @@ ui <- fluidPage(
         guide_tab,
         tabPanel("Design spec (JSON)",
           p("This portable spec is the single source of truth. Download it and run it ",
-            "unchanged in R or Python to obtain the identical data set."),
+            "unchanged in R or Python to obtain the same data set."),
           verbatimTextOutput("json")),
         tabPanel("Data", verbatimTextOutput("dims"), tableOutput("head")),
         tabPanel("Summary & plot", verbatimTextOutput("summary"), plotOutput("plot", height = "320px")),
@@ -391,7 +395,7 @@ server <- function(input, output, session) {
 
   output$rscript <- renderText(generate_r_script(current_spec()))
   output$repro_py <- renderText(paste0(
-    "# The same design also runs in Python (bit-identical given the same seed):\n",
+    "# The same design also runs in Python, with the same data given the same seed:\n",
     "from pilotr import simulate\n",
     "d = simulate(\"design.json\")   # download the spec from the first tab\n",
     "d.to_csv(\"data.csv\")"))

@@ -8,9 +8,26 @@ within the boundary set out under [Scope of the guarantee](#scope-of-the-guarant
 The machine-readable form of this document is
 [`design.schema.json`](https://github.com/pablobernabeu/pilotr/blob/main/spec/design.schema.json).
 The link is absolute because this file is read both here in the repository and embedded in the
-documentation site, where a path relative to the repository would not resolve. Both
-implementations enforce it through `validate_spec()`, together with the cross-field rules JSON
-Schema cannot express.
+documentation site, where a path relative to the repository would not resolve. The schema states
+which fields each object may hold and their types, ranges and allowed values. It also states
+which parameters each response family requires and refuses. Both implementations enforce those
+rules through `validate_spec()` in strict mode, its default, and `tools/parity/validate_cross.py`
+checks that the schema accepts every specification of its battery that both validators accept.
+Of the readings set out under [Reading a specification](#reading-a-specification), the schema
+accepts the single-value forms of `vary_within` and `thresholds` and a count written as `8.0`. It
+refuses a `null` standing for an absent field, `[]` standing for an empty object and a
+one-element array standing for a single value, all of which both implementations accept.
+
+`validate_spec()` also enforces the rules that relate one value to another or to the
+implementation reading the file. Every coefficient and slope key names a contrast column or a
+predictor, a contrast has one value per level and thresholds increase. A uniform predictor's
+`min` lies below its `max`, `per_subject` does not exceed the number of items, and a unit that a
+factor, a predictor, a grouping factor or `random.item` names exists. A correlation key names two
+terms of its group, and each pair is given once. A specification that uses a 0.3 feature declares
+0.3 or later, and none may declare a version newer than the implementation. Names do not collide
+(see [Names](#names)), and at most one factor is between each unit (see [Factors](#factors)).
+Lenient validation (`strict = FALSE`) reports an unknown field as a warning where the schema
+refuses it.
 
 ## Versioning
 
@@ -539,8 +556,25 @@ the same integer (see [Reading a specification](#reading-a-specification)).
 
 ### Normal deviates
 
-Every normal in pilotr is Wichura's (1988) Algorithm AS 241 applied to `u`, the algorithm R's
-`qnorm` uses, so the two languages agree to full double precision.
+Every normal in pilotr is Wichura's (1988) Algorithm AS 241, the routine PPND16, applied to `u`.
+It is the algorithm R's `qnorm` uses, and pilotr's R port returned `qnorm`'s double for each of
+1,000,000 uniforms measured. With `q = u − 0.5` it has two branches:
+
+```
+if |q| ≤ 0.425:  r ← 0.180625 − q·q
+                 z ← (q·A(r)) / B(r)
+otherwise:       r ← u if q < 0, else 1 − u
+                 r ← sqrt(−log(r))
+                 z ← C(r − 1.6) / D(r − 1.6) if r ≤ 5, else E(r − 5) / F(r − 5)
+                 z ← −z if q < 0
+```
+
+`A` to `F` are the paper's polynomials of degree 7, each evaluated in Horner form from its
+highest power, `(…((c₇·r + c₆)·r + c₅)…)·r + c₀`, with the coefficients as `core.R` and `core.py`
+write them. The central branch is arithmetic alone. The tail branch, which about 15% of draws
+take, calls `log()`, whose last bit the maths library decides. Two implementations that do not
+share that library can therefore turn the same uniform into different normals (see
+[Scope of the guarantee](#scope-of-the-guarantee)).
 
 ### Draw order
 
@@ -570,15 +604,19 @@ itself, and every implementation must follow the sequence below exactly.
    shifted_lognormal and a uniform for bernoulli, poisson and ordinal. The ex-Gaussian consumes
    exactly two, a normal then a uniform, in that order. The beta family instead consumes a
    variable, data-dependent number of draws per row: two Gamma variates through the
-   Marsaglia–Tsang rejection sampler, each consuming normal–uniform pairs until acceptance (with
-   one extra uniform per Gamma variate whose shape is below 1).
+   Marsaglia–Tsang rejection sampler. Each proposal draws a normal and, only when that normal
+   gives `v > 0`, a uniform for the acceptance test. A variate whose shape is below 1 draws one
+   further uniform, after the variate it boosts. The sampler is set out under
+   [Sampling algorithms](#sampling-algorithms-identical-across-all-implementations).
 
 ### Canonical row order
 
 Step 5 iterates the observations as nested loops, outermost first,
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
-listed order, levels in listed order): emit row`. A between factor assigns each unit a level by
-the block rule under [Factors](#factors) and does not expand rows.
+listed order, levels in listed order): emit row`. The level combinations run with the last
+within factor varying fastest. Under partial crossing, a subject's items run in ascending order.
+A between factor assigns each unit a level by the block rule under [Factors](#factors) and does
+not expand rows.
 
 ### Extending the draw order
 
@@ -590,13 +628,159 @@ reached only when that family is selected.
 
 ### Replicate seeds
 
-The power and precision loops derive their per-replicate seeds from the specification's seed by
-drawing from the shared generator and skipping any duplicate. Adding the replicate index, the
-rule they used before 0.3, does not give independent streams here: seeding sets `s1` to
-`1 + (seed mod 2147483562)` and `s2` from `s1`, with only ten warm-up draws discarded, so the
-first draw of replicate `i` correlated 0.95 with that of replicate `i + 1`. An arithmetic
-scramble does not help, since the seeding rule is linear in the seed. This changed every number
-pilotr produced before 0.3.
+The power and precision loops derive their per-replicate seeds from the specification's seed. A
+generator seeded with it draws `u`, the next seed is `⌊u · 2147483562⌋ + 1`, and a seed already
+drawn is skipped, so no two replicates share one.
+
+Adding the replicate index, the rule the loops used before 0.3, does not give independent
+streams. Seeding is affine in the seed and each component recurrence is linear, so the `k`-th
+draws of consecutive seeds differ by very nearly the same amount mod 1 (to within 1e−7). For the
+first draw, the step `d` is −0.0091. Draws in arithmetic progression mod 1 correlate
+`1 − 6|d|(1 − |d|)`, so the first draw of replicate `i` correlated 0.95 with that of replicate
+`i + 1`. A longer warm-up changes `d` and leaves the progression in place: with 50 warm-up draws
+in place of 10, the step is −0.32 and the correlation −0.30. An affine rule for the seeds keeps
+the draws in progression too, so no arithmetic scramble helps: a Weyl increment followed by a
+Lehmer step left the first draws correlated at −0.27. Matsumoto et al. (2007) describe the same
+defect in the initialisation of other linear generators. The first draws of the seeds the loops
+use correlate by 0.02 or less, either way. This changed every number pilotr produced before 0.3.
+
+## Sampling algorithms (identical across all implementations)
+
+The rules below turn the random stream into the values a specification describes. Each is written
+as the operations an implementation performs, in the order it performs them, since a reordering
+lands on a different double or consumes the stream differently. In each rule, `u` is the next
+uniform and `z` the next normal, taken from the stream where they appear, and `⌊x⌋` is the
+largest whole number not above `x`. Every operation is carried out in double precision and
+rounded to nearest.
+
+### Partial crossing
+
+With `n` items, of which each subject sees `m`, step 0 of the draw order samples one subject's
+items by a partial Fisher–Yates shuffle, counting positions from 0:
+
+```
+pool ← [1, 2, …, n]
+for k = 0, 1, …, m − 1:
+    j ← k + ⌊u · (n − k)⌋
+    swap pool[k] and pool[j]
+items ← pool[0 … m − 1], sorted ascending
+```
+
+### Blocks of units
+
+A between factor with `L` levels over `N` units gives unit `t`, counted from 1, the level with
+index `⌊(t − 1) · L / N⌋`, counted from 0. An additional grouping factor with `K` groups over `N`
+units puts unit `t` in group `⌊(t − 1) · K / N⌋`, counted from 0 and written to the data counted
+from 1. Both are exact integer arithmetic and draw nothing.
+
+### Predictor values
+
+A predictor draws its latent value as
+
+```
+normal:   value ← mean + sd · z
+uniform:  value ← min + (max − min) · u
+```
+
+where `mean` defaults to 0 and `sd` to 1. With a `reliability` `ρ` below 1, one further normal per
+value gives the observed value. `m` and `s` are the population mean and standard deviation of the
+latent variable: `mean` and `sd` for a normal predictor, and `(min + max) / 2` and
+`(max − min) / sqrt(12)` for a uniform one.
+
+```
+observed ← m + (value − m + s · sqrt((1 − ρ) / ρ) · z) · sqrt(ρ)
+```
+
+The latent value enters the linear predictor and the observed one the data (see
+[Reliability](#reliability)).
+
+### Random effects
+
+A covariance `Σ` of `q` terms, formed as under [Random effects](#random-effects-per-unit), is
+factorised row by row by the Cholesky–Banachiewicz algorithm. Every sum is a left fold taken in
+index order, and an empty one is 0.
+
+```
+tol ← ε · q · max(Σ[1,1], …, Σ[q,q], 1)          with ε = 2^−52
+for i = 1, …, q:
+    for j = 1, …, i:
+        s ← L[i,1]·L[j,1] + … + L[i,j−1]·L[j,j−1]
+        if i = j:
+            d ← Σ[i,i] − s
+            refuse if d < −tol, otherwise L[i,i] ← sqrt(max(d, 0))
+        otherwise:
+            L[i,j] ← (Σ[i,j] − s) / L[j,j] if L[j,j] ≠ 0, otherwise 0
+```
+
+Each unit, or each group of an additional grouping factor, then takes `b ← L · z` for `q` new
+normals, each element of `b` a left fold over all `q` terms of its row.
+
+### Inverse logit
+
+```
+invlogit(x) ← 1 / (1 + exp(−x))             if x ≥ 0
+invlogit(x) ← e / (1 + e), with e ← exp(x)  if x < 0
+```
+
+The exponent is never positive, so `exp()` cannot overflow.
+
+### Responses
+
+With `η` the linear predictor of the row, the response is drawn as below, and a rounded one then
+follows [Rounding](#rounding-identical-across-all-implementations).
+
+```
+gaussian            y ← η + σ · z
+lognormal           y ← exp(η + σ · z)
+shifted_lognormal   y ← shift + exp(η + σ · z)
+exgaussian          y ← (η + σ · z) − β · (log(u) + 1)        z first, then u
+bernoulli           y ← 1 if u < invlogit(η), otherwise 0
+poisson             y ← poisson(exp(η), u)
+ordinal             y ← the smallest k with u ≤ invlogit(θ_k − η), or K if there is none
+beta                y ← beta(η, φ)
+```
+
+Ordinal categories are counted from 1, and `K` is one more than the number of thresholds. A
+lognormal or shifted lognormal response is refused when its `exp()` overflows. The Poisson and
+Beta rules refuse the cases set out under [Response families](#response-families):
+
+```
+poisson(λ, u):
+    refuse if λ > 708.3964185322641
+    p ← exp(−λ);  c ← p;  k ← 0
+    while u > c and k < 1,000,000:
+        k ← k + 1;  p ← (p · λ) / k;  c ← c + p
+    refuse if u > c, otherwise return k
+
+beta(η, φ):
+    μ ← invlogit(η);  a ← μ · φ;  b ← (1 − μ) · φ
+    refuse if a = 0 or b = 0
+    x ← gamma(a);  y ← gamma(b)
+    refuse if x + y = 0
+    p ← x / (x + y)
+    return 1 − 2^−53 if p = 1, 2^−1074 if p = 0, otherwise p
+```
+
+The Gamma variates come from the method of Marsaglia and Tsang (2000). Its acceptance test is the
+logarithmic one, with no squeeze step, and the right-hand side is evaluated from left to right. A
+shape below 1 is boosted, and the boosting uniform is drawn after the Gamma(shape + 1) variate:
+
+```
+gamma(a):
+    if a < 1:
+        g ← gamma(a + 1)
+        return g · u^(1/a)
+    d ← a − 1/3;  c ← 1 / sqrt(9 · d)
+    repeat:
+        x ← z;  t ← 1 + c · x;  v ← t · t · t
+        if v ≤ 0: begin the next proposal, drawing no uniform
+        if log(u) < 0.5 · x · x + d − d · v + d · log(v): return d · v
+```
+
+`u^(1/a)` is the maths library's `pow()`, as Python's `**` computes it. R's `^` calls `pow()`
+too, with two exceptions. It computes a square as `u · u`, and, from R 4.6.0, it computes a cube
+or a fourth power by repeated multiplication, which rounds two or three times (see
+[Scope of the guarantee](#scope-of-the-guarantee)).
 
 A sweep runs the same loops at each point of a grid, such as a list of sample sizes, and gives
 each point a seed of its own by the same rule. Point `j` of a sweep over `J` values, counting from
@@ -614,31 +798,78 @@ its curve functions and in Python's `power_curve`.
 
 ## Scope of the guarantee
 
-Identical data means bit-identical, and holds exactly for the `gaussian` family and for any design
-whose response path applies no transcendental function to the linear predictor. It also holds for
-every family when `response.round` is set, since rounding quantises away a last-bit difference.
+Identical data means bit-identical. The guarantee holds wherever R and Python compute `exp()`,
+`log()` and `pow()` with one maths library, as on Linux, where continuous integration runs the
+parity harness and every case agrees to the last bit. One Beta case, set out below, is the
+exception. IEEE-754 requires correct rounding for addition, subtraction, multiplication,
+division and square root, so a value built from those alone is the same double everywhere. The
+uniform stream, AS 241's central branch and the Cholesky factors are such values, and the
+linear predictor is formed from its terms by those operations alone. The standard leaves the
+rounding of `exp()`, `log()` and `pow()` to the library, and on Windows R and CPython do not
+share one. R takes them from the MinGW-w64 toolchain it is built with, and CPython from
+Microsoft's Universal C Runtime. They were compared on Windows 11 with R 4.6.1 and Python 3.13,
+on arguments in the ranges pilotr's families use. The two returned different doubles for `exp()`
+on 0.47% of 700,000 arguments, for `log()` on 0.13% of 700,000 and for `pow()` on 0.11% of
+200,000. None differed by more than one unit in the last place (ulp). macOS has not been
+measured.
 
-For `lognormal`, `shifted_lognormal`, `exgaussian`, `bernoulli`, `poisson`, `ordinal` and `beta`
-without `round`, results may differ in the last unit in the last place. IEEE-754 requires correct
-rounding for addition, subtraction, multiplication, division and square root, but leaves the
-rounding of `exp()` and `log()` to the implementation. The R and Python builds on a given
-platform need not share a maths library. Measured over 200,000 arguments in the log-reaction-time
-range, R and CPython `exp()` disagreed on 0.44% of them by up to 6 ulp, and `log()` on 0.12% by up
-to 1 ulp.
+On Windows, the cause can be isolated. Taking a shifted-lognormal design and switching only its
+family to `gaussian`, so that the seed, the random-effect structure, the linear predictor and the
+entire draw sequence are unchanged, gives bit-identical output in both languages, while the
+lognormal original differs in a handful of rows. There, `exp()` is the only difference.
 
-This is demonstrable, and has been demonstrated. Taking a shifted-lognormal design and switching
-only its family to `gaussian`, so that the seed, the random-effect structure, the linear predictor
-and the entire draw sequence are unchanged, gives bit-identical output in both languages, while the
-lognormal original differs in a handful of rows. `exp()` is the only remaining difference.
+Those last bits reach the data wherever a value passes through one of the three functions, and
+every family has such a path. The figures below were measured on the same machine.
 
-For the discrete families the practical consequence is different in kind. A last-bit difference in
-`exp()` usually changes nothing, because the outcome is an integer decided by a comparison. When
-the comparison sits exactly on a threshold, though, the outcome moves by a whole category. That is
-rare but possible, so a design analysis that has to be reproducible to the last observation should
-either set `round` or stay with `gaussian`.
+* Normal draws, the Gaussian family's included. AS 241's tail branch calls `log()` for about 15%
+  of draws, and 1.4e−5 of normal draws differed, by 1 to 3 ulp. A Gaussian design of 50,000 rows
+  differed in one row by 1 ulp, and so did a crossed design of 40,000 rows.
+* The lognormal families and the ex-Gaussian, which apply `exp()` or `log()` to every response.
+  Of 50,000 rows, 213 differed for the lognormal family, 124 for the shifted lognormal and 3 for
+  the ex-Gaussian, each by 1 ulp.
+* An unrounded Beta response, which differed by up to 35 ulp in 54 of 40,000 rows with `φ = 0.8`.
+  A 1-ulp difference in `μ`, from `exp()` in the inverse logit, reaches the exponent of the Gamma
+  sampler's boost `u^(1/shape)`, which magnifies a relative difference in the exponent by the size
+  of the result's logarithm.
+* The discrete families, which decide each outcome by comparing a uniform with a value built from
+  `exp()`. A last-bit difference changes the outcome only when the uniform falls between the two
+  versions of that value, and then by a whole category. None of 50,000 rows differed for any of
+  the three, but nothing rules it out.
 
-The stricter guarantee within one language is unconditional: the same implementation, specification
-and seed always produce the same data.
+The Beta case can differ on any platform, Linux included. From R 4.6.0, R's `^` computes a cube or
+a fourth power by repeated multiplication, rounding two or three times, where Python's `**` calls
+`pow()`. On Windows, the two differed for 26% of uniforms raised to the third power and 34%
+raised to the fourth. A Beta response is affected wherever a Gamma shape below 1 has a reciprocal
+of exactly 3 or 4, so that its boost is a cube or a fourth power. That takes a linear predictor
+shared by every row of a cell, as in a design without random effects or continuous predictors.
+With `η = 0` and `φ = 0.5`, both shapes are 1/4, and 251 of 1,000 such rows differed on Windows,
+by up to 3 ulp. R before 4.6.0 computed those powers with the maths library, so R's own data for
+such a design changed with R 4.6.0.
+
+Rounding has removed every continuous difference observed so far, in each rounded case of the
+parity harness and in the designs above rounded to four decimals, but it guarantees nothing. The
+rounding rule is shared (see [Rounding](#rounding-identical-across-all-implementations)), yet a
+last-bit difference that straddles a rounding boundary still rounds two ways. `round` is refused
+for the discrete families in any case, where a difference is a whole category.
+
+Agreement to the last bit in every family has one route: run both languages on a platform where
+they share a maths library, as on Linux, outside that Beta case. Short of that, the Gaussian
+family confines any difference to the last bits of a rare normal draw, where a discrete family
+can move a whole category.
+
+The R package's `build_spec()`, which builds the no-code app's specifications, rounds a response
+of the Gaussian and the two lognormal families to four decimals and leaves a `beta` response
+unrounded. Rounding moves every proportion near 0 or 1 onto the nearest value inside the interval
+at that many decimals. At four decimals, 9.8% of the 40,000 rows of the Beta design above landed
+on 0.0001 or 0.9999, and rows at such a bound dominate a Beta likelihood (see `?brms_bridge` in
+R). Unrounded, the data keep the distribution the specification describes.
+
+Within one language, the guarantee holds on one platform: a given build of R or Python produces
+the same data from the same specification and seed every time. Across operating systems, it
+holds on the same terms as across languages, since each language takes `exp()`, `log()` and
+`pow()` from the platform's maths library. On Windows, CPython's `exp()` returned a double other
+than the correctly rounded one for 0.48% of the 700,000 arguments above, and R's for 0.03%. A run
+on Windows and a run on Linux can therefore differ in their last bits even within one language.
 
 pilotr simulates no attrition, exclusion or missing response, so every data set is complete and
 the sample size in a specification is the number of units analysed. A study that expects to lose a
@@ -654,6 +885,11 @@ the values that would have been observed, which pilotr does not simulate, can bi
   *Communications of the ACM, 31*(6), 742–751. https://doi.org/10.1145/62959.62969
 * Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal
   distribution. *Applied Statistics, 37*(3), 477–484. https://doi.org/10.2307/2347330
+* Marsaglia, G., & Tsang, W. W. (2000). A simple method for generating gamma variables. *ACM
+  Transactions on Mathematical Software, 26*(3), 363–372. https://doi.org/10.1145/358407.358414
+* Matsumoto, M., Wada, I., Kuramoto, A., & Ashihara, H. (2007). Common defects in initialization
+  of pseudorandom number generators. *ACM Transactions on Modeling and Computer Simulation,
+  17*(4), Article 15. https://doi.org/10.1145/1276927.1276928
 * DeBruine, L. M., & Barr, D. J. (2021). Understanding mixed-effects models through data
   simulation. *Advances in Methods and Practices in Psychological Science, 4*(1).
   https://doi.org/10.1177/2515245920965119

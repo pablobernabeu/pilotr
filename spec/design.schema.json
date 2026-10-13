@@ -2,9 +2,10 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
-  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The R and Python implementations enforce this schema through validate_spec(), together with the cross-field rules JSON Schema cannot express: that every coefficient and random-slope key resolves to a contrast column or a predictor, that a response parameter belongs to the declared family, that a specification using a 0.3 feature declares 0.3, that names do not collide (see Names in SPEC.md), and that no two factors are between the same unit (see Factors in SPEC.md).",
+  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The schema states which fields each object may hold and their types, ranges and allowed values. It also states which parameters each response family requires and refuses. The R and Python implementations enforce the same rules through validate_spec() in strict mode, its default, and add the rules that relate one value to another or to the implementation. Every coefficient and random-slope key names a contrast column or a predictor, a contrast has one value per level and thresholds increase. A uniform predictor's min lies below its max, per_subject does not exceed the number of items, and a unit named by a factor, a predictor, a grouping factor or random.item exists. A correlation key names two terms of its group and gives each pair once. A specification using a 0.3 feature declares 0.3 or later, and none declares a version newer than the implementation. Names do not collide (see Names in SPEC.md), and no two factors are between the same unit (see Factors in SPEC.md).",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
+  "additionalProperties": false,
   "properties": {
     "spec_version": {
       "type": "string",
@@ -22,7 +23,7 @@
       "type": "object",
       "properties": {
         "subject": { "$ref": "#/$defs/unit" },
-        "item": { "$ref": "#/$defs/unit" }
+        "item": { "$ref": "#/$defs/item_unit" }
       },
       "required": ["subject"],
       "additionalProperties": false
@@ -42,7 +43,13 @@
             "additionalProperties": { "type": "array", "items": { "type": "number" } },
             "description": "One numeric value per level, so each array's length equals the length of `levels`."
           },
-          "vary_within": { "type": "array", "items": { "type": "string", "enum": ["subject", "item"] } },
+          "vary_within": {
+            "anyOf": [
+              { "type": "array", "items": { "type": "string", "enum": ["subject", "item"] }, "minItems": 1 },
+              { "type": "string", "enum": ["subject", "item"] }
+            ],
+            "description": "The units the factor varies within. pilotr crosses a within factor with every unit of the design, so a list that leaves a unit out draws a warning, and from 0.4 a refusal. A single unit name is read as a one-element array, the form pilotr's spec_json() wrote before 0.3."
+          },
           "between": { "type": "string", "enum": ["subject", "item"] }
         },
         "additionalProperties": false
@@ -65,7 +72,7 @@
           "dist": {
             "type": "string",
             "enum": ["normal", "uniform"],
-            "description": "New in 0.3. \"uniform\" uses min and max and ignores mean and sd. A uniform draw consumes exactly as much of the random stream as a normal one, so switching between them does not move the stream."
+            "description": "New in 0.3. \"uniform\" uses min and max, and a uniform predictor takes no mean or sd, as a normal one takes no min or max. A uniform draw consumes exactly as much of the random stream as a normal one, so switching between them does not move the stream."
           },
           "min": { "type": "number" },
           "max": { "type": "number" },
@@ -76,7 +83,10 @@
             "description": "New in 0.3. The latent value drives the linear predictor and any random slope keyed on the predictor, while the contaminated observed value appears in the data. The observed variable keeps the latent one's variance and correlates sqrt(reliability) with it. Absent or 1 draws nothing extra, so the stream is unchanged."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "if": { "properties": { "dist": { "const": "uniform" } }, "required": ["dist"] },
+        "then": { "required": ["min", "max"], "properties": { "mean": false, "sd": false } },
+        "else": { "properties": { "min": false, "max": false } }
       }
     },
     "fixed": {
@@ -95,11 +105,11 @@
     "random": {
       "type": "object",
       "properties": {
-        "subject": { "$ref": "#/$defs/ranef" },
-        "item": { "$ref": "#/$defs/ranef" }
+        "subject": { "$ref": "#/$defs/unit_ranef" },
+        "item": { "$ref": "#/$defs/unit_ranef" }
       },
       "propertyNames": { "pattern": "\\S" },
-      "additionalProperties": { "$ref": "#/$defs/ranef" }
+      "additionalProperties": { "$ref": "#/$defs/group_ranef" }
     },
     "response": {
       "type": "object",
@@ -120,22 +130,84 @@
         },
         "phi": { "type": "number", "exclusiveMinimum": 0 },
         "thresholds": {
-          "type": "array",
-          "items": { "type": "number" },
-          "minItems": 1,
-          "description": "K-1 strictly increasing cut-points, for the ordinal family."
+          "anyOf": [
+            { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+            { "type": "number" }
+          ],
+          "description": "K-1 strictly increasing cut-points, for the ordinal family. A single cut-point written as a bare number is read as a one-element array, the form pilotr's spec_json() wrote before 0.3."
         },
         "round": {
           "type": "integer",
           "minimum": 0,
-          "description": "Decimal rounding of the response. Applies only to the families whose outcome is continuous; the others are integers already."
+          "description": "Decimal rounding of the response. Only the families whose outcome is continuous take it, since the others are integers already. A beta response needs at least 1, because every proportion rounded to a whole number is 0 or 1."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "$comment": "One block per family: the parameters it requires and the fields it refuses, as in FAMILY_PARAMS and ROUNDING_FAMILIES of the validators. python/tests/test_schema.py and r/pilotr/tests/testthat/test-contract.R check that the two agree.",
+      "allOf": [
+        {
+          "if": { "properties": { "family": { "const": "gaussian" } }, "required": ["family"] },
+          "then": {
+            "required": ["sigma"],
+            "properties": { "shift": false, "beta": false, "phi": false, "thresholds": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "const": "lognormal" } }, "required": ["family"] },
+          "then": {
+            "required": ["sigma"],
+            "properties": { "shift": false, "beta": false, "phi": false, "thresholds": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "const": "shifted_lognormal" } }, "required": ["family"] },
+          "then": {
+            "required": ["sigma", "shift"],
+            "properties": { "beta": false, "phi": false, "thresholds": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "const": "exgaussian" } }, "required": ["family"] },
+          "then": {
+            "required": ["sigma", "beta"],
+            "properties": { "shift": false, "phi": false, "thresholds": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "enum": ["bernoulli", "poisson"] } }, "required": ["family"] },
+          "then": {
+            "properties": { "sigma": false, "shift": false, "beta": false, "phi": false,
+                            "thresholds": false, "round": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "const": "ordinal" } }, "required": ["family"] },
+          "then": {
+            "required": ["thresholds"],
+            "properties": { "sigma": false, "shift": false, "beta": false, "phi": false, "round": false }
+          }
+        },
+        {
+          "if": { "properties": { "family": { "const": "beta" } }, "required": ["family"] },
+          "then": {
+            "required": ["phi"],
+            "properties": { "sigma": false, "shift": false, "beta": false, "thresholds": false,
+                            "round": { "minimum": 1 } }
+          }
+        }
+      ]
     }
   },
   "$defs": {
     "unit": {
+      "type": "object",
+      "required": ["n"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "item_unit": {
       "type": "object",
       "required": ["n"],
       "properties": {
@@ -170,7 +242,17 @@
         "n": { "type": "integer", "minimum": 1 }
       },
       "required": ["intercept_sd"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": { "properties": { "correlated": { "const": false } }, "required": ["correlated"] },
+      "then": { "properties": { "correlations": { "maxProperties": 0 } } }
+    },
+    "unit_ranef": {
+      "description": "The random effects of the subject or item unit, which take no over or n.",
+      "allOf": [{ "$ref": "#/$defs/ranef" }, { "properties": { "over": false, "n": false } }]
+    },
+    "group_ranef": {
+      "description": "An additional grouping factor: the unit it groups (over) and its number of groups (n).",
+      "allOf": [{ "$ref": "#/$defs/ranef" }, { "required": ["over", "n"] }]
     }
   }
 }

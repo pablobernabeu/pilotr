@@ -28,6 +28,15 @@ intercept and effect, the random-effect standard deviations for
 within-subject and crossed designs, and the response family with its
 parameters.
 }
+\details{
+A response of the Gaussian, lognormal or shifted lognormal family is rounded to four
+decimals, and a \code{beta} response is left unrounded. Rounding moves every proportion near 0 or 1
+onto the nearest value inside the interval at that many decimals. At four decimals, 9.8\% of the
+40,000 rows of a design with \code{phi = 0.8} landed on 0.0001 or 0.9999, and rows at such a bound
+dominate a Beta likelihood (see \code{\link[=brms_bridge]{brms_bridge()}}). Unrounded, the data keep the distribution the
+specification describes. They can then differ between R and 'Python' in their last bits where
+the two do not share a maths library, as the cross-language vignette sets out.
+}
 \examples{
 build_spec(list(name = "demo", seed = 1, design_kind = "between",
   factor_name = "group", lev1 = "control", lev2 = "treatment", n_subject = 40,

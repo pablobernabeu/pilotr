@@ -69,7 +69,10 @@ after a simulation, a note above the tabs says so until you select Simulate agai
 
 The app does not own the design. The specification does. Download the specification (`.json`)
 or the data (`.csv`), and run the specification unchanged in R with `simulate_design()` or in
-Python with `pilotr.simulate()` for identical data. The heavier analyses stay with the installed
+Python with `pilotr.simulate()` for the same data, identical to the last bit wherever R and
+Python share a maths library (see the [cross-language article](cross-language.html)). The app
+rounds Gaussian and reaction-time responses to four decimals and leaves a Beta response
+unrounded, for the reason `?build_spec` gives. The heavier analyses stay with the installed
 packages: crossed mixed-effects power in R, through `lme4` as the reference backend, and in
 Python, and precision/ROPE design analysis in R. Whichever interface you use, the specification
 you build in the app drives all three.

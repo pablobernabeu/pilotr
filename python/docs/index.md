@@ -4,9 +4,10 @@
 
 This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
 carrying its generative core. The two share the design specification and the random-number
-generator, so the same specification and seed produce identical data in either language, bit for
-bit apart from a documented tolerance of a few units in the last place where an unrounded response
-family applies `exp()` or `log()` to the linear predictor. Simulation, validation,
+generator, so the same specification and seed produce identical data in either language wherever
+the two share a maths library, as on Linux. Elsewhere, a value that passes through `exp()`, `log()`
+or `pow()` can differ in its last bits, as [Cross-language reproducibility](cross-language.md) sets
+out. Simulation, validation,
 simulation-based power and the curve solvers are here. Precision/ROPE design analysis, the `lme4`
 reference backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the
 helpers that derive the analysis model and build specifications, and the app launcher are in the
@@ -37,7 +38,7 @@ that the two languages agree.
 - [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`, with
   `solve_curve` and `target_n` for the sample size a curve implies.
 - [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
-  in R and Python.
+  in R and Python, and where the last bits can differ.
 - [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
 - [API reference](api.md): every public function and class.
 

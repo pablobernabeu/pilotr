@@ -100,6 +100,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `solve_curve` reads a NumPy value of `n` as a replicate count, where it looked for a column of
   that name. `power_curve` records `n_subject` as a Python int, so a curve swept over a NumPy
   grid can be written as JSON.
+- The cross-language guarantee is stated as it holds, in the README, the documentation site and
+  the specification. Python and R produce bit-identical data wherever they share a maths library,
+  as on Linux. On Windows they do not, and a value that passes through `exp()`, `log()` or
+  `pow()` can differ in its last bits. Measured there, about 1.4e-5 of normal draws differed,
+  since the tail branch of AS 241 calls `log()`, so Gaussian data are not exempt. Lognormal and
+  ex-Gaussian responses differed by one unit in the last place and unrounded Beta responses by up
+  to 35, and a discrete outcome can in principle move by a whole category. The guarantee used to
+  cover the Gaussian family everywhere and every family with `round` set, although `round` is
+  refused for the discrete families. Rounding has removed every continuous difference observed,
+  but it guarantees nothing. One Beta case can differ on Linux too. From R 4.6.0, R's `^`
+  computes a cube or a fourth power by repeated multiplication, where Python calls `pow()`. A
+  Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits on
+  any platform. Within one language, the data are identical on one platform, and across operating
+  systems on the same terms: on Windows, CPython's `exp()` departed from the correctly rounded
+  value for 0.48% of 700,000 arguments.
+- The specification documents every sampling rule a third implementation needs, in a section of
+  pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
+  reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
+  the Poisson walk, the ordinal rule, the Marsaglia-Tsang Gamma sampler and the Beta ratio. It
+  corrects the Gamma sampler's draw consumption. A proposal draws a uniform only when its normal
+  gives a positive `v`, and a boosted variate draws its uniform after the Gamma(shape + 1)
+  variate. The schema refuses an unknown top-level field and a response parameter its family
+  does not use, requires each family's parameters, and accepts the single-value forms of
+  `vary_within` and `thresholds`, as `validate_spec` does in strict mode. The parity harness
+  checks that the schema accepts every specification of its battery that both twins accept.
+- The `replicate_seeds` docstring gives the right reason why consecutive seeds correlate. Seeding
+  is affine in the seed, so the first draws of consecutive seeds step by a constant mod 1 and
+  correlate 0.95, and a longer warm-up changes only the step (Matsumoto et al., 2007,
+  <https://doi.org/10.1145/1276927.1276928>). It said that consecutive replicates began a few
+  steps apart in one sequence.
 
 ### Fixed
 

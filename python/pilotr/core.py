@@ -66,18 +66,24 @@ class RNG:
 def replicate_seeds(base, n: int) -> list[int]:
     """The seeds pilotr's replicate loops give to their replicates, from a specification's seed.
 
-    Until 0.3 the rule was ``base + i``. Consecutive seeds are not independent streams in this
-    generator: seeding sets ``s1`` to ``1 + (seed mod 2147483562)`` and ``s2`` from ``s1``, and only
-    ten warm-up draws are discarded, so replicate ``i`` and replicate ``i + 1`` begin a few steps
-    apart in the same sequence rather than in unrelated parts of it. Measured over 2,000
-    replicates, the first draw of replicate ``i`` correlated 0.95 with the first draw of ``i + 1``.
+    Until 0.3 the rule was ``base + i``, and consecutive seeds are not independent streams in this
+    generator. Seeding is affine in the seed, setting ``s1`` to ``1 + (seed mod 2147483562)`` and
+    ``s2`` from ``s1``, and each component recurrence is linear, so the ``k``-th draws of
+    consecutive seeds differ by very nearly the same amount mod 1. For the first draw that step is
+    -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755, 0.6665 and 0.6574.
+    Draws in arithmetic progression mod 1 with step ``d`` correlate ``1 - 6|d|(1 - |d|)``, so over
+    2,000 replicates the first draw of replicate ``i`` correlated 0.95 with the first draw of
+    ``i + 1``. A longer warm-up changes ``d`` and leaves the progression in place: with 50 warm-up
+    draws in place of 10, the step is -0.32 and the correlation -0.30.
 
-    An arithmetic scramble does not fix that, because the seeding rule is itself linear in the
-    seed: adding a Weyl increment and applying a Lehmer step left the first draws correlated at
-    -0.27. Drawing the seeds from the shared generator does work, since successive outputs of the
-    combined generator are what it exists to make look independent. Duplicates are skipped, so no
-    two replicates are handed the same seed and silently produce identical data, and the skipping
-    is deterministic, so this matches the R implementation exactly.
+    An arithmetic scramble does not fix that, because the seeding rule is affine in the seed:
+    adding a Weyl increment and applying a Lehmer step left the first draws correlated at -0.27.
+    Any affine rule for the seeds keeps the draws in progression, as Matsumoto et al. (2007)
+    describe for the initialisation of other linear generators. Drawing the seeds from the shared
+    generator does work, since successive outputs of the combined generator are what it exists to
+    make look independent. Duplicates are skipped, so no two replicates are handed the same seed
+    and silently produce identical data, and the skipping is deterministic, so this matches the R
+    implementation exactly.
 
     Parameters
     ----------
@@ -90,6 +96,12 @@ def replicate_seeds(base, n: int) -> list[int]:
     -------
     list of int
         `n` distinct seeds.
+
+    References
+    ----------
+    Matsumoto, M., Wada, I., Kuramoto, A., & Ashihara, H. (2007). Common defects in
+    initialization of pseudorandom number generators. *ACM Transactions on Modeling and Computer
+    Simulation, 17*(4), Article 15. https://doi.org/10.1145/1276927.1276928
     """
     rng = RNG(base)
     out, seen = [], set()
@@ -106,7 +118,10 @@ def replicate_seeds(base, n: int) -> list[int]:
 def as241(p: float) -> float:
     """Inverse standard-normal CDF (quantile function), Wichura's (1988) Algorithm AS 241.
 
-    The PPND16 routine underlying R's `qnorm`, accurate to full double precision.
+    The PPND16 routine underlying R's `qnorm`, accurate to full double precision. The tail
+    branch, which about 15% of uniform draws reach, calls `log()`. Where Python and R do not share
+    a maths library, the two can therefore return different doubles for the same `p`. On Windows,
+    14 of 1,000,000 draws differed, by 1 to 3 units in the last place.
 
     Parameters
     ----------
@@ -320,6 +335,11 @@ def gamma_mt(rng, shape: float) -> float:
     a third of inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both
     languages, and they also decide the rejection step, so aligning them keeps the
     accept/reject sequence (and hence the number of draws consumed) identical.
+
+    The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, unless the
+    exponent is exactly 2, 3 or 4. From R 4.6.0, R computes a cube or a fourth power by repeated
+    multiplication, so a shape of exactly 1/3 or 1/4 can draw a different variate here than in
+    the R twin. spec/SPEC.md sets the case out under Scope of the guarantee.
     """
     if shape < 1.0:
         g = gamma_mt(rng, shape + 1.0)

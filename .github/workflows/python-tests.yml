@@ -90,10 +90,12 @@ jobs:
 
       # The mixed extra adds statsmodels and pandas to the power extra's scipy. With the power extra
       # alone, every power_mixed test skipped here and ran only in the minimum-versions job below,
-      # so only the oldest supported statsmodels release was tested.
+      # so only the oldest supported statsmodels release was tested. jsonschema lets
+      # tests/test_schema.py put specifications through spec/design.schema.json. The package
+      # itself never reads the schema, so jsonschema is installed for the tests alone.
       - name: Install with the mixed extra
         run: |
-          python -m pip install --upgrade pip pytest pytest-cov
+          python -m pip install --upgrade pip pytest pytest-cov jsonschema
           pip install -e "./python[mixed]"
 
       # A file opened without an encoding is read and written in the locale's encoding, which is
@@ -192,16 +194,24 @@ jobs:
         run: python -m pytest -q
 
   # The README's headline claim is that one specification and seed produce the
-  # same data in both languages, bit for bit except for a documented ulp
-  # tolerance where an unrounded family applies exp() or log(). tools/parity/
-  # holds the harness that proves it: run_r.R and run_py.py simulate every
-  # shipped and adversarial case from the local sources of each half, and
-  # compare.py diffs the dumps byte for byte against tolerance.json and checks
-  # the R dumps against golden.json. Running it here means the claim cannot rot
-  # unnoticed. One platform suffices, because each half is deterministic within
-  # itself and the cross-language comparison is the whole point.
+  # same data in both languages, bit for bit wherever the two share a maths
+  # library, as on Linux. tools/parity/ holds the harness that proves it:
+  # run_r.R and run_py.py simulate every shipped and adversarial case from the
+  # local sources of each half, and compare.py diffs the dumps byte for byte
+  # against tolerance.json and checks the R dumps against golden.json. Running
+  # it here means the claim cannot rot unnoticed. On the Linux runner both halves
+  # take exp(), log() and pow() from glibc, which is where the claim is made.
+  # The Windows cell is informational, so its failure does not fail the
+  # workflow. There, R and CPython take those functions from different
+  # libraries, and a value that passes through them can differ in its last bits.
+  # spec/SPEC.md says so, and this cell keeps measuring it.
   parity:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
 
@@ -228,6 +238,12 @@ jobs:
       - name: Install the Python package
         run: pip install -e ./python
 
+      # validate_cross.py checks that spec/design.schema.json accepts every specification of
+      # its battery that both validators accept with strict = TRUE, which needs a JSON Schema
+      # validator.
+      - name: Install jsonschema for the schema check
+        run: pip install jsonschema
+
       - name: Simulate every case from the R sources
         run: Rscript tools/parity/run_r.R
 
@@ -240,7 +256,8 @@ jobs:
       # The validators are the other half of the parity contract: a specification
       # accepted by one implementation and refused by the other means a design that
       # runs in one language and fails in the other. The script exits non-zero on
-      # any disagreement over its battery of valid and invalid specifications.
+      # any disagreement over its battery of valid and invalid specifications, and
+      # when the schema refuses a specification both validators accept.
       - name: Cross-check the two validators on the shared battery
         run: python tools/parity/validate_cross.py
 

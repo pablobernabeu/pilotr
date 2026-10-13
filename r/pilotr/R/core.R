@@ -9,8 +9,9 @@
 #'
 #' Build the combined linear congruential generator (L'Ecuyer 1988) used by both the R and
 #' Python implementations, so that a given specification and seed produce identical data in
-#' either language. The draw-order contract is documented in the specification at
-#' <https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md>.
+#' either language wherever the two share a maths library. The uniforms are exact everywhere.
+#' The draw-order contract, and where a value can differ in its last bits, are documented in the
+#' specification at <https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md>.
 #'
 #' @param seed A single number used to seed the generator (coerced to a non-negative integer).
 #' @return A list of three functions: `uniform()` returns one standard-uniform draw,
@@ -49,6 +50,10 @@ make_rng <- function(seed) {
 #' Compute the standard-normal quantile for a probability using Wichura's (1988) Algorithm
 #' AS 241 (the PPND16 routine), the same algorithm underlying
 #' [stats::qnorm()].
+#'
+#' The tail branch, which about 15% of uniform draws reach, calls `log()`. Where R and 'Python'
+#' do not share a maths library, the two can therefore return different doubles for the same `p`.
+#' On Windows, 14 of 1,000,000 draws differed, by 1 to 3 units in the last place.
 #'
 #' @param p A probability in the open interval (0, 1).
 #' @return The standard-normal quantile (a numeric value) corresponding to `p`.
@@ -201,6 +206,11 @@ as241 <- function(p) {
 # inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both languages, and
 # they also decide the rejection step, so aligning them keeps the accept/reject sequence (and
 # hence the number of draws consumed) identical across the two ports.
+#
+# The boost u^(1 / shape) is computed with `^`, which calls pow(), as Python's `**` does, unless
+# 1 / shape is exactly 2, 3 or 4. From R 4.6.0, a cube or a fourth power is repeated
+# multiplication, so a shape of exactly 1/3 or 1/4 can draw a different variate here than in
+# core.py. spec/SPEC.md sets the case out under Scope of the guarantee.
 .gamma_mt <- function(rng, shape) {
   if (shape < 1) return(.gamma_mt(rng, shape + 1) * rng$uniform()^(1 / shape))
   d <- shape - 1 / 3; cc <- 1 / sqrt(9 * d)

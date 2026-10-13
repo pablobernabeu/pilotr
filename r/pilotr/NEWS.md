@@ -372,6 +372,40 @@
   `prep` function for `power_mixed()` and `precision_design()` that drops the rows a
   counterbalanced study would not observe and runs in the worker processes of `workers > 1`.
 
+* The cross-language guarantee is stated as it holds, in the specification, the README files,
+  `DESCRIPTION`, the vignettes, the apps' guides and the landing page. R and Python produce
+  bit-identical data wherever they share a maths library, as on Linux. On Windows they do not,
+  and a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits.
+  Measured there, about 1.4e-5 of normal draws differed, since the tail branch of AS 241 calls
+  `log()`, so Gaussian data are not exempt. Lognormal and ex-Gaussian responses differed by one
+  unit in the last place and unrounded Beta responses by up to 35, and a discrete outcome can in
+  principle move by a whole category. The guarantee used to cover the Gaussian family everywhere
+  and every family with `round` set, although `round` is refused for the discrete families.
+  Rounding has removed every continuous difference observed, but it guarantees nothing. One Beta
+  case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power by
+  repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
+  exactly 1/3 or 1/4 can therefore differ in its last bits on any platform, and R's own data for
+  such a design changed with R 4.6.0. Within one language, the data are identical on one
+  platform, and across operating systems on the same terms as across languages. The vignettes
+  show determinism with `identical()`, since `all.equal()` allows a relative difference of 1.5e-8.
+
+* The specification documents every sampling rule a third implementation needs, in a section of
+  pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
+  reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
+  the Poisson walk, the ordinal rule, the Marsaglia-Tsang Gamma sampler and the Beta ratio. It
+  corrects the Gamma sampler's draw consumption. A proposal draws a uniform only when its normal
+  gives a positive `v`, and a boosted variate draws its uniform after the Gamma(shape + 1)
+  variate. The schema refuses an unknown top-level field and a response parameter its family
+  does not use, requires each family's parameters, and accepts the single-value forms of
+  `vary_within` and `thresholds`, as strict validation does. `?build_spec` says why a Beta
+  response is left unrounded: at four decimals, rounding put 9.8% of the rows of one design on
+  0.0001 or 0.9999, and such rows dominate a Beta likelihood.
+
+* `?replicate_seeds` gives the right reason why consecutive seeds correlate. Seeding is affine in
+  the seed, so the first draws of consecutive seeds step by a constant mod 1 and correlate 0.95,
+  and a longer warm-up changes only the step (Matsumoto et al., 2007). It said that consecutive
+  replicates began a few steps apart in one sequence.
+
 ## References
 
 Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate
@@ -389,6 +423,10 @@ Designs, analytic models, and statistical power. *Annual Review of Psychology, 6
 Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
 generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
 trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
+
+Matsumoto, M., Wada, I., Kuramoto, A. and Ashihara, H. (2007). Common defects in initialization
+of pseudorandom number generators. *ACM Transactions on Modeling and Computer Simulation,
+17*(4), 15. <doi:10.1145/1276927.1276928>
 
 Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 imprecise power estimates. *Perspectives on Psychological Science, 9*(3), 319-332.

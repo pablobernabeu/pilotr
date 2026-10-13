@@ -32,13 +32,15 @@ This is the twin of [the Python
 package](https://pablobernabeu.github.io/pilotr/python/) of the same
 name. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in
-either language, bit for bit apart from a documented tolerance of a few
-units in the last place where an unrounded response family applies
-`exp()` or `log()` to the linear predictor. The Python package carries
-the generative core. The R package additionally offers precision/ROPE
-design analysis, the `lme4` reference backend for mixed-effects power,
-the `brms` bridge, the analysis-script emitters, the helpers that derive
-the analysis model and build specifications, and the app launcher.
+either language wherever the two share a maths library, as on Linux.
+Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
+differ in its last bits, as the [cross-language
+article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
+sets out. The Python package carries the generative core. The R package
+additionally offers precision/ROPE design analysis, the `lme4` reference
+backend for mixed-effects power, the `brms` bridge, the analysis-script
+emitters, the helpers that derive the analysis model and build
+specifications, and the app launcher.
 
 ## Installation
 
@@ -78,8 +80,9 @@ head(data)
 ```
 
 The specification carries a seed, so those rows are the same on every
-machine and in the Python twin. Point `load_spec()` at your own
-`design.json` to simulate a design of your own.
+machine and in the Python twin, to the last bit wherever the maths
+library is the same. Point `load_spec()` at your own `design.json` to
+simulate a design of your own.
 
 Power and design analysis run from the same object. The call below is
 not evaluated here because it needs a few hundred model fits and `lme4`,

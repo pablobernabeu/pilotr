@@ -4,9 +4,9 @@ This guide installs pilotr and simulates a first data set from a design specific
 specification is what everything else reads. The same JSON file drives the
 [R package](https://pablobernabeu.github.io/pilotr/r/), the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
-the same file and seed all three produce identical data, bit for bit apart from a documented
-tolerance of a few units in the last place where an unrounded response family applies `exp()`
-or `log()` to the linear predictor.
+the same file and seed all three produce identical data wherever they share a maths library, as
+on Linux. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
+last bits.
 
 ## Install
 
@@ -87,6 +87,6 @@ From here, [Response families](families.md) shows what each of the eight familie
 which scale its effect is written on, [Worked examples](examples.md) gives one ready-to-run
 design per family, and [Power and design analysis](power.md) turns a specification into a power
 estimate with its Type S and Type M errors. [Cross-language reproducibility](cross-language.md)
-explains why an R run and a Python run agree to the last bit,
+explains why an R run and a Python run agree, and where their last bits can differ,
 [Specification format](specification.md) documents the JSON itself, and the
 [API reference](api.md) lists every public function and class.

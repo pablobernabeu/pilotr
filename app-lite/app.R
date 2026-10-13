@@ -132,7 +132,7 @@ guide <- card(
               "simulation-based power analysis, and a reproducible R script."),
       tags$li("To take the design further, download or copy the specification (", tags$code(".json"),
               ") or the data (", tags$code(".csv"), "). You can also copy the R script and run ",
-              "it in the installed package to reproduce the same data exactly.")
+              "it in the installed package to reproduce the same data.")
     ),
     tags$h5("Field guide"),
     tags$ul(
@@ -143,8 +143,12 @@ guide <- card(
               "(an SD). Beta instead uses a precision (phi)."),
       tags$li(tags$b("Random-effect SDs"), ", the by-subject and by-item intercept and slope ",
               "standard deviations and their correlation, for crossed designs."),
-      tags$li(tags$b("Seed"), ", which fixes the pseudo-random draw, so the same specification ",
-              "and seed give identical data here, in R and in Python.")
+      tags$li(tags$b("Seed"), ", which fixes the pseudo-random draws, so the same specification ",
+              "and seed give the same data here, in R and in Python, bit for bit wherever they ",
+              "share a maths library. Elsewhere, a value that passes through ", tags$code("exp()"),
+              ", ", tags$code("log()"), " or ", tags$code("pow()"), " can differ in its last bits, ",
+              "as the ", tags$a(href = paste0(DOCS, "r/articles/cross-language.html"),
+                               target = "_blank", "cross-language guide"), " explains.")
     ),
     tags$h5("Advanced: paste a spec"),
     tags$p("The point-and-click controls cover common two-level designs across six response ",
@@ -253,7 +257,7 @@ ui <- page_sidebar(
     nav_panel("Design spec",
       card(card_body(
         div(class = "d-flex justify-content-between align-items-center mb-2",
-            tags$small("The portable source of truth. Run it unchanged in R or Python for identical data."),
+            tags$small("The portable source of truth. Run it unchanged in R or Python for the same data."),
             copy_btn("json", "Copy JSON")),
         verbatimTextOutput("json")))),
     nav_panel("Data",

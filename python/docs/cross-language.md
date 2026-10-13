@@ -14,16 +14,46 @@ intermediate product stays below `2**53`, so the arithmetic is exact in IEEE-754
 and in Python integers alike. That holds for seeds within ±(2^53 − 1), the range `validate_spec`
 accepts: R reads a JSON number as a double, so beyond that range the two readers would hold
 different seeds. Normals use Wichura's (1988) Algorithm AS 241 inverse-CDF, the
-same routine R's `qnorm` uses, so deviates agree to full double precision. Everything else
-(Cholesky-correlated random effects, inverse-CDF Poisson and ordinal draws, Marsaglia and
-Tsang gamma draws for the Beta family) derives from those two through a documented, identical
-draw order.
+same routine R's `qnorm` uses. Everything else (Cholesky-correlated random effects,
+inverse-CDF Poisson and ordinal draws, Marsaglia and Tsang gamma draws for the Beta family)
+derives from those two through a documented, identical draw order.
 
 The draw order is specified on the [Specification](specification.md) page.
 
+## Where the data can differ
+
+Given the same specification and seed, the two implementations produce identical data wherever
+they share a maths library, as on Linux. Continuous integration checks every case of the parity
+harness to the last bit there. IEEE-754 fixes the rounding of arithmetic but leaves that of
+`exp()`, `log()` and `pow()` to the library, and on Windows Python and R do not share one.
+CPython takes them from Microsoft's Universal C Runtime, and R from the MinGW-w64 toolchain it is
+built with. There, a value that passes through those functions can differ in its last bits, and
+every family has such a path. The figures below were measured on Windows 11 with Python 3.13 and
+R 4.6.1.
+
+- Normal draws pass through `log()` in AS 241's tail branch, which about 15% of draws take.
+  About 1.4e-5 of normal draws differed, by 1 to 3 units in the last place (ulp), so Gaussian
+  data can differ too.
+- Responses of the lognormal families and the ex-Gaussian differed by 1 ulp.
+- An unrounded Beta response differed by up to 35 ulp.
+- A discrete outcome can in principle move by a whole category, although none did in 50,000
+  rows of each discrete family.
+
+One Beta case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power
+by repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
+exactly 1/3 or 1/4 can therefore differ in its last bits on any platform. Such a shape needs a
+cell whose rows share one linear predictor, as in a Beta design with no random effects, a linear
+predictor of 0 and `phi` set to 0.5.
+
+Rounding has removed every continuous difference observed so far, but it guarantees nothing,
+since a last-bit difference can straddle a rounding boundary, and `round` is refused for the
+discrete families. Agreement to the last bit in every family has one route: run both languages
+on a platform where they share a maths library, outside that Beta case. The section Scope of the
+guarantee on the [Specification](specification.md) page gives the measurements in full.
+
 ## Determinism in Python
 
-The same specification and seed always give the same data.
+On one platform, the same specification and seed always give the same data.
 
 ```python exec="true" source="material-block" session="xl"
 from pilotr import simulate
@@ -39,6 +69,11 @@ spec = {
 
 print(simulate(spec).rows == simulate(spec).rows)
 ```
+
+Across operating systems, the same holds on the terms set out above, since CPython takes
+`exp()`, `log()` and `pow()` from the platform's C library. On Windows, its `exp()` returned a
+double other than the correctly rounded one for 0.48% of 700,000 arguments. A run on Windows
+and a run on Linux can therefore differ in their last bits even within Python.
 
 Changing the seed changes the draws, while the structure and the ground-truth parameters stay
 fixed.
@@ -64,18 +99,21 @@ library(pilotr)
 write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 ```
 
-The two CSVs compare exactly, up to CSV number formatting. The repository's
+The two CSVs compare exactly, up to CSV number formatting, wherever the two languages share a
+maths library. The repository's
 [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
 runs this comparison across the worked example designs and reports the maximum difference:
 zero for every design with rounded responses, and below 1e-14 for the unrounded continuous
 design, where R's CSV writer prints 15 significant digits. At that precision the residual
 cannot be told apart from the writer's own rounding, and the script's small tolerance (1e-6)
 is there to absorb it. The stricter harness under `tools/parity/` dumps 17 digits and resolves
-what is really there: a handful of cells apart by a few units in the last place, from `exp()`,
-whose rounding IEEE-754 does not fix. That harness pins every path built from IEEE-exact
-arithmetic alone to a recorded hash, and deliberately leaves the `exp()` and `log()` cases
-unpinned, since those last bits belong to the maths library and so are not the specification's
-to fix.
+what is really there. On Windows, it finds a handful of cells one unit in the last place apart,
+from `exp()`, and on Linux, where it runs in continuous integration, every cell agrees. That
+harness pins the Gaussian cases to recorded hashes, on the observed agreement of AS 241's
+`log()` across platforms. The cases are small enough that none has met one of the rare normal
+draws that differ. The harness deliberately leaves unpinned the cases whose values pass through
+`exp()`, `log()` or `pow()` on the way to the response. Those last bits belong to the maths
+library, and so are not the specification's to fix.
 
 `solve_curve` sits a layer above the generator, taking a curve that has already been simulated
 and fitting a model to it, and it is held to a different standard on purpose. Its fit calls

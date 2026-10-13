@@ -29,9 +29,9 @@ this R package and a Python package. The specification is the unit of reproducib
 a complete, executable description rather than a screenshot of a graphical interface or a
 language-specific script. You can place it under version control, attach it to a
 preregistration, share it with a collaborator and run it unchanged in R or Python to obtain
-identical data, bit for bit apart from a documented tolerance of a few units in the last place
-where an unrounded response family applies `exp()` or `log()` to the linear predictor (the
-cross-language vignette quantifies this).
+identical data. The data agree to the last bit wherever R and Python share a maths library, as
+on Linux. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
+last bits, which the cross-language vignette quantifies.
 
 This vignette walks through the core loop of describe, simulate, inspect and export. The
 other vignettes, listed at the end, each go deeper into one part of the workflow.
@@ -86,11 +86,13 @@ The design is crossed, so every subject sees every item in both conditions
 ## Reproducible by construction
 
 pilotr ships a shared random-number generator, so the same specification and seed produce the
-same data every time. This holds in the current R session, in a fresh one, in Python and on
-any machine.
+same data every time. This holds in the current R session and in a fresh one on the same
+machine. In Python, and on another machine, it holds to the last bit wherever the maths library
+is the same, as on Linux. Elsewhere, values that pass through `exp()`, `log()` or `pow()` can
+differ in their last bits.
 
 ```{r}
-isTRUE(all.equal(simulate_design(spec), simulate_design(spec)))
+identical(simulate_design(spec), simulate_design(spec))
 ```
 
 Changing the seed changes the data, and leaving the specification unchanged leaves the data
@@ -121,6 +123,6 @@ that read it.
 - [Precision / ROPE design analysis](precision-rope.html), which plans by precision against a
   region of practical equivalence and sweeps sample size.
 - [Cross-language reproducibility](cross-language.html), describing the shared generator that
-  makes R and Python agree to the last bit.
+  makes R and Python agree, and where their data can differ in the last bits.
 - [The no-code app](the-no-code-app.html), the point-and-click interface over the same
   specification, running in the browser or locally with `run_app()`.

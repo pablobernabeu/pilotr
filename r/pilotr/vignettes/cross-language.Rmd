@@ -34,21 +34,46 @@ pilotr sets aside the native RNGs and provides a shared generator implemented id
 in both languages. Uniform deviates come from L'Ecuyer's (1988) combined linear congruential
 generator, whose arithmetic stays below $2^{53}$ and is therefore exact in IEEE-754 doubles
 (R) and Python integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241
-inverse-CDF, the algorithm R's `qnorm()` uses, so deviates agree to full double precision.
-The remaining draws (Cholesky-correlated random effects, inverse-CDF Poisson and ordinal
-draws, Marsaglia–Tsang gamma draws for the Beta family, a Fisher–Yates item sampler for
-partial crossing) are derived from those two through a documented, identical consumption
-order.
+inverse-CDF, the algorithm R's `qnorm()` uses. The remaining draws (Cholesky-correlated
+random effects, inverse-CDF Poisson and ordinal draws, Marsaglia–Tsang gamma draws for the
+Beta family, a Fisher–Yates item sampler for partial crossing) are derived from those two
+through a documented, identical consumption order.
 
-As a result, given the same specification and seed, the R and Python implementations
-produce identical data sets: bit for bit for rounded and Gaussian responses, and within a few
-units in the last place where an unrounded family applies `exp()` or `log()`, as the parity
-check below quantifies. The specification is the source of truth, and every implementation
-answers to it.
+As a result, given the same specification and seed, the R and Python implementations produce
+identical data sets wherever they share a maths library, as on Linux. Continuous integration
+checks every case of the parity harness to the last bit there. IEEE-754 fixes the rounding of
+arithmetic but leaves that of `exp()`, `log()` and `pow()` to the library, and on Windows R and
+Python do not share one. There, a value that passes through those functions can differ in its
+last bits, and every family has such a path. The figures below were measured on Windows 11 with
+R 4.6.1 and Python 3.13.
+
+- Normal draws pass through `log()` in AS 241's tail branch, which about 15% of draws take.
+  About 1.4e-5 of normal draws differed, by 1 to 3 units in the last place (ulp), so Gaussian
+  data can differ too.
+- Responses of the lognormal families and the ex-Gaussian differed by 1 ulp.
+- An unrounded Beta response differed by up to 35 ulp.
+- A discrete outcome can in principle move by a whole category, although none did in 50,000
+  rows of each discrete family.
+
+One Beta case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power
+by repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
+exactly 1/3 or 1/4 can therefore differ in its last bits on any platform. Such a shape needs a
+cell whose rows share one linear predictor, as in a Beta design with no random effects, a linear
+predictor of 0 and `phi` set to 0.5.
+
+Rounding has removed every continuous difference observed so far, but it guarantees nothing,
+since a last-bit difference can straddle a rounding boundary, and `round` is refused for the
+discrete families. `build_spec()`, which builds the no-code app's specifications, rounds the
+Gaussian and lognormal responses to four decimals and leaves a Beta response unrounded, for the
+reason `?build_spec` gives. Agreement to the last bit in every family has one route: run both
+languages on a platform where they share a maths library, outside that Beta case. The
+specification is the source of truth, and every implementation answers to it. Its section
+[Scope of the guarantee](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
+gives the measurements in full.
 
 ## Determinism in R
 
-The same specification and seed always give the same data.
+On one platform, the same specification and seed always give the same data.
 
 ```{r}
 spec <- build_spec(list(
@@ -57,8 +82,11 @@ spec <- build_spec(list(
   intercept = 100, effect = 5, family = "gaussian",
   resp_name = "score", sigma = 10))
 
-isTRUE(all.equal(simulate_design(spec), simulate_design(spec)))
+identical(simulate_design(spec), simulate_design(spec))
 ```
+
+Across operating systems, the same holds on the terms set out above, since R takes `exp()`,
+`log()` and `pow()` from the platform's maths library, as Python does.
 
 Changing the seed changes the draws, while the structure and the ground-truth parameters stay
 fixed.
@@ -70,9 +98,9 @@ identical(simulate_design(spec)$score, simulate_design(spec2)$score)
 
 ## The same design in Python
 
-The Python package reads the identical specification and produces the identical data. The
-code below is not evaluated here. It shows the Python you would run, and its output matches
-the R data to the last bit.
+The Python package reads the same specification and produces the same data. The code below is
+not evaluated here. It shows the Python you would run, and its output matches the R data to
+the last bit wherever the two share a maths library.
 
 ```python
 from pilotr import simulate, load_spec
@@ -104,12 +132,14 @@ The difference is exactly zero for every design whose responses are rounded, and
 5e-15 for the unrounded continuous design, where R's CSV writer prints 15 significant
 digits. At that precision the residual cannot be told apart from the writer's own rounding,
 and it is what the check's 1e-6 tolerance is there to absorb. The stricter harness dumps 17
-digits and resolves what is really there: a handful of cells apart by a few units in the last
-place, from `exp()`, whose rounding IEEE-754 does not fix. There are no categorical mismatches
-anywhere. The uniform stream is exact by construction, since every intermediate product stays
-below $2^{53}$, and the harness pins every path built from IEEE-exact arithmetic alone to a
-recorded hash in `tools/parity/golden.json`. The cases whose values pass through `exp()` or
-`log()` are deliberately left unpinned, because those last bits belong to the maths library and
+digits and resolves what is really there. On Windows, it finds a handful of cells one unit in
+the last place apart, from `exp()`, and no categorical mismatches. On Linux, where it runs in
+continuous integration, every cell agrees. The uniform stream is exact by construction, since
+every intermediate product stays below $2^{53}$. The harness pins the Gaussian cases to recorded
+hashes in `tools/parity/golden.json`, on the observed agreement of AS 241's `log()` across
+platforms. The cases are small enough that none has met one of the rare normal draws that
+differ. The cases whose values pass through `exp()`, `log()` or `pow()` on the way to the
+response are deliberately left unpinned, because those last bits belong to the maths library and
 so are not the specification's to fix. The cross-language comparison still gates them on every
 run. The parity check can be rerun on any new platform, so a design verified on a laptop can be
 confirmed on an HPC node before a large run.
@@ -132,8 +162,9 @@ Every refusal message is identical character for character.
 
 Because the specification is the source of truth and the generator is shared, a design can be
 authored once (in the app, in R or in Python) and reproduced everywhere. It can be preregistered
-as a small JSON file that anyone can run, scaled from a laptop to a cluster without drift and
-handed between collaborators who work in different languages.
+as a small JSON file that anyone can run, scaled from a laptop to a cluster and handed between
+collaborators who work in different languages, with data that agree to the last bit wherever
+the machines share a maths library.
 
 This property turns an informal request to simulate some data into a reproducible, shareable
 methodological artefact.

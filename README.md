@@ -89,19 +89,19 @@ a study.
 | Simulation-based power + Type S/M | ✗ | ✗ | ✓ (power only) | ✓ |
 | No-code GUI | ✗ | ✗ | ANOVA only | ✓ |
 | Python implementation | ✗ | ✗ | ✗ | ✓ |
-| R = Python bit-identical from one spec | — | — | — | ✓ |
+| R = Python data from one spec | — | — | — | ✓ |
 
 No single existing tool spans these capabilities, and the Python-implementation row is empty
 apart from pilotr. SDV learns from real data, pyDOE3 builds design matrices, Faker produces
 placeholder values and the statsmodels power module covers analytic classical tests only.
 
-The last row deserves its exact scope, which CI enforces through the parity harness in
-[`tools/parity/`](tools/parity). All eight shipped example designs reproduce bit for bit across
-the two languages. With rounding removed, six of the eight still do, and the two whose
-response family applies `exp()` to the linear predictor agree to within a few units in the last
-place, a tolerance measured and documented in
-[`tools/parity/tolerance.json`](tools/parity/tolerance.json). IEEE-754 fixes the rounding of
-arithmetic but not of `exp()` and `log()`, and the two languages need not share a maths library.
+The last row deserves its exact scope. On Linux, where R and Python share a maths library, every
+shipped example and every case of the parity harness in [`tools/parity/`](tools/parity)
+reproduces bit for bit, rounded or not, and CI enforces it. IEEE-754 fixes the rounding of
+arithmetic but not of `exp()`, `log()` and `pow()`, and on Windows the two languages take those
+from different libraries. There, a value that passes through one of them can differ in its last
+bits. [Cross-language reproducibility](#cross-language-reproducibility) below gives the measured
+rates.
 
 ## Repository layout
 
@@ -118,7 +118,7 @@ pilotr/  (repo root)
   hpc/           SLURM array job for large precision sweeps on a cluster
   tools/parity/  cross-language parity harness: the CI gate behind the bit-identical claim
     tolerance.json   the per-case ulp allowance, and which cases pass through exp() or log()
-    golden.json      hashes of the IEEE-exact R dumps, so the two halves cannot drift together
+    golden.json      hashes of the Gaussian R dumps, so the two halves cannot drift together
   docs/
     mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
 ```
@@ -178,8 +178,10 @@ A reference deployment on the Oxford ARC cluster keeps the code and scripts unde
 `jsonlite`. Submitting [`sbatch hpc/precision_array.slurm`](hpc/precision_array.slurm) runs the sweep, and a quick smoke test
 is `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`. Each task
 writes one `precision_N<n>.csv`, and these combine into a full precision-vs-*N* curve at a
-resolution far beyond a laptop. The simulation core is bit-identical across machines and R
-versions, so the cluster reproduces local output exactly.
+resolution far beyond a laptop. The cluster reproduces local simulated data exactly when both
+machines round `exp()`, `log()` and `pow()` alike, as two Linux machines with the same C library
+do. Between Windows and Linux, values that pass through those functions can differ in their last
+bits, as [Cross-language reproducibility](#cross-language-reproducibility) below sets out.
 
 ## Cross-language reproducibility
 
@@ -190,15 +192,28 @@ shared generator implemented identically in both languages.
 Uniform deviates come from L'Ecuyer's (1988) combined linear congruential generator, whose
 intermediate products stay below 2^53 and so remain exact in IEEE-754 doubles (R) and Python
 integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241 inverse-CDF, the algorithm
-behind R's `qnorm()`, so they agree to full double precision. Everything else (Cholesky factors
-for correlated random effects, and inverse-CDF draws for the Poisson, Bernoulli and ordinal
-families) derives from those two in a documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)). The same
-specification and seed therefore yield identical data in R and Python. That holds bit for bit
-for the Gaussian family, for any design that applies no transcendental function to the linear
-predictor and for any family with `response.round` set, and to within a few units in the last
-place for the unrounded `exp()`/`log()` families, whose rounding IEEE-754 leaves to the maths
-library ([`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the measured
-rates). The generator is auditable and free of external dependencies.
+behind R's `qnorm()`. Everything else (Cholesky factors for correlated random effects, and
+inverse-CDF draws for the Poisson, Bernoulli and ordinal families) derives from those two in a
+documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)).
+The same specification and seed therefore yield identical data in R and Python wherever the two
+share a maths library, as on Linux, where CI checks every case to the last bit.
+
+IEEE-754 leaves the rounding of `exp()`, `log()` and `pow()` to that library, and on Windows R
+and Python do not share one. There, a value that passes through those functions can differ in its
+last bits, and every family has such a path. AS 241 calls `log()` in its tails, and about 1.4e-5
+of normal draws differed, by 1 to 3 units in the last place, so even Gaussian data can differ.
+Responses of the lognormal families and the ex-Gaussian differed by 1 unit, and an unrounded
+Beta response by up to 35. A discrete outcome can in principle move by a whole category, though
+none did in 50,000 rows of each family. Rounding to four decimals removed every continuous
+difference measured, but it guarantees nothing, since a last-bit difference can straddle a
+rounding boundary. One Beta case can differ on Linux too. From R 4.6.0, R's `^` computes a cube
+or a fourth power by repeated multiplication, where Python calls `pow()`. A Beta response whose
+Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits on any platform. Within
+one language, the data are identical on one platform, and across operating systems on the same
+terms as across languages.
+[`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
+sets out the scope, and [`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the
+harness's allowances. The generator is auditable and free of external dependencies.
 
 ## Quick start
 
@@ -274,8 +289,8 @@ Rscript r/pilotr/examples/equivalence_simstudy.R
 python -m pytest python/tests -q
 ```
 
-> A note on R and Python coverage. Data generation is bit-identical across languages (exactly,
-> or within the documented ulp tolerance for the unrounded `exp()`/`log()` families), and both
+> A note on R and Python coverage. Data generation is bit-identical across languages wherever
+> they share a maths library, as on Linux (see Cross-language reproducibility above), and both
 > ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
 > however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
 > correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`

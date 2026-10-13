@@ -32,8 +32,15 @@ than the one each battery expects (ValueError, and NotImplementedError from the 
 or an R error raised by base R rather than by pilotr (which always stops with call. = FALSE),
 counts as a crash and fails the case whatever the other twin did.
 
+The schema check holds spec/design.schema.json to strict validation. Every specification of the
+spec battery that both twins accept with strict = TRUE must be valid under jsonschema's
+Draft7Validator. The schema used to be looser than the validators in one direction and stricter
+in the other. It accepted an unknown top-level field and a response parameter the family does
+not use, and it refused the single-value forms of vary_within and thresholds that both
+validators accept. The check needs the jsonschema package (pip install jsonschema).
+
 Usage: python tools/parity/validate_cross.py
-Exit status is 0 when the two agree on every case.
+Exit status is 0 when the two agree on every case and the schema accepts every case they accept.
 """
 
 from __future__ import annotations
@@ -56,6 +63,11 @@ from pilotr.power import _LINEAR_ON_LINK, _LINK_SCALE, _two_group_refusal  # noq
 from pilotr.simulate import _as_spec, load_spec, simulate  # noqa: E402
 from pilotr.validate import validate_spec  # noqa: E402
 from run_py import _dump  # noqa: E402  the dump format the parity harness compares
+
+try:
+    import jsonschema
+except ImportError:  # reported in main(), so that the message says what to install
+    jsonschema = None
 
 # The interpreter on PATH by default, so the script runs anywhere R is installed (CI
 # included); PILOTR_RSCRIPT overrides it for a machine whose Rscript lives elsewhere.
@@ -142,6 +154,9 @@ def cases():
          _mut(lambda s: _set_family(s, family="ordinal", name="r", thresholds=[1, 0.5, 2]))),
         ("valid ordinal",
          _mut(lambda s: _set_family(s, family="ordinal", name="r", thresholds=[-1, 0, 1]))),
+        ("a single threshold as a bare number",
+         _mut(lambda s: _set_family(s, family="ordinal", name="r", thresholds=0.5))),
+        ("valid bernoulli", _mut(lambda s: _set_family(s, family="bernoulli", name="acc"))),
         ("negative sigma", _mut(lambda s: s["response"].__setitem__("sigma", -1))),
         ("missing sigma", _mut(lambda s: s["response"].pop("sigma"))),
         ("missing response", _mut(lambda s: s.pop("response"))),
@@ -702,7 +717,34 @@ def _report(title, labels, r_res, p_res, data=None, warned=False):
     return failed
 
 
+def _schema_check(labels, specs, r_res, p_res):
+    """Count the specifications both twins accept with strict = TRUE that the schema refuses."""
+    with open(os.path.join(ROOT, "spec", "design.schema.json"), encoding="utf-8") as f:
+        schema = json.load(f)
+    jsonschema.Draft7Validator.check_schema(schema)
+    validator = jsonschema.Draft7Validator(schema)
+    print("\nSchema check: spec/design.schema.json on every case both validators accept")
+    print("-" * 96)
+    failed = checked = 0
+    for label, spec, rv, pv in zip(labels, specs, r_res, p_res):
+        if rv["verdict"] != "OK" or pv["verdict"] != "OK":
+            continue
+        checked += 1
+        errors = sorted(e.message for e in validator.iter_errors(spec))
+        if errors:
+            failed += 1
+            print("%-52s <== refused by the schema" % label[:52])
+            for message in errors:
+                print("    " + message)
+    print("%d cases accepted by both validators: %d valid under the schema, %d refused"
+          % (checked, checked - failed, failed))
+    return failed
+
+
 def main() -> int:
+    if jsonschema is None:
+        print("the schema check needs the jsonschema package: pip install jsonschema")
+        return 1
     battery = cases()
     files = file_cases()
     powers = power_cases()
@@ -750,6 +792,8 @@ def main() -> int:
                           [label for label, _s in powers], r_power, py_power)
         failed += _report("Scale battery: power_mixed()'s warning for a family on a link scale",
                           FAMILIES, r_scale, [_py_scale(f) for f in FAMILIES], warned=True)
+        failed += _schema_check([label for label, _s in battery], [s for _l, s in battery],
+                                r_spec, py_spec)
 
     print("\n%d disagreement%s in all" % (failed, "" if failed == 1 else "s"))
     return 1 if failed else 0

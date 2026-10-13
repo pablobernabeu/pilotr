@@ -45,6 +45,14 @@ default_response_name <- function(family) {
 #'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
 #'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
 #'   `item_corr`.
+#' @details
+#' A response of the Gaussian, lognormal or shifted lognormal family is rounded to four
+#' decimals, and a `beta` response is left unrounded. Rounding moves every proportion near 0 or 1
+#' onto the nearest value inside the interval at that many decimals. At four decimals, 9.8% of the
+#' 40,000 rows of a design with `phi = 0.8` landed on 0.0001 or 0.9999, and rows at such a bound
+#' dominate a Beta likelihood (see [brms_bridge()]). Unrounded, the data keep the distribution the
+#' specification describes. They can then differ between R and 'Python' in their last bits where
+#' the two do not share a maths library, as the cross-language vignette sets out.
 #' @return A design specification as a nested list, ready for
 #'   [simulate_design()], [spec_json()], or the
 #'   power and precision functions.

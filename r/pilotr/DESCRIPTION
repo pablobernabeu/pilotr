@@ -15,10 +15,9 @@ Description: Generative simulation of experimental and behavioural data sets fro
     Type S and Type M errors of Gelman and Carlin (2014)
     <doi:10.1177/1745691614551642> and a region of practical equivalence. A shared
     cross-language random-number generator means that, given the same specification and
-    seed, the R and 'Python' implementations produce identical data: exactly for the
-    Gaussian family and for any family with rounding set, and to within the last unit in
-    the last place for families applying a transcendental function to the linear
-    predictor, whose rounding the IEEE-754 standard does not fix.
+    seed, the R and 'Python' implementations produce identical data wherever they share a
+    maths library, as on Linux. Elsewhere, a value that passes through exp(), log() or
+    pow(), whose rounding the IEEE-754 standard does not fix, can differ in its last bits.
 License: MIT + file LICENSE
 URL: https://pablobernabeu.github.io/pilotr/r/, https://github.com/pablobernabeu/pilotr
 BugReports: https://github.com/pablobernabeu/pilotr/issues

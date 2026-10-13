@@ -51,7 +51,7 @@ solve the resulting curve for the value that meets a target.
 ## Reproducibility
 
 The shared random-number stream and the numerical primitives that make a Python
-run and an R run agree bit for bit.
+run and an R run agree, bit for bit wherever the two share a maths library.
 
 ::: pilotr.core.RNG
 

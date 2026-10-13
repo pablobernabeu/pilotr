@@ -31,6 +31,12 @@ TOLERANCE = os.path.join(ROOT, "tools", "parity", "tolerance.json")
 
 MAX_REPORTED = 5      # differing cells shown per case, so a systematic fault stays readable
 
+# The size from which a case may not be anchored. A Gaussian case is anchored on the observed
+# agreement of AS 241's log() across platforms, and on Windows about 1.5e-5 of normal draws
+# differ between R and Python, so a case of 50,000 rows, each of which draws at least one normal,
+# has an even chance or better of meeting such a draw. See the comment above `anchored` in main().
+MAX_ANCHORED_ROWS = 50_000
+
 
 def _tolerances() -> tuple[int, dict[str, int], set[str]]:
     """Per-case ulp allowance, and the transcendental classification that decides which
@@ -67,6 +73,12 @@ def _ulps(a: float, b: float) -> float:
         return n if n >= 0 else -(n & 0x7FFFFFFFFFFFFFFF) - (1 << 63)
 
     return float(abs(ordinal(a) - ordinal(b)))
+
+
+def _rows(path: str) -> int:
+    """The number of data rows in a dump, which has one header line."""
+    with open(path, "rb") as f:
+        return sum(1 for _ in f) - 1
 
 
 def _sha256(path: str) -> str:
@@ -171,27 +183,41 @@ def main() -> int:
         if n_fail:
             failures += 1
 
-    # The anchor covers exactly the cases whose bytes are IEEE-754-exact
-    # arithmetic: the Gaussian cases, which apply no transcendental to anything
-    # that reaches the dump. A case classified transcendental in tolerance.json
-    # is excluded because it cannot be anchored at all: its values pass through
-    # exp(), log() or pow(), whose rounding IEEE-754 leaves to the maths
-    # library, and Windows (MinGW/UCRT) and Linux (glibc) do not share a libm,
-    # so the same golden.json could fail on whichever platform did not record
-    # it. That some of those cases (beta, Poisson, ordinal, and the rounded
-    # dumps of the exp families) have hashed identically on every platform
-    # measured so far is an accident of the platforms measured, not a
-    # guarantee, which is why the classification is by construction rather
-    # than by observed agreement. The transcendental cases are gated by the
-    # R-versus-Python comparison above instead, which is the contract, at an
-    # allowance of zero ulp unless tolerance.json grants one.
+    # The anchor pins the Gaussian cases, and on observed agreement, not by
+    # construction. Their values pass through no exp() and no pow(), but every
+    # normal they draw comes from AS 241, whose tail branch calls log() for
+    # about 15% of draws. IEEE-754 leaves the rounding of log() to the maths
+    # library, and R and Python on Windows do not share one (MinGW-w64 against
+    # UCRT): there about 1.5e-5 of normal draws differ, by 1 to 3 ulp. The
+    # anchored cases are small enough that none has met such a draw on Linux or
+    # Windows, which is the agreement the anchor rests on. A case of 50,000
+    # draws or more is at least as likely to meet one as not, so such a case is
+    # classified transcendental. That keeps its platform-dependent R bytes out
+    # of the anchor, while the comparison above still gates it at 0 ulp on CI.
+    # MAX_ANCHORED_ROWS enforces it, since each row draws at least one normal.
+    # A case whose values pass through exp(), log() or pow() on the way to the
+    # dump is classified transcendental by construction, whether or not it has
+    # hashed identically on the platforms measured. The Beta, Poisson and
+    # ordinal cases are among them, as are the rounded dumps of the exp
+    # families. The transcendental cases are gated by the R-versus-Python
+    # comparison above, which is the contract, at an allowance of zero ulp unless
+    # tolerance.json grants one.
     anchored = {c: h for c, h in new_hashes.items() if c not in transcendental}
+    too_large = sorted(c for c in anchored if _rows(os.path.join(r_dir, c)) >= MAX_ANCHORED_ROWS)
+    if too_large:
+        print("\n%s ha%s %d rows or more, so %s to be classified transcendental in "
+              "tolerance.json: an anchored case relies on AS 241's log() agreeing across "
+              "platforms, which a case this large breaks at least half the time"
+              % (", ".join(too_large), "s" if len(too_large) == 1 else "ve", MAX_ANCHORED_ROWS,
+                 "it has" if len(too_large) == 1 else "they have"))
+        return 1
 
     if update:
         with open(GOLDEN, "w", encoding="utf-8") as f:
-            json.dump({"note": "SHA-256 of the IEEE-exact (non-transcendental) R dumps in "
-                               "tools/parity/out/r; regenerate with "
-                               "`python tools/parity/compare.py --update`",
+            json.dump({"note": "SHA-256 of the non-transcendental (Gaussian) R dumps in "
+                               "tools/parity/out/r, anchored on the agreement of AS 241's log() "
+                               "observed across platforms. Regenerate with "
+                               "`python tools/parity/compare.py --update`.",
                        "hashes": anchored}, f, indent=2, sort_keys=True)
             f.write("\n")
         print("\ngolden.json updated (%d anchored cases; %d transcendental cases are "
