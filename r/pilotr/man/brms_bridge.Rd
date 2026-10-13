@@ -65,6 +65,15 @@ A Bayes factor computed against these priors depends on their widths (Kass and R
 1995), so a different \code{prior_scale} gives a different Bayes factor from the same data. For a
 continuous family at the default of 0.5, a standardised effect of 0.5 lies one prior standard
 deviation from zero.
+
+A \code{beta} response lies strictly inside (0, 1), as \code{Beta()} requires, because
+\code{\link[=simulate_design]{simulate_design()}} moves a draw or a rounded value at exactly 0 or 1 to the nearest value
+inside the interval. When \code{mu * phi} or \code{(1 - mu) * phi} is well below 1, part of the
+distribution lies nearer to 0 or 1 than doubles resolve. Those rows sit at the bounds, which are
+\code{2^-1074} and \code{1 - 2^-53} for an unrounded response. There \code{log(y)} or \code{log(1 - y)} reaches
+about -744 or -37, so such rows dominate a Beta likelihood. They are an artefact of double
+precision. The process that generated them has no point mass at the boundary, so a
+zero-one-inflated model would misstate it.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

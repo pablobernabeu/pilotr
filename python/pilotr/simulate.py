@@ -13,7 +13,8 @@ stream.
 
 from __future__ import annotations
 import csv, json, math, itertools, os
-from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw, fround
+from .core import (RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, lognormal_exp,
+                   beta_response, beta_round, fround)
 from .validate import validate_spec, _normalise, _repeated_key_message
 
 
@@ -484,9 +485,10 @@ def _simulate(spec) -> Dataset:
         if family == "gaussian":
             y = eta + sigma * rng.normal()
         elif family == "shifted_lognormal":
-            y = shift + math.exp(eta + sigma * rng.normal())
+            # lognormal_exp() is exp(), refusing a value that overflows, in the R twin's words.
+            y = shift + lognormal_exp(eta + sigma * rng.normal(), family, eta)
         elif family == "lognormal":
-            y = math.exp(eta + sigma * rng.normal())
+            y = lognormal_exp(eta + sigma * rng.normal(), family, eta)
         elif family == "exgaussian":
             # A normal plus an exponential, mean-centred by subtracting the exponential's own
             # mean so that eta stays the mean of the response. That is brms's exgaussian(mu,
@@ -508,15 +510,17 @@ def _simulate(spec) -> Dataset:
         elif family == "ordinal":
             y = ordinal_inv(eta, thresholds, rng.uniform())
         elif family == "beta":
-            mu, phi = inv_logit(eta), resp.get("phi", 10.0)
-            y = beta_draw(rng, mu * phi, (1.0 - mu) * phi)
+            # beta_response() keeps the value strictly inside (0, 1), and refuses a row where no
+            # proportion can be drawn.
+            y = beta_response(rng, eta, resp.get("phi", 10.0))
         else:
             raise ValueError(f"unknown family: {family}")
         if ndp is not None and isinstance(y, float):
             # fround() is R's algorithm, the specification's rule, so a value near a decimal tie
             # rounds the same way in both twins, where CPython's round() can take the other
-            # candidate.
-            y = fround(y, ndp)
+            # candidate. beta_round() calls it too, then moves a proportion rounded onto 0 or 1
+            # back inside the interval.
+            y = beta_round(y, ndp) if family == "beta" else fround(y, ndp)
 
         out = {"subject": r["subject"]}
         if has_item:

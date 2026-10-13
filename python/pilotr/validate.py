@@ -574,6 +574,14 @@ def validate_spec(spec, strict: bool = True):
                     elif fam not in ROUNDING_FAMILIES:
                         unknown("'response.round' has no effect for the %s family, whose outcome "
                                 "is already an integer" % fam)
+                    # Rounded to whole numbers, every proportion became 0 or 1, outside the
+                    # family's support. At one place or more, a proportion rounded onto 0 or 1 is
+                    # moved inside the interval (core.beta_round). At none, the interval holds no
+                    # value to move to.
+                    elif fam == "beta" and r["round"] < 1:
+                        bad("'response.round' must be at least 1 for the beta family, because a "
+                            "proportion rounded to whole numbers is 0 or 1, outside the family's "
+                            "support")
 
     # ---- names and structure ----
     # An empty object is no object to R, which reads `{}` as an unnamed empty list.

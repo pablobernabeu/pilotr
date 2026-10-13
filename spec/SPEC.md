@@ -367,12 +367,38 @@ response at about 6.56, a mean count of about 708, which is well above the rates
 are normally specified at. The walk itself is set out under
 [Accumulation order](#accumulation-order-identical-across-all-implementations).
 
+A `lognormal` or `shifted_lognormal` response is refused when `exp(η + σ·z)` overflows, as it does
+once its argument passes about 709.78. The message is the same in every implementation and names
+`η`, since `exp(η)` can be finite in a row whose normal draw carries the argument past the limit.
+Earlier versions wrote an infinite response in R and raised a bare overflow error in Python.
+
+A `beta` response lies strictly inside (0, 1), the support of the Beta distribution and the range a
+Beta regression accepts. It is `x / (x + y)`, where `x` is a Gamma variate with shape `μ·φ` and
+`y`, drawn after it, one with shape `(1−μ)·φ`. Two cases are refused before the division, with the
+same messages in every implementation. The first is a shape of exactly zero. It arises when
+`invlogit(η)` rounds to 1 (from an `η` of about 36.74) or underflows to 0 (below about −745.1), or
+when `φ` is small enough to take either product to zero by itself. The second is a pair of
+variates that both underflow to zero, leaving the ratio undefined, as can happen when both shapes
+are tiny. Earlier versions returned 0, 1 or `NaN` in R and raised a division error in Python.
+
+Otherwise, the ratio rounds to exactly 1 whenever `y` is below about 2^−54 of `x`. That happens at
+realistic means near a ceiling, as in 161 of 4,000 rows of a design with an intercept of 3 and
+`φ = 2`. The ratio is exactly 0 when `x` underflows. A ratio of exactly 1 becomes 1 − 2^−53, the
+largest double below 1, and one of exactly 0 becomes 2^−1074, the smallest positive double. Where
+both variates were representable, a ratio that rounded to 1 lay between 1 − 2^−53 and 1, so no
+double inside the interval is nearer the draw. The replacement is a comparison and draws nothing,
+so the stream is unchanged. When `μ·φ` or `(1−μ)·φ` is well below 1, part of the distribution lies
+nearer a boundary than doubles resolve, and those rows sit at the two bounds. A rounded `beta`
+response is kept inside the interval too, by the last rule under
+[Rounding](#rounding-identical-across-all-implementations).
+
 `η` (the linear predictor for a row) = `intercept + Σ β_key · value(key)`, where a key is a
 contrast column, a continuous predictor or an `"a:b"` interaction (the product of the named
 columns), `+` subject random part `+` item random part `+` the random parts of any additional
 grouping factors. `name` sets the output column name. An optional `round` sets the decimal
 rounding of the response, and applies only to the families whose outcome is continuous, the others
-being integers already. The rounding follows the rule under
+being integers already. For `beta` it must be at least 1, since every proportion rounded to a whole
+number is 0 or 1. The rounding follows the rule under
 [Rounding](#rounding-identical-across-all-implementations).
 
 ### Names
@@ -466,6 +492,17 @@ then by `10^(d − 308)`, and `floor(t)` and `ceil(t)` are divided by the two in
 Beyond 323 places, `y` is returned unchanged. Validation accepts only a whole `d` of 0 or more.
 Without it, a `d` that is not whole counts as `floor(d + 0.5)` from step 3 on, a negative `d`
 takes `p = 1 / 10^|d|` and a `d` below −308 gives 0.
+
+A `beta` response takes one further step, which keeps the result inside (0, 1). Let `q` be 1
+multiplied by 10, `d` times, which is exact up to `d = 22`, and let `m = 1/q` for a `d` from 1 to
+22 and 2^−1074 otherwise. A result of 0 or less becomes `m`. A result of 1 or more becomes `1 − m`,
+or 1 − 2^−53 where `1 − m` rounds to 1, as it does from `d = 17`. Up to 22 places, `m` is the
+double that step 5 returns for 10^−d, and up to 15 places, `1 − m` is the one it returns for
+1 − 10^−d. A proportion rounded onto 0 or 1 therefore moves to the nearest value inside the
+interval at `d` decimals, 0.001 or 0.999 at three. Validation refuses `d = 0` for `beta`, where
+no such value exists. Before this rule, rounding sent 17% of the rows of one realistic low-mean
+design to exactly 0. The parity case `tools/parity/cases/beta_boundary_rounded.json` checks the
+rule end to end.
 
 CPython's `round()` follows a different rule. It rounds the exact binary value of `y`, whereas
 step 5 compares the two candidates by their distances from `x` as computed in double precision.

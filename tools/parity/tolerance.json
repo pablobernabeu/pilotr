@@ -19,6 +19,11 @@
     "stress_exgaussian is currently exact on this platform, but its value path applies log() to a",
     "uniform draw, so it belongs to the same class as the two lognormal cases and is classified",
     "with them rather than on the accident of one seed agreeing.",
+    "beta_boundary_rounded rounds a low and a high mean to three decimals, so that values land",
+    "on 0 and 1 and are moved inside the interval by the rule in SPEC.md. Both of its Beta shapes",
+    "stay at 1 or above, which keeps the pow() of the Gamma sampler's boost out of its noround",
+    "dump. On Windows, R's ^ and CPython's ** differed by 1 ulp on 0.13% of 200,000 such",
+    "exponents.",
     "",
     "'transcendental' lists every dump whose bytes pass through exp(), log() or pow() on the way",
     "to the file, whether or not the case currently hashes identically across platforms. Those",
@@ -36,6 +41,8 @@
     "stress_exgaussian.noround.txt": 8
   },
   "transcendental": [
+    "beta_boundary_rounded.asis.txt",
+    "beta_boundary_rounded.noround.txt",
     "beta_proportion.asis.txt",
     "beta_proportion.noround.txt",
     "crossed_mixed_rt.asis.txt",

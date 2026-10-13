@@ -251,6 +251,19 @@
   every build reads them exactly, as it does any value typed with up to four decimal places. Any
   other value is read through 'jsonlite'.
 
+* Beta responses stay inside (0, 1). Near a ceiling, `x / (x + y)` rounds to exactly 1 in double
+  precision (161 of 4,000 rows at an intercept of 3 and `phi = 2`), and rounding sent low
+  proportions to exactly 0 (17% of the rows at three decimals in one realistic design). brms's
+  `Beta()` refuses either value. An exact 1 or 0 now becomes the nearest double inside the
+  interval, a rounded value at 0 or 1 becomes the nearest value inside it at that many decimals,
+  and `round = 0` is refused for Beta. No other value changes, so the shipped examples simulate
+  the same data as before.
+
+* Extreme linear predictors are refused with the same message in both twins. R returned `Inf` for
+  a lognormal or shifted lognormal response whose `exp(eta + sigma * z)` overflowed, and 0, 1 or
+  `NaN` for a Beta response whose shape parameter was zero or whose two Gamma variates both
+  underflowed. Python raised a bare `OverflowError` or `ZeroDivisionError` in the same cases.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

@@ -139,6 +139,15 @@
 #' continuous family at the default of 0.5, a standardised effect of 0.5 lies one prior standard
 #' deviation from zero.
 #'
+#' A `beta` response lies strictly inside (0, 1), as `Beta()` requires, because
+#' [simulate_design()] moves a draw or a rounded value at exactly 0 or 1 to the nearest value
+#' inside the interval. When `mu * phi` or `(1 - mu) * phi` is well below 1, part of the
+#' distribution lies nearer to 0 or 1 than doubles resolve. Those rows sit at the bounds, which are
+#' `2^-1074` and `1 - 2^-53` for an unrounded response. There `log(y)` or `log(1 - y)` reaches
+#' about -744 or -37, so such rows dominate a Beta likelihood. They are an artefact of double
+#' precision. The process that generated them has no point mass at the boundary, so a
+#' zero-one-inflated model would misstate it.
+#'
 #' @param spec a design spec (path or list).
 #' @param prior_scale The standard deviation of the normal prior on a standardised main effect
 #'   for the continuous families, that is on the coefficient multiplied by its column's standard

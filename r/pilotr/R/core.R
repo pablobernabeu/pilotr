@@ -210,4 +210,88 @@ as241 <- function(p) {
     if (log(rng$uniform()) < 0.5 * x * x + d - d * v + d * log(v)) return(d * v)
   }
 }
-.beta_draw <- function(rng, a, b) { x <- .gamma_mt(rng, a); x / (x + .gamma_mt(rng, b)) }
+
+# The doubles nearest 1 and 0 inside the open interval, where a beta response of exactly 1 or 0
+# is moved. 1 - 2^-53 is the largest double below 1, and 2^-1074 the smallest positive double, a
+# subnormal. Both products are exact, and core.py forms the same two from float_info.
+.BETA_HI <- 1 - .Machine$double.eps / 2
+.BETA_LO <- .Machine$double.xmin * .Machine$double.eps
+
+# Both twins raise these three texts byte for byte. The numbers go through %g in both, and
+# core.py spells a value that is not finite as R does.
+.stop_lognormal_overflow <- function(family, eta) {
+  stop(sprintf(
+    "the %s response exp(eta + sigma * z) overflows at a linear predictor of %g, so no response can be drawn. Lower the intercept or the coefficients.",
+    family, as.numeric(eta)), call. = FALSE)
+}
+
+.stop_beta_shape <- function(eta, phi) {
+  stop(sprintf(
+    "the beta mean invlogit(eta) at a linear predictor of %g and precision phi = %g leaves a shape parameter of zero, so no proportion can be drawn. Keep eta between about -745 and 36.7 and phi large enough that mu * phi and (1 - mu) * phi stay positive.",
+    as.numeric(eta), as.numeric(phi)), call. = FALSE)
+}
+
+.stop_beta_underflow <- function(eta, phi) {
+  stop(sprintf(
+    "both Gamma variates underflowed to zero at a linear predictor of %g and precision phi = %g, so the proportion is undefined. Raise phi.",
+    as.numeric(eta), as.numeric(phi)), call. = FALSE)
+}
+
+# exp(w) for the two lognormal families, where w = eta + sigma * z. exp() overflows beyond about
+# 709.78, and R returned Inf for every such row while Python's math.exp() raised a bare
+# OverflowError. The refusal names eta, since exp(eta) itself can be finite in a row whose
+# normal draw carries w past the limit.
+.lognormal_exp <- function(w, family, eta) {
+  val <- exp(w)
+  if (!is.finite(val)) .stop_lognormal_overflow(family, eta)
+  val
+}
+
+# A beta response for linear predictor eta and precision phi. It is x / (x + y), where x and y are
+# Gamma variates with shapes mu * phi and (1 - mu) * phi, drawn in that order.
+#
+# A shape of zero leaves no distribution to draw from. invlogit(eta) rounds to 1 from an eta of
+# about 36.74 and underflows to 0 below about -745.1, and a tiny phi can take either product to
+# zero by itself. R's Gamma sampler then returned 0, so the response came out as exactly 0, 1 or
+# NaN, while Python's raised ZeroDivisionError. When both shapes are tiny, both variates can also
+# underflow to zero and leave 0 / 0. Both cases are refused before the division.
+#
+# Otherwise, the ratio rounds to exactly 1 whenever y is below about 2^-54 of x, as happens at
+# realistic means near a ceiling, and it is exactly 0 when x underflows. brms's Beta() refuses
+# both values, since they lie outside the family's support. Each becomes the nearest double inside
+# the interval, 1 - 2^-53 or 2^-1074. Where both variates were representable, a ratio that rounded
+# to 1 lay between 1 - 2^-53 and 1, so no double inside the interval is nearer the draw. The move
+# is a comparison and draws nothing, so the stream is unchanged.
+.beta_response <- function(rng, eta, phi) {
+  mu <- .inv_logit(eta)
+  a <- mu * phi; b <- (1 - mu) * phi
+  if (a == 0 || b == 0) .stop_beta_shape(eta, phi)
+  x <- .gamma_mt(rng, a)
+  y <- .gamma_mt(rng, b)
+  if (x + y == 0) .stop_beta_underflow(eta, phi)
+  p <- x / (x + y)
+  if (p == 1) .BETA_HI else if (p == 0) .BETA_LO else p
+}
+
+# A beta response rounded to `ndp` decimals by R's round(), with a result of exactly 0 or 1 moved
+# inside (0, 1). Rounding sends every value below half a unit in the last place kept to 0. That
+# happened to 17% of the rows of one realistic low-mean design, and brms's Beta() refuses such
+# data. The bounds are the nearest values inside the interval at that many decimals, lo =
+# 1 / 10^ndp and hi = 1 - lo: round() itself returns lo up to 22 places and hi up to 15. 10^ndp is
+# built by multiplication, exact up to 22 places and free of either language's pow(). Beyond 22
+# places lo falls back to 2^-1074, and from 17 places, where 1 - lo rounds to 1, hi falls back to
+# 1 - 2^-53, the bounds of an unrounded response.
+.beta_round <- function(val, ndp) {
+  val <- round(val, ndp)
+  if (val > 0 && val < 1) return(val)
+  dig <- floor(ndp + 0.5)  # the number of places round() itself uses
+  lo <- .BETA_LO
+  if (dig >= 1 && dig <= 22) {
+    p10 <- 1
+    for (i in seq_len(dig)) p10 <- p10 * 10
+    lo <- 1 / p10
+  }
+  if (val <= 0) return(lo)
+  hi <- 1 - lo
+  if (hi < 1) hi else .BETA_HI
+}

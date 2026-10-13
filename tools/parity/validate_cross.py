@@ -101,6 +101,10 @@ def cases():
         ("foreign response parameter", _mut(lambda s: s["response"].__setitem__("phi", 8))),
         ("round on an integer family",
          _mut(lambda s: _set_family(s, family="poisson", name="count", round=2))),
+        ("round 0 on beta",
+         _mut(lambda s: _set_family(s, family="beta", name="p", phi=8, round=0))),
+        ("round 1 on beta",
+         _mut(lambda s: _set_family(s, family="beta", name="p", phi=8, round=1))),
         ("unknown top-level field", _mut(lambda s: s.__setitem__("notafield", 1))),
         ("unknown factor field",
          _mut(lambda s: s["factors"][0].__setitem__("levls", ["a", "b"]))),
@@ -322,6 +326,22 @@ def _poisson():
     return s
 
 
+def _beta():
+    """The shipped Beta example with no group effect, so that every row has the mean its
+    intercept implies. It keeps the example's five decimals."""
+    s = _read("spec", "examples", "beta_proportion.json")
+    s["fixed"]["coefficients"]["grp"] = 0.0
+    return s
+
+
+def _lognormal(family, **extra):
+    """The shipped two-group design with a lognormal response and no group effect."""
+    s = _between()
+    s["fixed"]["coefficients"]["grp"] = 0.0
+    s["response"] = dict({"family": family, "name": "RT", "sigma": 0.3}, **extra)
+    return s
+
+
 def _text(spec):
     return json.dumps(spec, ensure_ascii=False, indent=1).encode("utf-8")
 
@@ -427,6 +447,25 @@ def file_cases():
          _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(742)))),
         ("poisson intercept 800 (exp overflows)",
          _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", 800))),
+        # The lognormal and Beta refusals, raised while simulating. At an intercept of 36.7, every
+        # draw is exactly 1 and every row lands on 0.99999, so the data compare exactly too.
+        ("lognormal intercept 750 (exp overflows)",
+         _with(lambda: _lognormal("lognormal"),
+               lambda s: s["fixed"].__setitem__("intercept", 750))),
+        ("shifted_lognormal intercept 750 (exp overflows)",
+         _with(lambda: _lognormal("shifted_lognormal", shift=200),
+               lambda s: s["fixed"].__setitem__("intercept", 750))),
+        ("beta intercept 36.7 (draws of 1 moved inside)",
+         _with(_beta, lambda s: s["fixed"].__setitem__("intercept", 36.7))),
+        ("beta intercept 40 (a shape of zero)",
+         _with(_beta, lambda s: s["fixed"].__setitem__("intercept", 40))),
+        ("beta intercept -750 (a shape of zero)",
+         _with(_beta, lambda s: s["fixed"].__setitem__("intercept", -750))),
+        ("beta intercept -700 and phi 1e-30 (mu * phi underflows)",
+         _with(_beta, lambda s: (s["fixed"].__setitem__("intercept", -700),
+                                 s["response"].__setitem__("phi", 1e-30)))),
+        ("beta phi 0.001 (both Gamma variates underflow)",
+         _with(_beta, lambda s: s["response"].__setitem__("phi", 0.001))),
     ]
     return out
 

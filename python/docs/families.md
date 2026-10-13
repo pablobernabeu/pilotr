@@ -28,6 +28,15 @@ to it agree on what the intercept means. A shifted lognormal is not a substitute
 specification using the ex-Gaussian has to declare `"spec_version": "0.3"`, since a 0.2
 implementation would read it differently.
 
+Every Beta response lies strictly inside (0, 1), as a Beta regression requires. Near a ceiling or a
+floor, a draw can round to exactly 1 or 0 in double precision, and it then becomes the nearest
+double inside the interval. A Beta specification that sets `round` needs at least 1, and a value
+rounded onto 0 or 1 becomes the nearest value inside the interval at that many decimals: 0.001 or
+0.999 at three. A linear predictor beyond about 36.7, or below about −745, leaves a shape parameter
+of zero, and a lognormal response whose `exp(eta + sigma * z)` overflows has no value to return.
+`simulate` refuses both with the R twin's messages, where it raised `ZeroDivisionError` or
+`OverflowError` before.
+
 ## What the families look like
 
 ```python exec="true" session="fam"

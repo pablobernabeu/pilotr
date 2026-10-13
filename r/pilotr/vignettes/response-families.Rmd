@@ -154,6 +154,15 @@ round(bt$by_group, 3)   # mean proportion by group
 fam_hist(bt$y, "#2E8B57", "Beta", "proportion")
 ```
 
+Every simulated proportion lies strictly inside (0, 1), as `brms::Beta()` and other Beta
+regressions require. Near a ceiling or a floor, a draw can round to exactly 1 or 0 in double
+precision, and it then becomes the nearest double inside the interval. A `round` set for the
+family must be at least 1. A value rounded onto 0 or 1 then becomes the nearest value inside the
+interval at that many decimals, 0.001 or 0.999 at three. A linear predictor beyond about 36.7, or
+below about −745, leaves a shape parameter of zero and is refused. When `mu * phi` or
+`(1 - mu) * phi` is well below 1, many rows sit at the bounds, and `?brms_bridge` explains how
+they weigh on a Beta fit.
+
 ## Choosing a family
 
 The families above, together with the ex-Gaussian, cover the outcome types a behavioural study

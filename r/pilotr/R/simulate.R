@@ -375,8 +375,9 @@ simulate_design <- function(spec, validate = TRUE) {
     }
     val <- switch(family,
       gaussian          = eta + sigma * rng$normal(),
-      shifted_lognormal = shift + exp(eta + sigma * rng$normal()),
-      lognormal         = exp(eta + sigma * rng$normal()),
+      # .lognormal_exp() is exp(), refusing a value that overflows.
+      shifted_lognormal = shift + .lognormal_exp(eta + sigma * rng$normal(), family, eta),
+      lognormal         = .lognormal_exp(eta + sigma * rng$normal(), family, eta),
       # Ex-Gaussian: a normal plus an exponential, mean-centred by subtracting the exponential's
       # own mean so that eta stays the mean of the response. That is brms's exgaussian(mu, sigma,
       # beta) parameterisation, in which mu is the mean, so a spec and the model fitted to it
@@ -385,16 +386,19 @@ simulate_design <- function(spec, validate = TRUE) {
       bernoulli         = if (rng$uniform() < .inv_logit(eta)) 1 else 0,
       poisson           = .poisson_inv(exp(eta), rng$uniform()),
       ordinal           = .ordinal_inv(eta, thresholds, rng$uniform()),
-      beta              = { mu <- .inv_logit(eta)
-                            .beta_draw(rng, mu * phi, (1 - mu) * phi) },
+      # .beta_response() keeps the value strictly inside (0, 1), and refuses a row where no
+      # proportion can be drawn.
+      beta              = .beta_response(rng, eta, phi),
       stop("unknown family: ", family))
     # The round() below is R's own, and its algorithm (src/nmath/fround.c, new in R 4.0.0) is the
     # specification's rounding rule. Of the two candidates with ndp decimals either side of val,
     # it takes the one nearer in double precision, a tie going to the even one. CPython's round()
     # works on the exact binary value instead and took the other candidate for 166 of 5,000
     # values probed near decimal ties, so the Python twin ports R's algorithm as fround(). The
-    # algorithm is also why DESCRIPTION declares R (>= 4.0.0).
-    if (!is.null(ndp) && family %in% .rounding_families) val <- round(val, ndp)
+    # algorithm is also why DESCRIPTION declares R (>= 4.0.0). .beta_round() calls it too, then
+    # moves a proportion rounded onto 0 or 1 back inside the interval.
+    if (!is.null(ndp) && family %in% .rounding_families)
+      val <- if (family == "beta") .beta_round(val, ndp) else round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item
     for (cn in label_cols) label_mat[r_i, cn] <- r$labels[[cn]]

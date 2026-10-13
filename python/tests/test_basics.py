@@ -154,6 +154,150 @@ def test_the_poisson_walk_evaluates_each_term_as_the_r_twin_does():
     assert poisson_inv(3.7, 0.4941532441504185) == 3
 
 
+# The edges of the beta and lognormal families. Each count below is the one the R twin pins, and
+# each refusal is byte-identical to the twin's.
+_BELOW_ONE = 1.0 - sys.float_info.epsilon / 2          # 1 - 2^-53, the largest double below 1
+_SMALLEST = sys.float_info.min * sys.float_info.epsilon  # 2^-1074, the smallest positive double
+
+
+def _beta_spec(intercept, phi, n=4000, seed=11, grp=0.5, rnd=None):
+    spec = {
+        "name": "b", "seed": seed,
+        "units": {"subject": {"n": n}},
+        "factors": [{"name": "group", "levels": ["a", "b"],
+                     "contrasts": {"grp": [-0.5, 0.5]}, "between": "subject"}],
+        "fixed": {"intercept": intercept, "coefficients": {"grp": grp}},
+        "response": {"family": "beta", "name": "p", "phi": phi},
+    }
+    if rnd is not None:
+        spec["response"]["round"] = rnd
+    return spec
+
+
+def _beta_shape_refusal(eta, phi):
+    return ("the beta mean invlogit(eta) at a linear predictor of %s and precision phi = %s leaves "
+            "a shape parameter of zero, so no proportion can be drawn. Keep eta between about -745 "
+            "and 36.7 and phi large enough that mu * phi and (1 - mu) * phi stay positive."
+            % (eta, phi))
+
+
+def _beta_underflow_refusal(eta, phi):
+    return ("both Gamma variates underflowed to zero at a linear predictor of %s and precision "
+            "phi = %s, so the proportion is undefined. Raise phi." % (eta, phi))
+
+
+def _exp_overflow_refusal(family, eta):
+    return ("the %s response exp(eta + sigma * z) overflows at a linear predictor of %s, so no "
+            "response can be drawn. Lower the intercept or the coefficients." % (family, eta))
+
+
+def test_a_beta_response_never_equals_1_and_moving_it_inside_draws_nothing():
+    # At an intercept of 3 and phi 2, (1 - mu) * phi is about 0.1. The ratio x / (x + y) then
+    # rounded to exactly 1 in 161 of these 4,000 rows, a value brms's Beta() refuses. Each becomes
+    # 1 - 2^-53, the largest double below 1, where 9 draws already lay.
+    p = simulate(_beta_spec(3, 2)).column("p")
+    assert not any(v in (0.0, 1.0) for v in p)
+    assert p.count(_BELOW_ONE) == 170
+    # The move draws nothing, so every later row is as it was. These are the sum and the last
+    # value recorded before the change: the 161 moves of 2^-53 lie far inside the tolerance, and a
+    # stream shifted by one draw far outside it.
+    assert math.isclose(math.fsum(p), 3811.6303419786809, rel_tol=1e-12)
+    assert math.isclose(p[-1], 0.99719118581120192, rel_tol=1e-12)
+
+
+def test_a_beta_response_never_equals_0():
+    # At an intercept of -7, mu * phi is about 0.002, and the first Gamma variate underflowed to
+    # zero in 97 of these 400 rows, each of which was then exactly 0. Each is now 2^-1074, the
+    # smallest positive double.
+    p = simulate(_beta_spec(-7, 2, n=400, grp=0.0)).column("p")
+    assert not any(v in (0.0, 1.0) for v in p)
+    assert p.count(_SMALLEST) == 97
+
+
+def test_a_rounded_beta_response_is_moved_inside_the_unit_interval_at_its_decimals():
+    # A low mean rounded to three decimals: 694 of these 4,000 values, 17% of the rows, rounded to
+    # exactly 0. Each becomes 0.001, where 218 values already were.
+    p = simulate(_beta_spec(-2.5, 4, seed=909, rnd=3)).column("p")
+    assert not any(v in (0.0, 1.0) for v in p)
+    assert min(p) == 0.001
+    assert p.count(0.001) == 912
+    # A high mean rounded to three decimals: 2,088 values rounded to exactly 1 and become 0.999.
+    p = simulate(_beta_spec(3, 2, rnd=3)).column("p")
+    assert not any(v in (0.0, 1.0) for v in p)
+    assert max(p) == 0.999
+    assert p.count(0.999) == 2306
+
+
+def test_the_bounds_of_a_rounded_beta_response_follow_the_specifications_rule():
+    from pilotr.core import beta_round
+
+    def bounds(d):
+        return beta_round(0.0, d), beta_round(1.0, d)
+
+    assert bounds(1) == (0.1, 0.9)
+    assert bounds(3) == (0.001, 0.999)
+    assert bounds(15) == (1e-15, 1 - 1e-15)
+    # 1 - 1e-16 rounds to 1 - 2^-53, and from 17 places 1 - lo rounds to 1 itself, so the upper
+    # bound stays at the largest double below 1.
+    assert bounds(16) == (1e-16, _BELOW_ONE)
+    assert bounds(17) == (1e-17, _BELOW_ONE)
+    assert bounds(22) == (1e-22, _BELOW_ONE)
+    # 10^23 is not a double, so the lower bound falls back to the smallest positive one.
+    assert bounds(23) == (_SMALLEST, _BELOW_ONE)
+
+
+def test_round_0_is_refused_for_the_beta_family():
+    with pytest.raises(ValueError, match=re.escape(
+            "'response.round' must be at least 1 for the beta family, because a proportion "
+            "rounded to whole numbers is 0 or 1, outside the family's support")):
+        validate_spec(_beta_spec(0, 8, rnd=0))
+    validate_spec(_beta_spec(0, 8, rnd=1))
+
+
+def test_a_beta_response_with_a_shape_of_zero_or_two_gamma_variates_of_zero_is_refused():
+    # invlogit(40) rounds to 1, so (1 - mu) * phi is 0: R returned 1 in every row, and Python
+    # raised ZeroDivisionError. invlogit(-750) underflows to 0, the mirror case, and at -700 with
+    # phi 1e-30 mu * phi underflows to 0 although mu does not.
+    with pytest.raises(ValueError, match=re.escape(_beta_shape_refusal("40", "2"))):
+        simulate(_beta_spec(40, 2, n=8, grp=0.0))
+    with pytest.raises(ValueError, match=re.escape(_beta_shape_refusal("-750", "2"))):
+        simulate(_beta_spec(-750, 2, n=8, grp=0.0))
+    with pytest.raises(ValueError, match=re.escape(_beta_shape_refusal("-700", "1e-30"))):
+        simulate(_beta_spec(-700, 1e-30, n=8, grp=0.0))
+    # At phi 0.001 both shapes are 0.0005, and both Gamma variates of a row can underflow to zero.
+    # R returned NaN for 96 of 200 rows, and Python raised ZeroDivisionError.
+    with pytest.raises(ValueError, match=re.escape(_beta_underflow_refusal("0", "0.001"))):
+        simulate(_beta_spec(0, 0.001, n=200, grp=0.0))
+    # Within the bounds the message gives, a proportion is drawn.
+    p = simulate(_beta_spec(36.7, 2, n=8, grp=0.0)).column("p")
+    assert all(0.0 < v < 1.0 for v in p)
+
+
+def test_a_lognormal_response_that_overflows_is_refused():
+    def rt(family):
+        spec = _beta_spec(750, 1, n=8, grp=0.0)
+        spec["response"] = {"family": family, "name": "RT", "sigma": 0.3}
+        if family == "shifted_lognormal":
+            spec["response"]["shift"] = 200
+        return spec
+
+    # exp(750) overflows, so R returned Inf in every row, and Python raised a bare OverflowError.
+    with pytest.raises(ValueError, match=re.escape(_exp_overflow_refusal("lognormal", "750"))):
+        simulate(rt("lognormal"))
+    with pytest.raises(ValueError,
+                       match=re.escape(_exp_overflow_refusal("shifted_lognormal", "750"))):
+        simulate(rt("shifted_lognormal"))
+
+
+def test_the_shipped_beta_example_simulates_the_data_it_always_has():
+    # Moving a value inside (0, 1) touches only a value at 0 or 1, and this example has none.
+    p = simulate(os.path.join(SPEC, "beta_proportion.json")).column("prop")
+    assert len(p) == 200
+    assert p[:3] == pytest.approx([0.29928, 0.54044, 0.25637])
+    assert p[-3:] == pytest.approx([0.60073, 0.91115, 0.43263])
+    assert math.fsum(p) == pytest.approx(102.45347)
+
+
 # One specification file is run through both engines, so the same mistake has to be reported the
 # same way by both. Each message below is byte-identical to the R twin's.
 def test_a_whole_version_is_read_the_same_however_it_was_written():

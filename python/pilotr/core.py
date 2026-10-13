@@ -336,10 +336,96 @@ def gamma_mt(rng, shape: float) -> float:
             return d * v
 
 
-def beta_draw(rng, a: float, b: float) -> float:
-    """Beta(a, b) via two Gamma draws: X/(X+Y), X~Gamma(a), Y~Gamma(b)."""
+# The doubles nearest 1 and 0 inside the open interval, where a beta response of exactly 1 or 0 is
+# moved. 1 - 2^-53 is the largest double below 1, and 2^-1074 the smallest positive double, a
+# subnormal. Both products are exact, and core.R forms the same two from .Machine.
+_BETA_HI = 1.0 - sys.float_info.epsilon / 2
+_BETA_LO = sys.float_info.min * sys.float_info.epsilon
+
+
+def _r_g(x) -> str:
+    """`x` as R's ``sprintf("%g")`` writes it. The digits agree, but R spells a value that is not
+    finite as Inf, -Inf or NaN, where Python writes inf, -inf or nan."""
+    x = float(x)
+    if math.isnan(x):
+        return "NaN"
+    if math.isinf(x):
+        return "Inf" if x > 0 else "-Inf"
+    return "%g" % x
+
+
+# Both twins raise these three texts byte for byte.
+def _stop_lognormal_overflow(family: str, eta: float):
+    raise ValueError(
+        "the %s response exp(eta + sigma * z) overflows at a linear predictor of %s, so no "
+        "response can be drawn. Lower the intercept or the coefficients." % (family, _r_g(eta)))
+
+
+def _stop_beta_shape(eta: float, phi: float):
+    raise ValueError(
+        "the beta mean invlogit(eta) at a linear predictor of %s and precision phi = %s leaves a "
+        "shape parameter of zero, so no proportion can be drawn. Keep eta between about -745 and "
+        "36.7 and phi large enough that mu * phi and (1 - mu) * phi stay positive."
+        % (_r_g(eta), _r_g(phi)))
+
+
+def _stop_beta_underflow(eta: float, phi: float):
+    raise ValueError(
+        "both Gamma variates underflowed to zero at a linear predictor of %s and precision "
+        "phi = %s, so the proportion is undefined. Raise phi." % (_r_g(eta), _r_g(phi)))
+
+
+def lognormal_exp(w: float, family: str, eta: float) -> float:
+    """``exp(w)`` for the two lognormal families, where ``w = eta + sigma * z``.
+
+    ``exp()`` overflows beyond about 709.78. ``math.exp`` raised a bare OverflowError there,
+    while the R twin returned Inf for every such row. Both now refuse the value with the same
+    message. The test is on the value, as in R, so an infinite eta, for which ``math.exp``
+    returns inf without raising, is refused too. The refusal names eta, since ``exp(eta)``
+    itself can be finite in a row whose normal draw carries ``w`` past the limit.
+    """
+    try:
+        y = math.exp(w)
+    except OverflowError:
+        y = math.inf
+    if not math.isfinite(y):
+        _stop_lognormal_overflow(family, eta)
+    return y
+
+
+def beta_response(rng, eta: float, phi: float) -> float:
+    """A beta response for linear predictor `eta` and precision `phi`, strictly inside (0, 1).
+
+    The draw is ``x / (x + y)``, where `x` and `y` are Gamma variates with shapes ``mu * phi``
+    and ``(1 - mu) * phi``, drawn in that order, and ``mu = inv_logit(eta)``.
+
+    A shape of zero leaves no distribution to draw from. ``inv_logit(eta)`` rounds to 1 from an
+    eta of about 36.74 and underflows to 0 below about -745.1, and a tiny `phi` can take either
+    product to zero by itself. `gamma_mt` then raised ZeroDivisionError, while the R twin
+    returned exactly 0, 1 or NaN. When both shapes are tiny, both variates can also underflow to
+    zero and leave 0 / 0. Both cases are refused before the division, in the R twin's words.
+
+    Otherwise, the ratio rounds to exactly 1 whenever `y` is below about 2^-54 of `x`, as happens
+    at realistic means near a ceiling, and it is exactly 0 when `x` underflows. brms's ``Beta()``
+    refuses both values, since they lie outside the family's support. Each becomes the nearest
+    double inside the interval, 1 - 2^-53 or 2^-1074. Where both variates were representable, a
+    ratio that rounded to 1 lay between 1 - 2^-53 and 1, so no double inside the interval is
+    nearer the draw. The move is a comparison and draws nothing, so the stream is unchanged.
+    """
+    mu = inv_logit(eta)
+    a, b = mu * phi, (1.0 - mu) * phi
+    if a == 0.0 or b == 0.0:
+        _stop_beta_shape(eta, phi)
     x = gamma_mt(rng, a)
-    return x / (x + gamma_mt(rng, b))
+    y = gamma_mt(rng, b)
+    if x + y == 0.0:
+        _stop_beta_underflow(eta, phi)
+    p = x / (x + y)
+    if p == 1.0:
+        return _BETA_HI
+    if p == 0.0:
+        return _BETA_LO
+    return p
 
 
 # --- Rounding a response: R's round(), src/nmath/fround.c -------------------------
@@ -431,3 +517,43 @@ def fround(x: float, digits) -> float:
         xu = float(math.ceil(x10)) / pow10 / p10
     du, dd = xu - x, x - xd
     return sign * (xu if du < dd or (math.fmod(i10, 2.0) == 1.0 and du == dd) else xd)
+
+
+def beta_round(y: float, digits) -> float:
+    """A beta response rounded by `fround`, with a result of exactly 0 or 1 moved inside (0, 1).
+
+    Rounding sends every value below half a unit in the last place kept to 0. That happened to
+    17% of the rows of one realistic low-mean design, and brms's ``Beta()`` refuses such data. The
+    bounds are the nearest values inside the interval at that many decimals, ``lo = 1 / 10^d``
+    and ``hi = 1 - lo``: `fround` itself returns `lo` up to 22 places and `hi` up to 15.
+    ``10^d`` is built by multiplication, exact up to 22 places and free of either language's
+    ``pow()``. Beyond 22 places `lo` falls back to 2^-1074, and from 17 places, where ``1 - lo``
+    rounds to 1, `hi` falls back to 1 - 2^-53, the bounds of an unrounded response. See
+    "Rounding" in spec/SPEC.md.
+
+    Parameters
+    ----------
+    y : float
+        A beta response, inside (0, 1).
+    digits : int or float
+        Decimal places, read as `fround` reads them.
+
+    Returns
+    -------
+    float
+        The rounded response, strictly inside (0, 1).
+    """
+    y = fround(y, digits)
+    if 0.0 < y < 1.0:
+        return y
+    dig = math.floor(digits + 0.5)  # the number of places fround() itself uses
+    lo = _BETA_LO
+    if 1 <= dig <= 22:
+        p10 = 1.0
+        for _ in range(dig):
+            p10 *= 10.0
+        lo = 1.0 / p10
+    if y <= 0.0:
+        return lo
+    hi = 1.0 - lo
+    return hi if hi < 1.0 else _BETA_HI

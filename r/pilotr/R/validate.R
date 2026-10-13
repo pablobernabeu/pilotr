@@ -528,6 +528,12 @@ validate_spec <- function(spec, strict = TRUE) {
           else if (!fam %in% .rounding_families)
             unknown("'response.round' has no effect for the ", fam,
                     " family, whose outcome is already an integer")
+          # Rounded to whole numbers, every proportion became 0 or 1, outside the family's
+          # support. At one place or more, a proportion rounded onto 0 or 1 is moved inside the
+          # interval (.beta_round() in core.R). At none, the interval holds no value to move to.
+          else if (identical(fam, "beta") && r[["round"]] < 1)
+            bad("'response.round' must be at least 1 for the beta family, because a proportion ",
+                "rounded to whole numbers is 0 or 1, outside the family's support")
         }
       }
     }

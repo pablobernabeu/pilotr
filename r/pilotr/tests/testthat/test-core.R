@@ -145,6 +145,132 @@ test_that("the poisson walk evaluates each term as (p * lambda) / k, as the Pyth
   expect_identical(pilotr:::.poisson_inv(3.7, 0.4941532441504185), 3)
 })
 
+# The edges of the beta and lognormal families. Each count below is the one the Python twin pins,
+# and each refusal is byte-identical to the twin's.
+beta_spec <- function(intercept, phi, n = 4000, seed = 11, grp = 0.5, round = NULL) {
+  spec <- list(name = "b", seed = seed, units = list(subject = list(n = n)),
+               factors = list(list(name = "group", levels = c("a", "b"),
+                                   contrasts = list(grp = c(-0.5, 0.5)), between = "subject")),
+               fixed = list(intercept = intercept, coefficients = list(grp = grp)),
+               response = list(family = "beta", name = "p", phi = phi))
+  spec$response$round <- round
+  spec
+}
+
+beta_shape_refusal <- function(eta, phi) sprintf(paste0(
+  "the beta mean invlogit(eta) at a linear predictor of %s and precision phi = %s leaves a shape ",
+  "parameter of zero, so no proportion can be drawn. Keep eta between about -745 and 36.7 and ",
+  "phi large enough that mu * phi and (1 - mu) * phi stay positive."), eta, phi)
+
+beta_underflow_refusal <- function(eta, phi) sprintf(paste0(
+  "both Gamma variates underflowed to zero at a linear predictor of %s and precision phi = %s, ",
+  "so the proportion is undefined. Raise phi."), eta, phi)
+
+exp_overflow_refusal <- function(family, eta) sprintf(paste0(
+  "the %s response exp(eta + sigma * z) overflows at a linear predictor of %s, so no response ",
+  "can be drawn. Lower the intercept or the coefficients."), family, eta)
+
+test_that("a beta response never equals 1, and moving it inside draws nothing", {
+  # At an intercept of 3 and phi 2, (1 - mu) * phi is about 0.1. The ratio x / (x + y) then rounded
+  # to exactly 1 in 161 of these 4,000 rows, a value brms's Beta() refuses. Each becomes 1 - 2^-53,
+  # the largest double below 1, where 9 draws already lay.
+  p <- simulate_design(beta_spec(3, 2))$p
+  expect_false(any(p == 0 | p == 1))
+  expect_identical(sum(p == 1 - .Machine$double.eps / 2), 170L)
+  # The move draws nothing, so every later row is as it was. These are the sum and the last value
+  # recorded before the change: the 161 moves of 2^-53 lie far inside the tolerance, and a stream
+  # shifted by one draw far outside it.
+  expect_equal(sum(p), 3811.6303419786809, tolerance = 1e-12)
+  expect_equal(p[4000], 0.99719118581120192, tolerance = 1e-12)
+})
+
+test_that("a beta response never equals 0", {
+  # At an intercept of -7, mu * phi is about 0.002, and the first Gamma variate underflowed to zero
+  # in 97 of these 400 rows, each of which was then exactly 0. Each is now 2^-1074, the smallest
+  # positive double.
+  p <- simulate_design(beta_spec(-7, 2, n = 400, grp = 0))$p
+  expect_false(any(p == 0 | p == 1))
+  expect_identical(sum(p == .Machine$double.xmin * .Machine$double.eps), 97L)
+})
+
+test_that("a rounded beta response is moved inside (0, 1) at its number of decimals", {
+  # A low mean rounded to three decimals: 694 of these 4,000 values, 17% of the rows, rounded to
+  # exactly 0. Each becomes 0.001, where 218 values already were.
+  p <- simulate_design(beta_spec(-2.5, 4, seed = 909, round = 3))$p
+  expect_false(any(p == 0 | p == 1))
+  expect_identical(min(p), 0.001)
+  expect_identical(sum(p == 0.001), 912L)
+  # A high mean rounded to three decimals: 2,088 values rounded to exactly 1 and become 0.999.
+  p <- simulate_design(beta_spec(3, 2, round = 3))$p
+  expect_false(any(p == 0 | p == 1))
+  expect_identical(max(p), 0.999)
+  expect_identical(sum(p == 0.999), 2306L)
+})
+
+test_that("the bounds of a rounded beta response follow the specification's rule", {
+  bounds <- function(d) c(pilotr:::.beta_round(0, d), pilotr:::.beta_round(1, d))
+  below_one <- 1 - .Machine$double.eps / 2
+  expect_identical(bounds(1), c(0.1, 0.9))
+  expect_identical(bounds(3), c(0.001, 0.999))
+  expect_identical(bounds(15), c(1e-15, 1 - 1e-15))
+  # 1 - 1e-16 rounds to 1 - 2^-53, and from 17 places 1 - lo rounds to 1 itself, so the upper
+  # bound stays at the largest double below 1.
+  expect_identical(bounds(16), c(1e-16, below_one))
+  expect_identical(bounds(17), c(1e-17, below_one))
+  expect_identical(bounds(22), c(1e-22, below_one))
+  # 10^23 is not a double, so the lower bound falls back to the smallest positive one.
+  expect_identical(bounds(23), c(.Machine$double.xmin * .Machine$double.eps, below_one))
+})
+
+test_that("round = 0 is refused for the beta family", {
+  expect_error(validate_spec(beta_spec(0, 8, round = 0)), paste0(
+    "'response.round' must be at least 1 for the beta family, because a proportion rounded to ",
+    "whole numbers is 0 or 1, outside the family's support"), fixed = TRUE)
+  expect_silent(validate_spec(beta_spec(0, 8, round = 1)))
+})
+
+test_that("a beta response with a shape of zero, or two Gamma variates of zero, is refused", {
+  # invlogit(40) rounds to 1, so (1 - mu) * phi is 0: R returned 1 in every row, and Python raised
+  # ZeroDivisionError. invlogit(-750) underflows to 0, the mirror case, and at -700 with phi 1e-30
+  # mu * phi underflows to 0 although mu does not.
+  expect_error(simulate_design(beta_spec(40, 2, n = 8, grp = 0)), beta_shape_refusal("40", "2"),
+               fixed = TRUE)
+  expect_error(simulate_design(beta_spec(-750, 2, n = 8, grp = 0)),
+               beta_shape_refusal("-750", "2"), fixed = TRUE)
+  expect_error(simulate_design(beta_spec(-700, 1e-30, n = 8, grp = 0)),
+               beta_shape_refusal("-700", "1e-30"), fixed = TRUE)
+  # At phi 0.001 both shapes are 0.0005, and both Gamma variates of a row can underflow to zero.
+  # R returned NaN for 96 of 200 rows, and Python raised ZeroDivisionError.
+  expect_error(simulate_design(beta_spec(0, 0.001, n = 200, grp = 0)),
+               beta_underflow_refusal("0", "0.001"), fixed = TRUE)
+  # Within the bounds the message gives, a proportion is drawn.
+  p <- simulate_design(beta_spec(36.7, 2, n = 8, grp = 0))$p
+  expect_true(all(p > 0 & p < 1))
+})
+
+test_that("a lognormal response that overflows is refused", {
+  rt <- function(family) {
+    spec <- beta_spec(750, 1, n = 8, grp = 0)
+    spec$response <- list(family = family, name = "RT", sigma = 0.3)
+    if (family == "shifted_lognormal") spec$response$shift <- 200
+    spec
+  }
+  # exp(750) overflows, so R returned Inf in every row, and Python raised a bare OverflowError.
+  expect_error(simulate_design(rt("lognormal")), exp_overflow_refusal("lognormal", "750"),
+               fixed = TRUE)
+  expect_error(simulate_design(rt("shifted_lognormal")),
+               exp_overflow_refusal("shifted_lognormal", "750"), fixed = TRUE)
+})
+
+test_that("the shipped beta example simulates the data it always has", {
+  # Moving a value inside (0, 1) touches only a value at 0 or 1, and this example has none.
+  p <- simulate_design(load_spec(pilotr_example("beta_proportion")))$prop
+  expect_identical(length(p), 200L)
+  expect_equal(head(p, 3), c(0.29928, 0.54044, 0.25637))
+  expect_equal(tail(p, 3), c(0.60073, 0.91115, 0.43263))
+  expect_equal(sum(p), 102.45347)
+})
+
 test_that("build_spec carries sigma through for the lognormal family", {
   spec <- build_spec(list(name = "ln", seed = 1, design_kind = "between",
                           factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 10,

@@ -176,6 +176,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one unit in the last place away, which `json` then read as written. The Python package is
   unchanged. A fixture written by R and a parity check over 20,000 numbers now hold the two
   packages to the same reading.
+- Beta responses stay inside (0, 1). Near a ceiling, `x / (x + y)` rounds to exactly 1 in double
+  precision (161 of 4,000 rows at an intercept of 3 and `phi` 2), and rounding sent low
+  proportions to exactly 0 (17% of the rows at three decimals in one realistic design). brms's
+  `Beta()` refuses either value. An exact 1 or 0 now becomes the nearest double inside the
+  interval, a rounded value at 0 or 1 becomes the nearest value inside it at that many decimals,
+  and `validate_spec` refuses `round` 0 for Beta, as the R twin does. No other value changes, so
+  the shipped examples simulate the same data as before. The sampler is
+  `pilotr.core.beta_response(rng, eta, phi)`, which replaces `beta_draw(rng, a, b)`, a function
+  the documented API never included.
+- Extreme linear predictors are refused with the R twin's message. `simulate` raised a bare
+  `OverflowError` for a lognormal or shifted lognormal response whose `exp(eta + sigma * z)`
+  overflowed, and `ZeroDivisionError` for a Beta response whose shape parameter was zero or whose
+  two Gamma variates both underflowed. R returned `Inf`, 0, 1 or `NaN` in the same cases.
 
 ### Deprecated
 

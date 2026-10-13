@@ -1,0 +1,17 @@
+{
+  "spec_version": "0.3",
+  "name": "beta_boundary_rounded",
+  "seed": 2026,
+  "units": { "subject": { "n": 1000 } },
+  "factors": [
+    {
+      "name": "group",
+      "levels": ["low", "high"],
+      "contrasts": { "grp": [-0.5, 0.5] },
+      "between": "subject"
+    }
+  ],
+  "fixed": { "intercept": 0.0, "coefficients": { "grp": 8.0 } },
+  "random": {},
+  "response": { "family": "beta", "name": "p", "phi": 60, "round": 3 }
+}
