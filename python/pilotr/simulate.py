@@ -13,7 +13,7 @@ stream.
 
 from __future__ import annotations
 import json, math, itertools
-from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw
+from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw, fround
 from .validate import validate_spec, _normalise, _repeated_key_message
 
 
@@ -498,7 +498,10 @@ def _simulate(spec) -> Dataset:
         else:
             raise ValueError(f"unknown family: {family}")
         if ndp is not None and isinstance(y, float):
-            y = round(y, ndp)
+            # fround() is R's algorithm, the specification's rule, so a value near a decimal tie
+            # rounds the same way in both twins, where CPython's round() can take the other
+            # candidate.
+            y = fround(y, ndp)
 
         out = {"subject": r["subject"]}
         if has_item:

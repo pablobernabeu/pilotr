@@ -138,6 +138,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of lme4's uncorrelated model to four decimal places in 11 of the 12, and the same 6 replicates
   are significant. A replicate whose Powell fit raises is fitted again with the default chain
   and counts as a fit with a warning.
+- A rounded response is rounded by R's algorithm, so the twins agree at decimal ties. CPython's
+  `round()` rounds the exact binary value, while R takes whichever of the two decimal candidates
+  is nearer in double precision, so `round(1.05, 1)` gave 1.1 in Python and 1 in R. The two
+  disagreed on 166 of 5,000 values probed within a few units in the last place of a tie and on
+  none of 1,000 random values. The shipped examples simulate the same data as before. With
+  `validate=False`, a `round` that is not a whole number, which validation refuses, counts as
+  `floor(round + 0.5)` decimal places, as in R. It raised `TypeError`.
 
 ### Deprecated
 

@@ -387,10 +387,12 @@ simulate_design <- function(spec, validate = TRUE) {
       beta              = { mu <- .inv_logit(eta)
                             .beta_draw(rng, mu * phi, (1 - mu) * phi) },
       stop("unknown family: ", family))
-    # Native round(), which the package's headline claim of exactly identical data for a rounded
-    # family runs through. R's algorithm for a non-zero number of digits changed in 4.0.0, and
-    # the current one agrees with CPython's on every probe measured; that is why DESCRIPTION
-    # declares R (>= 4.0.0), and states a floor at all.
+    # The round() below is R's own, and its algorithm (src/nmath/fround.c, new in R 4.0.0) is the
+    # specification's rounding rule. Of the two candidates with ndp decimals either side of val,
+    # it takes the one nearer in double precision, a tie going to the even one. CPython's round()
+    # works on the exact binary value instead and took the other candidate for 166 of 5,000
+    # values probed near decimal ties, so the Python twin ports R's algorithm as fround(). The
+    # algorithm is also why DESCRIPTION declares R (>= 4.0.0).
     if (!is.null(ndp) && family %in% .rounding_families) val <- round(val, ndp)
     y[r_i] <- val
     subj_v[r_i] <- r$subject; item_v[r_i] <- r$item

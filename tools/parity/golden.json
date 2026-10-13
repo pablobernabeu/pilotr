@@ -14,6 +14,8 @@
     "nested_clusters.noround.txt": "9e9df55ebc4cc950a949d68f48d5ca0d928aabf9f0e0acf7f3c50436bbffaee8",
     "partial_crossing.asis.txt": "c5535eb906bd88f96d128f707a60b2262cc1bf8a075b720e13b2b81c3c6ea575",
     "partial_crossing.noround.txt": "fdc75ba2de8046c308a54b3216355acc8669fbdbe2bb768385cb0b81be5da668",
+    "round_near_tie.asis.txt": "e088877f1ebb56584083c1b9b69a720a7cc403a2f8c263370dd5e7d12ea36635",
+    "round_near_tie.noround.txt": "a2eb802d77dc9afafc4d400ceed4e4669496cec69831bfeb6c034b25dbdc7e84",
     "stress_gaussian_slopes.asis.txt": "a924522775761f9a30023d2305cdf3251bc1dc01b1148f0497dfa44f3388ca3e",
     "stress_gaussian_slopes.noround.txt": "a924522775761f9a30023d2305cdf3251bc1dc01b1148f0497dfa44f3388ca3e",
     "stress_interaction_slopes.asis.txt": "94976a0d18cf2c0ae30632d798109466d88733a5522267f844fb3ebac4f125ee",

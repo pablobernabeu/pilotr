@@ -2,9 +2,10 @@
 
 Everything here is implemented to be bit-identical with the R port. The
 components are a shared L'Ecuyer (1988) combined LCG for uniforms, Wichura's
-AS 241 inverse-normal, a hand-rolled Cholesky factorisation, and inverse-CDF
-transforms for the response families. The routines avoid NumPy randomness, so
-the random stream remains aligned across the two languages.
+AS 241 inverse-normal, a hand-rolled Cholesky factorisation, inverse-CDF
+transforms for the response families and a port of R's round(). The routines
+avoid NumPy randomness, so the random stream remains aligned across the two
+languages.
 """
 
 from __future__ import annotations
@@ -324,3 +325,94 @@ def beta_draw(rng, a: float, b: float) -> float:
     """Beta(a, b) via two Gamma draws: X/(X+Y), X~Gamma(a), Y~Gamma(b)."""
     x = gamma_mt(rng, a)
     return x / (x + gamma_mt(rng, b))
+
+
+# --- Rounding a response: R's round(), src/nmath/fround.c -------------------------
+# log10(2) as Rmath.h writes it, the decimal digits a double always carries (float.h's DBL_DIG)
+# and the largest power of ten a double holds (DBL_MAX_10_EXP).
+
+_M_LOG10_2 = 0.301029995663981195213738894724493027
+_DBL_DIG = 15
+_MAX10E = 308
+
+
+def _pow_di(x: float, n: int) -> float:
+    """`x` to the integer power `n` by binary powering, as R's R_pow_di() computes it.
+
+    10^n is exact up to n = 22 however it is computed. From n = 25, repeated multiplication can
+    land on a different double, so the multiplications have to follow R's order.
+    """
+    xn = 1.0
+    if n != 0:
+        negative = n < 0
+        if negative:
+            n = -n
+        while True:
+            if n & 1:
+                xn *= x
+            n >>= 1
+            if not n:
+                break
+            x *= x
+        if negative:
+            xn = 1.0 / xn
+    return xn
+
+
+def fround(x: float, digits) -> float:
+    """Round `x` to `digits` decimal places exactly as R's ``round(x, digits)`` does.
+
+    A port of R's ``fround()`` (src/nmath/fround.c), whose algorithm dates from R 4.0.0. It
+    returns whichever of ``floor(x * 10^d) / 10^d`` and ``ceil(x * 10^d) / 10^d`` lies nearer to
+    `x` when the distances are computed in double precision, with ``d = digits``. A tie goes to
+    the candidate whose last digit is even. CPython's ``round()`` rounds the exact binary value
+    of `x` instead, so near a decimal tie the two can take different candidates. For instance,
+    ``round(1.05, 1)`` is 1 in R and 1.1 in CPython. See "Rounding" in spec/SPEC.md.
+
+    Parameters
+    ----------
+    x : float
+        The value to round.
+    digits : int or float
+        Decimal places. A value that is not whole counts as ``floor(digits + 0.5)``, as in R.
+
+    Returns
+    -------
+    float
+        The value R's ``round()`` returns, to the bit.
+    """
+    if math.isnan(x) or math.isnan(digits):
+        return x + digits
+    if math.isinf(x) or digits > _MAX10E + _DBL_DIG or x == 0.0:
+        return x
+    if digits < -_MAX10E:
+        return 0.0
+    if digits == 0:
+        # C's nearbyint(): the nearest whole number, a tie going to the even one. CPython's
+        # round() computes exactly that with 0 digits, and keeps the sign of a zero result.
+        return round(x, 0)
+    dig = math.floor(digits + 0.5)
+    sign = 1.0
+    if x < 0.0:
+        sign, x = -1.0, -x
+    # The first term approximates log10(x) from the binary exponent alone. frexp() gives
+    # x = m * 2^e with m in [0.5, 1), so e - 1 is C's logb(x). A rounding position beyond the 15
+    # significant digits a double always carries leaves x as it is.
+    if _M_LOG10_2 * (0.5 + (math.frexp(x)[1] - 1)) + dig > _DBL_DIG:
+        return sign * x
+    if dig <= _MAX10E:
+        pow10 = _pow_di(10.0, dig)
+        x10 = x * pow10
+        i10 = float(math.floor(x10))
+        xd = i10 / pow10
+        xu = float(math.ceil(x10)) / pow10
+    else:
+        # 10^dig would overflow, so R applies 10^308 and then the rest, in that order.
+        p10 = _pow_di(10.0, dig - _MAX10E)
+        pow10 = _pow_di(10.0, _MAX10E)
+        x10 = (x * pow10) * p10
+        i10 = float(math.floor(x10))
+        xd = i10 / pow10 / p10
+        xu = float(math.ceil(x10)) / pow10 / p10
+    du, dd = xu - x, x - xd
+    return sign * (xu if du < dd or (math.fmod(i10, 2.0) == 1.0 and du == dd) else xd)

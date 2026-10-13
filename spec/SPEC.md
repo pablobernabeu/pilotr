@@ -362,7 +362,8 @@ contrast column, a continuous predictor or an `"a:b"` interaction (the product o
 columns), `+` subject random part `+` item random part `+` the random parts of any additional
 grouping factors. `name` sets the output column name. An optional `round` sets the decimal
 rounding of the response, and applies only to the families whose outcome is continuous, the others
-being integers already.
+being integers already. The rounding follows the rule under
+[Rounding](#rounding-identical-across-all-implementations).
 
 ### Names
 
@@ -421,6 +422,42 @@ For the same reason, integer powers are written as repeated multiplication rathe
 measured over 200,000 draws in the Gamma sampler's range the two disagreed on a third of inputs
 by up to 6 ulp. Because that value decides a rejection step, the disagreement also changed how
 many draws were consumed.
+
+## Rounding (identical across all implementations)
+
+Every implementation applies `response.round` by one algorithm, that of R's `round()` from R 4.0.0
+onwards (`src/nmath/fround.c`). The R package calls `round()` itself, and the Python package ports
+it as `pilotr.core.fround()`. Every arithmetic operation below is carried out in double precision
+and rounded to nearest, as IEEE-754 requires. For a response `y` and `round = d`:
+
+1. If `y` is zero, infinite or not a number, it is returned unchanged.
+2. If `d` is 0, `y` becomes the nearest whole number, a tie going to the even one.
+3. Otherwise, let `x = |y|`, with binary exponent `e`, so that `2^e ≤ x < 2^(e+1)`. If
+   `log10(2) · (e + 0.5) + d > 15`, the rounding position lies beyond the 15 significant digits a
+   double always carries, and `y` is returned unchanged.
+4. Otherwise, let `p = 10^d`, `t = x · p`, `lo = floor(t) / p` and `hi = ceil(t) / p`.
+5. The result is `hi` if `hi − x < x − lo`, or if the two are equal and `floor(t)` is odd, and
+   `lo` otherwise, with the sign of `y`.
+
+`10^d` is computed by binary powering, as R's `R_pow_di()` computes it. It works through the
+binary digits of `d` from the lowest, multiplying the result by the base wherever the digit is 1
+and squaring the base before each further digit. The method matters from `d = 25`, where binary
+powering and repeated multiplication land on different doubles, while up to `d = 22` the power is
+exact either way. Beyond 308 places, where `10^d` would overflow, `x` is multiplied by `10^308` and
+then by `10^(d − 308)`, and `floor(t)` and `ceil(t)` are divided by the two in the same order.
+Beyond 323 places, `y` is returned unchanged. Validation accepts only a whole `d` of 0 or more.
+Without it, a `d` that is not whole counts as `floor(d + 0.5)` from step 3 on, a negative `d`
+takes `p = 1 / 10^|d|` and a `d` below −308 gives 0.
+
+CPython's `round()` follows a different rule. It rounds the exact binary value of `y`, whereas
+step 5 compares the two candidates by their distances from `x` as computed in double precision.
+Within a few units in the last place of a decimal tie, the two rules can therefore take different
+candidates. `round(1.05, 1)` is 1 in R, because in double precision `1.1 − 1.05` and `1.05 − 1`
+are equal and `floor(t)`, 10, is even. It is 1.1 in CPython, because the double nearest 1.05 lies
+just above it. `tools/parity/round_probes.R` writes 5,000 such values with R's results to
+`python/tests/fixtures/r_round_probes.csv`, and CPython's `round()` took the other candidate for
+166 of them. It agreed with R on all 1,000 random values in the same file. The parity case
+`tools/parity/cases/round_near_tie.json` checks the rule end to end.
 
 ## RNG contract (identical across all implementations)
 
