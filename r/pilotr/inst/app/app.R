@@ -60,6 +60,17 @@ N_SIMS_MIN     <- 100L    # the smallest count the box accepts
   if (length(v) != 1L || is.na(v)) N_SIMS_DEFAULT else min(max(v, N_SIMS_MIN), MAX_SIMS)
 }
 
+# Type S and Type M are shown with the Monte Carlo error power_design() reports for each. Type S
+# has a Wilson interval and Type M a standard error. A rate whose error is undefined is shown
+# bare, as before. That happens to both at a zero true effect, and to Type M when a single
+# replicate is significant. app-lite/app.R formats them in the same way.
+type_s_text <- function(r)
+  if (is.na(r$type_s_lo)) sprintf("%.4f", r$type_s) else
+    sprintf("%.4f (95%% Wilson [%.4f, %.4f])", r$type_s, r$type_s_lo, r$type_s_hi)
+type_m_text <- function(r)
+  if (is.na(r$type_m_mcse)) sprintf("%.3f", r$type_m) else
+    sprintf("%.3f ± %.3f (MCSE)", r$type_m, r$type_m_mcse)
+
 # Async only when running as the installed package with future+promises (workers reload the
 # package). From source / serverless this is FALSE and power runs synchronously.
 .async_ok <- isNamespaceLoaded("pilotr") &&
@@ -108,8 +119,9 @@ guide_tab <- tabPanel(
            "interactions and nesting."),
     tags$h5("Power and design analysis"),
     tags$p("The in-app backend estimates power for the two-group Gaussian design with one row ",
-           "per subject. It reports the Type S and Type M errors of Gelman and Carlin (2014) and ",
-           "draws a power curve over sample size. It then solves that curve for the sample size ",
+           "per subject. It reports power and the Type S and Type M errors of Gelman and Carlin ",
+           "(2014), each with its Monte Carlo error, and draws a power curve over sample size. ",
+           "It then solves that curve for the sample size ",
            "at which power reaches 0.80 and reports a confidence interval on it. The heavier ",
            "analyses stay with the packages themselves: crossed mixed-effects power (via lme4) ",
            "in R and in Python, and precision/ROPE design analysis in R. The specification you ",
@@ -480,8 +492,13 @@ server <- function(input, output, session) {
     txt <- if (is.null(r))
       sprintf("Set the number of simulations (capped at %d in the app, unlimited once you install the package), then select Run power analysis.", MAX_SIMS)
     else if (!is.null(r$msg)) r$msg
-    else sprintf("Simulations  : %d\nPower        : %.3f\nType S error : %.4f\nType M (exag): %.3f\nTrue effect  : %.3f | mean estimate: %.3f",
-                 r$n_sims, r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate)
+    else paste0(
+      sprintf("Simulations  : %d\n", r$n_sims),
+      sprintf("Power        : %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])\n",
+              r$power, r$power_mcse, r$power_lo, r$power_hi),
+      "Type S error : ", type_s_text(r), "\n",
+      "Type M (exag): ", type_m_text(r), "\n",
+      sprintf("True effect  : %.3f | mean estimate: %.3f", r$true_effect, r$mean_estimate))
     paste0(txt, strrep(" ", n %% 2))
   })
   output$power_plot <- renderPlot({

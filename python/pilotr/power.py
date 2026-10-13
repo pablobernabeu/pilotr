@@ -9,6 +9,9 @@ replicates.
 * Type S (sign) error: P(estimate has the wrong sign | significant)
 * Type M (magnitude): E(|estimate| / |true effect| | significant)  (exaggeration ratio)
 
+Each of the three comes with its Monte Carlo error, from `pilotr.mcse`: power with its standard
+error and Wilson interval, Type S with a Wilson interval and Type M with its standard error.
+
 The two-group Gaussian design with one row per subject uses a two-sample t-test (`power`).
 Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which fits
 independent variance components by REML and tests the effect with a Wald z. The R package's
@@ -26,6 +29,7 @@ from __future__ import annotations
 import copy, functools, math, statistics, warnings
 from .simulate import _simulate, _as_spec, load_spec
 from .core import replicate_seeds
+from .mcse import _rate_with_error, _type_m_mcse, _type_s_interval
 from .validate import _name_list
 
 
@@ -138,11 +142,22 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     Returns
     -------
     dict
-        Keys: `n_sims`, `alpha`, `power`, `n_significant`, `true_effect`, `mean_estimate`,
-        `type_s`, `type_m`. Both design-analysis quantities are `nan` when no replicate
-        reached significance and when the true effect is zero, as in a null condition:
-        neither is defined without a true value to compare against, and Type M divides by it.
-        A specification with no coefficient for the factor's contrast has a true effect of 0.
+        Keys: `n_sims`, `alpha`, `power`, `power_mcse` (its Monte Carlo standard error),
+        `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`, `true_effect`,
+        `mean_estimate`, `type_s`, `type_s_lo` and `type_s_hi` (its 95% Wilson interval),
+        `type_m` and `type_m_mcse` (its Monte Carlo standard error). Both design-analysis
+        quantities are `nan` when no replicate reached significance and when the true effect is
+        zero, as in a null condition: neither is defined without a true value to compare
+        against, and Type M divides by it. Their interval and standard error are `nan` then too,
+        and `type_m_mcse` is also `nan` when a single replicate reached significance, since a
+        standard deviation needs two. A specification with no coefficient for the factor's
+        contrast has a true effect of 0.
+
+        Only the significant replicates inform Type S and Type M, and they are often few. Type S
+        comes with a Wilson interval, since its standard error is zero whenever no sign is wrong.
+        Type M comes with its standard error, the standard deviation of the exaggeration ratios
+        over the square root of their number. Each is computed as in the R twin's
+        ``power_design()``, operation for operation, so the same counts give the same doubles.
 
     Raises
     ------
@@ -192,23 +207,27 @@ def _power_impl(spec, n_sims, alpha, executor):
     pvals = [r[1] for r in results]
 
     sig = [i for i, p in enumerate(pvals) if p < alpha]
-    power_val = len(sig) / n_sims
     # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
     # stay nan when the true effect is zero. The alternative was a division by zero, alongside a
     # sign-error rate that had quietly become "the estimate is positive". Same rule as
     # power_mixed(), and the null condition the sweep documentation recommends is exactly this
-    # case.
+    # case. Each carries its Monte Carlo error, nan wherever the rate is.
     if sig and not math.isnan(true_effect) and true_effect != 0:
-        type_s = sum(1 for i in sig if (estimates[i] > 0) != (true_effect > 0)) / len(sig)
-        type_m = statistics.mean(abs(estimates[i]) / abs(true_effect) for i in sig)
+        n_wrong = sum(1 for i in sig if (estimates[i] > 0) != (true_effect > 0))
+        ratios = [abs(estimates[i]) / abs(true_effect) for i in sig]
+        type_s = n_wrong / len(sig)
+        type_s_lo, type_s_hi = _type_s_interval(n_wrong, len(sig), true_effect)
+        type_m = statistics.mean(ratios)
+        type_m_mcse = _type_m_mcse(ratios)  # nan with a single significant replicate
     else:
-        type_s = type_m = float("nan")
+        type_s = type_s_lo = type_s_hi = type_m = type_m_mcse = float("nan")
 
     return {
-        "n_sims": n_sims, "alpha": alpha, "power": power_val,
+        "n_sims": n_sims, "alpha": alpha, **_rate_with_error(len(sig), n_sims, "power"),
         "n_significant": len(sig), "true_effect": true_effect,
         "mean_estimate": statistics.mean(estimates),
-        "type_s": type_s, "type_m": type_m,
+        "type_s": type_s, "type_s_lo": type_s_lo, "type_s_hi": type_s_hi,
+        "type_m": type_m, "type_m_mcse": type_m_mcse,
     }
 
 
@@ -466,7 +485,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     dict
         Keys: `backend` (the estimator and its test), `n_sims`, `alpha`, the fit counts
         `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`, then `power`,
-        `n_significant`, `true_effect`, `mean_estimate`, `type_s` and `type_m`.
+        `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`,
+        `type_s`, `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`, as in `power`.
 
         The fit counts mean what they mean in the R twin. `n_attempted` is `n_sims`, and
         `n_returned` counts the replicates that returned an estimate and a p-value. `power` is
@@ -479,9 +499,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         that are neither singular nor warned. statsmodels' notice that a fit may be on the
         boundary counts towards none of them, since it comes with every fit that has a variance
         component below 0.01. Singular fits and fits with a warning stay in `power`, as in the R
-        twin. `type_s` and `type_m` are `nan` when no replicate reached significance and when the
+        twin. `power_mcse`, `power_lo` and `power_hi` are taken over the same returned fits.
+        `type_s` and `type_m` are `nan` when no replicate reached significance and when the
         true effect is zero. `mean_estimate` and `type_m` are also `nan` for a ``bernoulli``,
-        ``poisson``, ``ordinal`` or ``beta`` response, whose true effect is on a link scale.
+        ``poisson``, ``ordinal`` or ``beta`` response, whose true effect is on a link scale. The
+        interval of `type_s` and the standard error of `type_m` are `nan` wherever their rate is,
+        and `type_m_mcse` also when a single replicate reached significance.
 
     Raises
     ------
@@ -553,8 +576,13 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     pv = [r["p"] for r in fits]
 
     sig = [i for i, p in enumerate(pv) if p < alpha]
-    # See _power_impl: a zero true effect leaves both design-analysis quantities undefined.
+    # See _power_impl: a zero true effect leaves both design-analysis quantities undefined, and
+    # their Monte Carlo errors with them. Type M's is withheld with Type M.
     usable = bool(sig) and not math.isnan(beta) and beta != 0
+    n_wrong = sum(1 for i in sig if (est[i] > 0) != (beta > 0)) if usable else 0
+    ratios = [abs(est[i]) / abs(beta) for i in sig] if usable and not withheld else []
+    type_s_lo, type_s_hi = (_type_s_interval(n_wrong, len(sig), beta) if usable
+                            else (float("nan"), float("nan")))
     return {
         "backend": "statsmodels MixedLM (crossed variance components, REML; Wald z tests)",
         "n_sims": n_sims, "alpha": alpha,
@@ -564,14 +592,20 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         "n_converged": sum(r["converged"] for r in fits),
         "n_singular": sum(r["singular"] for r in fits),
         "n_warning": sum(r["warned"] for r in fits),
-        "power": len(sig) / len(pv) if pv else float("nan"),
+        **_rate_with_error(len(sig), len(pv), "power"),
         "n_significant": len(sig), "true_effect": beta,
         "mean_estimate": statistics.mean(est) if est and not withheld else float("nan"),
-        "type_s": (sum(1 for i in sig if (est[i] > 0) != (beta > 0)) / len(sig))
-                  if usable else float("nan"),
-        "type_m": statistics.mean(abs(est[i]) / abs(beta) for i in sig)
-                  if usable and not withheld else float("nan"),
+        "type_s": n_wrong / len(sig) if usable else float("nan"),
+        "type_s_lo": type_s_lo, "type_s_hi": type_s_hi,
+        "type_m": statistics.mean(ratios) if ratios else float("nan"),
+        "type_m_mcse": _type_m_mcse(ratios),
     }
+
+
+# What each power_curve() record keeps of a power() result. A record used to hold power and Type M
+# without their Monte Carlo errors, and no Type S.
+_CURVE_KEYS = ("power", "power_mcse", "power_lo", "power_hi", "type_s", "type_s_lo", "type_s_hi",
+               "type_m", "type_m_mcse", "n_sims", "n_significant")
 
 
 def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
@@ -598,9 +632,11 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
     Returns
     -------
     list of dict
-        One dict per grid point, with keys `n_subject`, `power`, `type_m`, `n_sims` and
-        `n_significant`. The two counts are what `solve_curve` weights the curve by, since a
-        power estimate over 1000 replicates should count for more than one over 50.
+        One dict per grid point, with keys `n_subject`, `power`, `power_mcse`, `power_lo`,
+        `power_hi`, `type_s`, `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, `n_sims` and
+        `n_significant`, each as `power` returns it. `power_lo` and `power_hi` give the band to
+        draw around a plotted curve. The two counts are what `solve_curve` weights the curve by,
+        since a power estimate over 1000 replicates should count for more than one over 50.
 
     See Also
     --------
@@ -616,8 +652,7 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
             s = copy.deepcopy(spec)
             s["units"]["subject"]["n"] = n
             r = _power_impl(s, n_sims, alpha, executor)
-            out.append({"n_subject": n, "power": r["power"], "type_m": r["type_m"],
-                        "n_sims": r["n_sims"], "n_significant": r["n_significant"]})
+            out.append({"n_subject": n, **{k: r[k] for k in _CURVE_KEYS}})
         return out
 
     if workers == 1:

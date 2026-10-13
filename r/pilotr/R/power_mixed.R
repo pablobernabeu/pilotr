@@ -70,7 +70,11 @@
 #'
 #' Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 #' proportion over a finite number of replicates is an estimate rather than a fact. At the default
-#' 100 replicates a power near 0.5 has a standard error of 0.05.
+#' 100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
+#' the significant replicates alone, which may be few. Each carries its own Monte Carlo error.
+#' Type S has a Wilson interval, since its standard error would be zero whenever no sign is wrong.
+#' Type M has its standard error, the standard deviation of the exaggeration ratios over the square
+#' root of their number.
 #'
 #' @param spec A design specification (path or list).
 #' @param focal The fixed effects to test. `NULL`, the default, tests every coefficient in the
@@ -96,12 +100,14 @@
 #' @return An object of class `pilotr_power`, a list whose per-run elements are `n_sims`,
 #'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
-#'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s` and
-#'   `type_m`. With a single focal effect each of those has length one, so `result$power` reads as
-#'   it always has. `fitter` names the fitter and its test, such as
-#'   `"lme4::glmer (binomial), Wald z"`. `mean_estimate` and `type_m` are `NA` for an `ordinal` or
-#'   `beta` response fitted on its own scale, and so is the `type_s` of an interaction (see
-#'   Details).
+#'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s`,
+#'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect each of
+#'   those has length one, so `result$power` reads as it always has. `fitter` names the fitter and
+#'   its test, such as `"lme4::glmer (binomial), Wald z"`. `mean_estimate` and `type_m` are `NA`
+#'   for an `ordinal` or `beta` response fitted on its own scale, and so is the `type_s` of an
+#'   interaction (see Details). `type_s_lo` and `type_s_hi`, the Wilson interval of `type_s`, and
+#'   `type_m_mcse`, the Monte Carlo standard error of `type_m`, are `NA` wherever their rate is,
+#'   and `type_m_mcse` also when a single replicate reached significance.
 #'
 #'   `power` is the proportion of significant results among the replicates that returned an
 #'   estimate for that effect, not among `n_sims`. The counts report the fit outcomes separately,
@@ -211,7 +217,7 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 
   seen <- stats::setNames(integer(length(fnames)), fnames)
   blank <- stats::setNames(rep(NA_real_, length(fnames)), fnames)
-  power <- mcse <- lo <- hi <- type_s <- type_m <- mean_est <- blank
+  power <- mcse <- lo <- hi <- type_s <- s_lo <- s_hi <- type_m <- m_mcse <- mean_est <- blank
   n_sig <- stats::setNames(integer(length(fnames)), fnames)
 
   for (f in fnames) {
@@ -231,10 +237,20 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     # stay NA when the true effect is unknown or zero rather than reporting an infinity. Type S
     # compares signs alone, which a monotone link keeps for a main effect, so it survives a fit on
     # the response scale except for an interaction. Type M compares magnitudes, which the link
-    # changes.
+    # changes. Each carries its Monte Carlo error and is withheld together with it: a Wilson
+    # interval for Type S and a standard error for Type M, which needs two significant replicates.
     if (length(sig) && !is.na(beta) && beta != 0) {
-      if (!(f %in% interactions)) type_s[f] <- mean((est[sig] > 0) != (beta > 0))
-      if (!withheld) type_m[f] <- mean(abs(est[sig]) / abs(beta))
+      if (!(f %in% interactions)) {
+        wrong <- (est[sig] > 0) != (beta > 0)
+        type_s[f] <- mean(wrong)
+        ci <- .type_s_interval(sum(wrong), length(sig), beta)
+        s_lo[f] <- ci[1]; s_hi[f] <- ci[2]
+      }
+      if (!withheld) {
+        ratios <- abs(est[sig]) / abs(beta)
+        type_m[f] <- mean(ratios)
+        m_mcse[f] <- .type_m_mcse(ratios)
+      }
     }
   }
   .warn_no_fits(res, n_returned, formula)
@@ -245,19 +261,22 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
            .fit_counts(res, n_sims, n_returned),
            list(power = power, power_mcse = mcse, power_lo = lo, power_hi = hi,
                 n_significant = n_sig, true_effect = fo$true[fnames],
-                mean_estimate = mean_est, type_s = type_s, type_m = type_m))
+                mean_estimate = mean_est, type_s = type_s, type_s_lo = s_lo, type_s_hi = s_hi,
+                type_m = type_m, type_m_mcse = m_mcse))
   class(out) <- c("pilotr_power", "list")
   out
 }
 
 #' Print a simulation-based power result
 #'
-#' Shows the fit accounting and then one row per focal effect, with each power estimate beside its
-#' Monte Carlo standard error and Wilson interval, so that the precision of the estimate is as
-#' visible as the estimate.
+#' Shows the fit accounting and then two tables with one row per focal effect. The first gives
+#' each power estimate beside its Monte Carlo standard error and Wilson interval, so that the
+#' precision of the estimate is as visible as the estimate. The second gives Type S beside its
+#' Wilson interval and Type M beside its Monte Carlo standard error, both taken over the
+#' significant replicates alone.
 #'
 #' @param x A `pilotr_power` object, as returned by [power_mixed()].
-#' @param digits Number of significant digits for the reported rates.
+#' @param digits Number of decimal places for the reported rates and for the interval bounds.
 #' @param ... Ignored, present for consistency with the generic.
 #' @return `x`, invisibly.
 #' @export
@@ -269,18 +288,31 @@ print.pilotr_power <- function(x, digits = 3, ...) {
               x$n_attempted, x$n_returned, x$n_converged, x$n_singular, x$n_warning))
   if (x$n_singular > 0.25 * max(x$n_attempted, 1))
     cat("  note: many fits were boundary-singular, so this model is richer than the design supports\n")
-  tab <- data.frame(
-    effect = names(x$power),
+  # The bounds take `digits` as the rates do. They were written with three decimals whatever
+  # `digits` said.
+  interval <- function(lo, hi)
+    ifelse(is.na(lo), NA_character_, sprintf("[%.*f, %.*f]", digits, lo, digits, hi))
+  effect <- names(x$power)
+  print(data.frame(
+    effect = effect,
     true = unname(x$true_effect),
     power = round(unname(x$power), digits),
     mcse = round(unname(x$power_mcse), digits),
-    ci95 = ifelse(is.na(x$power_lo), NA_character_,
-                  sprintf("[%.3f, %.3f]", unname(x$power_lo), unname(x$power_hi))),
+    ci95 = interval(unname(x$power_lo), unname(x$power_hi)),
     n_sig = unname(x$n_significant),
-    type_s = round(unname(x$type_s), digits),
-    type_m = round(unname(x$type_m), digits),
-    row.names = NULL, stringsAsFactors = FALSE)
-  print(tab, row.names = FALSE)
+    row.names = NULL, stringsAsFactors = FALSE), row.names = FALSE)
+  # Only the n_sig significant replicates inform Type S and Type M, so each is shown with its
+  # uncertainty, in a second table that keeps both within 80 columns. A result saved by a version
+  # that did not report the uncertainty prints the two rates alone.
+  cat("  Type S and Type M, over the significant replicates:\n")
+  design <- data.frame(effect = effect, type_s = round(unname(x$type_s), digits),
+                       row.names = NULL, stringsAsFactors = FALSE)
+  if (!is.null(x$type_s_lo))
+    design$type_s_ci95 <- interval(unname(x$type_s_lo), unname(x$type_s_hi))
+  design$type_m <- round(unname(x$type_m), digits)
+  if (!is.null(x$type_m_mcse))
+    design$type_m_mcse <- round(unname(x$type_m_mcse), digits)
+  print(design, row.names = FALSE)
   invisible(x)
 }
 
@@ -319,9 +351,10 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   identical to a serial run.
 #' @return A data frame with one row per sample size and focal effect, with columns `n_subject`,
 #'   `effect`, `true`, `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `type_s`,
-#'   `type_m`, the `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning` fit
-#'   counts, and `fitter`, as in [power_mixed()]. `n_singular` typically falls as the sample size
-#'   rises, so reading it down the sweep shows where the model becomes supportable.
+#'   `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, the `n_attempted`, `n_returned`,
+#'   `n_converged`, `n_singular` and `n_warning` fit counts, and `fitter`, as in [power_mixed()].
+#'   `n_singular` typically falls as the sample size rises, so reading it down the sweep shows
+#'   where the model becomes supportable.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
 #'   of generalized linear mixed models by simulation. \emph{Methods in Ecology and
 #'   Evolution}, 7(4), 493-498. \doi{10.1111/2041-210x.12504}
@@ -364,7 +397,8 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
     power = unname(x$power), power_mcse = unname(x$power_mcse),
     power_lo = unname(x$power_lo), power_hi = unname(x$power_hi),
     n_significant = unname(x$n_significant),
-    type_s = unname(x$type_s), type_m = unname(x$type_m),
+    type_s = unname(x$type_s), type_s_lo = unname(x$type_s_lo), type_s_hi = unname(x$type_s_hi),
+    type_m = unname(x$type_m), type_m_mcse = unname(x$type_m_mcse),
     n_attempted = x$n_attempted, n_returned = x$n_returned, n_converged = x$n_converged,
     n_singular = x$n_singular, n_warning = x$n_warning,
     fitter = if (is.null(x$fitter)) NA_character_ else x$fitter,

@@ -37,6 +37,19 @@ At roughly 50% power the Type M ratio is well above 1. Conditional on significan
 estimated effect is exaggerated, even though the average estimate over all replicates is
 unbiased. This is the statistical-significance filter that design analysis is meant to expose.
 
+Power is a proportion over the `n_sims` replicates, so it comes with its Monte Carlo error.
+`power_mcse` is its standard error, and `power_lo` and `power_hi` bound its 95% Wilson interval,
+which stays between 0 and 1 and does not shrink to a point when power is 0 or 1. Type S and
+Type M rest on the significant replicates alone, so they settle more slowly than power.
+`type_s_lo` and `type_s_hi` bound a Wilson interval for Type S, whose plain standard error would
+be zero whenever no sign is wrong, and `type_m_mcse` is the standard error of Type M.
+
+```python exec="true" source="material-block" session="pow"
+print(table([{k: res[k] for k in (
+    "power_mcse", "power_lo", "power_hi", "type_s_lo", "type_s_hi", "type_m_mcse"
+)}]))
+```
+
 The t-test treats every row as an independent observation, which is valid only when each
 subject contributes one row and no rows share a cluster. Take 30 subjects crossed with 20
 items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3. With no
@@ -53,18 +66,16 @@ from row to row.
 
 ```python exec="true" source="material-block" html="true" session="pow"
 import matplotlib.pyplot as plt
-from math import sqrt
 from pilotr import power_curve, target_n
 
 n_sims = 200
 curve = power_curve(spec, subject_ns=[16, 32, 48, 64, 96, 128, 160, 192], n_sims=n_sims)
 ns = [p["n_subject"] for p in curve]
 pw = [p["power"] for p in curve]
-# Each power estimate is a proportion over n_sims replicates, so it carries a
-# binomial Monte Carlo standard error. The shaded band is the 95% interval.
-se = [sqrt(p * (1 - p) / n_sims) for p in pw]
-lo = [max(0, p - 1.96 * s) for p, s in zip(pw, se)]
-hi = [min(1, p + 1.96 * s) for p, s in zip(pw, se)]
+# Each power estimate is a proportion over n_sims replicates, and each record
+# carries its 95% Wilson interval, which the shaded band draws.
+lo = [p["power_lo"] for p in curve]
+hi = [p["power_hi"] for p in curve]
 
 # The sample size the curve solves to, drawn as a vertical band. The next
 # section explains the call.
@@ -82,9 +93,9 @@ ax.set_ylabel("Power")
 print(show(fig))
 ```
 
-The shaded horizontal band along the curve is the Monte Carlo interval, the binomial standard
-error of each power estimate over the `n_sims` replicates widened to a 95% envelope. The
-vertical band is the solved sample size, with its own interval.
+The shaded horizontal band along the curve is the Monte Carlo interval of each power estimate,
+the 95% Wilson interval over its `n_sims` replicates that `power_curve` returns as `power_lo`
+and `power_hi`. The vertical band is the solved sample size, with its own interval.
 
 ## The sample size the curve implies
 

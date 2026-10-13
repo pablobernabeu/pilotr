@@ -11,8 +11,8 @@ power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
 row per subject (see Details).}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
-standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
-\code{type_m} average over the significant replicates alone, so they settle more
+standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported as \code{power_mcse}, and
+\code{type_s} and \code{type_m} average over the significant replicates alone, so they settle more
 slowly still. At least 200 replicates are advisable for study planning.}
 
 \item{alpha}{Two-sided significance level.}
@@ -22,13 +22,17 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 \code{\link[=replicate_seeds]{replicate_seeds()}}, any worker count returns results identical to a serial run.}
 }
 \value{
-A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{n_significant},
-\code{true_effect}, \code{mean_estimate}, \code{type_s} (sign-error rate among significant
-replicates), and \code{type_m} (mean exaggeration ratio among significant
-replicates). Both design-analysis quantities are \code{NaN} when no replicate reached
+A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{power_mcse} (its Monte Carlo
+standard error), \code{power_lo} and \code{power_hi} (its 95\% Wilson interval), \code{n_significant},
+\code{true_effect} and \code{mean_estimate}. Then come \code{type_s} (sign-error rate among significant
+replicates), \code{type_s_lo} and \code{type_s_hi} (its 95\% Wilson interval), \code{type_m} (mean
+exaggeration ratio among significant replicates) and \code{type_m_mcse} (its Monte Carlo
+standard error). Both design-analysis quantities are \code{NaN} when no replicate reached
 significance and when the true effect is zero, as in the null condition
-\code{\link[=design_conditions]{design_conditions()}} produces: neither is defined without a true value to
-compare against, and Type M divides by it.
+\code{\link[=design_conditions]{design_conditions()}} produces: neither is defined without a true value to compare
+against, and Type M divides by it. Their interval and standard error are \code{NaN} then too,
+and \code{type_m_mcse} is also \code{NaN} when a single replicate reached significance, since a
+standard deviation needs two.
 }
 \description{
 Estimate power by repeatedly simulating from the specification and applying a two-sample
@@ -48,6 +52,14 @@ no true effect, a t-test of every row is significant in about half of all replic
 
 A specification with no coefficient for the factor's contrast has a true effect of 0, so
 \code{type_s} and \code{type_m} are \code{NaN}.
+
+Power, Type S and Type M are each estimated from a finite number of replicates, so each is
+reported with its Monte Carlo error. Power has its standard error and a 95\% Wilson interval,
+one of the intervals Brown, Cai and DasGupta (2001) recommend in place of the Wald interval. It
+stays between 0 and 1 and does not shrink to a point when power is 0 or 1. Type S and Type M
+rest on the significant replicates alone, often a handful. Type S has a Wilson interval,
+because its standard error is zero whenever no sign is wrong. Type M has its standard error,
+the standard deviation of the exaggeration ratios over the square root of their number.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
@@ -57,6 +69,10 @@ spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
 power_design(spec, n_sims = 50)
 }
 \references{
+Brown, L. D., Cai, T. T. and DasGupta, A. (2001). Interval estimation for a
+binomial proportion. \emph{Statistical Science}, 16(2), 101-133.
+\doi{10.1214/ss/1009213286}
+
 Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 9(6), 641-651. \doi{10.1177/1745691614551642}

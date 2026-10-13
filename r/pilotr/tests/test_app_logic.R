@@ -32,6 +32,11 @@ tmp <- tempfile(fileext = ".json"); writeLines(spec_json(spec), tmp)
 check(isTRUE(all.equal(d$score, simulate_design(load_spec(tmp))$score)), "JSON round-trip reproduces identical data")
 res <- power_design(spec, n_sims = 500)
 check(res$power > 0.3 && res$power < 0.7, sprintf("power in plausible range (%.3f)", res$power))
+# power_design() takes the Monte Carlo errors the app shows from mcse.R, so the subset has to
+# carry that file as well.
+check(all(c("power_mcse", "power_lo", "power_hi", "type_s_lo", "type_s_hi", "type_m_mcse")
+          %in% names(res)) && res$power_lo < res$power && res$power < res$power_hi,
+      "power_design() returns its Monte Carlo errors from the browser build's engine subset")
 
 p_within <- list(name = "ui_crossed", seed = 90210, n_subject = 30, include_items = TRUE,
                  n_item = 24, design_kind = "within", factor_name = "condition",

@@ -47,12 +47,14 @@ mixed-model fits dominate the cost, so the speed-up is close to linear in the nu
 An object of class \code{pilotr_power}, a list whose per-run elements are \code{n_sims},
 \code{alpha}, \code{fitter}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning},
 and whose per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse},
-\code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s} and
-\code{type_m}. With a single focal effect each of those has length one, so \code{result$power} reads as
-it always has. \code{fitter} names the fitter and its test, such as
-\code{"lme4::glmer (binomial), Wald z"}. \code{mean_estimate} and \code{type_m} are \code{NA} for an \code{ordinal} or
-\code{beta} response fitted on its own scale, and so is the \code{type_s} of an interaction (see
-Details).
+\code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s},
+\code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect each of
+those has length one, so \code{result$power} reads as it always has. \code{fitter} names the fitter and
+its test, such as \code{"lme4::glmer (binomial), Wald z"}. \code{mean_estimate} and \code{type_m} are \code{NA}
+for an \code{ordinal} or \code{beta} response fitted on its own scale, and so is the \code{type_s} of an
+interaction (see Details). \code{type_s_lo} and \code{type_s_hi}, the Wilson interval of \code{type_s}, and
+\code{type_m_mcse}, the Monte Carlo standard error of \code{type_m}, are \code{NA} wherever their rate is,
+and \code{type_m_mcse} also when a single replicate reached significance.
 
 \code{power} is the proportion of significant results among the replicates that returned an
 estimate for that effect, not among \code{n_sims}. The counts report the fit outcomes separately,
@@ -125,7 +127,11 @@ model's. A named numeric \code{focal} gives the true values on the model's scale
 
 Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 proportion over a finite number of replicates is an estimate rather than a fact. At the default
-100 replicates a power near 0.5 has a standard error of 0.05.
+100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
+the significant replicates alone, which may be few. Each carries its own Monte Carlo error.
+Type S has a Wilson interval, since its standard error would be zero whenever no sign is wrong.
+Type M has its standard error, the standard deviation of the exaggeration ratios over the square
+root of their number.
 }
 \examples{
 \donttest{

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Every rate carries its Monte Carlo error. `power` and `power_mixed` gain `power_mcse`,
+  `power_lo` and `power_hi`, the standard error and 95% Wilson interval of power. Both also gain
+  `type_m_mcse`, the standard error of Type M, and a Wilson interval for Type S, `type_s_lo` and
+  `type_s_hi`, since the standard error of Type S is zero whenever no sign is wrong. Each
+  `power_curve` record gains the same keys and `type_s`, which it lacked. Type S and Type M rest
+  on the significant replicates alone, which are often a handful, yet they were reported without
+  any uncertainty. The values are computed as in the R twin, operation for operation, so the same
+  counts give the same doubles in both languages, and both test suites pin them. The power guide
+  draws the band around its curve from `power_lo` and `power_hi`, where it had computed a Wald
+  band by hand, which narrows to nothing where power reaches 0 or 1.
+
 ### Changed
 
 - The home page gives the Zenodo concept DOI as a full link,

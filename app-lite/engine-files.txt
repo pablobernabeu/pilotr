@@ -16,10 +16,14 @@
 # solve_curve.R is in the subset because the app draws a power curve against a
 # target line, and reporting where the curve meets it is the point of drawing it.
 # The file needs nothing beyond base R and core.R.
+#
+# mcse.R is in the subset because power_design() in power.R reports each rate with
+# its Monte Carlo error, which mcse.R computes. It needs nothing beyond base R.
 core.R
 simulate.R
 parallel.R
 power.R
+mcse.R
 solve_curve.R
 validate.R
 spec_builder.R

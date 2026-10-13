@@ -20,24 +20,40 @@
 #' A specification with no coefficient for the factor's contrast has a true effect of 0, so
 #' `type_s` and `type_m` are `NaN`.
 #'
+#' Power, Type S and Type M are each estimated from a finite number of replicates, so each is
+#' reported with its Monte Carlo error. Power has its standard error and a 95% Wilson interval,
+#' one of the intervals Brown, Cai and DasGupta (2001) recommend in place of the Wald interval. It
+#' stays between 0 and 1 and does not shrink to a point when power is 0 or 1. Type S and Type M
+#' rest on the significant replicates alone, often a handful. Type S has a Wilson interval,
+#' because its standard error is zero whenever no sign is wrong. Type M has its standard error,
+#' the standard deviation of the exaggeration ratios over the square root of their number.
+#'
 #' @param spec A design specification (path or list) for a two-group Gaussian design with one
 #'   row per subject (see Details).
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
-#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and
-#'   `type_m` average over the significant replicates alone, so they settle more
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, reported as `power_mcse`, and
+#'   `type_s` and `type_m` average over the significant replicates alone, so they settle more
 #'   slowly still. At least 200 replicates are advisable for study planning.
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
-#' @return A list with elements `n_sims`, `alpha`, `power`, `n_significant`,
-#'   `true_effect`, `mean_estimate`, `type_s` (sign-error rate among significant
-#'   replicates), and `type_m` (mean exaggeration ratio among significant
-#'   replicates). Both design-analysis quantities are `NaN` when no replicate reached
+#' @return A list with elements `n_sims`, `alpha`, `power`, `power_mcse` (its Monte Carlo
+#'   standard error), `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`,
+#'   `true_effect` and `mean_estimate`. Then come `type_s` (sign-error rate among significant
+#'   replicates), `type_s_lo` and `type_s_hi` (its 95% Wilson interval), `type_m` (mean
+#'   exaggeration ratio among significant replicates) and `type_m_mcse` (its Monte Carlo
+#'   standard error). Both design-analysis quantities are `NaN` when no replicate reached
 #'   significance and when the true effect is zero, as in the null condition
-#'   [design_conditions()] produces: neither is defined without a true value to
-#'   compare against, and Type M divides by it.
-#' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+#'   [design_conditions()] produces: neither is defined without a true value to compare
+#'   against, and Type M divides by it. Their interval and standard error are `NaN` then too,
+#'   and `type_m_mcse` is also `NaN` when a single replicate reached significance, since a
+#'   standard deviation needs two.
+#' @references Brown, L. D., Cai, T. T. and DasGupta, A. (2001). Interval estimation for a
+#'   binomial proportion. \emph{Statistical Science}, 16(2), 101-133.
+#'   \doi{10.1214/ss/1009213286}
+#'
+#'   Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
 #' @examples
@@ -74,18 +90,25 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   est <- vapply(res, `[[`, numeric(1), 1L)
   pv  <- vapply(res, `[[`, numeric(1), 2L)
   sig <- which(pv < alpha)
+  n_sig <- length(sig)
   # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
   # stay NaN when the true effect is zero. The alternative was an infinity, alongside a
   # sign-error rate that had quietly become "the estimate is positive". Same rule as
   # power_mixed(), and the null condition design_conditions() recommends is exactly this case.
-  usable <- length(sig) > 0L && !is.na(true_effect) && true_effect != 0
-  list(
-    n_sims = n_sims, alpha = alpha,
-    power = length(sig) / n_sims, n_significant = length(sig),
-    true_effect = true_effect, mean_estimate = mean(est),
-    type_s = if (usable) mean((est[sig] > 0) != (true_effect > 0)) else NaN,
-    type_m = if (usable) mean(abs(est[sig]) / abs(true_effect)) else NaN
-  )
+  usable <- n_sig > 0L && !is.na(true_effect) && true_effect != 0
+  wrong <- (est[sig] > 0) != (true_effect > 0)
+  ratios <- abs(est[sig]) / abs(true_effect)
+  # Each carries its Monte Carlo error, NaN wherever the rate is, and Type M's needs two
+  # significant replicates. The result stays a plain list, as code written for earlier versions
+  # expects.
+  type_s_ci <- if (usable) .type_s_interval(sum(wrong), n_sig, true_effect) else c(NaN, NaN)
+  c(list(n_sims = n_sims, alpha = alpha),
+    .rate_with_error(n_sig, n_sims, "power"),
+    list(n_significant = n_sig, true_effect = true_effect, mean_estimate = mean(est),
+         type_s = if (usable) mean(wrong) else NaN,
+         type_s_lo = type_s_ci[1], type_s_hi = type_s_ci[2],
+         type_m = if (usable) mean(ratios) else NaN,
+         type_m_mcse = if (usable && n_sig >= 2L) .type_m_mcse(ratios) else NaN))
 }
 
 # The refusal for a design whose rows are correlated, byte-identical in the Python twin. It sends

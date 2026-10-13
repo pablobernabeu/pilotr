@@ -10,6 +10,9 @@ app_dir <- file.path(here, "..", "inst", "app")
 
 ok <- TRUE
 check <- function(cond, msg) { cat(if (cond) "  [PASS] " else "  [FAIL] ", msg, "\n", sep = ""); ok <<- ok && cond }
+# The sign both apps print between Type M and its standard error, built here so that this file
+# stays ASCII.
+plus_minus <- intToUtf8(0xB1)
 
 # The designs whose not-supported text both apps route, built with the app's own build_spec().
 # They are crossed reaction times and crossed accuracy with one within factor, a Likert and a
@@ -73,6 +76,29 @@ testServer(app = app_dir, {
   po <- output$power_out
   check(grepl("Power", po), "power analysis output rendered")
   cat("  power output:\n", gsub("\n", "\n    ", po), "\n")
+  # Every rate is shown with its Monte Carlo error: power with its standard error and Wilson
+  # interval, Type S with its Wilson interval and Type M with its standard error. The output
+  # gave the bare rates, and Type M rests on the significant replicates alone.
+  r <- power_result()
+  check(grepl(sprintf("Power        : %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])",
+                      r$power, r$power_mcse, r$power_lo, r$power_hi), po, fixed = TRUE),
+        "power is shown with its Monte Carlo standard error and Wilson interval")
+  check(grepl(sprintf("Type S error : %.4f (95%% Wilson [%.4f, %.4f])",
+                      r$type_s, r$type_s_lo, r$type_s_hi), po, fixed = TRUE),
+        "Type S is shown with its Wilson interval")
+  check(grepl(sprintf("Type M (exag): %.3f %s %.3f (MCSE)",
+                      r$type_m, plus_minus, r$type_m_mcse), po, fixed = TRUE),
+        "Type M is shown with its Monte Carlo standard error")
+  # With no true effect, Type S and Type M are undefined, and so is their uncertainty, so both
+  # are shown bare, as before. The click count is set apart from the ones below, since a click
+  # that repeats the previous value fires nothing.
+  session$setInputs(effect = 0, run_power = 101)
+  po0 <- output$power_out
+  check(grepl("Type S error : NaN\n", po0, fixed = TRUE) &&
+          grepl("Type M (exag): NaN\n", po0, fixed = TRUE) &&
+          grepl("(MCSE ", po0, fixed = TRUE),
+        "a design with no true effect shows Type S and Type M bare and power with its error")
+  session$setInputs(effect = 5)
 
   # A cleared Simulations box arrives as NA. Clamping it left NA, and power_design() then
   # stopped with "vector size cannot be NA", which says nothing about the emptied box. The
@@ -194,6 +220,30 @@ testServer(app = lite, {
     out[[names(routes)[i]]] <- output$power_out
   }
   check_routes(out, "runs power only for the two-group Gaussian design", "browser app")
+
+  # A design the browser build can analyse shows every rate with its Monte Carlo error, as the
+  # installed app does. Both apps source their engine into the global environment, so the full
+  # engine the installed app loaded above is still there. test_app_logic.R is what holds the
+  # staged subset to the files power_design() needs.
+  two <- build_spec(list(name = "two", seed = 2024, design_kind = "between", n_subject = 64,
+                         factor_name = "group", lev1 = "control", lev2 = "treatment",
+                         intercept = 100, effect = 5, family = "gaussian", resp_name = "",
+                         sigma = 10))
+  po <- tryCatch({
+    session$setInputs(pasted = spec_json(two), run_power = length(routes) + 1L)
+    output$power_out
+  }, error = function(e) paste("error:", conditionMessage(e)))
+  cat("  browser power output:\n", gsub("\n", "\n    ", po), "\n")
+  r <- power_design(two, n_sims = 100)
+  check(grepl(sprintf("Power: %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])",
+                      r$power, r$power_mcse, r$power_lo, r$power_hi), po, fixed = TRUE),
+        "browser app: power is shown with its Monte Carlo standard error and Wilson interval")
+  check(grepl(sprintf("Type S: %.4f (95%% Wilson [%.4f, %.4f])",
+                      r$type_s, r$type_s_lo, r$type_s_hi), po, fixed = TRUE),
+        "browser app: Type S is shown with its Wilson interval")
+  check(grepl(sprintf("Type M: %.3f %s %.3f (MCSE)", r$type_m, plus_minus, r$type_m_mcse),
+              po, fixed = TRUE),
+        "browser app: Type M is shown with its Monte Carlo standard error")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")

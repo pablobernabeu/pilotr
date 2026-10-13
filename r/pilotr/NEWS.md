@@ -105,7 +105,22 @@
   `reading_time_continuous`, whose fixed effects carry 15% of the total, `cond` calibrates to
   0.127 against the random components and the residual, and to 0.117 against the total.
 
+* Every rate carries its Monte Carlo error. `power_design()` gains `power_mcse`, `power_lo` and
+  `power_hi`, the standard error and 95% Wilson interval of power, which `power_mixed()` already
+  reported, and it still returns a plain list. Both functions gain `type_m_mcse`, the standard
+  error of Type M, and a Wilson interval for Type S, `type_s_lo` and `type_s_hi`, since the
+  standard error of Type S is zero whenever no sign is wrong. `power_curve_mixed()` and
+  `sweep_spec()` return them as columns. Type S and Type M rest on the significant replicates
+  alone, which are often a handful, yet they were reported without any uncertainty. Printing a
+  `power_mixed()` result shows them in a second table, and the no-code app, installed or in the
+  browser, shows each rate with its error. The Python twin computes these values with the same
+  operations in the same order, and both test suites pin them bit for bit.
+
 ## Fixes
+
+* Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the
+  rates. The bounds were written with three decimals whatever `digits` said, and the
+  documentation called `digits` significant digits, where it counts decimal places.
 
 * The no-code app, installed or in the browser, sends a design its power tab cannot analyse to
   the analysis that fits it. It sent every such design to the `power_mixed()` of both packages.

@@ -61,6 +61,17 @@ copy_btn <- function(target, label = "Copy")
   tags$button(label, class = "btn btn-sm btn-outline-secondary",
               onclick = sprintf("navigator.clipboard.writeText(document.getElementById('%s').innerText)", target))
 
+# Type S and Type M are shown with the Monte Carlo error power_design() reports for each. Type S
+# has a Wilson interval and Type M a standard error. A rate whose error is undefined is shown
+# bare, as before. That happens to both at a zero true effect, and to Type M when a single
+# replicate is significant. The installed app formats them in the same way.
+type_s_text <- function(r)
+  if (is.na(r$type_s_lo)) sprintf("%.4f", r$type_s) else
+    sprintf("%.4f (95%% Wilson [%.4f, %.4f])", r$type_s, r$type_s_lo, r$type_s_hi)
+type_m_text <- function(r)
+  if (is.na(r$type_m_mcse)) sprintf("%.3f", r$type_m) else
+    sprintf("%.3f ± %.3f (MCSE)", r$type_m, r$type_m_mcse)
+
 # Immediate client-side feedback. webR runs the server in a worker, so the main thread can
 # repaint on click while the computation is still in flight.
 computing_js <- tags$script(HTML(
@@ -443,9 +454,12 @@ server <- function(input, output, session) {
     if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); return() }
     if (!gaussian_two_group(spec)) { power_out(not_supported_msg(spec)); power_plot(NULL); return() }
     ns <- nsims(); r <- power_design(spec, n_sims = ns)
-    power_out(sprintf(
-      "Power: %.3f   |   Type S: %.4f   |   Type M: %.3f\nTrue effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
-      r$power, r$type_s, r$type_m, r$true_effect, r$mean_estimate, ns))
+    power_out(paste0(
+      sprintf("Power: %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])\n",
+              r$power, r$power_mcse, r$power_lo, r$power_hi),
+      "Type S: ", type_s_text(r), "   |   Type M: ", type_m_text(r), "\n",
+      sprintf("True effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
+              r$true_effect, r$mean_estimate, ns)))
   })
 
   observeEvent(input$run_curve, {
