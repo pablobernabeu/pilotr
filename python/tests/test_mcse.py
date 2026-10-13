@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 
-from pilotr import power, power_curve, power_mixed
+from pilotr import power, power_curve, power_mixed, replicate_seeds
 from pilotr.mcse import _rate_with_error, _type_m_mcse, _type_s_interval
 
 # count, n, then the rate, its standard error and its Wilson bounds.
@@ -122,12 +122,15 @@ def test_each_power_curve_record_carries_the_errors_power_reports():
     pytest.importorskip("scipy")
     spec = _two_group()
     curve = power_curve(spec, subject_ns=[32, 64], n_sims=50)
-    for rec in curve:
+    # Each grid point draws from its own seed, which power_curve takes from replicate_seeds().
+    seeds = replicate_seeds(spec["seed"], len(curve))
+    for rec, seed in zip(curve, seeds):
         assert list(rec) == ["n_subject", "power", "power_mcse", "power_lo", "power_hi", "type_s",
                              "type_s_lo", "type_s_hi", "type_m", "type_m_mcse", "n_sims",
                              "n_significant"]
         s = copy.deepcopy(spec)
         s["units"]["subject"]["n"] = rec["n_subject"]
+        s["seed"] = seed
         r = power(s, n_sims=50)
         assert all(_same(rec[k], r[k]) for k in list(rec)[1:])
 

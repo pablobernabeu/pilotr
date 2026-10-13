@@ -206,10 +206,10 @@ for (gname in names(GRIDS)) {
     spec <- build_spec(list(name = "calib", seed = seed, design_kind = "between",
       n_subject = sizes[1], factor_name = "group", lev1 = "a", lev2 = "b",
       intercept = 0, effect = d, family = "gaussian", resp_name = "score", sigma = 1))
-    # sweep_spec() carries the specification's seed to every grid point, so replicate i is drawn
-    # from the same seed at every size and the points of one curve share their random numbers.
-    # That is what a user's sweep does, and it is left alone: a calibration that broke the
-    # correlation would be measuring a curve the package does not produce.
+    # sweep_spec() gives each grid point its own seed, so the points of one curve draw
+    # independent replicates, as they do in a user's sweep. Up to 0.3.1 every point reused the
+    # specification's seed, and this calibration kept that sharing so as to measure the curves the
+    # package produced. solve_curve_coverage.R beside it shows what the sharing did to coverage.
     curve <- sweep_spec(spec, "units$subject$n", sizes, power_design,
                         n_sims = n_sims, alpha = ALPHA)
 

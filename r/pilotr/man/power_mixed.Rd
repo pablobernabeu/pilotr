@@ -11,7 +11,8 @@ power_mixed(
   prep = NULL,
   n_sims = 100,
   alpha = 0.05,
-  workers = 1
+  workers = 1,
+  cl = NULL
 )
 }
 \arguments{
@@ -42,6 +43,12 @@ slowly still. At least 200 replicates are advisable for study planning.}
 The default of 1 runs serially. Because the replicate seeds are derived once from the
 specification's seed, any worker count returns results identical to a serial run. The
 mixed-model fits dominate the cost, so the speed-up is close to linear in the number of cores.}
+
+\item{cl}{A cluster made by \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to run the replicates on, in place of one
+started for this call, in which case \code{workers} is ignored. The cluster is left running for its
+owner to stop. Through \code{\link[=sweep_spec]{sweep_spec()}}, as in
+\code{sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed, cl = cl)}, one cluster serves
+every grid point.}
 }
 \value{
 An object of class \code{pilotr_power}, a list whose per-run elements are \code{n_sims},

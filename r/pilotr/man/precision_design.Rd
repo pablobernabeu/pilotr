@@ -11,7 +11,8 @@ precision_design(
   prep = NULL,
   rope = 0.05,
   n_sims = 100,
-  workers = 1
+  workers = 1,
+  cl = NULL
 )
 }
 \arguments{
@@ -48,6 +49,10 @@ steps when \code{n_sims} is small. At least 200 replicates are advisable for rea
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because every replicate takes its own seed from
 \code{\link[=replicate_seeds]{replicate_seeds()}}, any worker count returns results identical to a serial run.}
+
+\item{cl}{A cluster made by \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to run the replicates on, in place of one
+started for this call, in which case \code{workers} is ignored. The cluster is left running for its
+owner to stop, and through \code{\link[=sweep_spec]{sweep_spec()}} one cluster serves every grid point.}
 }
 \value{
 A data frame with one row per focal effect and columns \code{param}, \code{true},

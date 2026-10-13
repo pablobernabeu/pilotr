@@ -72,8 +72,9 @@ probability: under the normal approximation to a two-group comparison, the probi
 linear in the square root of the sample size, so the model has the shape a design analysis
 already implies. Measured against \code{\link[stats:power.t.test]{stats::power.t.test()}} across twelve combinations of effect
 size and target power on each of three grid shapes, at 400 replicates a point, the solved
-sample size fell within 2.9\% of the analytic answer on average, against 3.4\% for a logit
-fitted the same way.
+sample size fell within 2.6\% of the analytic answer on average. A logit fitted the same way did
+as well on that draw, at 2.5\%, and worse on another, at 3.5\% against 2.2\%. Curves this noisy do
+not separate the two links, and the probit is chosen for its shape.
 
 The interval is the delta-method interval of \code{MASS::dose.p()}, computed on the scale named by
 \code{transform} and mapped back, so it is symmetric on that scale and asymmetric on the natural
@@ -103,14 +104,23 @@ whose fitted slope cannot be told from zero is refused too: the crossing is then
 with any value at all, and an interval that said otherwise would be false.
 
 What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between the
-fitted shape and the true curve. Across 36 checks against \code{\link[stats:power.t.test]{stats::power.t.test()}} at 400
-replicates a point, the solved size sat within 2.9\% of the analytic answer on average and
-within 6.9\% at worst, and the nominal 95\% interval covered the analytic value 35 times out of
-36. Nearly all of that error is the Monte Carlo noise the interval is describing, and it falls
-with the square root of the replicate count. Raise the count far enough and the interval
-narrows onto a fitted shape that is still slightly the wrong shape, so replicates alone do not
-make a solved size arbitrarily accurate. The remedies are a finer grid, more replicates, or a
-design with a closed form to check against.
+fitted shape and the true curve, and it treats the points of the curve as independent. Every
+sweep in pilotr now draws each point's replicates from a seed of its own (see \code{\link[=sweep_spec]{sweep_spec()}}).
+Over 1,000 simulated curves for each combination of four effect sizes and three target powers,
+at 400 replicates a point, the nominal 95\% interval covered the analytic sample size in 96.5\%,
+95.9\% and 96.2\% of solves on the three grid shapes. For an effect size swept at a fixed sample
+size, it covered the analytic effect in 95.7\% of solves. When every point reused the
+specification's seed, as up to 0.3.1, the figures were 87.8\%, 94.0\%, 93.5\% and 70.3\%. A curve
+assembled by hand, from separate runs that each started from the same seed, shares its noise in
+the same way. In the calibration's 36 checks, the solved size sat within 2.6\% of the analytic
+answer on average and within 7.7\% at worst. Nearly all of that error is the Monte Carlo noise
+the interval is describing, and it falls with the square root of the replicate count. Raise the
+count far enough and the interval narrows onto a fitted shape that is still slightly the wrong
+shape, so replicates alone do not make a solved size arbitrarily accurate. The remedies are more
+replicates, a finer grid or a design with a closed form to check against. A finer grid helps
+only while its points are independent. With shared seeds, its points share more of their noise,
+and the tight grid, whose points lie closest together, covered 87.8\% where the coarse one
+covered 94.0\%.
 }
 \examples{
 spec <- build_spec(list(name = "s", seed = 1, design_kind = "between", n_subject = 40,

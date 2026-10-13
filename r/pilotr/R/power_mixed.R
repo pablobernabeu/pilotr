@@ -97,6 +97,11 @@
 #'   The default of 1 runs serially. Because the replicate seeds are derived once from the
 #'   specification's seed, any worker count returns results identical to a serial run. The
 #'   mixed-model fits dominate the cost, so the speed-up is close to linear in the number of cores.
+#' @param cl A cluster made by [parallel::makeCluster()] to run the replicates on, in place of one
+#'   started for this call, in which case `workers` is ignored. The cluster is left running for its
+#'   owner to stop. Through [sweep_spec()], as in
+#'   `sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed, cl = cl)`, one cluster serves
+#'   every grid point.
 #' @return An object of class `pilotr_power`, a list whose per-run elements are `n_sims`,
 #'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
@@ -166,15 +171,15 @@
 #'   run this over a grid of sample sizes or effect sizes.
 #' @export
 power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
-                        n_sims = 100, alpha = 0.05, workers = 1) {
+                        n_sims = 100, alpha = 0.05, workers = 1, cl = NULL) {
   if (!requireNamespace("lme4", quietly = TRUE) ||
       !requireNamespace("lmerTest", quietly = TRUE))
     stop("power_mixed() requires the 'lme4' and 'lmerTest' packages; please install them.",
          call. = FALSE)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
-  cl <- NULL
-  if (workers > 1L) {
+  cl <- .check_cluster(cl)
+  if (is.null(cl) && workers > 1L) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
@@ -182,8 +187,9 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
                     n_sims = n_sims, alpha = alpha, cl = cl)
 }
 
-# The replicate loop behind power_mixed(), taking an optional PSOCK cluster so that sweep
-# functions can create one cluster and reuse it across grid points.
+# The replicate loop behind power_mixed(), run on the PSOCK cluster `cl` when there is one. The
+# cluster is the caller's or one power_mixed() started, and power_curve_mixed() hands one to every
+# grid point through sweep_spec().
 .power_mixed_impl <- function(spec, focal, formula, prep, n_sims, alpha, cl = NULL) {
   auto <- is.null(formula)
   if (auto) formula <- model_formula(spec)
@@ -330,6 +336,10 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' specification, in reporting Type S and Type M errors, and in built-in parallelisation: with
 #' `workers > 1` a single worker pool is created once and reused across all sample sizes.
 #'
+#' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
+#' so the points of the curve are independent, as [target_n()] assumes when it fits them.
+#' `seeds = "shared"` runs every point from the specification's own seed instead, as up to 0.3.1.
+#'
 #' For any axis other than sample size, call [sweep_spec()] directly. Effect size is the axis a
 #' design analysis most often needs after sample size, and [design_conditions()] builds the
 #' coefficient overrides for it.
@@ -348,7 +358,9 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' @param alpha Two-sided significance level.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
-#'   identical to a serial run.
+#'   identical to a serial run. One pool of that many processes serves the whole sweep.
+#' @param seeds How the sample sizes are seeded: `"independent"`, the default, or `"shared"`, as
+#'   in [sweep_spec()]'s `.seeds`.
 #' @return A data frame with one row per sample size and focal effect, with columns `n_subject`,
 #'   `effect`, `true`, `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `type_s`,
 #'   `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, the `n_attempted`, `n_returned`,
@@ -380,14 +392,25 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   other axis, and [design_conditions()] for effect-size grids.
 #' @export
 power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha = 0.05,
-                              workers = 1) {
+                              workers = 1, seeds = c("independent", "shared")) {
   if (!requireNamespace("lme4", quietly = TRUE) ||
       !requireNamespace("lmerTest", quietly = TRUE))
     stop("power_curve_mixed() requires the 'lme4' and 'lmerTest' packages; please install them.",
          call. = FALSE)
+  spec <- .as_spec(spec)
+  seeds <- match.arg(seeds)
+  workers <- .check_workers(workers)
+  # One pool for the whole sweep, handed to every grid point. Since 0.3.0, when the sweep moved
+  # into sweep_spec(), `workers` had travelled to power_mixed(), which started and stopped a pool
+  # at every point.
+  cl <- NULL
+  if (workers > 1L) {
+    cl <- parallel::makeCluster(workers)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+  }
   sweep_spec(spec, "units$subject$n", subject_ns, power_mixed,
-             focal = focal, n_sims = n_sims, alpha = alpha, workers = workers,
-             .name = "n_subject")
+             focal = focal, n_sims = n_sims, alpha = alpha, cl = cl,
+             .name = "n_subject", .seeds = seeds)
 }
 
 # Flatten a pilotr_power object into one data-frame row per focal effect, for the sweeps.

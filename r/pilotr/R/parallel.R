@@ -11,6 +11,15 @@
   as.integer(workers)
 }
 
+# Validate the `cl` argument: NULL, or a cluster such as parallel::makeCluster() returns. A cluster
+# passed in belongs to the caller, who may hand the same one to many calls, so the analyses run on
+# it and leave it running.
+.check_cluster <- function(cl) {
+  if (!is.null(cl) && !inherits(cl, "cluster"))
+    stop("`cl` must be a cluster made by parallel::makeCluster(), or NULL.", call. = FALSE)
+  cl
+}
+
 # Apply FUN over the replicate indices: serially when `cl` is NULL, otherwise with
 # load balancing over the cluster. parLapplyLB returns results in input order, so the
 # downstream reductions match the serial code exactly.

@@ -460,9 +460,13 @@ server <- function(input, output, session) {
     n <- .n_sims_input(input$n_sims)
     base_n <- spec$units$subject$n
     grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
+    # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
+    # independent points, as it assumes. Every point used to keep the design's seed.
+    seeds <- replicate_seeds(spec$seed, length(grid))
     withProgress(message = "Computing the power curve...", value = 0.3, {
-      pw <- vapply(grid, function(nn) {
-        s <- spec; s$units$subject$n <- as.integer(nn); power_design(s, n_sims = n)$power
+      pw <- vapply(seq_along(grid), function(j) {
+        s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
+        power_design(s, n_sims = n)$power
       }, numeric(1))
     })
     # A dashed target line leaves the reader to judge the crossing. target_n() estimates

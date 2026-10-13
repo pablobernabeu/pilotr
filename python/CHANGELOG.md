@@ -22,6 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `power_curve` gives each grid point its own replicates. Every point reused the specification's
+  seed, so neighbouring points shared their random numbers, while `solve_curve` treats them as
+  independent. Over 1,000 emulated curves a setting, its nominal 95% intervals covered the true
+  sample size in 88% of solves on a tight grid. Point j of a sweep over J sizes now takes
+  `replicate_seeds(seed, J)[j]`, the rule of the R twin's `sweep_spec()`, which brings that
+  figure to 96.5%, so every number `power_curve` produces changes. `seeds="shared"` keeps the
+  old behaviour. The coverage figures quoted for `solve_curve` come from a new calibration over
+  1,000 curves a setting, where the earlier 35 in 36 rested on 12 curves whose points shared
+  their seeds. Rerun with independent points, those 12 curves no longer favour the probit link
+  over the logit, and the documentation now says so.
 - The home page gives the Zenodo concept DOI as a full link,
   <https://doi.org/10.5281/zenodo.21266313>, in place of the Zenodo badge, and the About
   page links every DOI the same way, so its reference line can be clicked. The BibTeX

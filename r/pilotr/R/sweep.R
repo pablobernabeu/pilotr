@@ -55,6 +55,24 @@
 #' specification edited by hand. A condition may name only coefficients the specification
 #' already has, and any other name is refused.
 #'
+#' Each grid point draws its own replicates. Point `i` of a sweep over `J` values takes
+#' `replicate_seeds(spec$seed, J)[i]` as its seed, and the analysis derives its replicates' seeds
+#' from that, so no two points share their random numbers. [solve_curve()] fits the points of a
+#' curve as independent binomial counts, and its interval keeps its nominal coverage only when they
+#' are. The rule is prefix-stable: appending values to a sweep leaves the earlier points' results
+#' as they were. It depends on order, though, since a point's seed follows its position in
+#' `values`, so reordering the values, or inserting one, changes the results at every point that
+#' moves. A sweep over `seed` itself sets each point's seed to the value swept.
+#'
+#' `.seeds = "shared"` gives every point the specification's own seed, as every sweep did up to
+#' 0.3.1. The points then share their noise, so the curve looks smoother than its Monte Carlo
+#' error allows and an interval fitted to it is too narrow. Over 1,000 emulated curves for each
+#' of twelve settings on a tight grid of sample sizes, the nominal 95% interval of [solve_curve()]
+#' covered the true size in 87.8% of solves with shared seeds and in 96.5% with independent ones.
+#' On an effect-size axis, where the design and so every draw stay the same from point to point,
+#' the figures were 70.3% and 95.7%. `tools/calibration/solve_curve_coverage.R` in the source
+#' repository produces them.
+#'
 #' The result of `fn` is coerced to a data frame: a `pilotr_power` object becomes one row per focal
 #' effect, a data frame is used as it stands, and a plain list becomes a single row. The swept value
 #' is added as a leading column named by `.name`. A list has no single value to record, so a sweep
@@ -72,9 +90,14 @@
 #'   [design_conditions()] builds such a list for an effect-size sweep.
 #' @param fn The analysis to run at each grid point, for example [power_mixed()] or
 #'   [precision_design()]. It is called as `fn(spec, ...)`.
-#' @param ... Further arguments passed to `fn` at every grid point.
+#' @param ... Further arguments passed to `fn` at every grid point. A cluster passed as `cl` to an
+#'   analysis that takes one, such as [power_mixed()], serves every point, so that one pool of
+#'   workers runs the whole sweep.
 #' @param .name Name for the column recording the swept value. Defaults to the last element of
 #'   `path`.
+#' @param .seeds How the grid points are seeded. `"independent"`, the default, gives point `i` of
+#'   `J` the seed `replicate_seeds(spec$seed, J)[i]`, and `"shared"` gives every point the
+#'   specification's own seed, as sweeps did up to 0.3.1 (see Details).
 #' @return A data frame binding the results, with the swept value as the leading column, or the
 #'   grid index when the values are lists. [solve_curve()] reads that leading column by default,
 #'   so a sweep over single values goes straight into a solve.
@@ -101,8 +124,10 @@
 #'   [precision_design()] for the analyses usually swept, and [solve_curve()] to solve the
 #'   resulting curve for the swept value that meets a target.
 #' @export
-sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
+sweep_spec <- function(spec, path, values, fn, ..., .name = NULL,
+                       .seeds = c("independent", "shared")) {
   spec <- .as_spec(spec)
+  .seeds <- match.arg(.seeds)
   if (!is.function(fn)) stop("`fn` must be a function", call. = FALSE)
   if (!length(values)) stop("`values` must contain at least one value", call. = FALSE)
   current <- .get_path(spec, path)
@@ -117,6 +142,13 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
   }
 
   scalar_values <- !is.list(values)
+  # One seed per grid point, drawn from the specification's seed by the rule its replicates follow.
+  # Every point used to keep the specification's seed, so replicate i drew the same numbers at
+  # every point. The points of a curve then shared their noise, while solve_curve() fits them as
+  # independent binomial counts, and its 95% intervals covered the true sample size in 88% of
+  # solves on a tight grid. replicate_seeds() draws its seeds in turn, so the first J of a longer
+  # sweep are the J seeds of a shorter one, and appending points leaves the earlier ones alone.
+  grid_seeds <- if (.seeds == "independent") replicate_seeds(spec[["seed"]], length(values))
   parts <- lapply(seq_along(values), function(i) {
     value <- if (is.list(values)) values[[i]] else values[i]
     # A condition names only the effects it varies, so it is merged into the field. modifyList()
@@ -124,9 +156,12 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL) {
     # predictor is summed. Reversing it moves 691 of the 4,000 unrounded responses of
     # reading_time_continuous by up to 3.3e-16.
     if (merge) value <- utils::modifyList(current, value)
+    # The seed is set before the swept field, so that a sweep over `seed` itself still decides it.
+    point <- spec
+    if (!is.null(grid_seeds)) point[["seed"]] <- grid_seeds[i]
     # The specification is already validated, and each grid point only replaces one field, so
     # revalidating at every point would repeat the same work; fn() validates its own argument.
-    res <- fn(.set_path(spec, path, value), ...)
+    res <- fn(.set_path(point, path, value), ...)
     frame <- if (inherits(res, "pilotr_power")) .as_power_frame(res)
       else if (is.data.frame(res)) res
       else as.data.frame(res, stringsAsFactors = FALSE)

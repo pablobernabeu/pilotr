@@ -1,0 +1,84 @@
+solve_curve() coverage with shared and independent replicates across grid points
+
+Produced by tools/calibration/solve_curve_coverage.R with 1000 curves a setting, 400
+replicates a point and an emulation seed of 20261013, under R version 4.6.1 (2026-06-24 ucrt).
+Rerun it to regenerate this file. Nothing here is timed or dated, so a rerun that changes a
+line has changed a result.
+
+The curves emulate the two-group Gaussian design of solve_curve_calibration.R, whose draw
+layout was checked against simulate_design() before any curve was drawn. In the shared arm,
+each replicate's stream is reused as a prefix at every point of a curve, as when every point
+of a sweep reused the specification's seed. In the independent arm, every point draws afresh,
+as every point of a sweep now does. Each curve is solved by the package's own solve_curve(),
+for an interval at the 0.95 level. At 1000 curves a setting, a coverage of 0.95 carries a
+binomial standard error of 0.007.
+
+Effect sizes 0.5, 0.65, 0.8, 1 at a residual standard deviation of 1, target powers 0.7, 0.8, 0.9,
+two-tailed tests at alpha 0.05. Sizes are total subjects across the two groups.
+Grid shapes, as the analytic power each point carries:
+  tight: 0.55 0.68 0.79 0.88 0.95
+  coarse: 0.3 0.55 0.78 0.95
+  tall: 0.4 0.75 0.92 0.98 0.995
+
+Coverage of the analytic size, root mean squared error and mean interval width in subjects,
+and the solves refused, per setting.
+
+  grid  effect  target  analytic  cover_sh  cover_ind  rmse_sh  rmse_ind  width_sh  width_ind  refused_sh  refused_ind
+ tight    0.50    0.70     100.7     0.878      0.968     3.64      2.71     11.38      12.18           0            0
+ tight    0.50    0.80     127.5     0.881      0.973     4.07      3.06     12.89      13.78           0            0
+ tight    0.50    0.90     170.1     0.908      0.964     6.57      5.44     22.82      24.36           1            0
+ tight    0.65    0.70      60.4     0.876      0.969     2.20      1.60      6.76       7.24           0            0
+ tight    0.65    0.80      76.3     0.859      0.967     2.51      1.81      7.57       8.10           0            0
+ tight    0.65    0.90     101.4     0.890      0.960     4.13      3.28     13.43      14.33           0            0
+ tight    0.80    0.70      40.6     0.878      0.956     1.42      1.11      4.44       4.70           0            0
+ tight    0.80    0.80      51.0     0.867      0.964     1.58      1.26      4.99       5.30           0            0
+ tight    0.80    0.90      67.7     0.895      0.967     2.57      2.21      8.79       9.34           0            0
+ tight    1.00    0.70      26.7     0.865      0.967     0.94      0.70      2.85       3.08           0            0
+ tight    1.00    0.80      33.4     0.858      0.969     1.08      0.77      3.17       3.42           0            0
+ tight    1.00    0.90      44.0     0.886      0.961     1.72      1.35      5.61       6.03           0            0
+coarse    0.50    0.70     100.7     0.946      0.967     3.29      2.97     13.24      13.54           0            0
+coarse    0.50    0.80     127.5     0.948      0.962     4.51      4.12     18.07      18.47           0            0
+coarse    0.50    0.90     170.1     0.944      0.955     6.98      6.63     28.45      29.06           0            0
+coarse    0.65    0.70      60.4     0.942      0.960     1.93      1.88      7.88       7.93           0            0
+coarse    0.65    0.80      76.3     0.944      0.949     2.65      2.54     10.79      10.87           0            0
+coarse    0.65    0.90     101.4     0.948      0.956     4.15      3.96     17.08      17.21           0            0
+coarse    0.80    0.70      40.6     0.934      0.955     1.33      1.21      5.17       5.33           0            0
+coarse    0.80    0.80      51.0     0.931      0.961     1.78      1.63      7.02       7.24           0            0
+coarse    0.80    0.90      67.7     0.935      0.957     2.75      2.57     10.96      11.30           0            0
+coarse    1.00    0.70      26.7     0.934      0.954     0.85      0.77      3.29       3.37           0            0
+coarse    1.00    0.80      33.4     0.938      0.967     1.13      1.01      4.45       4.56           0            0
+coarse    1.00    0.90      44.0     0.940      0.959     1.74      1.61      6.94       7.10           0            0
+  tall    0.50    0.70     100.7     0.960      0.976     3.27      2.97     13.54      13.77           0            0
+  tall    0.50    0.80     127.5     0.945      0.968     3.99      3.42     15.85      16.12           0            0
+  tall    0.50    0.90     170.1     0.933      0.969     5.94      4.96     22.90      23.29           0            0
+  tall    0.65    0.70      60.4     0.941      0.969     2.03      1.88      7.93       8.24           0            0
+  tall    0.65    0.80      76.3     0.923      0.966     2.51      2.17      9.21       9.56           0            0
+  tall    0.65    0.90     101.4     0.913      0.963     3.70      3.06     13.27      13.78           0            0
+  tall    0.80    0.70      40.6     0.950      0.960     1.31      1.28      5.27       5.47           0            0
+  tall    0.80    0.80      51.0     0.934      0.956     1.59      1.47      6.12       6.35           0            0
+  tall    0.80    0.90      67.7     0.924      0.957     2.34      2.05      8.80       9.12           0            0
+  tall    1.00    0.70      26.7     0.939      0.949     0.87      0.81      3.38       3.46           0            0
+  tall    1.00    0.80      33.4     0.933      0.953     1.04      0.93      3.91       4.00           0            0
+  tall    1.00    0.90      44.0     0.926      0.963     1.50      1.29      5.60       5.74           0            0
+
+Pooled over the effect sizes and targets of each grid shape, with the standard error
+of each coverage rate. The three targets of a curve are solved from the same simulated
+rates, so the standard error treats each curve as one cluster of three solves.
+
+  grid  solves_sh  cover_sh  mcse_sh  solves_ind  cover_ind  mcse_ind
+ tight      11999     0.878    0.004       12000      0.965     0.002
+coarse      12000     0.940    0.003       12000      0.959     0.003
+  tall      12000     0.935    0.003       12000      0.962     0.002
+
+Across the 36 settings, coverage ran from 0.858 to 0.960 in the shared arm and from 0.949
+to 0.976 in the independent arm.
+
+Effect-size axis: 64 subjects, effects 0.45 0.55 0.65 0.75 0.85 0.95, solved for a power of 0.8 with
+transform = "identity". The analytic effect is 0.7115.
+
+        arm  solves  cover   mcse    rmse  mean_se  refused
+     shared    1000  0.703  0.014  0.0159   0.0085        0
+independent    1000  0.957  0.006  0.0089   0.0094        0
+
+Where the reported standard error falls short of the root mean squared error, the interval
+claims more precision than the curve holds.

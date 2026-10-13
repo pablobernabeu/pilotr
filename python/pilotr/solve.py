@@ -14,36 +14,37 @@ probit of power is exactly linear in the square root of the sample size, so this
 parameterisation estimates two coefficients of a curve the design analysis already implies,
 where a general sigmoid would have to be bent to fit.
 
-The choice was checked, by ``tools/calibration/solve_curve_calibration.R``, which produces every
-figure quoted here and writes them to a file beside itself. Against R's ``stats::power.t.test``,
-over twelve combinations of effect size and target power on each of three grid shapes at 400
-replicates a point, the probit solved to a mean absolute error of 2.75%, 2.18%
-and 3.70%, the logit to 3.27%, 2.54% and 4.28%. The two separate most clearly on the grid that
-sweeps the widest range: reaching a power of 0.995, the logit's Pearson chi-square per degree of
-freedom rose to 1.65 against 1.15 for the probit, and its intervals covered the analytic answer
-nine times in twelve where the probit covered twelve. The margin is not large, because at this
-replicate count most of what separates a solved size from the analytic one is Monte Carlo noise in
-the curve, and only a little of it is the link fitted to that curve. Rerun at the seed base
-77000, which the calibration script takes as its third argument, and the probit still leads on
-the tight grid and by more on the tall one, while the coarse grid swaps: four widely spaced
-points do not tell the two links apart.
+The choice was checked, by ``tools/calibration/solve_curve_calibration.R``, which produces the
+figures quoted here about the link and the interval and writes them to a file beside itself.
+Against R's ``stats::power.t.test``, over twelve combinations of effect size and target power on
+each of three grid shapes at 400 replicates a point, the probit solved to a mean absolute error of
+2.81%, 2.10% and 2.87%, the logit to 3.13%, 2.12% and 2.32%. Rerun at the seed base 77000, which
+the calibration script takes as its third argument, and the probit leads on every grid but the
+coarse one. Its lead is largest on the grid that reaches a power of 0.995, with a mean error of
+2.02% against 5.09%, and there its intervals covered the analytic answer in all twelve checks,
+where the logit's covered eight. Two draws that disagree this much show that twelve curves cannot
+separate the links at this replicate count. Most of what separates a solved size from the analytic
+one is Monte Carlo noise in the curve, and only a little of it is the link. The probit is kept for
+its shape. Up to 0.3.0 the calibration's curves shared their random numbers across grid points, as
+every sweep did then, and on those smoother curves the probit led in both draws.
 
 The inversion and its interval are the delta method that R's ``MASS::dose.p`` applies to a
 fitted glm: the solved point on the fitted scale is ``(link(target) - intercept) / slope``, and
 its standard error follows from the gradient of that expression in the two coefficients.
 
 Fieller's exact interval for a ratio (Fieller, 1954) is the obvious alternative, and it was
-tried. It does not separate from the delta method on this evidence. Over the same 36 checks it
-covered the analytic answer 36 times against the delta method's 35, a difference of one check, at
-a mean width of 9.48 subjects against 9.38, and it was bounded every time. These curves determine
-the slope well enough that the two intervals nearly coincide, so nothing here argues for one over
-the other on coverage. The delta method is kept because it is the interval R's ``MASS::dose.p``
-reports, which gives the R test suite an independent implementation to check against, and because
-the one condition under which Fieller's would differ, a slope too poorly determined for a bounded
-interval, is the condition the slope refusal below already rejects outright. A one-check
-difference in coverage is noise at this replicate count, and the rerun at seed base 77000 above
-puts the two level at 34 each. Anyone reopening the question should rerun the calibration before
-arguing from it.
+tried. It does not separate from the delta method on this evidence. Over the same 36 checks both
+covered the analytic answer 31 times, at mean widths of 10.34 subjects for Fieller's and 10.18 for
+the delta method, and Fieller's was bounded every time. The rerun at seed base 77000 above puts
+both at 36. These curves determine the slope well enough that the two intervals nearly coincide,
+so nothing here argues for one over the other on coverage. The delta method is kept because it is
+the interval R's ``MASS::dose.p`` reports, which gives the R test suite an independent
+implementation to check against, and because the one condition under which Fieller's would
+differ, a slope too poorly determined for a bounded interval, is the condition the slope refusal
+below already rejects outright. Thirty-six checks over twelve curves cannot measure a coverage
+rate, so ``tools/calibration/solve_curve_coverage.R`` measures the delta method's over 1,000 curves
+a setting, as the documentation of `solve_curve` reports. Anyone reopening the question should
+rerun both before arguing from them.
 
 One departure from ``dose.p``'s default: where the two-parameter model does not describe the
 curve, the covariance is scaled by Pearson's chi-square over its degrees of freedom, the
@@ -323,8 +324,10 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     probit of power is linear in the square root of the sample size, so the model has the
     shape a design analysis already implies. Measured against R's `stats::power.t.test` across
     twelve combinations of effect size and target power on each of three grid shapes, at 400
-    replicates a point, the solved sample size fell within 2.9% of the analytic answer on
-    average, against 3.4% for a logit fitted the same way.
+    replicates a point, the solved sample size fell within 2.6% of the analytic answer on
+    average. A logit fitted the same way did as well on that draw, at 2.5%, and worse on another,
+    at 3.5% against 2.2%. Curves this noisy do not separate the two links, and the probit is
+    chosen for its shape.
 
     The interval is the delta-method interval of R's `MASS::dose.p`, computed on the scale
     named by `transform` and mapped back, so it is symmetric on that scale and asymmetric on
@@ -347,14 +350,23 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     false.
 
     What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between
-    the fitted shape and the true curve. Across 36 checks against R's `stats::power.t.test` at
-    400 replicates a point, the solved size sat within 2.9% of the analytic answer on average
-    and within 6.9% at worst, and the nominal 95% interval covered the analytic value 35 times
-    out of 36. Nearly all of that error is the Monte Carlo noise the interval is describing,
-    and it falls with the square root of the replicate count. Raise the count far enough and
-    the interval narrows onto a fitted shape that is still slightly the wrong shape, so
-    replicates alone do not make a solved size arbitrarily accurate. The remedies are a finer
-    grid, more replicates, or a design with a closed form to check against.
+    the fitted shape and the true curve, and it treats the points of the curve as independent.
+    `power_curve` now draws each point's replicates from a seed of its own. Over 1,000
+    simulated curves for each combination of four effect sizes and three target powers, at 400
+    replicates a point, the nominal 95% interval covered the analytic sample size in 96.5%,
+    95.9% and 96.2% of solves on the three grid shapes. For an effect size swept at a fixed
+    sample size, it covered the analytic effect in 95.7% of solves. When every point reused the
+    specification's seed, as up to 0.3.0, the figures were 87.8%, 94.0%, 93.5% and 70.3%. A
+    curve assembled by hand, from separate runs that each started from the same seed, shares its
+    noise in the same way. In the calibration's 36 checks, the solved size sat within 2.6% of the
+    analytic answer on average and within 7.7% at worst. Nearly all of that error is the Monte
+    Carlo noise the interval is describing, and it falls with the square root of the replicate
+    count. Raise the count far enough and the interval narrows onto a fitted shape that is still
+    slightly the wrong shape, so replicates alone do not make a solved size arbitrarily accurate.
+    The remedies are more replicates, a finer grid or a design with a closed form to check
+    against. A finer grid helps only while its points are independent. With shared seeds, its
+    points share more of their noise, and the tight grid, whose points lie closest together,
+    covered 87.8% where the coarse one covered 94.0%.
 
     Parameters
     ----------

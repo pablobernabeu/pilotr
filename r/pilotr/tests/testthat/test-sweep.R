@@ -45,6 +45,9 @@ test_that("a condition simulates exactly the data of the specification edited by
   spec$response$round <- NULL
   by_hand <- spec
   by_hand$fixed$coefficients$cond <- 0.02
+  # The single grid point takes the first seed that replicate_seeds() derives from the
+  # specification's own.
+  by_hand$seed <- replicate_seeds(spec$seed, 1)
   want <- simulate_design(by_hand)$reading_time_per_word
 
   got <- sweep_spec(spec, "fixed$coefficients", design_conditions(cond = 0.02, .null = FALSE),
@@ -157,4 +160,109 @@ test_that("a sweep of one coefficient solves for a minimum detectable effect", {
   expect_identical(s$x, "effect")
   # 50 subjects a group detect d = 0.57 with a power of 0.8.
   expect_lt(abs(s$value - stats::power.t.test(n = 50, sd = 1, power = 0.8)$delta), 0.05)
+})
+
+# Each grid point draws its own replicates. Every point used to reuse the specification's seed, so
+# neighbouring points shared their random numbers, while solve_curve() fits them as independent
+# binomial counts. Its nominal 95% intervals then covered the true sample size 88% of the time on a
+# tight grid and 70% of the time on an effect-size axis.
+two_group <- function(effect = 0.6) {
+  build_spec(list(name = "seeds", seed = 7, design_kind = "between", n_subject = 20,
+    factor_name = "group", lev1 = "a", lev2 = "b", intercept = 0, effect = effect,
+    family = "gaussian", resp_name = "score", sigma = 1))
+}
+
+# What `fn` returns for the specification at subject count `n` and seed `seed`, as one list, so
+# that a row of a sweep can be compared with it.
+at_point <- function(spec, n, seed, fn, ...) {
+  spec$units$subject$n <- n
+  spec$seed <- seed
+  res <- fn(spec, ...)
+  as.list(if (inherits(res, "pilotr_power")) pilotr:::.as_power_frame(res) else as.data.frame(res))
+}
+row_of <- function(curve, j) as.list(curve[j, -1, drop = FALSE])
+
+test_that("grid point j of J takes replicate_seeds(seed, J)[j] as its seed", {
+  spec <- two_group()
+  sizes <- c(20, 40, 60)
+  curve <- sweep_spec(spec, "units$subject$n", sizes, power_design, n_sims = 30)
+  seeds <- replicate_seeds(spec$seed, length(sizes))
+  for (j in seq_along(sizes))
+    expect_identical(row_of(curve, j), at_point(spec, sizes[j], seeds[j], power_design,
+                                                n_sims = 30), info = paste("grid point", j))
+})
+
+test_that("the twins give each grid point the same replicates", {
+  # python/tests/test_power_curve.py pins the same counts for power_curve(). Shared seeds gave 8,
+  # 18 and 19.
+  curve <- sweep_spec(two_group(), "units$subject$n", c(20, 40, 60), power_design, n_sims = 30)
+  expect_identical(curve$n_significant, c(4L, 14L, 19L))
+})
+
+test_that("adding grid points leaves the earlier points unchanged", {
+  spec <- two_group()
+  two <- sweep_spec(spec, "units$subject$n", c(20, 40), power_design, n_sims = 30)
+  three <- sweep_spec(spec, "units$subject$n", c(20, 40, 60), power_design, n_sims = 30)
+  expect_identical(as.list(three[1:2, ]), as.list(two))
+})
+
+test_that("a point's seed follows its position in `values`, not the value", {
+  spec <- two_group()
+  up <- sweep_spec(spec, "units$subject$n", c(20, 40), simulate_design)
+  down <- sweep_spec(spec, "units$subject$n", c(40, 20), simulate_design)
+  seeds <- replicate_seeds(spec$seed, 2)
+  expect_identical(up$score[up$n == 20], at_point(spec, 20, seeds[1], simulate_design)$score)
+  expect_identical(down$score[down$n == 20], at_point(spec, 20, seeds[2], simulate_design)$score)
+})
+
+test_that(".seeds = \"shared\" gives every grid point the specification's own seed, as before", {
+  spec <- two_group()
+  sizes <- c(20, 40)
+  curve <- sweep_spec(spec, "units$subject$n", sizes, power_design, n_sims = 30,
+                      .seeds = "shared")
+  for (j in seq_along(sizes))
+    expect_identical(row_of(curve, j), at_point(spec, sizes[j], spec$seed, power_design,
+                                                n_sims = 30), info = paste("grid point", j))
+  # The data make the difference plain: the shared rows of the smaller design are a prefix of the
+  # larger design's, and the independent rows are not.
+  shared <- sweep_spec(spec, "units$subject$n", sizes, simulate_design, .seeds = "shared")
+  indep <- sweep_spec(spec, "units$subject$n", sizes, simulate_design)
+  expect_identical(shared$score[shared$n == 20][1:10], shared$score[shared$n == 40][1:10])
+  expect_false(identical(indep$score[indep$n == 20][1:10], indep$score[indep$n == 40][1:10]))
+  expect_error(sweep_spec(spec, "units$subject$n", sizes, simulate_design, .seeds = "common"),
+               "should be one of")
+})
+
+test_that("a sweep over the seed itself still sets each point's seed", {
+  spec <- two_group()
+  seen <- sweep_spec(spec, "seed", c(11, 12), function(s) data.frame(used = s$seed))
+  expect_identical(seen$used, c(11, 12))
+})
+
+test_that("power_curve_mixed() and precision_curve() seed their points by the same rule", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  # A between-subjects design is fitted by lm(), which keeps this quick. With an effect this large
+  # every replicate is significant, so Type M, a continuous value, tells the streams apart.
+  spec <- two_group(effect = 2)
+  sizes <- c(20, 30)
+  seeds <- replicate_seeds(spec$seed, length(sizes))
+  mixed <- power_curve_mixed(spec, subject_ns = sizes, n_sims = 4)
+  mixed_shared <- power_curve_mixed(spec, subject_ns = sizes, n_sims = 4, seeds = "shared")
+  precision <- precision_curve(spec, subject_ns = sizes, rope = 0.2, n_sims = 4)
+  precision_shared <- precision_curve(spec, subject_ns = sizes, rope = 0.2, n_sims = 4,
+                                      seeds = "shared")
+  for (j in seq_along(sizes)) {
+    at <- paste("grid point", j)
+    expect_identical(row_of(mixed, j),
+                     at_point(spec, sizes[j], seeds[j], power_mixed, n_sims = 4), info = at)
+    expect_identical(row_of(mixed_shared, j),
+                     at_point(spec, sizes[j], spec$seed, power_mixed, n_sims = 4), info = at)
+    expect_identical(row_of(precision, j),
+                     at_point(spec, sizes[j], seeds[j], precision_design, rope = 0.2,
+                              n_sims = 4), info = at)
+    expect_identical(row_of(precision_shared, j),
+                     at_point(spec, sizes[j], spec$seed, precision_design, rope = 0.2,
+                              n_sims = 4), info = at)
+  }
 })

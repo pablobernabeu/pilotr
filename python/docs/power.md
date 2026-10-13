@@ -97,6 +97,11 @@ The shaded horizontal band along the curve is the Monte Carlo interval of each p
 the 95% Wilson interval over its `n_sims` replicates that `power_curve` returns as `power_lo`
 and `power_hi`. The vertical band is the solved sample size, with its own interval.
 
+Each point of the curve draws its own replicates. Point j of a sweep over J sizes takes
+`replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers, as
+`target_n` assumes when it fits them. Up to pilotr 0.3.0 every point took the specification's own
+seed, which `seeds="shared"` still does.
+
 ## The sample size the curve implies
 
 The point of a power curve is the sample size at which power reaches the target, and that is
@@ -106,8 +111,10 @@ the crossing arrives with the uncertainty that a simulated curve carries.
 
 ```python exec="true" source="material-block" session="pow"
 solved = target_n(curve, target=0.8)
+# n, n_lo and n_hi round up to whole subjects; lo and hi are the bounds before rounding.
 print(table([{"target": solved["target"], "n": solved["n"],
-              "n_lo": solved["n_lo"], "n_hi": solved["n_hi"]}]))
+              "n_lo": solved["n_lo"], "n_hi": solved["n_hi"],
+              "lo": round(solved["lo"], 1), "hi": round(solved["hi"], 1)}]))
 ```
 
 This design has a closed-form answer to check against. With an effect of 5 and a residual

@@ -39,6 +39,19 @@ route_designs <- function(build_spec) {
        prop = between("beta", phi = 8), crossed = crossed)
 }
 
+# The power at each point of an app's curve, worked out as sweep_spec() would: point j of the grid
+# takes replicate_seeds(seed, J)[j] as its seed. Both apps put the engine in the global
+# environment, which is where this finds power_design() and replicate_seeds().
+curve_at_grid_seeds <- function(spec, grid, n_sims) {
+  seeds <- replicate_seeds(spec$seed, length(grid))
+  vapply(seq_along(grid), function(j) {
+    s <- spec
+    s$units$subject$n <- as.integer(grid[j])
+    s$seed <- seeds[j]
+    power_design(s, n_sims = n_sims)$power
+  }, numeric(1))
+}
+
 # The not-supported text sends each design to the analysis that fits it. power_mixed() in R fits
 # every family but ordinal and Beta, which go to the Bayesian design analysis. Python's
 # power_mixed() takes one within factor crossed with items and fits a linear model on the
@@ -114,6 +127,14 @@ testServer(app = app_dir, {
   check(grepl("Simulations *: *100\\b", output$power_out),
         "a count below the minimum is clamped to 100")
   session$setInputs(n_sims = 300, run_power = 4)
+
+  # The power curve gives each grid point its own seed, by sweep_spec()'s rule, so the points it
+  # hands target_n() are independent. Every point used to keep the design's seed.
+  session$setInputs(n_sims = 100, run_curve = 1)
+  pc <- power_curve_data()
+  check(identical(pc$pw, curve_at_grid_seeds(current_spec(), pc$grid, 100)),
+        "the power curve gives each grid point its own seed")
+  session$setInputs(n_sims = 300)
 
   # build_spec() keeps a seed of 2^31 or more, which it used to turn into NA. The caption
   # formatted the seed with %d, which stops on a double outside the integer range.
@@ -244,6 +265,10 @@ testServer(app = lite, {
   check(grepl(sprintf("Type M: %.3f %s %.3f (MCSE)", r$type_m, plus_minus, r$type_m_mcse),
               po, fixed = TRUE),
         "browser app: Type M is shown with its Monte Carlo standard error")
+  session$setInputs(run_curve = 1)
+  pc <- power_plot()
+  check(identical(pc$pw, curve_at_grid_seeds(current_spec(), pc$grid, 100)),
+        "browser app: the power curve gives each grid point its own seed")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")

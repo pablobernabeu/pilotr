@@ -4,7 +4,7 @@
 \alias{power_design}
 \title{Simulation-based power and design analysis for a two-group Gaussian design}
 \usage{
-power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1)
+power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NULL)
 }
 \arguments{
 \item{spec}{A design specification (path or list) for a two-group Gaussian design with one
@@ -20,6 +20,10 @@ slowly still. At least 200 replicates are advisable for study planning.}
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because every replicate takes its own seed from
 \code{\link[=replicate_seeds]{replicate_seeds()}}, any worker count returns results identical to a serial run.}
+
+\item{cl}{A cluster made by \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to run the replicates on, in place of one
+started for this call, in which case \code{workers} is ignored. The cluster is left running for its
+owner to stop, and through \code{\link[=sweep_spec]{sweep_spec()}} one cluster serves every grid point.}
 }
 \value{
 A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{power_mcse} (its Monte Carlo

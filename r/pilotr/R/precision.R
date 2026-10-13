@@ -77,6 +77,9 @@
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
+#' @param cl A cluster made by [parallel::makeCluster()] to run the replicates on, in place of one
+#'   started for this call, in which case `workers` is ignored. The cluster is left running for its
+#'   owner to stop, and through [sweep_spec()] one cluster serves every grid point.
 #' @return A data frame with one row per focal effect and columns `param`, `true`,
 #'   `mean_ci_width`, `p_meaningful`, `p_meaningful_mcse`, `p_meaningful_lo`,
 #'   `p_meaningful_hi`, `p_equivalent`, `p_equivalent_mcse`, `p_equivalent_lo`,
@@ -131,14 +134,14 @@
 #' }
 #' @export
 precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, rope = 0.05,
-                             n_sims = 100, workers = 1) {
+                             n_sims = 100, workers = 1, cl = NULL) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_design() requires the 'lme4' package; please install it.", call. = FALSE)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
+  cl <- .check_cluster(cl)
   rope <- .as_rope(rope)
-  cl <- NULL
-  if (workers > 1L) {
+  if (is.null(cl) && workers > 1L) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
@@ -146,9 +149,9 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
                          n_sims = n_sims, cl = cl)
 }
 
-# The replicate loop behind precision_design(), taking an optional PSOCK cluster so that
-# precision_curve() can create one cluster and reuse it across grid points. `rope` arrives as
-# the region c(lower, upper) that .as_rope() returns.
+# The replicate loop behind precision_design(), run on the PSOCK cluster `cl` when there is one,
+# which precision_curve() hands to every grid point through sweep_spec(). `rope` arrives as the
+# region c(lower, upper) that .as_rope() returns.
 .precision_design_impl <- function(spec, focal, formula, prep, rope, n_sims, cl = NULL) {
   auto <- is.null(formula)
   if (auto) formula <- model_formula(spec)
@@ -261,6 +264,11 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #' the axis a design analysis most often needs next, and [design_conditions()] builds the
 #' coefficient overrides for it.
 #'
+#' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
+#' so the points of the curve are independent, as [solve_curve()] assumes when it fits them.
+#' `seeds = "shared"` runs every point from the specification's own seed instead, as up to 0.3.1.
+#' With `workers > 1`, one worker pool is created and reused across all sample sizes.
+#'
 #' Reading the crossing off the returned curve, or off a plot of it, is what [solve_curve()]
 #' replaces. At the replicate counts these runs are usually given, neighbouring points on the
 #' curve are not significantly different from one another, so a sample size judged by eye is a
@@ -286,7 +294,9 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   design; raise it to at least 200 for planning.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each sample size. The default of 1 runs serially, and any worker count returns results
-#'   identical to a serial run.
+#'   identical to a serial run. One pool of that many processes serves the whole sweep.
+#' @param seeds How the sample sizes are seeded: `"independent"`, the default, or `"shared"`, as
+#'   in [sweep_spec()]'s `.seeds`.
 #' @return A data frame with one row per focal effect and sample size, adding an `n_subject`
 #'   column to the columns returned by [precision_design()], including the Monte Carlo standard
 #'   errors, the Wilson interval bounds, and the `n_returned`, `n_converged`, `n_singular` and
@@ -309,10 +319,22 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #' }
 #' @export
 precision_curve <- function(spec, focal = NULL, subject_ns, formula = NULL, prep = NULL,
-                            rope = 0.05, n_sims = 60, workers = 1) {
+                            rope = 0.05, n_sims = 60, workers = 1,
+                            seeds = c("independent", "shared")) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_curve() requires the 'lme4' package; please install it.", call. = FALSE)
+  spec <- .as_spec(spec)
+  seeds <- match.arg(seeds)
+  workers <- .check_workers(workers)
+  .as_rope(rope)                    # a malformed region is refused before any worker starts
+  # One pool for the whole sweep, handed to every grid point. Since 0.3.0 `workers` had travelled
+  # to precision_design(), which started and stopped a pool at every point.
+  cl <- NULL
+  if (workers > 1L) {
+    cl <- parallel::makeCluster(workers)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+  }
   sweep_spec(spec, "units$subject$n", subject_ns, precision_design,
              focal = focal, formula = formula, prep = prep, rope = rope,
-             n_sims = n_sims, workers = workers, .name = "n_subject")
+             n_sims = n_sims, cl = cl, .name = "n_subject", .seeds = seeds)
 }

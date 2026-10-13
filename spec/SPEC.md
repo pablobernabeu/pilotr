@@ -598,6 +598,20 @@ first draw of replicate `i` correlated 0.95 with that of replicate `i + 1`. An a
 scramble does not help, since the seeding rule is linear in the seed. This changed every number
 pilotr produced before 0.3.
 
+A sweep runs the same loops at each point of a grid, such as a list of sample sizes, and gives
+each point a seed of its own by the same rule. Point `j` of a sweep over `J` values, counting from
+1, takes the `j`-th of the seeds `replicate_seeds(seed, J)` returns. Its replicates take their
+seeds from that one, so that no two points share their random numbers. The seeds are drawn in
+turn, so the first `J` of a longer sweep are the seeds of a shorter one, and appending points to
+a grid leaves the earlier points' results unchanged. A point's seed follows its position in the
+grid, though, not the value at that position. A sweep over the seed itself sets each point's seed
+to the value swept. Sweeps up to R 0.3.1 and Python 0.3.0 gave every point the specification's own
+seed, so replicate `i` drew the same numbers at every point, and the points of a curve shared
+their noise. The curve solvers fit the points as independent, and with shared seeds their nominal
+95% intervals covered the true sample size in 87.8% of solves on a tight grid. Both packages keep
+that behaviour as an option, `.seeds = "shared"` in R's `sweep_spec()` and `seeds = "shared"` in
+its curve functions and in Python's `power_curve`.
+
 ## Scope of the guarantee
 
 Identical data means bit-identical, and holds exactly for the `gaussian` family and for any design

@@ -95,6 +95,20 @@
   only the intercept of the output changes, and no power or precision result for a coefficient
   does. `scale_intercept = TRUE` restores the old behaviour.
 
+* Each point of a sweep draws its own replicates. Every grid point reused the specification's
+  seed, so neighbouring points shared their random numbers, while `solve_curve()` treats them as
+  independent. Over 1,000 emulated curves a setting, its nominal 95% intervals covered the true
+  sample size in 88% of solves on a tight grid, and the true effect in 70% on an effect-size
+  axis. Grid point i of `sweep_spec()` now takes `replicate_seeds(seed, length(values))[i]`,
+  which brings the two to 96.5% and 95.7%. Every number a sweep produces changes, in
+  `power_curve_mixed()`, `precision_curve()`, the power curve of the no-code app, installed or in
+  the browser, and the HPC precision-array job, whose tasks a local `precision_curve()` over the
+  same grid now reproduces. `seeds = "shared"` (`.seeds` in `sweep_spec()`) keeps the old
+  behaviour. The coverage figures quoted for `solve_curve()` come from a new calibration,
+  `tools/calibration/solve_curve_coverage.R`, where the earlier 35 in 36 rested on 12 curves
+  whose points shared their seeds. Rerun with independent points, those 12 curves no longer
+  favour the probit link over the logit, and the documentation now says so.
+
 ## New features
 
 * `calibrate_response()` gains `denominator = "random"`, which calibrates the random components
@@ -263,6 +277,13 @@
   a lognormal or shifted lognormal response whose `exp(eta + sigma * z)` overflowed, and 0, 1 or
   `NaN` for a Beta response whose shape parameter was zero or whose two Gamma variates both
   underflowed. Python raised a bare `OverflowError` or `ZeroDivisionError` in the same cases.
+
+* `power_curve_mixed()` and `precision_curve()` start one worker pool for the whole sweep, as their
+  documentation said. Since 0.3.0 every grid point started and stopped its own, at a cost of 20 to
+  50 seconds a point on a loaded machine. `power_mixed()`, `precision_design()` and
+  `power_design()` gain `cl`, for a cluster the caller has made, which they run on and leave
+  running. Passed through `sweep_spec()`, as in `sweep_spec(spec, path, values, power_mixed,
+  cl = cl)`, one cluster serves every point of an effect-size sweep as well.
 
 ## Deprecated
 

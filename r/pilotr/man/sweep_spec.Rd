@@ -4,7 +4,15 @@
 \alias{sweep_spec}
 \title{Sweep an analysis over one field of a design specification}
 \usage{
-sweep_spec(spec, path, values, fn, ..., .name = NULL)
+sweep_spec(
+  spec,
+  path,
+  values,
+  fn,
+  ...,
+  .name = NULL,
+  .seeds = c("independent", "shared")
+)
 }
 \arguments{
 \item{spec}{A design specification (path or list).}
@@ -17,10 +25,16 @@ sweep_spec(spec, path, values, fn, ..., .name = NULL)
 \item{fn}{The analysis to run at each grid point, for example \code{\link[=power_mixed]{power_mixed()}} or
 \code{\link[=precision_design]{precision_design()}}. It is called as \code{fn(spec, ...)}.}
 
-\item{...}{Further arguments passed to \code{fn} at every grid point.}
+\item{...}{Further arguments passed to \code{fn} at every grid point. A cluster passed as \code{cl} to an
+analysis that takes one, such as \code{\link[=power_mixed]{power_mixed()}}, serves every point, so that one pool of
+workers runs the whole sweep.}
 
 \item{.name}{Name for the column recording the swept value. Defaults to the last element of
 \code{path}.}
+
+\item{.seeds}{How the grid points are seeded. \code{"independent"}, the default, gives point \code{i} of
+\code{J} the seed \code{replicate_seeds(spec$seed, J)[i]}, and \code{"shared"} gives every point the
+specification's own seed, as sweeps did up to 0.3.1 (see Details).}
 }
 \value{
 A data frame binding the results, with the swept value as the leading column, or the
@@ -46,6 +60,24 @@ coefficient keeps the specification's, in the specification's order. That is the
 which the linear predictor is summed, so a condition simulates exactly the data of the
 specification edited by hand. A condition may name only coefficients the specification
 already has, and any other name is refused.
+
+Each grid point draws its own replicates. Point \code{i} of a sweep over \code{J} values takes
+\code{replicate_seeds(spec$seed, J)[i]} as its seed, and the analysis derives its replicates' seeds
+from that, so no two points share their random numbers. \code{\link[=solve_curve]{solve_curve()}} fits the points of a
+curve as independent binomial counts, and its interval keeps its nominal coverage only when they
+are. The rule is prefix-stable: appending values to a sweep leaves the earlier points' results
+as they were. It depends on order, though, since a point's seed follows its position in
+\code{values}, so reordering the values, or inserting one, changes the results at every point that
+moves. A sweep over \code{seed} itself sets each point's seed to the value swept.
+
+\code{.seeds = "shared"} gives every point the specification's own seed, as every sweep did up to
+0.3.1. The points then share their noise, so the curve looks smoother than its Monte Carlo
+error allows and an interval fitted to it is too narrow. Over 1,000 emulated curves for each
+of twelve settings on a tight grid of sample sizes, the nominal 95\% interval of \code{\link[=solve_curve]{solve_curve()}}
+covered the true size in 87.8\% of solves with shared seeds and in 96.5\% with independent ones.
+On an effect-size axis, where the design and so every draw stay the same from point to point,
+the figures were 70.3\% and 95.7\%. \code{tools/calibration/solve_curve_coverage.R} in the source
+repository produces them.
 
 The result of \code{fn} is coerced to a data frame: a \code{pilotr_power} object becomes one row per focal
 effect, a data frame is used as it stands, and a plain list becomes a single row. The swept value

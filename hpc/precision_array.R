@@ -41,8 +41,12 @@ form  <- model_formula(spec)
 focal <- c(SyntaxPC = 0.10, cond_age = 0.02)       # meaningful (outside ROPE) + negligible (inside)
 # The package's own seed rule, not an arithmetic one. Consecutive seeds are not independent
 # streams in this generator, so `base + (i - 1)` left neighbouring replicates correlated at 0.95
-# and understated the job's Monte Carlo error; see ?replicate_seeds.
-seeds <- replicate_seeds(spec$seed, n_sims)
+# and understated the job's Monte Carlo error; see ?replicate_seeds. Each task is one point of a
+# sweep over `grid` and takes the seed sweep_spec() gives that point. The points of the combined
+# curve are then independent, as solve_curve() assumes, and a local precision_curve() over the
+# same grid reproduces every task. Every task used to draw its replicates from the specification's
+# own seed, so neighbouring points of the curve shared their random numbers.
+seeds <- replicate_seeds(replicate_seeds(spec$seed, length(grid))[task + 1L], n_sims)
 
 # mclapply forks, so the workers inherit the definitions sourced above. A PSOCK cluster (what
 # precision_design(workers = ) builds) would not, because pilotr is not installed on the cluster.

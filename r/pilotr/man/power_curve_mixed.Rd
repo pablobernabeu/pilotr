@@ -10,7 +10,8 @@ power_curve_mixed(
   focal = NULL,
   n_sims = 60,
   alpha = 0.05,
-  workers = 1
+  workers = 1,
+  seeds = c("independent", "shared")
 )
 }
 \arguments{
@@ -29,7 +30,10 @@ too coarse to support a claim about a design; raise it to at least 200 for plann
 
 \item{workers}{Number of local worker processes over which to spread the replicates at
 each grid point. The default of 1 runs serially, and any worker count returns results
-identical to a serial run.}
+identical to a serial run. One pool of that many processes serves the whole sweep.}
+
+\item{seeds}{How the sample sizes are seeded: \code{"independent"}, the default, or \code{"shared"}, as
+in \code{\link[=sweep_spec]{sweep_spec()}}'s \code{.seeds}.}
 }
 \value{
 A data frame with one row per sample size and focal effect, with columns \code{n_subject},
@@ -51,6 +55,10 @@ specification rather than wrapping an existing package, and differs from \code{s
 MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021) in being driven by that
 specification, in reporting Type S and Type M errors, and in built-in parallelisation: with
 \code{workers > 1} a single worker pool is created once and reused across all sample sizes.
+
+Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
+so the points of the curve are independent, as \code{\link[=target_n]{target_n()}} assumes when it fits them.
+\code{seeds = "shared"} runs every point from the specification's own seed instead, as up to 0.3.1.
 
 For any axis other than sample size, call \code{\link[=sweep_spec]{sweep_spec()}} directly. Effect size is the axis a
 design analysis most often needs after sample size, and \code{\link[=design_conditions]{design_conditions()}} builds the

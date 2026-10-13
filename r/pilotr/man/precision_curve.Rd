@@ -12,7 +12,8 @@ precision_curve(
   prep = NULL,
   rope = 0.05,
   n_sims = 60,
-  workers = 1
+  workers = 1,
+  seeds = c("independent", "shared")
 )
 }
 \arguments{
@@ -43,7 +44,10 @@ design; raise it to at least 200 for planning.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates at
 each sample size. The default of 1 runs serially, and any worker count returns results
-identical to a serial run.}
+identical to a serial run. One pool of that many processes serves the whole sweep.}
+
+\item{seeds}{How the sample sizes are seeded: \code{"independent"}, the default, or \code{"shared"}, as
+in \code{\link[=sweep_spec]{sweep_spec()}}'s \code{.seeds}.}
 }
 \value{
 A data frame with one row per focal effect and sample size, adding an \code{n_subject}
@@ -62,6 +66,11 @@ A thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$s
 the sweep users want most often. For any other axis, call \code{\link[=sweep_spec]{sweep_spec()}} directly; effect size is
 the axis a design analysis most often needs next, and \code{\link[=design_conditions]{design_conditions()}} builds the
 coefficient overrides for it.
+
+Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
+so the points of the curve are independent, as \code{\link[=solve_curve]{solve_curve()}} assumes when it fits them.
+\code{seeds = "shared"} runs every point from the specification's own seed instead, as up to 0.3.1.
+With \code{workers > 1}, one worker pool is created and reused across all sample sizes.
 
 Reading the crossing off the returned curve, or off a plot of it, is what \code{\link[=solve_curve]{solve_curve()}}
 replaces. At the replicate counts these runs are usually given, neighbouring points on the

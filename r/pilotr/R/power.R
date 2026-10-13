@@ -38,6 +38,9 @@
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
+#' @param cl A cluster made by [parallel::makeCluster()] to run the replicates on, in place of one
+#'   started for this call, in which case `workers` is ignored. The cluster is left running for its
+#'   owner to stop, and through [sweep_spec()] one cluster serves every grid point.
 #' @return A list with elements `n_sims`, `alpha`, `power`, `power_mcse` (its Monte Carlo
 #'   standard error), `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`,
 #'   `true_effect` and `mean_estimate`. Then come `type_s` (sign-error rate among significant
@@ -63,7 +66,7 @@
 #' # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #' power_design(spec, n_sims = 50)
 #' @export
-power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
+power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NULL) {
   spec <- .as_spec(spec)
   refusal <- .two_group_refusal(spec)
   if (!is.null(refusal)) stop(refusal, call. = FALSE)
@@ -80,8 +83,8 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1) {
   seeds <- replicate_seeds(spec[["seed"]], n_sims)
 
   workers <- .check_workers(workers)
-  cl <- NULL
-  if (workers > 1L) {
+  cl <- .check_cluster(cl)
+  if (is.null(cl) && workers > 1L) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
