@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import copy
 import math
+import numbers
+import os
 
 # The specification version this implementation writes and understands.
 SPEC_VERSION = "0.3"
@@ -87,7 +89,10 @@ def _name_list(xs) -> str:
 
 def _is_num(x) -> bool:
     # bool is a subclass of int in Python, and a boolean where a number belongs is a mistake.
-    if isinstance(x, bool) or not isinstance(x, (int, float)):
+    # numbers.Real takes in NumPy's integer and floating types, which NumPy registers with the
+    # numbers ABCs, so a NumPy integer is no longer refused as a non-number. NumPy's bool_ is not
+    # registered, so it is refused along with bool.
+    if isinstance(x, bool) or not isinstance(x, numbers.Real):
         return False
     # An integer too large for a double is infinite to R, which reads every JSON number as one,
     # and math.isfinite() raises OverflowError on it where a refusal belongs.
@@ -178,8 +183,10 @@ def validate_spec(spec, strict: bool = True):
 
     Parameters
     ----------
-    spec : dict
-        A parsed design specification.
+    spec : dict, str or os.PathLike
+        A parsed design specification, or the path to a JSON file holding one. A path is read
+        as `load_spec` reads it and then validated, as the R twin's ``validate_spec()`` reads a
+        path.
     strict : bool
         Whether an unrecognised field is an error (the default) or a warning. Pass ``False`` to
         load a specification carrying private annotations, accepting that a misspelled field
@@ -188,12 +195,13 @@ def validate_spec(spec, strict: bool = True):
     Returns
     -------
     dict
-        The specification, unchanged.
+        The specification as given, or as read from the file.
 
     Raises
     ------
     ValueError
-        If the specification is invalid. All problems found are reported together.
+        If the specification is invalid. All problems found are reported together. A file that
+        repeats a key within one object is refused as `load_spec` refuses it.
 
     Warns
     -----
@@ -204,6 +212,11 @@ def validate_spec(spec, strict: bool = True):
     """
     import warnings
 
+    if isinstance(spec, (str, os.PathLike)):
+        # A path used to be refused as no JSON object. Imported here because simulate.py, where
+        # the reader lives, imports this module.
+        from .simulate import load_spec
+        spec = load_spec(spec, validate=False)
     if not isinstance(spec, dict):
         raise ValueError("a design specification must be a JSON object")
 
@@ -786,6 +799,21 @@ def _drop_nulls(x):
             _drop_nulls(v)
 
 
+def _plain_numbers(x):
+    """Make every number nested in `x`, other than a bool, a Python int or float, in place."""
+    keys = list(x) if isinstance(x, dict) else range(len(x)) if isinstance(x, list) else ()
+    for k in keys:
+        v = x[k]
+        if isinstance(v, (dict, list)):
+            _plain_numbers(v)
+        elif isinstance(v, bool) or type(v) in (int, float):
+            continue
+        elif isinstance(v, numbers.Integral):
+            x[k] = int(v)
+        elif isinstance(v, numbers.Real):
+            x[k] = float(v)
+
+
 def _as_int(d, key):
     """Turn a whole-number float at d[key] into the int the engine counts with."""
     v = d.get(key) if isinstance(d, dict) else None
@@ -797,10 +825,14 @@ def _normalise(spec):
     """Return a copy of a validated specification in the one shape the engine reads.
 
     Validation accepts what the schema and R accept, and the engine was written for one form of
-    each. Three readings bridge the two, applied once at every public entry point:
+    each. Four readings bridge the two, applied once at every public entry point:
 
     * A JSON null in an optional field means the field is absent, as it does to R, so it is
       removed, and a missing `factors`, `predictors` or `random` becomes empty.
+    * Every number becomes a Python int or float. Validation accepts NumPy's numbers, and the
+      engine computes with Python ints and doubles, as the R twin computes in doubles. A NumPy
+      float64, which subclasses float, used to pass straight through into the simulated data,
+      where `Dataset.to_csv` wrote it as "np.float64(...)".
     * A count written as a whole-number float, such as ``"n": 8.0``, becomes an int. Draft-07
       counts 8.0 as an integer and R simulates it, while ``range()`` raised TypeError on it.
     * A single threshold written as a bare number, which pilotr's own spec_json() wrote before
@@ -810,6 +842,7 @@ def _normalise(spec):
     if not isinstance(s, dict):
         return s
     _drop_nulls(s)
+    _plain_numbers(s)
     s.setdefault("factors", [])
     s.setdefault("predictors", [])
     s.setdefault("random", {})

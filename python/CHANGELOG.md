@@ -83,6 +83,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `poisson` responses with `lme4::glmer()` on their link scale.
 - The power guide sets each response family against the model each `power_mixed` fits, and
   against the R package's `precision_design()`.
+- NumPy integers and floats, `pathlib` paths and pandas data frames are accepted wherever a
+  number, a path or a curve is, and `validate_spec` accepts a path, as in R. A NumPy integer was
+  refused as not a whole number, so `power_curve` refused a grid made with `np.arange`, and a
+  path object was refused as not a JSON object. `workers` takes any whole number, as in R, and
+  `solve_curve` reads a NumPy value of `n` as a replicate count, where it looked for a column of
+  that name. `power_curve` records `n_subject` as a Python int, so a curve swept over a NumPy
+  grid can be written as JSON.
 
 ### Fixed
 
@@ -155,6 +162,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uniform falling between the two gave a different count. At a mean of 3.7, a uniform of
   0.4941532441504185 drew 4 here and 3 in R. In 300,000 draws from the generator, at means from
   0.5 to 100, no count differed.
+- `Dataset.to_csv` writes UTF-8 and quotes a field that holds a comma, a double quote or a
+  newline. It wrote the locale encoding, so on Windows a Polish label raised
+  `UnicodeEncodeError` and a Spanish one came out in bytes that no UTF-8 reader accepts. A comma
+  in a label or a column name shifted every later field of its row. Lines still end in LF on
+  every platform, and a data set without such characters is written byte for byte as before.
+- A NumPy float64 in a specification no longer reaches the simulated data as a NumPy scalar,
+  which `to_csv` wrote as `np.float64(...)` under NumPy 2. Every number in the specification
+  becomes a Python int or float before anything is drawn, on a copy of the caller's.
 
 ### Deprecated
 

@@ -38,7 +38,7 @@ def _tolerances() -> tuple[int, dict[str, int], set[str]]:
     """
     if not os.path.exists(TOLERANCE):
         return 0, {}, set()
-    with open(TOLERANCE) as f:
+    with open(TOLERANCE, encoding="utf-8") as f:
         cfg = json.load(f)
     default_ulp = int(cfg.get("default_max_ulp", 0))
     case_ulp = dict(cfg.get("cases", {}))
@@ -141,7 +141,7 @@ def main() -> int:
 
     golden = {}
     if os.path.exists(GOLDEN) and not update:
-        with open(GOLDEN) as f:
+        with open(GOLDEN, encoding="utf-8") as f:
             golden = json.load(f)["hashes"]
 
     default_ulp, case_ulp, transcendental = _tolerances()
@@ -188,7 +188,7 @@ def main() -> int:
     anchored = {c: h for c, h in new_hashes.items() if c not in transcendental}
 
     if update:
-        with open(GOLDEN, "w") as f:
+        with open(GOLDEN, "w", encoding="utf-8") as f:
             json.dump({"note": "SHA-256 of the IEEE-exact (non-transcendental) R dumps in "
                                "tools/parity/out/r; regenerate with "
                                "`python tools/parity/compare.py --update`",

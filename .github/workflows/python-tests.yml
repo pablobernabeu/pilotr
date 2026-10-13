@@ -96,9 +96,22 @@ jobs:
           python -m pip install --upgrade pip pytest pytest-cov
           pip install -e "./python[mixed]"
 
+      # A file opened without an encoding is read and written in the locale's encoding, which is
+      # UTF-8 on these Linux runners and cp1252 on most Windows machines, so a test of non-ASCII
+      # text can pass here and fail there. Dataset.to_csv raised UnicodeEncodeError for a Polish
+      # label on Windows for that reason. From Python 3.10, -X warn_default_encoding issues an
+      # EncodingWarning wherever an encoding is left out (PEP 597), and -W error makes the
+      # warning a failure, so the suite catches such a call on Linux. Python 3.9 has no
+      # EncodingWarning, so its cell runs the suite as before.
       - name: Run the test suite
         working-directory: python
-        run: python -m pytest --cov=pilotr --cov-report=term --cov-report=json
+        run: |
+          if python -c "import sys; sys.exit(sys.version_info < (3, 10))"; then
+            python -X warn_default_encoding -W error::EncodingWarning -m pytest \
+              --cov=pilotr --cov-report=term --cov-report=json
+          else
+            python -m pytest --cov=pilotr --cov-report=term --cov-report=json
+          fi
 
       - name: Write the coverage percentage to the run summary
         # coverage.json is the machine-readable twin of the terminal report the

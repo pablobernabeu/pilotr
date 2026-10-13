@@ -72,6 +72,7 @@ between them is written to be identical.
 from __future__ import annotations
 
 import math
+import numbers
 
 from .core import as241
 
@@ -195,6 +196,28 @@ def _dispersion(eta, y, m):
     return max(chi / df, 1.0)
 
 
+def _is_real(v) -> bool:
+    """A single real number and no bool, NumPy's numbers included, which NumPy registers with the
+    numbers ABCs. The test was ``isinstance(v, (int, float))``, which refused a NumPy integer."""
+    return isinstance(v, numbers.Real) and not isinstance(v, bool)
+
+
+def _records(curve):
+    """A curve as the records the solver reads.
+
+    A pandas data frame, or any table with the same ``to_dict("records")`` method, gives its rows
+    as records, so pandas never has to be imported here. A data frame used to be refused as no
+    table of curve points. An object whose ``to_dict`` takes no such argument is returned as it
+    is, for the check that follows to refuse.
+    """
+    if isinstance(curve, (list, tuple)) or not callable(getattr(curve, "to_dict", None)):
+        return curve
+    try:
+        return curve.to_dict("records")
+    except (TypeError, ValueError):
+        return curve
+
+
 def _columns(curve):
     """The column names of a curve, taken from its first row."""
     return list(curve[0].keys())
@@ -217,14 +240,16 @@ def _column(curve, given, auto, label, arg):
 
 
 def _probability(v, arg):
-    """A single probability strictly inside the unit interval. The two checks are separate so
-    that a missing or non-numeric argument is never formatted into the message, which R would
-    render as "NA" and Python as "nan"."""
-    ok = isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
-    if not ok:
+    """A single probability strictly inside the unit interval, returned as a Python float. The
+    two checks are separate so that a missing or non-numeric argument is never formatted into
+    the message, which R would render as "NA" and Python as "nan". The float keeps the fit in
+    double precision whatever number type was passed, and a NumPy scalar out of the result."""
+    if not (_is_real(v) and math.isfinite(v)):
         raise ValueError("`%s` must be a single number strictly between 0 and 1." % arg)
+    v = float(v)
     if v <= 0 or v >= 1:
         raise ValueError("`%s` must be strictly between 0 and 1; got %s." % (arg, _num(v)))
+    return v
 
 
 def _rows(curve, effect):
@@ -256,7 +281,7 @@ def _numeric(curve, name, keep, what):
         if v is None:
             out.append(float("nan"))
             continue
-        if isinstance(v, bool) or not isinstance(v, (int, float)):
+        if not _is_real(v):
             raise ValueError("the %s column '%s' is not numeric." % (what, name))
         out.append(float(v))
     return out
@@ -264,8 +289,9 @@ def _numeric(curve, name, keep, what):
 
 def _weights(curve, n, keep):
     """The replicate count behind each rate: a column name, a numeric value repeated over the
-    rows, or the first count column the curve carries."""
-    if isinstance(n, (int, float)) and not isinstance(n, bool):
+    rows, or the first count column the curve carries. A NumPy count used to be looked up as a
+    column name."""
+    if _is_real(n):
         return [float(n)] * len(keep)
     if isinstance(n, (list, tuple)):
         if not len(n):
@@ -332,9 +358,10 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
 
     Parameters
     ----------
-    curve : sequence of dict
+    curve : sequence of dict, or data frame
         A curve, as returned by `power_curve`: one record per swept value, holding the swept
-        value, a decision rate, and the number of replicates behind it.
+        value, a decision rate, and the number of replicates behind it. A pandas data frame, or
+        any table with a ``to_dict("records")`` method, is read as its records.
     target : float
         The decision rate to solve for, strictly between 0 and 1.
     x : str, optional
@@ -343,10 +370,10 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     y : str, optional
         Name of the column holding the decision rate. `None`, the default, takes `power` or
         `p_meaningful`, whichever is present.
-    n : str or float or sequence, optional
+    n : str, float or sequence, optional
         The number of replicates behind each rate, either the name of a column or a numeric
-        value. `None`, the default, takes `n_returned`, `n_converged` or `n_sims`, whichever
-        is present.
+        value, a NumPy number included. `None`, the default, takes `n_returned`, `n_converged`
+        or `n_sims`, whichever is present.
     effect : str, optional
         Which focal effect to solve for, when the curve holds more than one. Matched against
         the `effect` or `param` column. `None`, the default, uses every record, which is
@@ -394,10 +421,11 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     >>> round(solve_curve(curve, target=0.8)["value"])
     120
     """
+    curve = _records(curve)
     if not isinstance(curve, (list, tuple)) or not len(curve) or not _columns(curve):
         raise ValueError("`curve` must be a table of curve points, with one row per swept value.")
-    _probability(target, "target")
-    _probability(level, "level")
+    target = _probability(target, "target")
+    level = _probability(level, "level")
     if not isinstance(transform, str) or transform not in _TRANSFORMS:
         raise ValueError("`transform` must be one of %s."
                          % ", ".join("'%s'" % t for t in _TRANSFORMS))
@@ -497,8 +525,8 @@ def target_n(curve, target=0.8, **kwargs):
 
     Parameters
     ----------
-    curve : sequence of dict
-        A power curve, as returned by `power_curve`.
+    curve : sequence of dict, or data frame
+        A power curve, as returned by `power_curve`, or a pandas data frame of one.
     target : float, optional
         The power to reach (default 0.8, the convention this package's plots draw a line at).
     **kwargs

@@ -12,7 +12,7 @@ stream.
 """
 
 from __future__ import annotations
-import json, math, itertools
+import csv, json, math, itertools, os
 from .core import RNG, cholesky, matvec, inv_logit, poisson_inv, ordinal_inv, beta_draw, fround
 from .validate import validate_spec, _normalise, _repeated_key_message
 
@@ -47,11 +47,25 @@ class Dataset:
         return self.rows[:n]
 
     def to_csv(self, path):
-        """Write the data set to `path` as CSV: a header row then one row per observation."""
-        with open(path, "w", newline="") as f:
-            f.write(",".join(self.columns) + "\n")
-            for r in self.rows:
-                f.write(",".join(_fmt(r[c]) for c in self.columns) + "\n")
+        """Write the data set to `path` as CSV: a header row then one row per observation.
+
+        The file is UTF-8 whatever the locale, with LF line endings on every platform. A field
+        holding a comma, a double quote or a newline is quoted, so a label such as "low, fast"
+        stays one field. A float is written with ``repr``, which reads back as the same double.
+
+        Parameters
+        ----------
+        path : str or os.PathLike
+            The file to write, which is replaced if it exists.
+        """
+        # The locale encoding raised UnicodeEncodeError for "Łatwy" on Windows and wrote "fácil"
+        # as cp1252 bytes, and fields joined with bare commas came apart at a comma inside a
+        # label. lineterminator keeps the LF endings this method has always written, where the
+        # csv module's default is CRLF.
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            writer.writerow(self.columns)
+            writer.writerows([_fmt(r[c]) for c in self.columns] for r in self.rows)
 
 
 def _fmt(v):
@@ -160,8 +174,8 @@ def load_spec(path, validate=True):
 
     Parameters
     ----------
-    path : str
-        Path to a JSON design-specification file.
+    path : str or os.PathLike
+        Path to a JSON design-specification file, as a string or a `pathlib.Path`.
     validate : bool
         Whether to validate the specification after reading it. ``True`` (the default) applies
         `validate_spec` strictly; ``False`` skips validation; ``"lenient"`` or any other truthy
@@ -192,9 +206,10 @@ def _as_spec(spec, validate=True):
     """Resolve a specification argument to a validated, normalised copy.
 
     Every public entry point calls this once, so that a path is read once and validation runs
-    once for a whole replicate loop, mirroring `.as_spec()` in the R twin.
+    once for a whole replicate loop, mirroring `.as_spec()` in the R twin. A path may be a string
+    or any os.PathLike, such as a `pathlib.Path`, which used to be refused as no JSON object.
     """
-    if isinstance(spec, str):
+    if isinstance(spec, (str, os.PathLike)):
         spec = load_spec(spec, validate=validate)
     elif validate is not False:
         validate_spec(spec, strict=validate is True)
@@ -280,9 +295,9 @@ def simulate(spec, validate=True) -> Dataset:
 
     Parameters
     ----------
-    spec : dict or str
-        A design specification, either an already-parsed `dict` or a path to a JSON spec
-        file. The format is documented at
+    spec : dict, str or os.PathLike
+        A design specification, either an already-parsed `dict` or the path to a JSON spec
+        file, as a string or a `pathlib.Path`. The format is documented at
         https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md.
     validate : bool
         Whether to validate the specification first. The default ``True`` catches the errors

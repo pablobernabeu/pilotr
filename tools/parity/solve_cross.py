@@ -160,13 +160,13 @@ def _run_r(cases):
     with tempfile.TemporaryDirectory() as tmp:
         cases_path = os.path.join(tmp, "cases.json")
         driver_path = os.path.join(tmp, "driver.R")
-        with open(cases_path, "w") as f:
+        with open(cases_path, "w", encoding="utf-8") as f:
             json.dump([c[1] for c in cases], f)
-        with open(driver_path, "w") as f:
+        with open(driver_path, "w", encoding="utf-8") as f:
             f.write(R_DRIVER)
         src = os.path.join(ROOT, "r", "pilotr", "R")
         proc = subprocess.run([RSCRIPT, "--vanilla", driver_path, src, cases_path],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         raise SystemExit("the R driver failed:\n" + proc.stderr)
     return json.loads(proc.stdout)

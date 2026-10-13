@@ -26,18 +26,22 @@ functions are module-level so that they pickle under the Windows spawn start met
 """
 
 from __future__ import annotations
-import copy, functools, math, statistics, warnings
+import copy, functools, math, os, statistics, warnings
 from .simulate import _simulate, _as_spec, load_spec
 from .core import replicate_seeds
 from .mcse import _rate_with_error, _type_m_mcse, _type_s_interval
-from .validate import _name_list
+from .validate import _is_whole, _name_list
 
 
 def _check_workers(workers):
-    """Validate `workers` as a single positive whole number and return it as an int."""
-    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+    """Validate `workers` as a single positive whole number and return it as an int.
+
+    Any whole number is accepted, a NumPy integer or a float such as 2.0 included, as the R twin's
+    ``.check_workers()`` accepts one. Only a Python int used to pass.
+    """
+    if not _is_whole(workers) or workers < 1:
         raise ValueError("workers must be a positive whole number")
-    return workers
+    return int(workers)
 
 
 def _map_replicates(rep, seeds, executor):
@@ -127,7 +131,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
 
     Parameters
     ----------
-    spec : dict or str
+    spec : dict, str or os.PathLike
         A two-group Gaussian design specification with one row per subject (dict or path to a
         JSON file).
     n_sims : int, optional
@@ -467,7 +471,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
 
     Parameters
     ----------
-    spec : dict or str
+    spec : dict, str or os.PathLike
         A design specification (dict or path to a JSON file) with exactly one within-unit
         factor and a crossed design with an item unit.
     n_sims : int, optional
@@ -615,11 +619,12 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
 
     Parameters
     ----------
-    spec : dict or str
+    spec : dict, str or os.PathLike
         A two-group Gaussian design specification with one row per subject, as `power`
         requires.
     subject_ns : iterable of int
-        Subject counts to evaluate.
+        Subject counts to evaluate: any whole numbers, such as a range, a list or a NumPy
+        array from ``np.arange`` or ``np.linspace``.
     n_sims : int, optional
         Replicates per grid point (default 1000).
     alpha : float, optional
@@ -634,7 +639,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
     list of dict
         One dict per grid point, with keys `n_subject`, `power`, `power_mcse`, `power_lo`,
         `power_hi`, `type_s`, `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, `n_sims` and
-        `n_significant`, each as `power` returns it. `power_lo` and `power_hi` give the band to
+        `n_significant`, each as `power` returns it. `n_subject` is a Python int, whatever type
+        the grid held, so the records serialise as JSON. `power_lo` and `power_hi` give the band to
         draw around a plotted curve. The two counts are what `solve_curve` weights the curve by,
         since a power estimate over 1000 replicates should count for more than one over 50.
 
@@ -643,7 +649,7 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
     solve_curve, target_n : solve this curve for the sample size that meets a target power.
     """
     workers = _check_workers(workers)
-    if isinstance(spec, str):
+    if isinstance(spec, (str, os.PathLike)):
         spec = load_spec(spec)
 
     def sweep(executor):
@@ -652,7 +658,9 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1):
             s = copy.deepcopy(spec)
             s["units"]["subject"]["n"] = n
             r = _power_impl(s, n_sims, alpha, executor)
-            out.append({"n_subject": n, **{k: r[k] for k in _CURVE_KEYS}})
+            # _power_impl() has validated n as a whole number, so int() is exact. A NumPy grid
+            # would otherwise leave a NumPy scalar here, and json cannot write a NumPy integer.
+            out.append({"n_subject": int(n), **{k: r[k] for k in _CURVE_KEYS}})
         return out
 
     if workers == 1:
