@@ -353,7 +353,9 @@ def counterbalance_cases():
 
     The field is refused in a specification declaring less than 0.4, whatever its value, and
     with a between factor, without items or with per_subject. Subjects or items that are not a
-    multiple of the number of lists draw a warning, which the spec battery compares as text.
+    multiple of the number of lists draw a warning, which the spec battery compares as text. The
+    data of such a design name each subject's list in a column `list`, so another column of that
+    name is refused, and accepted beside counterbalance false.
     """
     def counterbalanced(version="0.4", value=True, fn=None):
         def mutate(s):
@@ -392,6 +394,20 @@ def counterbalance_cases():
                                        s["fixed"]["coefficients"].__setitem__("pr", 0.02)))),
         ("counterbalanced beside a crossed within factor",
          counterbalanced(fn=_second_factor)),
+        ("a factor named list beside a counterbalanced one",
+         counterbalanced(fn=lambda s: _second_factor(s, name="list"))),
+        ("a factor named list beside counterbalance false",
+         counterbalanced(value=False, fn=lambda s: _second_factor(s, name="list"))),
+        ("a predictor named list in a counterbalanced design",
+         counterbalanced(fn=lambda s: s.__setitem__("predictors",
+                                                    [{"name": "list", "varies_by": "subject"}]))),
+        ("a grouping factor named list in a counterbalanced design",
+         counterbalanced(fn=lambda s: s["random"].__setitem__(
+             "list", {"intercept_sd": 0.5, "over": "subject", "n": 5}))),
+        ("the response named list in a counterbalanced design",
+         counterbalanced(fn=lambda s: s["response"].__setitem__("name", "list"))),
+        ("a contrast column named list in a counterbalanced design",
+         counterbalanced(fn=lambda s: _second_factor(s, contrasts={"list": [-0.5, 0.5]}))),
     ]
 
 
@@ -550,6 +566,11 @@ def file_cases():
         ("counterbalanced over 31 subjects",
          _with(g, lambda s: (_counterbalance(True)(s),
                              s["units"]["subject"].__setitem__("n", 31)))),
+        # Its data name each subject's list, in a column placed before the grouping factors.
+        ("counterbalanced with subjects in sites",
+         _with(g, lambda s: (_counterbalance(True)(s),
+                             s["random"].__setitem__("site", {"intercept_sd": 0.5,
+                                                              "over": "subject", "n": 4})))),
         # The Poisson cap is a refusal raised while simulating, below and above 708.4.
         ("poisson mean 700",
          _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(700)))),

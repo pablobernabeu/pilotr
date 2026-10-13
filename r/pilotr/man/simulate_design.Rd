@@ -21,7 +21,8 @@ directly.}
 \value{
 A data frame with one row per observation, containing a \code{subject} column, an
 optional \code{item} column, any grouping, factor, and continuous-predictor columns, and the
-response column named by the specification.
+response column named by the specification. A design with a counterbalanced factor also has
+a \code{list} column after \code{item}, holding the list each subject follows, counted from 1.
 }
 \description{
 Generate an analysis-ready data set from a portable design specification: a linear

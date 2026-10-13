@@ -311,7 +311,8 @@ def simulate(spec, validate=True) -> Dataset:
     Dataset
         A table with one row per observation: a `subject` column, an optional `item` column,
         any grouping, factor, and continuous-predictor columns, and the response column named
-        by ``spec["response"]["name"]``.
+        by ``spec["response"]["name"]``. A design with a counterbalanced factor also has a
+        `list` column after `item`, holding the list each subject follows, counted from 1.
     """
     return _simulate(_as_spec(spec, validate))
 
@@ -486,8 +487,9 @@ def _simulate(spec) -> Dataset:
     thresholds, ndp = resp.get("thresholds"), resp.get("round")
     beta_exg = resp.get("beta")
 
-    out_cols = (["subject"] + (["item"] if has_item else []) + [g for g, _ in extra] +
-                [f["name"] for f in factors] + [p["name"] for p in predictors] + [yname])
+    out_cols = (["subject"] + (["item"] if has_item else []) + (["list"] if rotated else []) +
+                [g for g, _ in extra] + [f["name"] for f in factors] +
+                [p["name"] for p in predictors] + [yname])
     out_rows = []
     for r in rows:
         cv = r["cvals"]
@@ -557,6 +559,11 @@ def _simulate(spec) -> Dataset:
         out = {"subject": r["subject"]}
         if has_item:
             out["item"] = r["item"]
+        # A counterbalanced design names the list each subject follows, ((s - 1) mod C) + 1,
+        # counted from 1 as the units are. It is integer arithmetic and draws nothing, and a
+        # design without a counterbalanced factor has no such column.
+        if rotated:
+            out["list"] = (r["subject"] - 1) % n_lists + 1
         for gname, (over, _cols, group_of) in group_meta.items():
             out[gname] = group_of[r[over]] + 1
         out.update(r["labels"])

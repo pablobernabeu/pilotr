@@ -498,25 +498,35 @@
 #' item unit gains a `per_subject` count, so that the recovered design keeps the partial crossing
 #' of the original.
 #'
-#' A factor that varies within both units is crossed with every subject-item pair, so the
-#' returned specification observes each pair at every level. A pilot run in counterbalanced
-#' lists, as priming studies usually are, showed each subject each item at one level only. The
-#' levels rotated across lists of subjects, so that every item appeared at each level. When
-#' every subject-item pair of the pilot holds one level of a factor, and every subject and every
-#' item holds two or more, a warning says so. The returned specification then has twice the
-#' pilot's observations per subject for a two-level factor and three times for a three-level one.
-#' Two two-level factors rotated together over four lists draw one warning, for four times the
-#' observations. The power computed from such a specification is too high. Take the variance
+#' A factor that varies within both units is crossed with every subject-item pair unless it sets
+#' `counterbalance`, a field of specification version 0.4. A pilot run in counterbalanced lists,
+#' as priming studies usually are, showed each subject each item at one level only. The levels
+#' rotated across lists of subjects, so that every item appeared at each level. When every
+#' subject-item pair of the pilot holds one level of a factor, and every subject and every item
+#' holds two or more, the returned specification sets `counterbalance` to `TRUE` on that factor
+#' and declares version 0.4. Each subject then meets each item at one level, the levels rotating
+#' over subjects and items as described under Counterbalanced lists in the specification
+#' (`spec/SPEC.md`). The simulated data name each subject's list in a column `list`. Factors
+#' rotated together, as two two-level factors over four lists, are all counterbalanced, and a
+#' message names them. Releases that read no version above 0.3 refuse such a specification.
+#'
+#' `counterbalance = FALSE` returns the crossed specification of earlier versions, which those
+#' releases read, with a warning. It has twice the pilot's observations per subject for a
+#' two-level factor, three times for a three-level one and four times for two two-level factors
+#' rotated together. The power computed from it is therefore too high. Take the variance
 #' components of the `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05
 #' on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
-#' for the crossed design and 0.55 for the counterbalanced one.
-#' The counterbalanced study needs about 1.8 times the subjects to match the crossed one. To plan
-#' it, set `counterbalance` to `TRUE` on each factor the warning names, and `spec_version` to
-#' `"0.4"` in the returned specification. Specification version 0.4 then rotates the levels over
-#' subjects and items, as described under Counterbalanced lists in the specification
-#' (`spec/SPEC.md`). A release that reads no version above 0.3 takes a two-level design written
-#' with a list factor between subjects and an item-set factor between items, as in the two-list
-#' example among the worked encodings of the specification.
+#' for the crossed design and 0.55 for the counterbalanced one. The counterbalanced study needs
+#' about 1.8 times the subjects to match the crossed one. A release that reads no version above 0.3
+#' takes a two-level design written with a list factor between subjects and an item-set factor
+#' between items, as in the two-list example among the worked encodings of the specification.
+#' The crossed specification and the warning also come back, whatever `counterbalance` says, when
+#' each subject of the pilot saw only some of the items. The specification then keeps
+#' `per_subject`, which version 0.4 does not combine with `counterbalance`, since that field needs
+#' every subject to see every item. They come back as well when the pilot's model has a column or
+#' grouping factor named `list`, as a model that fits the list beside the condition does. Version
+#' 0.4 gives that name to the column holding each subject's list, and no other column may share
+#' it. The warning then asks for the term to be renamed in the pilot's data and the model refitted.
 #'
 #' Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 #' would not observe, through the `prep` argument of [power_mixed()] and [precision_design()].
@@ -576,7 +586,14 @@
 #'   effect size of interest on the scale of the fit, as in `sesoi = c(cond = 0.03)`. The names
 #'   are the returned specification's coefficient keys, which write an interaction as `a:b`, and
 #'   a name that is not among them is refused.
-#' @return A design specification as a nested list, carrying `spec_version` and validated with
+#' @param counterbalance Whether a factor that the pilot counterbalanced sets `counterbalance` in
+#'   the returned specification, which then declares specification version 0.4 (see Details).
+#'   `TRUE`, the default, plans the pilot's design, unless its subjects each saw only some of the
+#'   items or its model has a term named `list`. `FALSE` returns a fully crossed specification
+#'   that releases reading version 0.3 accept, with a warning that the power computed from it is
+#'   too high.
+#' @return A design specification as a nested list, carrying the lowest `spec_version` that reads
+#'   it, 0.4 when it sets `counterbalance` and 0.3 otherwise, and validated with
 #'   [validate_spec()], so it can be passed directly to [simulate_design()],
 #'   [power_mixed()] or [spec_json()]. Two attributes record the readings that
 #'   the fit did not settle on its own: `group_mapping`, a named character vector giving the
@@ -643,7 +660,7 @@
 #' @export
 spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item = NULL,
                             family = NULL, round = NULL, effects = c("estimate", "safeguard"),
-                            safeguard_level = 0.6, sesoi = NULL) {
+                            safeguard_level = 0.6, sesoi = NULL, counterbalance = TRUE) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("spec_from_model() requires the 'lme4' package; please install it.", call. = FALSE)
   .refuse_unless_lmer(fit)
@@ -658,6 +675,8 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
     stop("`safeguard_level` must be a single number greater than 0 and less than 1",
          call. = FALSE)
   .check_sesoi(sesoi)
+  if (!isTRUE(counterbalance) && !isFALSE(counterbalance))
+    stop("`counterbalance` must be TRUE or FALSE", call. = FALSE)
 
   mf <- stats::model.frame(fit)
   flist <- lme4::getME(fit, "flist")
@@ -733,8 +752,11 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   kinds <- character(0)
   used <- c(names(mf), gnames)
   # The columns of factors that the pilot counterbalanced, with each factor's number of levels.
-  # The returned specification multiplies the observations per subject by their product.
+  # A crossed specification multiplies the observations per subject by their product.
+  # `rotated_factor` gives the factor each column became, which takes another name when the
+  # column holds two numbers, as a -0.5/0.5 column `cond` becomes the factor `cond_level`.
   rotated <- integer(0)
+  rotated_factor <- character(0)
   is_rotated <- function(v, const)
     !length(const) && !is.null(itm) && .counterbalanced(v, flist[[subj]], flist[[itm]])
   for (cn in design_cols) {
@@ -751,7 +773,10 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
         list(name = cn, levels = levels(f), contrasts = contr), .placement(const, unit_group))
       used <- c(used, names(contr))
       kinds[cn] <- "factor"
-      if (is_rotated(v, const)) rotated[cn] <- nlevels(f)
+      if (is_rotated(v, const)) {
+        rotated[cn] <- nlevels(f)
+        rotated_factor[cn] <- cn
+      }
     } else if (!is.numeric(v)) {
       stop("column '", cn, "' of the model frame is of class '",
            paste(class(v), collapse = "/"), "', which a specification has no field for. ",
@@ -765,7 +790,10 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
              contrasts = stats::setNames(list(as.numeric(vals)), cn)),
         .placement(const, unit_group))
       kinds[cn] <- "factor"
-      if (is_rotated(v, const)) rotated[cn] <- 2L
+      if (is_rotated(v, const)) {
+        rotated[cn] <- 2L
+        rotated_factor[cn] <- fname
+      }
     } else {
       vb <- if (length(const)) const[[1L]] else "observation"
       vals <- if (identical(vb, "observation")) v else .unit_values(v, flist[[unit_group[[vb]]]])
@@ -872,6 +900,24 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
     random[[sg]] <- entry
   }
 
+  # ---- counterbalanced factors ----
+  # Specification version 0.4 writes the pilot's design with `counterbalance` on each factor the
+  # pilot rotated, so that the specification shows each subject each item once, as the pilot did.
+  # The field needs every subject to see every item, so a pilot whose subjects each saw some of the
+  # items, which keeps per_subject, stays crossed, as does every pilot when the caller asks for a
+  # specification that the releases reading 0.3 accept. The field also gives the data a column
+  # `list`, which no other column may share. A pilot whose model has a term of that name, as when
+  # the list is fitted beside the condition, stays crossed too, since validation would refuse it.
+  partial <- !is.null(units[["item"]][["per_subject"]])
+  list_taken <- "list" %in% c(names(random), yname,
+                              vapply(factors, function(f) f[["name"]], character(1)),
+                              unlist(lapply(factors, function(f) names(f[["contrasts"]]))),
+                              vapply(predictors, function(p) p[["name"]], character(1)))
+  set_field <- length(rotated) > 0L && counterbalance && !partial && !list_taken
+  if (set_field)
+    for (k in seq_along(factors))
+      if (factors[[k]][["name"]] %in% rotated_factor) factors[[k]][["counterbalance"]] <- TRUE
+
   # ---- assemble ----
   spec <- list(name = if (is.null(name)) "from_model" else name,
                seed = .as_seed(seed),
@@ -883,33 +929,68 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   spec$response <- .model_response(fit, family, round, yname)
   # The lowest version that reads the specification, first, as spec_json() writes it. The factor
   # of cells built above keeps a factorial between design within 0.3, where two between factors
-  # would need 0.4, so the releases that read 0.3 read this specification too.
+  # would need 0.4, so the releases that read 0.3 read this specification too, unless it sets
+  # counterbalance, a field of 0.4.
   spec <- c(list(spec_version = .required_spec_version(spec)), spec)
   validate_spec(spec)
-  # A warning, where the readings above are messages, because this specification would plan a
-  # larger study than the pilot ran. The power computed from it would be too high, and nothing
-  # downstream would show it. Factors rotated together, as over the four lists of a 2 x 2 design,
-  # draw one warning with the product of their level counts. One warning per factor would say
-  # "doubling" twice, for a specification with four times the pilot's observations. The warning
-  # names the field of version 0.4 that writes the pilot's design, and for one factor of two levels
-  # also the two-list encoding, the only one that releases reading 0.3 take.
+  # The pilot names its columns, and the specification its factors, which differ for a column of
+  # two numbers. Factors rotated together, as over the four lists of a 2 x 2 design, are named
+  # once, with the product of their level counts.
   if (length(rotated)) {
     one <- length(rotated) == 1L
     times <- prod(rotated)
-    warning("spec_from_model(): in the pilot each subject saw each item under one ",
-            if (one) sprintf("level of '%s'", names(rotated))
-            else paste("combination of the levels of", .name_list(sprintf("'%s'", names(rotated)))),
-            " (a counterbalanced, Latin-square design), but the returned specification crosses ",
-            "every subject with every item under every ", if (one) "level" else "combination", ", ",
-            if (times == 2) "doubling the observations per subject"
-            else paste("multiplying the observations per subject by", times),
-            " and overstating power. To plan the pilot's design, set counterbalance to true on ",
-            .name_list(sprintf("'%s'", names(rotated))), " and declare spec_version \"0.4\" (see ",
-            "Counterbalanced lists in SPEC.md).",
-            if (times == 2) paste0(" For a release that reads no version above 0.3, encode it as ",
-                                   "list (between subject) x item set (between item), as in ",
-                                   "SPEC.md's two-list example."),
-            call. = FALSE)
+    every <- if (one) "level" else "combination"
+    on <- .name_list(sprintf("'%s'", rotated_factor))
+    seen <- paste0(
+      "spec_from_model(): in the pilot each subject saw each item under one ",
+      if (one) sprintf("level of '%s'", names(rotated))
+      else paste("combination of the levels of", .name_list(sprintf("'%s'", names(rotated)))),
+      " (a counterbalanced, Latin-square design)")
+    if (set_field) {
+      message(seen, ". The returned specification therefore sets counterbalance to true on ", on,
+              " and declares spec_version \"0.4\", so that each subject meets each item at one ",
+              every, ", as in the pilot (see Counterbalanced lists in SPEC.md). Releases that ",
+              "read no version above 0.3 refuse it. With counterbalance = FALSE, ",
+              "spec_from_model() returns a crossed specification that they read, but the power ",
+              "computed from it is too high.")
+    } else {
+      # A warning, where the readings above are messages, because this specification would plan
+      # a larger study than the pilot ran. The power computed from it would be too high, and
+      # nothing downstream would show it. For one factor of two levels, the warning also names the
+      # two-list encoding, which releases reading 0.3 take and which allows per_subject. Where the
+      # pilot's model takes the name `list`, setting the field by hand would be refused, so the
+      # advice is to rename that term, whichever `counterbalance` was asked for.
+      two_list <- paste0("list (between subject) x item set (between item), as in SPEC.md's ",
+                         "two-list example.")
+      warning(seen, ", but the returned specification ",
+              if (partial) paste0("crosses the items each subject sees with every ", every)
+              else paste0("crosses every subject with every item under every ", every), ", ",
+              if (times == 2) "doubling the observations per subject"
+              else paste("multiplying the observations per subject by", times),
+              " and overstating power.",
+              if (partial)
+                paste0(" Specification version 0.4 counterbalances a factor only when every ",
+                       "subject sees every item, and in the pilot each subject saw some of the ",
+                       "items, so the returned specification keeps units.item.per_subject and ",
+                       "does not set counterbalance.",
+                       if (times == 2) paste0(" Encode the design as ", two_list))
+              else if (list_taken)
+                paste0(" Specification version 0.4 names each subject's list in a column 'list', ",
+                       "a name that the pilot's model uses already, so ",
+                       if (counterbalance) "the returned specification does not set counterbalance"
+                       else "a specification setting counterbalance would be refused",
+                       ". To plan the pilot's design, rename 'list' in the pilot's data, refit ",
+                       "the model and call spec_from_model() again",
+                       if (!counterbalance) " with counterbalance = TRUE", ".",
+                       if (times == 2) paste0(" For a release that reads no version above 0.3, ",
+                                              "encode it as ", two_list))
+              else
+                paste0(" To plan the pilot's design, set counterbalance to true on ", on,
+                       " and declare spec_version \"0.4\" (see Counterbalanced lists in SPEC.md).",
+                       if (times == 2) paste0(" For a release that reads no version above 0.3, ",
+                                              "encode it as ", two_list)),
+              call. = FALSE)
+    }
   }
   structure(spec, group_mapping = mapping, column_kinds = kinds,
             effects = list(method = effects,

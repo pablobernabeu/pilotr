@@ -198,12 +198,19 @@ way:
 The counterbalanced factors, in listed order with `L_1, …, L_k` levels, have `C = L_1·…·L_k`
 combinations of levels. Subject `s` meets item `t`, both counted from 1, at combination
 `((s − 1) + (t − 1)) mod C`, counted from 0. The combination is read as a cell is read above,
-the first-listed factor varying slowest. Subject `s` therefore follows list `(s − 1) mod C` of
-`C` lists, each of which moves on by one combination from one item to the next. The rotation is
-integer arithmetic and draws nothing. Only the within factors that are not counterbalanced
-expand rows, so each subject–item pair has one row for each combination of their levels. With
-two conditions and no other within factor, 24 subjects and 18 items give 432 rows, where the
-crossed design gives 864.
+the first-listed factor varying slowest. Subject `s` therefore follows list `((s − 1) mod C) + 1`
+of `C` lists, counted from 1, each of which moves on by one combination from one item to the
+next. The rotation is integer arithmetic and draws nothing. Only the within factors that are not
+counterbalanced expand rows, so each subject–item pair has one row for each combination of their
+levels. With two conditions and no other within factor, 24 subjects and 18 items give 432 rows,
+where the crossed design gives 864.
+
+The simulated data of a design with a counterbalanced factor carry a column `list`, placed after
+`subject` and `item`. It holds the number of the list that subject `s` follows,
+`((s − 1) mod C) + 1`, and nothing is drawn for it. The subjects of one list meet every item at
+the same combination, and list `k` meets the first item at combination `k − 1`. A design without
+a counterbalanced factor has no such column, and in a design with one no other column may be
+named `list` (see [Names](#names)).
 
 When the `S` subjects and the `I` items are both multiples of `C`, every item appears at each
 combination for `S/C` subjects and every subject meets each combination on `I/C` items.
@@ -414,7 +421,9 @@ From version 0.4, the same design is written with `counterbalance` on a within f
 whose design is that of the two-list file. Its subjects alternate between the two lists. The
 two-list encoding gives the first 12 subjects one list and the other 12 the other, so the two
 files assign different conditions and draw different data. Both have 432 rows, show every
-subject nine items in each condition and show every item in each condition to 12 subjects.
+subject nine items in each condition and show every item in each condition to 12 subjects. Both
+data sets also have a column `list`. In the two-list file it is the factor, with levels `list1`
+and `list2`, and in the other it holds the number of each subject's list, 1 or 2.
 `model_formula()` gives `.y ~ cond + (1 + cond | subject) + (1 + cond | item)`, with the
 condition's own contrast column. The field writes three or more conditions too.
 [`counterbalanced_three_conditions.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/counterbalanced_three_conditions.json)
@@ -522,12 +531,13 @@ appended a second one under the same name, so the two implementations also expor
 tables from one specification.
 
 1. The simulated data has these columns, in this order: `subject`, `item` when the design has
-   items, one per additional grouping factor, one per factor, one per continuous predictor and
-   the response. Their names are non-blank and all different.
+   items, `list` when a factor is counterbalanced, one per additional grouping factor, one per
+   factor, one per continuous predictor and the response. Their names are non-blank and all
+   different.
 2. A contrast column belongs to one factor. Its name differs from every predictor, from
-   `subject`, from `item` when the design has items, from every additional grouping factor, from
-   every other factor and from the response. It may carry its own factor's name, as two-level
-   designs often do.
+   `subject`, from `item` when the design has items, from `list` when a factor is
+   counterbalanced, from every additional grouping factor, from every other factor and from the
+   response. It may carry its own factor's name, as two-level designs often do.
 3. The analysis column `a_b` that `model_data()` builds for an interaction key `a:b` does not
    take the name of another column, another interaction's included.
 4. A factor lists each level once.
@@ -723,7 +733,8 @@ observation-level predictor only appears when declared, a uniform draw costs the
 normal it replaces, a `reliability` of 1 or absent draws nothing, and a family branch is
 reached only when that family is selected. The joint allocation of 0.4 draws nothing either, and
 with one between factor per unit it allocates as earlier versions did. Counterbalancing draws
-nothing as well, and without the field every within factor expands rows as before.
+nothing as well, and without the field every within factor expands rows as before and the data
+have no `list` column.
 
 ### Replicate seeds
 
@@ -796,6 +807,8 @@ for j = k, k − 1, …, 1:
     level_j ← c mod L_j
     c ← ⌊c / L_j⌋
 ```
+
+Each row of subject `s` takes `((s − 1) mod C) + 1` in the `list` column.
 
 ### Predictor values
 

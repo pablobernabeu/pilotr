@@ -64,7 +64,72 @@ test_that("a counterbalanced factor gives each subject-item pair one row", {
   # The canonical order: subjects slowest, then items.
   expect_identical(d$subject, rep(1:24, each = 18))
   expect_identical(d$item, rep(1:18, times = 24))
-  expect_identical(names(d), c("subject", "item", "cond", "logRT"))
+  expect_identical(names(d), c("subject", "item", "list", "cond", "logRT"))
+})
+
+test_that("the data of a counterbalanced design name each subject's list", {
+  # Subject s follows list ((s - 1) mod C) + 1, in a column after the units. A list is a set of
+  # subjects who meet every item at the same level, and list k meets the first item at level k.
+  d <- simulate_design(cb_spec())
+  expect_type(d$list, "integer")
+  expect_identical(d$list, (d$subject - 1L) %% 2L + 1L)
+  expect_identical(d$list[d$item == 1], match(d$cond[d$item == 1], c("related", "unrelated")))
+  pairs <- unique(d[c("list", "item", "cond")])
+  expect_identical(nrow(pairs), 2L * 18L)
+  expect_identical(anyDuplicated(pairs[c("list", "item")]), 0L)
+  d3 <- simulate_design(cb3_spec())
+  expect_identical(d3$list, (d3$subject - 1L) %% 3L + 1L)
+  # Two counterbalanced factors rotate over the four combinations of their levels.
+  s <- cb_spec(8, 8)
+  s$factors[[2]] <- list(name = "prime", levels = c("p1", "p2"),
+                         contrasts = list(pr = c(-0.5, 0.5)),
+                         vary_within = c("subject", "item"), counterbalance = TRUE)
+  s$fixed$coefficients$pr <- 0.03
+  expect_identical(simulate_design(s)$list, rep(rep(1:4, each = 8), times = 2))
+  # 25 subjects over two lists put 13 in the first and 12 in the second.
+  d <- suppressWarnings(simulate_design(cb_spec(25, 18)))
+  expect_identical(as.vector(table(d$list[d$item == 1])), c(13L, 12L))
+  # The column comes before an additional grouping factor, as the units do.
+  s <- cb_spec()
+  s$random$site <- list(over = "subject", n = 4, intercept_sd = 0.1)
+  expect_identical(names(simulate_design(s)),
+                   c("subject", "item", "list", "site", "cond", "logRT"))
+  # Without a counterbalanced factor, the data have no such column.
+  crossed <- cb_spec()
+  crossed$factors[[1]]$counterbalance <- NULL
+  expect_identical(names(simulate_design(crossed)), c("subject", "item", "cond", "logRT"))
+})
+
+test_that("a counterbalanced design keeps the name list for its list column", {
+  taken <- function(who) paste0(
+    "the name 'list' is used for more than one column (the list column of a counterbalanced ",
+    "design and ", who, "); every unit, grouping factor, factor, predictor and the response needs ",
+    "a column of its own")
+  s <- cb_spec()
+  s$factors[[2]] <- list(name = "list", levels = c("l1", "l2"), contrasts = list(lst = c(-1, 1)),
+                         between = "subject")
+  refused(s, taken("factors[2]"))
+  s <- cb_spec()
+  s$predictors <- list(list(name = "list", varies_by = "subject"))
+  refused(s, taken("predictors[1]"))
+  s <- cb_spec()
+  s$random$list <- list(over = "subject", n = 4, intercept_sd = 0.1)
+  refused(s, taken("random.list"))
+  s <- cb_spec()
+  s$response$name <- "list"
+  refused(s, taken("the response"))
+  s <- cb_spec()
+  s$factors[[1]]$contrasts <- list(list = c(-0.5, 0.5))
+  s$fixed$coefficients <- list(list = 0.06)
+  s$random$subject$slopes <- list(list = 0.04)
+  s$random$item$slopes <- list(list = 0.02)
+  refused(s, paste0("the contrast column 'list' of factors[1] is also the name of the list column ",
+                    "of a counterbalanced design; a contrast column may share its own factor's ",
+                    "name but no other column's"))
+  # Without a counterbalanced factor the name is free, as the two-list encoding's factor shows.
+  s$factors[[1]]$counterbalance <- FALSE
+  expect_silent(validate_spec(s))
+  expect_silent(validate_spec(parity_case("two_list_counterbalanced")))
 })
 
 test_that("subject s meets item t at level ((s - 1) + (t - 1)) mod C", {
@@ -162,8 +227,10 @@ test_that("a counterbalanced design is analysed with the model of the crossed de
   expect_identical(model_formula(cb), model_formula(crossed))
   expect_identical(deparse(model_formula(cb)),
                    ".y ~ cond + (1 + cond || subject) + (1 + cond || item)")
-  expect_identical(names(model_data(cb, simulate_design(cb))),
-                   names(model_data(crossed, simulate_design(crossed))))
+  # The modelling data keep the list column, which the formula leaves out.
+  cb_names <- names(model_data(cb, simulate_design(cb)))
+  expect_identical(setdiff(cb_names, "list"), names(model_data(crossed, simulate_design(crossed))))
+  expect_identical(cb_names[3], "list")
 })
 
 test_that("the parity cases hold the designs they describe", {

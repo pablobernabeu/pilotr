@@ -14,7 +14,8 @@ spec_from_model(
   round = NULL,
   effects = c("estimate", "safeguard"),
   safeguard_level = 0.6,
-  sesoi = NULL
+  sesoi = NULL,
+  counterbalance = TRUE
 )
 }
 \arguments{
@@ -57,9 +58,17 @@ and Costantini (2014).}
 effect size of interest on the scale of the fit, as in \code{sesoi = c(cond = 0.03)}. The names
 are the returned specification's coefficient keys, which write an interaction as \code{a:b}, and
 a name that is not among them is refused.}
+
+\item{counterbalance}{Whether a factor that the pilot counterbalanced sets \code{counterbalance} in
+the returned specification, which then declares specification version 0.4 (see Details).
+\code{TRUE}, the default, plans the pilot's design, unless its subjects each saw only some of the
+items or its model has a term named \code{list}. \code{FALSE} returns a fully crossed specification
+that releases reading version 0.3 accept, with a warning that the power computed from it is
+too high.}
 }
 \value{
-A design specification as a nested list, carrying \code{spec_version} and validated with
+A design specification as a nested list, carrying the lowest \code{spec_version} that reads
+it, 0.4 when it sets \code{counterbalance} and 0.3 otherwise, and validated with
 \code{\link[=validate_spec]{validate_spec()}}, so it can be passed directly to \code{\link[=simulate_design]{simulate_design()}},
 \code{\link[=power_mixed]{power_mixed()}} or \code{\link[=spec_json]{spec_json()}}. Two attributes record the readings that
 the fit did not settle on its own: \code{group_mapping}, a named character vector giving the
@@ -179,25 +188,35 @@ the factor partitions. Any renaming is reported by a message and recorded in the
 item unit gains a \code{per_subject} count, so that the recovered design keeps the partial crossing
 of the original.
 
-A factor that varies within both units is crossed with every subject-item pair, so the
-returned specification observes each pair at every level. A pilot run in counterbalanced
-lists, as priming studies usually are, showed each subject each item at one level only. The
-levels rotated across lists of subjects, so that every item appeared at each level. When
-every subject-item pair of the pilot holds one level of a factor, and every subject and every
-item holds two or more, a warning says so. The returned specification then has twice the
-pilot's observations per subject for a two-level factor and three times for a three-level one.
-Two two-level factors rotated together over four lists draw one warning, for four times the
-observations. The power computed from such a specification is too high. Take the variance
+A factor that varies within both units is crossed with every subject-item pair unless it sets
+\code{counterbalance}, a field of specification version 0.4. A pilot run in counterbalanced lists,
+as priming studies usually are, showed each subject each item at one level only. The levels
+rotated across lists of subjects, so that every item appeared at each level. When every
+subject-item pair of the pilot holds one level of a factor, and every subject and every item
+holds two or more, the returned specification sets \code{counterbalance} to \code{TRUE} on that factor
+and declares version 0.4. Each subject then meets each item at one level, the levels rotating
+over subjects and items as described under Counterbalanced lists in the specification
+(\code{spec/SPEC.md}). The simulated data name each subject's list in a column \code{list}. Factors
+rotated together, as two two-level factors over four lists, are all counterbalanced, and a
+message names them. Releases that read no version above 0.3 refuse such a specification.
+
+\code{counterbalance = FALSE} returns the crossed specification of earlier versions, which those
+releases read, with a warning. It has twice the pilot's observations per subject for a
+two-level factor, three times for a three-level one and four times for two two-level factors
+rotated together. The power computed from it is therefore too high. Take the variance
 components of the \code{crossed_mixed_rt} example, with 30 subjects, 24 items and an effect of 0.05
 on the log scale. By the formulas of Judd, Westfall and Kenny (2017), power is then about 0.80
-for the crossed design and 0.55 for the counterbalanced one.
-The counterbalanced study needs about 1.8 times the subjects to match the crossed one. To plan
-it, set \code{counterbalance} to \code{TRUE} on each factor the warning names, and \code{spec_version} to
-\code{"0.4"} in the returned specification. Specification version 0.4 then rotates the levels over
-subjects and items, as described under Counterbalanced lists in the specification
-(\code{spec/SPEC.md}). A release that reads no version above 0.3 takes a two-level design written
-with a list factor between subjects and an item-set factor between items, as in the two-list
-example among the worked encodings of the specification.
+for the crossed design and 0.55 for the counterbalanced one. The counterbalanced study needs
+about 1.8 times the subjects to match the crossed one. A release that reads no version above 0.3
+takes a two-level design written with a list factor between subjects and an item-set factor
+between items, as in the two-list example among the worked encodings of the specification.
+The crossed specification and the warning also come back, whatever \code{counterbalance} says, when
+each subject of the pilot saw only some of the items. The specification then keeps
+\code{per_subject}, which version 0.4 does not combine with \code{counterbalance}, since that field needs
+every subject to see every item. They come back as well when the pilot's model has a column or
+grouping factor named \code{list}, as a model that fits the list beside the condition does. Version
+0.4 gives that name to the column holding each subject's list, and no other column may share
+it. The warning then asks for the term to be renamed in the pilot's data and the model refitted.
 
 Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 would not observe, through the \code{prep} argument of \code{\link[=power_mixed]{power_mixed()}} and \code{\link[=precision_design]{precision_design()}}.

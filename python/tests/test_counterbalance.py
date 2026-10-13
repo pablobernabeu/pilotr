@@ -112,7 +112,74 @@ def test_a_counterbalanced_factor_gives_each_subject_item_pair_one_row():
     # The canonical order: subjects slowest, then items.
     assert d.column("subject") == [s for s in range(1, 25) for _ in range(18)]
     assert d.column("item") == list(range(1, 19)) * 24
-    assert d.columns == ["subject", "item", "cond", "logRT"]
+    assert d.columns == ["subject", "item", "list", "cond", "logRT"]
+
+
+def test_the_data_of_a_counterbalanced_design_name_each_subjects_list():
+    # Subject s follows list ((s - 1) mod C) + 1, in a column after the units. A list is a set of
+    # subjects who meet every item at the same level, and list k meets the first item at level k.
+    d = simulate(cb_spec())
+    assert all(type(v) is int for v in d.column("list"))
+    assert d.column("list") == [(r["subject"] - 1) % 2 + 1 for r in d.rows]
+    assert ([r["list"] for r in d.rows if r["item"] == 1]
+            == [["related", "unrelated"].index(r["cond"]) + 1 for r in d.rows if r["item"] == 1])
+    pairs = {(r["list"], r["item"], r["cond"]) for r in d.rows}
+    assert len(pairs) == 2 * 18
+    assert len({(lst, t) for lst, t, _ in pairs}) == len(pairs)
+    d3 = simulate(cb3_spec())
+    assert d3.column("list") == [(r["subject"] - 1) % 3 + 1 for r in d3.rows]
+    # Two counterbalanced factors rotate over the four combinations of their levels.
+    s = cb_spec(8, 8)
+    s["factors"].append({"name": "prime", "levels": ["p1", "p2"],
+                         "contrasts": {"pr": [-0.5, 0.5]},
+                         "vary_within": ["subject", "item"], "counterbalance": True})
+    s["fixed"]["coefficients"]["pr"] = 0.03
+    assert simulate(s).column("list") == ([k for k in range(1, 5) for _ in range(8)] * 2)
+    # 25 subjects over two lists put 13 in the first and 12 in the second.
+    d = quiet_simulate(cb_spec(25, 18))
+    assert Counter(r["list"] for r in d.rows if r["item"] == 1) == {1: 13, 2: 12}
+    # The column comes before an additional grouping factor, as the units do.
+    s = cb_spec()
+    s["random"]["site"] = {"over": "subject", "n": 4, "intercept_sd": 0.1}
+    assert simulate(s).columns == ["subject", "item", "list", "site", "cond", "logRT"]
+    assert list(simulate(s).rows[0]) == ["subject", "item", "list", "site", "cond", "logRT"]
+    # Without a counterbalanced factor, the data have no such column.
+    crossed = cb_spec()
+    del crossed["factors"][0]["counterbalance"]
+    assert simulate(crossed).columns == ["subject", "item", "cond", "logRT"]
+
+
+def test_a_counterbalanced_design_keeps_the_name_list_for_its_list_column():
+    def taken(who):
+        return ("the name 'list' is used for more than one column (the list column of a "
+                "counterbalanced design and %s); every unit, grouping factor, factor, predictor "
+                "and the response needs a column of its own" % who)
+
+    s = cb_spec()
+    s["factors"].append({"name": "list", "levels": ["l1", "l2"], "contrasts": {"lst": [-1, 1]},
+                         "between": "subject"})
+    refused(s, taken("factors[2]"))
+    s = cb_spec()
+    s["predictors"] = [{"name": "list", "varies_by": "subject"}]
+    refused(s, taken("predictors[1]"))
+    s = cb_spec()
+    s["random"]["list"] = {"over": "subject", "n": 4, "intercept_sd": 0.1}
+    refused(s, taken("random.list"))
+    s = cb_spec()
+    s["response"]["name"] = "list"
+    refused(s, taken("the response"))
+    s = cb_spec()
+    s["factors"][0]["contrasts"] = {"list": [-0.5, 0.5]}
+    s["fixed"]["coefficients"] = {"list": 0.06}
+    s["random"]["subject"]["slopes"] = {"list": 0.04}
+    s["random"]["item"]["slopes"] = {"list": 0.02}
+    refused(s, "the contrast column 'list' of factors[1] is also the name of the list column of a "
+               "counterbalanced design; a contrast column may share its own factor's name but no "
+               "other column's")
+    # Without a counterbalanced factor the name is free, as the two-list encoding's factor shows.
+    s["factors"][0]["counterbalance"] = False
+    silent(s)
+    silent(parity_case("two_list_counterbalanced"))
 
 
 def test_subject_s_meets_item_t_at_level_s_plus_t_mod_c():

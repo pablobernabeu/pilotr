@@ -178,7 +178,8 @@ load_spec <- function(path, validate = TRUE) {
 #'   directly.
 #' @return A data frame with one row per observation, containing a `subject` column, an
 #'   optional `item` column, any grouping, factor, and continuous-predictor columns, and the
-#'   response column named by the specification.
+#'   response column named by the specification. A design with a counterbalanced factor also has
+#'   a `list` column after `item`, holding the list each subject follows, counted from 1.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "control", lev2 = "treatment", n_subject = 40,
@@ -445,6 +446,10 @@ simulate_design <- function(spec, validate = TRUE) {
 
   df <- data.frame(subject = subj_v, stringsAsFactors = FALSE)
   if (has_item) df$item <- item_v
+  # A counterbalanced design names the list each subject follows, ((s - 1) mod C) + 1, counted
+  # from 1 as the units are. It is integer arithmetic and draws nothing, and a design without a
+  # counterbalanced factor has no such column.
+  if (length(rotated)) df[["list"]] <- (subj_v - 1L) %% as.integer(n_lists) + 1L
   for (gname in extra_names) df[[gname]] <- group_mat[, gname]
   for (cn in label_cols) df[[cn]] <- label_mat[, cn]
   for (pn in pred_names) df[[pn]] <- pred_mat[, pn]

@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subjects or the items are not a multiple of C. The condition stays a within factor, so
   `power_mixed` analyses a counterbalanced design. It refuses the two-list encoding, which has no
   within factor and stays documented for releases that read no version above 0.3.
+- The simulated data of a counterbalanced specification name each subject's list in a column
+  `list`, placed after `subject` and `item`. Subject s follows list ((s − 1) mod C) + 1, and
+  nothing is drawn for it, so a specification without a counterbalanced factor simulates as
+  before. Such a design keeps the name `list` for that column, and `validate_spec` refuses a
+  factor, predictor, grouping factor, contrast column or response of that name in it, in the R
+  twin's words.
 - Every rate carries its Monte Carlo error. `power` and `power_mixed` gain `power_mcse`,
   `power_lo` and `power_hi`, the standard error and 95% Wilson interval of power. Both also gain
   `type_m_mcse`, the standard error of Type M, and a Wilson interval for Type S, `type_s_lo` and

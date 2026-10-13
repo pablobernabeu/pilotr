@@ -385,31 +385,159 @@ sfm_priming_pilot <- function(keep) {
   d
 }
 
-test_that("spec_from_model warns that a counterbalanced pilot comes back fully crossed", {
-  skip_if_not_installed("lme4")
-  # The pilot rotates two lists in a Latin square. Each subject sees each item once, and the
-  # level alternates over items within a subject and over subjects within an item, so every
-  # item appears in both conditions across subjects. This is how priming studies are run.
+# The pilot rotates two lists in a Latin square. Each subject sees each item once, and the level
+# alternates over items within a subject and over subjects within an item, so every item appears
+# in both conditions across subjects. This is how priming studies are run.
+sfm_latin_fit <- function() {
   pilot <- sfm_priming_pilot(function(d) ((d$subject %% 2L) + d$item + d$level) %% 2L == 0L)
-  expect_identical(nrow(pilot), 30L * 24L)
   fit <- suppressMessages(suppressWarnings(
     lme4::lmer(y ~ cond + (1 + cond | subject) + (1 + cond | item), data = pilot)))
+  list(pilot = pilot, fit = fit)
+}
+
+test_that("spec_from_model counterbalances the factors a counterbalanced pilot rotated", {
+  skip_if_not_installed("lme4")
+  lf <- sfm_latin_fit()
+  pilot <- lf$pilot
+  expect_identical(nrow(pilot), 30L * 24L)
+  expect_no_warning(msgs <- capture_messages(
+    rec <- spec_from_model(lf$fit, n_subject = 30, n_item = 24)))
+  # The pilot's -0.5/0.5 column becomes the factor cond_level, which the message names.
+  expect_true(any(grepl(paste0(
+    "spec_from_model(): in the pilot each subject saw each item under one level of 'cond' (a ",
+    "counterbalanced, Latin-square design). The returned specification therefore sets ",
+    "counterbalance to true on 'cond_level' and declares spec_version \"0.4\""), msgs,
+    fixed = TRUE)))
+  expect_identical(rec$spec_version, "0.4")
+  expect_identical(rec$factors[[1]]$name, "cond_level")
+  expect_true(rec$factors[[1]]$counterbalance)
+  expect_setequal(rec$factors[[1]]$vary_within, c("subject", "item"))
+  # One row per subject-item pair, at the level the pilot showed: the rotation of version 0.4 is
+  # the pilot's, subject s meeting item t at level ((s - 1) + (t - 1)) mod 2.
+  d <- simulate_design(rec)
+  expect_identical(nrow(d), nrow(pilot))
+  expect_identical(anyDuplicated(d[c("subject", "item")]), 0L)
+  p <- pilot[order(pilot$subject, pilot$item), ]
+  expect_identical(d$subject, p$subject)
+  expect_identical(d$item, p$item)
+  expect_identical(as.numeric(d$cond_level), p$cond)
+  # The lists are the pilot's: the odd subjects saw the first item at the first level and the even
+  # ones at the second, and each list saw every item at one level.
+  expect_identical(d$list, (d$subject - 1L) %% 2L + 1L)
+  expect_identical(d$list[d$item == 1], p$level[p$item == 1] + 1L)
+  expect_identical(nrow(unique(data.frame(list = d$list, item = d$item, level = p$level))),
+                   2L * 24L)
+  # Items that are not a multiple of the lists leave them unequal, which warns and is not refused.
+  expect_warning(rec <- suppressMessages(spec_from_model(lf$fit, n_subject = 30, n_item = 25)),
+                 "the lists are unequal", fixed = TRUE)
+  expect_true(rec$factors[[1]]$counterbalance)
+  expect_identical(nrow(simulate_design(rec, validate = FALSE)), 30L * 25L)
+})
+
+test_that("counterbalance = FALSE returns the crossed specification, with the warning", {
+  skip_if_not_installed("lme4")
+  lf <- sfm_latin_fit()
+  pilot <- lf$pilot
   expect_warning(
-    rec <- suppressMessages(spec_from_model(fit, n_subject = 30, n_item = 24)),
+    rec <- suppressMessages(spec_from_model(lf$fit, n_subject = 30, n_item = 24,
+                                            counterbalance = FALSE)),
     paste0("spec_from_model(): in the pilot each subject saw each item under one level of ",
            "'cond' (a counterbalanced, Latin-square design), but the returned specification ",
            "crosses every subject with every item under every level, doubling the observations ",
            "per subject and overstating power. To plan the pilot's design, set counterbalance to ",
-           "true on 'cond' and declare spec_version \"0.4\" (see Counterbalanced lists in ",
+           "true on 'cond_level' and declare spec_version \"0.4\" (see Counterbalanced lists in ",
            "SPEC.md). For a release that reads no version above 0.3, encode it as list (between ",
            "subject) x item set (between item), as in SPEC.md's two-list example."),
     fixed = TRUE)
   # As the warning says, the specification crosses every pair with both levels, so it simulates
-  # twice the pilot's rows. Changed as the warning advises, it simulates as many as the pilot had.
+  # twice the pilot's rows, and the releases that read 0.3 read it. Changed as the warning
+  # advises, it simulates as many as the pilot had.
+  expect_identical(rec$spec_version, "0.3")
+  expect_null(rec$factors[[1]]$counterbalance)
   expect_setequal(rec$factors[[1]]$vary_within, c("subject", "item"))
-  expect_identical(nrow(simulate_design(rec)), 2L * nrow(pilot))
+  d <- simulate_design(rec)
+  expect_identical(nrow(d), 2L * nrow(pilot))
+  expect_false("list" %in% names(d))
   rec$spec_version <- "0.4"
   rec$factors[[1]]$counterbalance <- TRUE
+  expect_identical(nrow(simulate_design(rec)), nrow(pilot))
+  expect_error(spec_from_model(lf$fit, counterbalance = NA),
+               "`counterbalance` must be TRUE or FALSE", fixed = TRUE)
+})
+
+test_that("a counterbalanced pilot whose subjects saw some of the items stays crossed", {
+  skip_if_not_installed("lme4")
+  # Each subject saw 16 of the 24 items, one level each. Version 0.4 counterbalances only a design
+  # in which every subject sees every item, so the specification keeps per_subject, crosses the
+  # factor and says why, where setting the field would have failed validation.
+  pilot <- sfm_priming_pilot(function(d)
+    ((d$subject %% 2L) + d$item + d$level) %% 2L == 0L & (d$subject + d$item) %% 3L != 0L)
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + (1 | subject) + (1 | item), data = pilot)))
+  w <- expect_warning(rec <- suppressMessages(spec_from_model(fit)),
+                      "one level of 'cond' (a counterbalanced, Latin-square design)", fixed = TRUE)
+  expect_match(conditionMessage(w), paste0(
+    "overstating power. Specification version 0.4 counterbalances a factor only when every ",
+    "subject sees every item, and in the pilot each subject saw some of the items, so the ",
+    "returned specification keeps units.item.per_subject and does not set counterbalance. Encode ",
+    "the design as list (between subject) x item set (between item), as in SPEC.md's two-list ",
+    "example."), fixed = TRUE)
+  expect_identical(rec$units$item$per_subject, 16L)
+  expect_identical(rec$spec_version, "0.3")
+  expect_null(rec$factors[[1]]$counterbalance)
+})
+
+test_that("a counterbalanced pilot whose model has a term named list stays crossed", {
+  skip_if_not_installed("lme4")
+  # Analyses of a counterbalanced design often fit the list as a factor, or give it a random
+  # intercept. Version 0.4 names each subject's list in a column 'list' that no other column may
+  # share, so setting counterbalance beside such a term stopped spec_from_model() with a refusal
+  # from validate_spec(). The specification stays crossed instead, and the warning asks for the
+  # term to be renamed.
+  pilot <- sfm_latin_fit()$pilot
+  pilot$list <- factor(ifelse(pilot$subject %% 2L == 1L, "first", "second"))
+  rename <- paste0(
+    "overstating power. Specification version 0.4 names each subject's list in a column 'list', ",
+    "a name that the pilot's model uses already, so the returned specification does not set ",
+    "counterbalance. To plan the pilot's design, rename 'list' in the pilot's data, refit the ",
+    "model and call spec_from_model() again. For a release that reads no version above 0.3, ",
+    "encode it as list (between subject) x item set (between item), as in SPEC.md's two-list ",
+    "example.")
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + list + (1 | subject) + (1 | item), data = pilot)))
+  w <- expect_warning(rec <- suppressMessages(spec_from_model(fit)),
+                      "one level of 'cond' (a counterbalanced, Latin-square design)", fixed = TRUE)
+  expect_match(conditionMessage(w), rename, fixed = TRUE)
+  expect_identical(rec$spec_version, "0.3")
+  expect_identical(vapply(rec$factors, `[[`, "", "name"), c("cond_level", "list"))
+  expect_null(rec$factors[[1]]$counterbalance)
+  # The list as a grouping factor, and as a column of two numbers, whose contrast column takes the
+  # name.
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + (1 | subject) + (1 | item) + (1 | list), data = pilot)))
+  expect_warning(rec <- suppressMessages(spec_from_model(fit)), rename, fixed = TRUE)
+  expect_identical(names(rec$random), c("subject", "item", "list"))
+  expect_null(rec$factors[[1]]$counterbalance)
+  pilot$list <- as.numeric(pilot$list) - 1.5
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + list + (1 | subject) + (1 | item), data = pilot)))
+  expect_warning(rec <- suppressMessages(spec_from_model(fit)), rename, fixed = TRUE)
+  expect_identical(names(rec$factors[[2]]$contrasts), "list")
+  expect_null(rec$factors[[1]]$counterbalance)
+  # Asked for the crossed specification, the warning gives the same advice, since setting the
+  # field by hand would be refused.
+  w <- expect_warning(suppressMessages(spec_from_model(fit, counterbalance = FALSE)), paste0(
+    "a name that the pilot's model uses already, so a specification setting counterbalance would ",
+    "be refused. To plan the pilot's design, rename 'list' in the pilot's data, refit the model ",
+    "and call spec_from_model() again with counterbalance = TRUE."), fixed = TRUE)
+  expect_false(grepl("set counterbalance to true", conditionMessage(w), fixed = TRUE))
+  # Renamed and refitted, the pilot gives a counterbalanced specification.
+  names(pilot)[names(pilot) == "list"] <- "lst"
+  fit <- suppressMessages(suppressWarnings(
+    lme4::lmer(y ~ cond + lst + (1 | subject) + (1 | item), data = pilot)))
+  expect_no_warning(rec <- suppressMessages(spec_from_model(fit)))
+  expect_identical(rec$spec_version, "0.4")
+  expect_true(rec$factors[[1]]$counterbalance)
   expect_identical(nrow(simulate_design(rec)), nrow(pilot))
 })
 
@@ -420,7 +548,9 @@ test_that("a crossed pilot with missing rows, or a factor between items, draws n
   crossed <- sfm_priming_pilot(function(d) seq_len(nrow(d)) %% 10L != 0L)
   fit <- suppressMessages(suppressWarnings(
     lme4::lmer(y ~ cond + (1 + cond | subject) + (1 + cond | item), data = crossed)))
-  expect_no_warning(suppressMessages(spec_from_model(fit)))
+  expect_no_warning(rec <- suppressMessages(spec_from_model(fit)))
+  expect_null(rec$factors[[1]]$counterbalance)
+  expect_identical(rec$spec_version, "0.3")
   # Here each item has one level for every subject, so the items carry the condition and the
   # factor is placed between items.
   by_item <- sfm_priming_pilot(function(d) (d$item + d$level) %% 2L == 0L)
@@ -428,6 +558,7 @@ test_that("a crossed pilot with missing rows, or a factor between items, draws n
     lme4::lmer(y ~ cond + (1 + cond | subject) + (1 | item), data = by_item)))
   expect_no_warning(rec <- suppressMessages(spec_from_model(fit)))
   expect_identical(rec$factors[[1]]$between, "item")
+  expect_null(rec$factors[[1]]$counterbalance)
 })
 
 test_that("the counterbalancing warning counts the levels of a factor with more than two", {
@@ -448,8 +579,8 @@ test_that("the counterbalancing warning counts the levels of a factor with more 
   pilot <- d[(d$subject + d$item + level) %% 3L == 0L, ]
   fit <- suppressMessages(suppressWarnings(
     lme4::lmer(y ~ prime + (1 | subject) + (1 | item), data = pilot)))
-  w <- expect_warning(rec <- suppressMessages(spec_from_model(fit)), "one level of 'prime'",
-                      fixed = TRUE)
+  w <- expect_warning(rec <- suppressMessages(spec_from_model(fit, counterbalance = FALSE)),
+                      "one level of 'prime'", fixed = TRUE)
   expect_match(conditionMessage(w),
                "every level, multiplying the observations per subject by 3 and overstating power",
                fixed = TRUE)
@@ -460,6 +591,13 @@ test_that("the counterbalancing warning counts the levels of a factor with more 
   rec$spec_version <- "0.4"
   rec$factors[[1]]$counterbalance <- TRUE
   expect_identical(nrow(simulate_design(rec)), nrow(pilot))
+  # By default the specification counterbalances the factor itself, over three lists.
+  expect_no_warning(rec <- suppressMessages(spec_from_model(fit)))
+  expect_identical(rec$spec_version, "0.4")
+  expect_true(rec$factors[[1]]$counterbalance)
+  d <- simulate_design(rec)
+  expect_identical(nrow(d), nrow(pilot))
+  expect_identical(d$list, (d$subject - 1L) %% 3L + 1L)
 })
 
 test_that("factors counterbalanced together draw one warning with their joint multiple", {
@@ -482,7 +620,16 @@ test_that("factors counterbalanced together draw one warning with their joint mu
   pilot <- d[(d$subject + d$item + cell) %% 4L == 0L, ]
   fit <- suppressMessages(suppressWarnings(
     lme4::lmer(y ~ A * B + (1 | subject) + (1 | item), data = pilot)))
-  w <- capture_warnings(rec <- suppressMessages(spec_from_model(fit)))
+  # By default both factors are counterbalanced, and one message names them.
+  msgs <- capture_messages(expect_no_warning(cb <- spec_from_model(fit)))
+  expect_length(grep("Latin-square", msgs, fixed = TRUE), 1L)
+  expect_match(msgs, paste0("one combination of the levels of 'A' and 'B' (a counterbalanced, ",
+                            "Latin-square design). The returned specification therefore sets ",
+                            "counterbalance to true on 'A' and 'B'"), fixed = TRUE, all = FALSE)
+  expect_identical(vapply(cb$factors, function(f) isTRUE(f$counterbalance), logical(1)),
+                   c(TRUE, TRUE))
+  expect_identical(nrow(simulate_design(cb)), nrow(pilot))
+  w <- capture_warnings(rec <- suppressMessages(spec_from_model(fit, counterbalance = FALSE)))
   expect_length(w, 1L)
   expect_match(w, paste0("each item under one combination of the levels of 'A' and 'B' (a ",
                          "counterbalanced, Latin-square design), but the returned specification ",

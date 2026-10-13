@@ -52,15 +52,17 @@
   needs, so their output stays readable by earlier releases unless it uses a 0.4 feature. A 0.4
   specification whose `vary_within` omits a unit of the design is refused.
 
-* `spec_from_model()` warns when the pilot was counterbalanced, each subject seeing each item
-  under one condition, because the specification it returns crosses every subject with every
-  item under every condition. Planning a counterbalanced study that way doubles the observations
+* `spec_from_model()` turned a counterbalanced pilot, each subject seeing each item under one
+  condition, into a specification that crosses every subject with every item under every
+  condition, without saying so. Planning a counterbalanced study that way doubles the observations
   per subject and overstates power. By the formulas of Judd, Westfall and Kenny (2017), the
   `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05 on the log scale,
-  has a power of about 0.80 crossed and 0.55 counterbalanced. The warning names the field that
-  plans a counterbalanced study, `counterbalance` in specification version 0.4. For a two-level
-  factor it also names the encoding that earlier releases read, a list factor between subjects
-  and an item-set factor between items. The specification returned is unchanged.
+  has a power of about 0.80 crossed and 0.55 counterbalanced. The specification it returns for
+  such a pilot now sets `counterbalance` on the factor, a field of specification version 0.4 (see
+  New features). `counterbalance = FALSE` returns the crossed specification, which earlier
+  releases read, with a warning. The warning names the field, and for a two-level factor also
+  the encoding that earlier releases read, a list factor between subjects and an item-set factor
+  between items.
 
 * `power_mixed()` and `precision_design()` fit the model each family needs. They fitted a linear
   mixed model to every response, so for `bernoulli` and `poisson` outcomes the estimate was a
@@ -163,9 +165,22 @@
   subjects and C items every subject meets every condition across items and every item every
   condition across subjects. `build_spec()` gains `counterbalance = TRUE`, and the no-code app,
   installed or in the browser, offers it as "Counterbalanced lists" for a within design with
-  items. `spec_from_model()` names the field when it warns that a pilot was counterbalanced. The
-  two-list encoding of the specification suits two conditions only, and it stays documented for
-  releases that read no version above 0.3.
+  items. `spec_from_model()` sets the field when it reads a counterbalanced pilot, as the next
+  entry describes. The two-list encoding of the specification suits two conditions only, and it
+  stays documented for releases that read no version above 0.3.
+
+* The simulated data of a counterbalanced specification name each subject's list in a column
+  `list`, placed after `subject` and `item`. Subject s follows list ((s − 1) mod C) + 1, and
+  nothing is drawn for it, so a specification without a counterbalanced factor simulates as
+  before. Such a design keeps the name `list` for that column, and `validate_spec()` refuses a
+  factor, predictor, grouping factor, contrast column or response of that name in it.
+  `spec_from_model()` recognises a counterbalanced pilot and returns a specification-0.4 design
+  with `counterbalance` set, and says so in a message. `counterbalance = FALSE` keeps the earlier
+  output, a crossed specification that releases reading 0.3 accept, with a warning. A pilot whose
+  subjects each saw only some of the items keeps `per_subject` and stays crossed, with the
+  warning, since the field needs every subject to see every item. A pilot whose model has a term
+  named `list`, as when the list is fitted beside the condition, stays crossed too, with a
+  warning that asks for that term to be renamed.
 
 ## Fixes
 

@@ -52,7 +52,8 @@ one level, rotating the levels over subjects and items as a Latin square does. I
 unit, and it is refused with \code{per_subject}, since every subject has to see every item. A
 warning says when the subjects or the items are not a multiple of the number of lists, which is
 the number of combinations of the counterbalanced factors' levels, so that the lists are
-unequal.
+unequal. The simulated data name each subject's list in a column \code{list}, so no other column of
+such a design may take that name.
 
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or

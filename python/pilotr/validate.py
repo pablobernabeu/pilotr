@@ -251,7 +251,8 @@ def validate_spec(spec, strict: bool = True):
     unit, and it is refused with ``per_subject``, since every subject has to see every item. A
     warning says when the subjects or the items are not a multiple of the number of lists, which
     is the number of combinations of the counterbalanced factors' levels, so that the lists are
-    unequal.
+    unequal. The simulated data name each subject's list in a column ``list``, so no other column
+    of such a design may take that name.
 
     Version negotiation covers the other direction. A specification that uses a feature introduced
     in 0.3 must declare 0.3 or later, and one that uses a feature introduced in 0.4 must declare
@@ -784,6 +785,11 @@ def _check_names(spec, has_item, units_ok, version=None):
         claim("subject", "the subject unit")
         if has_item:
             claim("item", "the item unit")
+            # From version 0.4, the data of a design with a counterbalanced factor name each
+            # subject's list.
+            if any(isinstance(f, dict) and f.get("counterbalance") is True
+                   and f.get("vary_within") is not None for f in factors):
+                claim("list", "the list column of a counterbalanced design")
     for g in groups:
         if g not in ("subject", "item"):
             claim(g, "random.%s" % g)
