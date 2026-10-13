@@ -5,7 +5,8 @@
 # records the focal 95% CIs; the task aggregates ROPE decision probabilities and writes one
 # CSV per sample size to the project results dir. Combine the CSVs into a full precision curve.
 #
-# Env: TOOLKIT (toolkit dir), TASK_ID (grid index), N_SIMS, ROPE, OUTDIR, SLURM_CPUS_PER_TASK.
+# Env: TOOLKIT (toolkit dir), TASK_ID (grid index), N_SIMS, ROPE (a half-width such as 0.05, or an
+# interval such as -0.02,0.05), OUTDIR, SLURM_CPUS_PER_TASK.
 
 suppressWarnings(suppressMessages({
   TK <- path.expand(Sys.getenv("TOOLKIT", "~/pilotr_toolkit/toolkit"))
@@ -20,8 +21,16 @@ suppressWarnings(suppressMessages({
 task   <- as.integer(Sys.getenv("TASK_ID", "0"))
 n_sims <- as.integer(Sys.getenv("N_SIMS", "200"))
 ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "4"))
-rope   <- as.numeric(Sys.getenv("ROPE", "0.05"))
 outdir <- Sys.getenv("OUTDIR", ".")
+# ROPE is read as comma-separated numbers and checked by the rule precision_design() applies, so a
+# malformed value stops the task before any replicate runs. scan() reads a trailing comma as a
+# missing bound, which is refused, where strsplit() would drop it. Read as one number, an interval
+# became NA and a negative half-width was used as given, and the task wrote its decision
+# probabilities regardless.
+rope_text <- Sys.getenv("ROPE", "0.05")
+rope <- tryCatch(.as_rope(scan(text = rope_text, sep = ",", quiet = TRUE)),
+                 error = function(e) stop(sprintf("ROPE=%s: %s", rope_text, conditionMessage(e)),
+                                          call. = FALSE))
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 spec <- load_spec(file.path(TK, "spec/examples/reading_time_continuous.json"))
@@ -54,10 +63,12 @@ agg <- do.call(rbind, lapply(names(focal), function(f) {
   est <- vapply(res, function(r) r["est", f], numeric(1))
   se  <- vapply(res, function(r) r["se",  f], numeric(1))
   lo <- est - .Z95 * se; hi <- est + .Z95 * se     # the package's qnorm(0.975), not a rounded 1.96
-  # Both decision probabilities are proportions over nc replicates, so each is reported with its
-  # Monte Carlo standard error and Wilson interval, as precision_design() has done since 0.3.
-  ro <- .rate_with_error(sum(lo > rope | hi < -rope), nc, "p_meaningful")
-  ri <- .rate_with_error(sum(lo > -rope & hi < rope), nc, "p_equivalent")
+  # The decisions are precision_design()'s own. Both decision probabilities are proportions over
+  # nc replicates, so each is reported with its Monte Carlo standard error and Wilson interval, as
+  # precision_design() has done since 0.3.
+  d  <- .rope_decisions(lo, hi, rope)
+  ro <- .rate_with_error(sum(d$meaningful), nc, "p_meaningful")
+  ri <- .rate_with_error(sum(d$equivalent), nc, "p_equivalent")
   data.frame(n_subject = N, param = f, true = focal[[f]],
              mean_ci_width = mean(hi - lo), ro, ri,
              n_converged = nc, n_sims = n_sims)

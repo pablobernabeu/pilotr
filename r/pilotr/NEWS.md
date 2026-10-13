@@ -171,6 +171,14 @@
   specification has no coefficient for the factor's contrast, as with `"coefficients": {}`. It
   stopped with "missing value where TRUE/FALSE needed".
 
+* `precision_design()` and `precision_curve()` check `rope`. A vector was recycled across
+  replicates, and a negative value was used as given. On the design of the `precision_design()`
+  example, the range form `c(-0.02, 0.02)` reported a `p_meaningful` of 0.200 over 30
+  replicates, where `0.02` gave 0.067. `rope` takes a half-width or an increasing pair
+  `c(lower, upper)`, which also allows an asymmetric region, and anything else is refused.
+  Results for a non-negative half-width are unchanged. The HPC precision-array job reads its
+  `ROPE` variable in either form, as `0.05` or `-0.02,0.05`, and checks it in the same way.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

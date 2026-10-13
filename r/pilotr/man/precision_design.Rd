@@ -31,10 +31,13 @@ it is derived via \code{\link[=model_data]{model_data()}}, which log-transforms 
 builds the contrast and interaction columns, so focal names follow the
 auto-formula (interactions written as \code{a_b}).}
 
-\item{rope}{Half-width of the region of practical equivalence; an effect with
-\code{abs(beta) < rope} is treated as practically equivalent to zero. Set it clearly narrower
-than the smallest effect worth detecting, because the probability of a determinate
-meaningful decision about an effect no larger than \code{rope} cannot rise above 0.5 however
+\item{rope}{The region of practical equivalence, as a half-width or as an interval. A single
+non-negative number \code{r} is the region from \code{-r} to \code{r}, so that an effect with
+\code{abs(beta) < r} is treated as practically equivalent to zero. A pair \code{c(lower, upper)} with
+\code{lower < upper} is the region between those bounds, which need not be centred on zero, as
+for a prediction that an effect lies within a stated interval. Any other value is refused.
+Keep the effects worth detecting clearly outside the region, because the probability of a
+determinate meaningful decision about an effect inside it cannot rise above 0.5 however
 large the sample.}
 
 \item{n_sims}{Number of Monte Carlo replicates. \code{p_meaningful} and \code{p_equivalent} are
@@ -75,8 +78,8 @@ is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017).
 A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
 analysis. Across Monte Carlo replicates, fit the model and record, for each focal fixed
 effect, whether its 95\% confidence interval falls entirely outside a region of practical
-equivalence (a practically meaningful effect) or entirely inside it (practical equivalence
-to zero), along with the expected interval width. Requires the \code{lme4} package.
+equivalence (a practically meaningful effect) or entirely inside it (practical equivalence),
+along with the expected interval width. Requires the \code{lme4} package.
 }
 \details{
 The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors

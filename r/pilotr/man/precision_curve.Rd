@@ -29,10 +29,11 @@ specification.}
 \item{prep}{Optional data-preparation function; if \code{NULL} it is derived via
 \code{\link[=model_data]{model_data()}}.}
 
-\item{rope}{Half-width of the region of practical equivalence. Set it clearly narrower than
-the smallest effect worth detecting, because the probability of a determinate meaningful
-decision about an effect no larger than \code{rope} cannot rise above 0.5 however large the
-sample, so the curve would fall with \emph{N} rather than rise.}
+\item{rope}{The region of practical equivalence, as in \code{\link[=precision_design]{precision_design()}}: a non-negative
+half-width \code{r} for the region from \code{-r} to \code{r}, or a pair \code{c(lower, upper)} with
+\code{lower < upper}. Keep the effects worth detecting clearly outside the region, because the
+probability of a determinate meaningful decision about an effect inside it cannot rise above
+0.5 however large the sample, so the curve would fall with \emph{N} rather than rise.}
 
 \item{n_sims}{Number of Monte Carlo replicates per sample size. \code{p_meaningful} and
 \code{p_equivalent} are proportions over the replicates that produced an estimate, so each is

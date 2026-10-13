@@ -14,8 +14,8 @@
 #' A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
 #' analysis. Across Monte Carlo replicates, fit the model and record, for each focal fixed
 #' effect, whether its 95% confidence interval falls entirely outside a region of practical
-#' equivalence (a practically meaningful effect) or entirely inside it (practical equivalence
-#' to zero), along with the expected interval width. Requires the `lme4` package.
+#' equivalence (a practically meaningful effect) or entirely inside it (practical equivalence),
+#' along with the expected interval width. Requires the `lme4` package.
 #'
 #' @details
 #' The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
@@ -62,10 +62,13 @@
 #'   it is derived via [model_data()], which log-transforms the outcome and
 #'   builds the contrast and interaction columns, so focal names follow the
 #'   auto-formula (interactions written as `a_b`).
-#' @param rope Half-width of the region of practical equivalence; an effect with
-#'   `abs(beta) < rope` is treated as practically equivalent to zero. Set it clearly narrower
-#'   than the smallest effect worth detecting, because the probability of a determinate
-#'   meaningful decision about an effect no larger than `rope` cannot rise above 0.5 however
+#' @param rope The region of practical equivalence, as a half-width or as an interval. A single
+#'   non-negative number `r` is the region from `-r` to `r`, so that an effect with
+#'   `abs(beta) < r` is treated as practically equivalent to zero. A pair `c(lower, upper)` with
+#'   `lower < upper` is the region between those bounds, which need not be centred on zero, as
+#'   for a prediction that an effect lies within a stated interval. Any other value is refused.
+#'   Keep the effects worth detecting clearly outside the region, because the probability of a
+#'   determinate meaningful decision about an effect inside it cannot rise above 0.5 however
 #'   large the sample.
 #' @param n_sims Number of Monte Carlo replicates. `p_meaningful` and `p_equivalent` are
 #'   proportions over the replicates that returned an estimate (`n_returned`), so they carry
@@ -133,6 +136,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     stop("precision_design() requires the 'lme4' package; please install it.", call. = FALSE)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
+  rope <- .as_rope(rope)
   cl <- NULL
   if (workers > 1L) {
     cl <- parallel::makeCluster(workers)
@@ -143,7 +147,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 }
 
 # The replicate loop behind precision_design(), taking an optional PSOCK cluster so that
-# precision_curve() can create one cluster and reuse it across grid points.
+# precision_curve() can create one cluster and reuse it across grid points. `rope` arrives as
+# the region c(lower, upper) that .as_rope() returns.
 .precision_design_impl <- function(spec, focal, formula, prep, rope, n_sims, cl = NULL) {
   auto <- is.null(formula)
   if (auto) formula <- model_formula(spec)
@@ -185,10 +190,9 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     lo <- est[ok] - .Z95 * se[ok]; hi <- est[ok] + .Z95 * se[ok]
     width[f] <- mean(hi - lo)
     if (withheld) next
-    n_out <- sum(lo > rope | hi < -rope)
-    n_ins <- sum(lo > -rope & hi < rope)
-    ro <- .rate_with_error(n_out, length(ok), "p")
-    ri <- .rate_with_error(n_ins, length(ok), "p")
+    d <- .rope_decisions(lo, hi, rope)
+    ro <- .rate_with_error(sum(d$meaningful), length(ok), "p")
+    ri <- .rate_with_error(sum(d$equivalent), length(ok), "p")
     p_out[f] <- ro$p; out_mcse[f] <- ro$p_mcse; out_lo[f] <- ro$p_lo; out_hi[f] <- ro$p_hi
     p_ins[f] <- ri$p; ins_mcse[f] <- ri$p_mcse; ins_lo[f] <- ri$p_lo; ins_hi[f] <- ri$p_hi
   }
@@ -212,6 +216,37 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 # The default data-preparation function, built in its own small frame so that only the
 # spec (not the caller's whole frame, cluster included) travels to PSOCK workers.
 .default_prep <- function(spec) function(d) model_data(spec, d)
+
+# The region of practical equivalence as c(lower, upper). A single finite half-width r >= 0 is
+# the region c(-r, r), and a pair of finite numbers in increasing order is the region it names.
+# Anything else is refused. The decisions used to compare each interval with `rope` and `-rope`.
+# A pair was therefore recycled across the replicates, each bound standing in turn for the
+# half-width, and a negative half-width was used as given, all without a word.
+# hpc/precision_array.R reads its ROPE variable through this function too.
+.as_rope <- function(rope) {
+  ok <- is.numeric(rope) && all(is.finite(rope)) &&
+    ((length(rope) == 1L && rope >= 0) || (length(rope) == 2L && rope[1] < rope[2]))
+  if (!ok) {
+    # Shown as code, so that NA, a string and a vector of the wrong length each read as what they
+    # are. A long vector is cut short.
+    shown <- paste(deparse(rope, width.cutoff = 500L), collapse = " ")
+    if (nchar(shown) > 60L) shown <- paste0(substr(shown, 1L, 57L), "...")
+    stop("`rope` must be a non-negative half-width or an increasing pair c(lower, upper); got ",
+         shown, call. = FALSE)
+  }
+  rope <- as.numeric(rope)
+  if (length(rope) == 1L) c(-rope, rope) else rope
+}
+
+# Each interval's decisions against the region c(lower, upper) from .as_rope(): meaningful when
+# the interval lies wholly above or below the region, equivalent when it lies wholly inside. Both
+# inequalities are strict, so an interval that touches a bound counts as neither. For a half-width
+# these are the comparisons made before, so its results are unchanged. hpc/precision_array.R
+# applies this function, where it used to repeat the comparisons and their defect.
+.rope_decisions <- function(lo, hi, rope) {
+  list(meaningful = lo > rope[2] | hi < rope[1],
+       equivalent = lo > rope[1] & hi < rope[2])
+}
 
 #' Precision and ROPE curve over sample size
 #'
@@ -239,10 +274,11 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   [model_formula()], and the response family chooses the fitter, as in [precision_design()].
 #' @param prep Optional data-preparation function; if `NULL` it is derived via
 #'   [model_data()].
-#' @param rope Half-width of the region of practical equivalence. Set it clearly narrower than
-#'   the smallest effect worth detecting, because the probability of a determinate meaningful
-#'   decision about an effect no larger than `rope` cannot rise above 0.5 however large the
-#'   sample, so the curve would fall with \emph{N} rather than rise.
+#' @param rope The region of practical equivalence, as in [precision_design()]: a non-negative
+#'   half-width `r` for the region from `-r` to `r`, or a pair `c(lower, upper)` with
+#'   `lower < upper`. Keep the effects worth detecting clearly outside the region, because the
+#'   probability of a determinate meaningful decision about an effect inside it cannot rise above
+#'   0.5 however large the sample, so the curve would fall with \emph{N} rather than rise.
 #' @param n_sims Number of Monte Carlo replicates per sample size. `p_meaningful` and
 #'   `p_equivalent` are proportions over the replicates that produced an estimate, so each is
 #'   reported with its Monte Carlo standard error and Wilson interval. The default of 60 gives a

@@ -8,6 +8,7 @@
 # Submit (after bootstrapping the R library once via scripts/bootstrap_rlib.sh):
 #   sbatch precision_array.slurm                       # full sweep, N_SIMS=200
 #   sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm   # smoke test
+#   ROPE=-0.02,0.05 sbatch precision_array.slurm       # a region given as an interval
 # =============================================================================
 #SBATCH --account=educ-intract
 #SBATCH --job-name=pilotr_prec
@@ -31,6 +32,8 @@ export R_LIBS=$PD/Rlib:${R_LIBS:-}        # lme4/lmerTest live here; jsonlite fr
 export TOOLKIT=$HOME/pilotr_toolkit/toolkit
 export OUTDIR=$PD/results
 export N_SIMS=${N_SIMS:-200}
+# ROPE is a half-width or an interval written lower,upper. sbatch's --export separates variables
+# with commas and so cannot carry an interval, which is set in the submitting shell, as above.
 export ROPE=${ROPE:-0.05}
 export TASK_ID=$SLURM_ARRAY_TASK_ID
 export OMP_NUM_THREADS=1                  # mclapply provides the parallelism
