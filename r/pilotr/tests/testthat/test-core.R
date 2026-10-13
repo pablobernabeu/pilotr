@@ -101,21 +101,48 @@ test_that("each response family simulates a column on the expected scale", {
 
 # The refusal is byte-identical to the Python twin's, which normalises its "inf" to R's
 # "Inf" when the linear predictor overflows exp().
-test_that("a poisson mean past the sampler's reach is an error, not the iteration cap", {
-  pois <- function(intercept) build_spec(list(
-    name = "p", seed = 1, n_subject = 4, design_kind = "between",
+poisson_refusal <- function(mean) sprintf(paste0(
+  "the poisson mean exp(eta) = %s is too large for the inverse-CDF sampler: beyond a mean of ",
+  "about 708.4, exp(-mean) is subnormal and the walk loses accuracy. Lower the poisson ",
+  "intercept or coefficients until the implied mean is at most 708."), mean)
+
+test_that("a poisson mean beyond the sampler's accurate range is refused", {
+  pois <- function(intercept, n = 4) build_spec(list(
+    name = "p", seed = 1, n_subject = n, design_kind = "between",
     factor_name = "group", lev1 = "a", lev2 = "b", intercept = intercept,
     effect = 0, family = "poisson", resp_name = ""))
+  # From a mean of about 738, the walk's total mass departs from 1. Over 40,000 draws, a mean of
+  # 742 was refused for 4% of them. A mean of 744 drew counts with a mean of 733.5 and a
+  # variance of 407.
+  expect_error(simulate_design(pois(log(742))), poisson_refusal("742"), fixed = TRUE)
   # An intercept of 7 implies a mean of exp(7), about 1097, where exp(-mean) underflows to
   # zero; every count then used to come back as the sampler's 1e6 iteration cap.
-  expect_error(
-    simulate_design(pois(7)),
-    "the poisson mean exp(eta) = 1096.63 is too large for the inverse-CDF sampler: the cumulative distribution cannot reach the drawn uniform, so no count can be drawn. Lower the poisson intercept or coefficients until the implied mean is simulable.",
-    fixed = TRUE)
-  expect_error(simulate_design(pois(800)), "exp(eta) = Inf", fixed = TRUE)
+  expect_error(simulate_design(pois(7)), poisson_refusal("1096.63"), fixed = TRUE)
+  expect_error(simulate_design(pois(800)), poisson_refusal("Inf"), fixed = TRUE)
+  # A mean of 700 is served, and its counts centre on it.
+  d <- simulate_design(pois(log(700), n = 200))
+  expect_true(all(d$count == round(d$count)))
+  expect_lt(abs(mean(d$count) - 700), 5 * sqrt(700 / 200))
   # Feasible means are untouched: the shipped poisson example still draws real counts.
   d <- simulate_design(load_spec(pilotr_example("poisson_counts_between")))
   expect_true(all(d$count >= 0) && all(d$count < 1e6))
+})
+
+test_that("the poisson cap is the double nearest -log of the smallest normal double", {
+  # 1022 * log(2) rounds to the literal both twins compare against. exp(-literal) is still a
+  # normal double, so that mean is served. The next double up gives a subnormal and is refused.
+  expect_identical(pilotr:::.poisson_inv(708.3964185322641, 0.5), 708)
+  expect_error(pilotr:::.poisson_inv(0x1.6232bdd7abcd3p+9, 0.5), poisson_refusal("708.396"),
+               fixed = TRUE)
+})
+
+test_that("the poisson walk evaluates each term as (p * lambda) / k, as the Python twin does", {
+  # From exp(-3.7), the cumulative sum at k = 3 is 0.4941532441504185 with this bracketing and
+  # 0.49415324415041845 with p * (lambda / k), which core.py used. This uniform therefore drew 3
+  # in R and 4 in Python. The case was derived from the correctly rounded exp(-3.7).
+  skip_if_not(identical(exp(-3.7), 0x1.9511fc6871044p-6),
+              "this platform's exp(-3.7) is not the correctly rounded value")
+  expect_identical(pilotr:::.poisson_inv(3.7, 0.4941532441504185), 3)
 })
 
 test_that("build_spec carries sigma through for the lognormal family", {

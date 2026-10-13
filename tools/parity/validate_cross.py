@@ -10,6 +10,8 @@ battery writes raw JSON text to a file and has each twin read it with its own lo
 is where the readers used to differ: one-element arrays, `[]`, JSON null, whole-number floats,
 repeated keys, seeds beyond 2^53 and a byte-order mark. Where both twins accept a file, each
 simulates it and the two dumps, in the 17-digit format of run_r.R and run_py.py, must hash alike.
+A refusal raised while simulating, such as the cap on a Poisson mean, is compared as text like
+any other.
 
 The power battery checks the two-group backend's refusal, which power_design() in R and power()
 in Python raise before drawing any replicate. Each twin validates the specification and applies
@@ -39,6 +41,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -310,6 +313,15 @@ def _between():
     return _read("spec", "examples", "between_2group_gaussian.json")
 
 
+def _poisson():
+    """The shipped Poisson example with 200 subjects and no group effect, so that every row has
+    the mean its intercept implies."""
+    s = _read("spec", "examples", "poisson_counts_between.json")
+    s["units"]["subject"]["n"] = 200
+    s["fixed"]["coefficients"]["grp"] = 0.0
+    return s
+
+
 def _text(spec):
     return json.dumps(spec, ensure_ascii=False, indent=1).encode("utf-8")
 
@@ -408,6 +420,13 @@ def file_cases():
                              s["fixed"]["coefficients"].__setitem__("z", 0.1)))),
         ("random 0", _with(g, lambda s: s.__setitem__("random", 0))),
         ("random []", _with(g, lambda s: s.__setitem__("random", []))),
+        # The Poisson cap is a refusal raised while simulating, below and above 708.4.
+        ("poisson mean 700",
+         _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(700)))),
+        ("poisson mean 742",
+         _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(742)))),
+        ("poisson intercept 800 (exp overflows)",
+         _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", 800))),
     ]
     return out
 

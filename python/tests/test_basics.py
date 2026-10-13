@@ -92,32 +92,66 @@ def test_per_subject_must_lie_between_1_and_n_items():
         simulate(spec)
 
 
-def test_a_poisson_mean_past_the_sampler_is_an_error_not_the_iteration_cap():
-    # The refusal is byte-identical to the R twin's; Python's "inf" is normalised to R's
-    # "Inf" when the linear predictor overflows exp(). An intercept of 7 implies a mean of
-    # exp(7), about 1097, where exp(-mean) underflows to zero; every count then used to
-    # come back as the sampler's 1e6 iteration cap.
-    spec = {
-        "name": "p", "seed": 1,
-        "units": {"subject": {"n": 4}},
-        "factors": [{"name": "group", "levels": ["a", "b"],
-                     "contrasts": {"grp": [-0.5, 0.5]}, "between": "subject"}],
-        "fixed": {"intercept": 7, "coefficients": {"grp": 0.0}},
-        "random": {},
-        "response": {"family": "poisson", "name": "count"},
-    }
-    with pytest.raises(ValueError, match=re.escape(
-            "the poisson mean exp(eta) = 1096.63 is too large for the inverse-CDF "
-            "sampler: the cumulative distribution cannot reach the drawn uniform, so no "
-            "count can be drawn. Lower the poisson intercept or coefficients until the "
-            "implied mean is simulable.")):
-        simulate(spec)
-    spec["fixed"]["intercept"] = 800  # overflows math.exp itself; R's exp() returns Inf
-    with pytest.raises(ValueError, match=re.escape("exp(eta) = Inf")):
-        simulate(spec)
+# The refusal is byte-identical to the R twin's; Python's "inf" is normalised to R's "Inf" when
+# the linear predictor overflows exp().
+def _poisson_refusal(mean):
+    return ("the poisson mean exp(eta) = %s is too large for the inverse-CDF sampler: beyond a "
+            "mean of about 708.4, exp(-mean) is subnormal and the walk loses accuracy. Lower the "
+            "poisson intercept or coefficients until the implied mean is at most 708." % mean)
+
+
+def test_a_poisson_mean_beyond_the_samplers_accurate_range_is_refused():
+    def pois(intercept, n=4):
+        return {
+            "name": "p", "seed": 1,
+            "units": {"subject": {"n": n}},
+            "factors": [{"name": "group", "levels": ["a", "b"],
+                         "contrasts": {"grp": [-0.5, 0.5]}, "between": "subject"}],
+            "fixed": {"intercept": intercept, "coefficients": {"grp": 0.0}},
+            "random": {},
+            "response": {"family": "poisson", "name": "count"},
+        }
+
+    # From a mean of about 738, the walk's total mass departs from 1. Over 40,000 draws, a mean
+    # of 742 was refused for 4% of them. A mean of 744 drew counts with a mean of 733.5 and a
+    # variance of 407.
+    with pytest.raises(ValueError, match=re.escape(_poisson_refusal("742"))):
+        simulate(pois(math.log(742)))
+    # An intercept of 7 implies a mean of exp(7), about 1097, where exp(-mean) underflows to
+    # zero; every count then used to come back as the sampler's 1e6 iteration cap.
+    with pytest.raises(ValueError, match=re.escape(_poisson_refusal("1096.63"))):
+        simulate(pois(7))
+    with pytest.raises(ValueError, match=re.escape(_poisson_refusal("Inf"))):
+        simulate(pois(800))  # overflows math.exp itself; R's exp() returns Inf
+    # A mean of 700 is served, and its counts centre on it.
+    counts = [r["count"] for r in simulate(pois(math.log(700), n=200)).rows]
+    assert all(isinstance(c, int) for c in counts)
+    assert abs(statistics.fmean(counts) - 700) < 5 * math.sqrt(700 / 200)
     # Feasible means are untouched: the shipped poisson example still draws real counts.
     d = simulate(os.path.join(SPEC, "poisson_counts_between.json"))
     assert all(0 <= r["count"] < 1_000_000 for r in d.rows)
+
+
+def test_the_poisson_cap_is_the_double_nearest_minus_log_of_the_smallest_normal_double():
+    from pilotr.core import poisson_inv
+
+    # 1022 * log(2) rounds to the literal both twins compare against. exp(-literal) is still a
+    # normal double, so that mean is served. The next double up gives a subnormal and is refused.
+    assert poisson_inv(708.3964185322641, 0.5) == 708
+    with pytest.raises(ValueError, match=re.escape(_poisson_refusal("708.396"))):
+        poisson_inv(float.fromhex("0x1.6232bdd7abcd3p+9"), 0.5)
+
+
+def test_the_poisson_walk_evaluates_each_term_as_the_r_twin_does():
+    from pilotr.core import poisson_inv
+
+    # From exp(-3.7), the cumulative sum at k = 3 is 0.4941532441504185 when each term is
+    # (p * lam) / k, as in R, and 0.49415324415041845 when it is p * (lam / k), as here before.
+    # This uniform therefore drew 3 in R and 4 in Python. The case was derived from the
+    # correctly rounded exp(-3.7).
+    if math.exp(-3.7) != float.fromhex("0x1.9511fc6871044p-6"):
+        pytest.skip("this platform's exp(-3.7) is not the correctly rounded value")
+    assert poisson_inv(3.7, 0.4941532441504185) == 3
 
 
 # One specification file is run through both engines, so the same mistake has to be reported the

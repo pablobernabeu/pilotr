@@ -227,6 +227,12 @@
   Results for a non-negative half-width are unchanged. The HPC precision-array job reads its
   `ROPE` variable in either form, as `0.05` or `-0.02,0.05`, and checks it in the same way.
 
+* A Poisson mean above about 708 is refused. The sampler's starting value `exp(-mean)` is
+  subnormal there, and from a mean of about 738 the counts were biased or intermittently refused,
+  while the specification promised service up to 746. Over 40,000 draws, a mean of 744 drew counts
+  with a mean of 733.5 and a variance of 407, and a mean of 742 was refused for 4% of them. The
+  refusal reads as the Python twin's and asks for a mean of at most 708.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

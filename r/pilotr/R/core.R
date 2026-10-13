@@ -159,21 +159,30 @@ as241 <- function(p) {
 
 .inv_logit <- function(x) if (x >= 0) 1 / (1 + exp(-x)) else { e <- exp(x); e / (1 + e) }
 
-# Refuse a mean the inverse-CDF walk cannot serve. exp(-lam) underflows to exactly zero
-# near lam = 746, after which every term of the cumulative sum is zero and the walk would
-# return its iteration cap as though it were a drawn count (a poisson intercept of 7
-# implies lam = exp(7), about 1097, already past that point); a huge but representable
-# mean exhausts the cap the same way. Both twins raise this text byte for byte; R prints
-# an infinite value as "Inf", which is what core.py's twin normalises its "inf" to.
+# The largest mean the inverse-CDF walk serves. The walk starts from exp(-lam), which is
+# subnormal once lam passes -log of the smallest normal double, 1022 * log(2). A subnormal
+# keeps fewer significant bits, and from a mean of about 738 the cumulative distribution no
+# longer sums to 1. Counts came out biased there (a mean of 744 drew a mean of 733.5), or the
+# walk never reached the uniform, until exp(-lam) underflowed to zero near 745. The literal is
+# the double nearest 1022 * log(2), and core.py compares against the same one, so both twins
+# refuse the same means.
+.POISSON_MAX_MEAN <- 708.3964185322641
+
+# Both twins raise this text byte for byte. R prints an infinite mean as "Inf", which is what
+# core.py's twin normalises its "inf" to.
 .stop_poisson_mean <- function(lam) {
   stop(sprintf(
-    "the poisson mean exp(eta) = %g is too large for the inverse-CDF sampler: the cumulative distribution cannot reach the drawn uniform, so no count can be drawn. Lower the poisson intercept or coefficients until the implied mean is simulable.",
+    "the poisson mean exp(eta) = %g is too large for the inverse-CDF sampler: beyond a mean of about 708.4, exp(-mean) is subnormal and the walk loses accuracy. Lower the poisson intercept or coefficients until the implied mean is at most 708.",
     lam), call. = FALSE)
 }
 
+# Each term is p_k = (p_{k-1} * lam) / k, multiplied before it is divided. spec/SPEC.md fixes
+# that bracketing, because the other one lands on a different double for most terms. Within the
+# cap, the cumulative sum reaches every uniform the generator draws long before the iteration
+# cap, so the check after the loop only keeps an out-of-range u from being returned as a count.
 .poisson_inv <- function(lam, u) {
+  if (lam > .POISSON_MAX_MEAN) .stop_poisson_mean(lam)
   p <- exp(-lam); cum <- p; k <- 0
-  if (p == 0) .stop_poisson_mean(lam)
   while (u > cum && k < 1e6) { k <- k + 1; p <- p * lam / k; cum <- cum + p }
   if (u > cum) .stop_poisson_mean(lam)
   k

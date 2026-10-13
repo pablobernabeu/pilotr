@@ -255,31 +255,46 @@ def inv_logit(x: float) -> float:
     return e / (1.0 + e)
 
 
+# The largest mean the inverse-CDF walk serves. The walk starts from exp(-lam), which is
+# subnormal once lam passes -log of the smallest normal double, 1022 * log(2). A subnormal keeps
+# fewer significant bits, and from a mean of about 738 the cumulative distribution no longer
+# sums to 1. Counts came out biased there (a mean of 744 drew a mean of 733.5), or the walk
+# never reached the uniform, until exp(-lam) underflowed to zero near 745. The literal is the
+# double nearest 1022 * log(2), and core.R compares against the same one, so both twins refuse
+# the same means.
+_POISSON_MAX_MEAN = 708.3964185322641
+
+
 def _stop_poisson_mean(lam: float):
-    """Refuse a mean the inverse-CDF walk cannot serve. exp(-lam) underflows to exactly
-    zero near lam = 746, after which every term of the cumulative sum is zero and the walk
-    would return its iteration cap as though it were a drawn count (a poisson intercept of
-    7 implies lam = exp(7), about 1097, already past that point); a huge but representable
-    mean exhausts the cap the same way. Both twins raise this text byte for byte; Python
-    renders an infinite value as "inf" where R prints "Inf", hence the normalisation.
+    """Refuse a mean beyond the inverse-CDF walk's accurate range. Both twins raise this text
+    byte for byte. Python renders an infinite value as "inf" where R prints "Inf", hence the
+    normalisation.
     """
     raise ValueError(
-        "the poisson mean exp(eta) = %s is too large for the inverse-CDF sampler: the "
-        "cumulative distribution cannot reach the drawn uniform, so no count can be drawn. "
-        "Lower the poisson intercept or coefficients until the implied mean is simulable."
+        "the poisson mean exp(eta) = %s is too large for the inverse-CDF sampler: beyond a "
+        "mean of about 708.4, exp(-mean) is subnormal and the walk loses accuracy. Lower the "
+        "poisson intercept or coefficients until the implied mean is at most 708."
         % ("Inf" if math.isinf(lam) else "%g" % lam))
 
 
 def poisson_inv(lam: float, u: float) -> int:
-    """Inverse-CDF Poisson draw from a uniform u."""
-    p = math.exp(-lam)
-    if p == 0.0:
+    """Inverse-CDF Poisson draw from a uniform u.
+
+    Each term is ``p_k = (p_{k-1} * lam) / k``, multiplied before it is divided, as in the R
+    twin. spec/SPEC.md fixes that bracketing, because the one this function used before,
+    ``p * (lam / k)``, lands on a different double for most terms. A uniform falling between the
+    two cumulative sums then drew a different count. Within the cap, the cumulative sum reaches
+    every uniform the generator draws long before the iteration cap, so the check after the loop
+    only keeps an out-of-range ``u`` from being returned as a count.
+    """
+    if lam > _POISSON_MAX_MEAN:
         _stop_poisson_mean(lam)
+    p = math.exp(-lam)
     cum = p
     k = 0
     while u > cum and k < 1_000_000:
         k += 1
-        p *= lam / k
+        p = p * lam / k
         cum += p
     if u > cum:
         _stop_poisson_mean(lam)

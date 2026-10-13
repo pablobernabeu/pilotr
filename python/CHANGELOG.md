@@ -145,6 +145,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   none of 1,000 random values. The shipped examples simulate the same data as before. With
   `validate=False`, a `round` that is not a whole number, which validation refuses, counts as
   `floor(round + 0.5)` decimal places, as in R. It raised `TypeError`.
+- A Poisson mean above about 708 is refused. The sampler's starting value `exp(-mean)` is
+  subnormal there, and from a mean of about 738 the counts were biased or intermittently refused,
+  while the specification promised service up to 746. Over 40,000 draws, a mean of 744 drew
+  counts with a mean of 733.5 and a variance of 407, and a mean of 742 was refused for 4% of
+  them. The refusal reads as the R twin's and asks for a mean of at most 708.
+- The Poisson sampler evaluates each term of its recurrence as `(p * lam) / k`, as R does. The
+  other bracketing, `p * (lam / k)`, lands on a different double for most cumulative sums, and a
+  uniform falling between the two gave a different count. At a mean of 3.7, a uniform of
+  0.4941532441504185 drew 4 here and 3 in R. In 300,000 draws from the generator, at means from
+  0.5 to 100, no count differed.
 
 ### Deprecated
 

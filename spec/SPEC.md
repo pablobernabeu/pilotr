@@ -350,12 +350,16 @@ lognormal is not a substitute, because `model_data()` logs the response back and
 residual on the analysis scale.
 
 The Poisson mean has an upper bound, and it is the same in every implementation. The inverse-CDF
-walk starts from `exp(−λ)`, which underflows to exactly zero once `λ` passes about 746, and from
-there the cumulative distribution can never reach the drawn uniform, so no count exists to return.
-Both implementations refuse such a mean with the same message, where earlier versions returned the
-walk's iteration cap as though it were a draw. The effect is to cap the linear predictor of a
-`poisson` response at roughly 6.6, a mean count near 750, which is well above the rates count
-outcomes are normally specified at.
+walk starts from `exp(−λ)`, which is subnormal once `λ` exceeds `−log` of the smallest normal
+double, `1022·ln 2`, about 708.4. A subnormal carries fewer significant bits. From a mean of
+about 738, the walk's cumulative distribution no longer sums to 1, so its counts are biased or the
+drawn uniform lies out of its reach. Beyond about 745.1, `exp(−λ)` underflows to zero. Every
+implementation therefore refuses a mean above 708.3964185322641, the double nearest `1022·ln 2`,
+before the walk starts, and with the same message. Earlier versions served means up to about 745,
+with biased counts from about 738. The effect is to cap the linear predictor of a `poisson`
+response at about 6.56, a mean count of about 708, which is well above the rates count outcomes
+are normally specified at. The walk itself is set out under
+[Accumulation order](#accumulation-order-identical-across-all-implementations).
 
 `η` (the linear predictor for a row) = `intercept + Σ β_key · value(key)`, where a key is a
 contrast column, a continuous predictor or an `"a:b"` interaction (the product of the named
@@ -422,6 +426,14 @@ For the same reason, integer powers are written as repeated multiplication rathe
 measured over 200,000 draws in the Gamma sampler's range the two disagreed on a third of inputs
 by up to 6 ulp. Because that value decides a rejection step, the disagreement also changed how
 many draws were consumed.
+
+The Poisson walk is fixed in the same way. It starts from `p_0 = exp(−λ)` and `c_0 = p_0`, and
+step `k` computes `p_k = (p_{k−1}·λ)/k`, multiplying before it divides, and then
+`c_k = c_{k−1} + p_k`. The draw is the first `k` at which `u ≤ c_k`. Bracketed as
+`p_{k−1}·(λ/k)`, most of the cumulative sums land on a different double, and a uniform falling
+between the two versions of a sum gives a different count. At `λ = 3.7`, `c_3` is
+0.4941532441504185 with the first bracketing and 0.49415324415041845 with the second. A uniform
+of 0.4941532441504185 therefore draws 3 with the first and 4 with the second.
 
 ## Rounding (identical across all implementations)
 
