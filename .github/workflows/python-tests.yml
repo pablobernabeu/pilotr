@@ -251,3 +251,11 @@ jobs:
       # together with the text of every refusal it can raise.
       - name: Cross-check the two curve solvers
         run: python tools/parity/solve_cross.py
+
+      # A specification file is the one artefact the two halves share, so each number in it has
+      # to name the same double in both readers. R writes spec_json() for 20,000 doubles and
+      # Python reads them back, and a single number read differently fails the job. This runner's
+      # R has long doubles, with which the 0.3.1 writer put several of the 20,000 one unit in the
+      # last place away.
+      - name: Read back in Python the numbers R writes with spec_json()
+        run: python tools/parity/json_roundtrip.py

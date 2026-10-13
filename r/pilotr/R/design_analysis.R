@@ -78,7 +78,7 @@
   list(names = nms, true = stats::setNames(true, nms))
 }
 
-# A named numeric vector as an R source literal, at the full precision of .num_literal(). The
+# A named numeric vector as R source, each value exact as .num_literal() writes it. The
 # .r_literal() walk drops the names of an atomic vector, and the true values have to stay
 # attached to the coefficients they belong to.
 .da_named_num <- function(x) {
@@ -118,10 +118,11 @@
     "",
     "# ---- design ----",
     "",
-    "# The specification is embedded at full precision, so that the script reproduces the",
-    "# design on its own, with no file to read, and a coefficient the user typed as 0.3 is",
-    "# still exactly 0.3 here.",
-    paste0("spec <- ", .r_literal(spec)),
+    "# The specification is embedded as pilotr::spec_json() writes it, so that the script",
+    "# reproduces the design on its own, with no file to read. load_spec() reads it with",
+    "# jsonlite, which recovers every number exactly on every build of R, so a coefficient",
+    "# the user typed as 0.3 is still exactly 0.3 here.",
+    paste0("spec <- pilotr::load_spec(", .r_raw_string(spec_json(spec)), ")"),
     "",
     "# ---- decision rule ----",
     "",

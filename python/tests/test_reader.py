@@ -2,7 +2,8 @@
 JSON null read as an absent field, whole-number floats accepted, and every malformed shape
 reported as a ValueError in the R validator's words.
 
-The two fixtures under tests/fixtures were written by the R twin:
+The three fixtures this module reads from tests/fixtures were written by the R twin. The first
+two:
 
     spec <- build_spec(list(name = "write_json defaults", seed = 2024, design_kind = "within",
       include_items = TRUE, n_subject = 6, n_item = 4, factor_name = "cond", lev1 = "a",
@@ -17,7 +18,14 @@ The two fixtures under tests/fixtures were written by the R twin:
     jsonlite::write_json(ord, "write_json_auto_unbox_ordinal.json", auto_unbox = TRUE)
 
 The first writes every scalar as a one-element array, the second a single threshold as a bare
-number. R reads and simulates both.
+number. R reads and simulates both. The third is what spec_json() writes:
+
+    spec <- build_spec(list(name = "spec_json round trip", seed = 11, n_subject = 6,
+      design_kind = "within", factor_name = "cond", lev1 = "a", lev2 = "b",
+      intercept = -0x1.0efdc5258p+3, effect = 0x1.e2b06cc2p+2, subj_int_sd = 1/3,
+      subj_slope_sd = 0, family = "gaussian", resp_name = "", sigma = 0x1.1fe271f9p+3))
+    spec$response$round <- NULL
+    writeLines(spec_json(spec), "r_spec_json_roundtrip.json")
 """
 import copy, json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -34,6 +42,13 @@ SPEC = os.path.join(HERE, "..", "..", "spec", "examples")
 # returns them, written with sprintf("%a").
 R_WRITE_JSON_HEAD = ["0x1.a154c985f06f7p+2", "0x1.96339c0ebedfap+2", "0x1.806f694467382p+2"]
 R_ORDINAL = [2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 2, 2, 2]
+# The numbers of r_spec_json_roundtrip.json as R held them before writing it. spec_json() used to
+# write the first three in a form that json reads one unit in the last place away. R's first six
+# responses from that specification, simulated before it was written, follow.
+R_ROUNDTRIP_VALUES = {"intercept": "-0x1.0efdc5258p+3", "effect": "0x1.e2b06cc2p+2",
+                      "sigma": "0x1.1fe271f9p+3", "intercept_sd": "0x1.5555555555555p-2"}
+R_ROUNDTRIP_HEAD = ["-0x1.16456a82ba7b4p+4", "-0x1.bdc6a00f23ep+1", "-0x1.b16293a42c25ep+4",
+                    "-0x1.1d1c2d8a5df17p+4", "-0x1.b28952c20f1a3p+3", "0x1.f4256c2b3f50ep+1"]
 
 DUPLICATE = ("the specification repeats the key '%s' within one object; JSON leaves a repeated "
              "key undefined, and R and Python read it differently")
@@ -73,6 +88,23 @@ def test_a_bare_single_threshold_simulates():
     path = os.path.join(FIXTURES, "write_json_auto_unbox_ordinal.json")
     assert simulate(load_spec(path)).column("rating") == R_ORDINAL
     assert simulate(path).column("rating") == R_ORDINAL
+
+
+def test_numbers_spec_json_writes_read_back_as_the_doubles_r_held():
+    # spec_json() checked its 15- and 16-digit forms with R's as.numeric(), which on a build with
+    # long doubles rounds twice. json rounds once, correctly, so it read the specification's
+    # numbers one unit in the last place away and simulated different data from R's.
+    path = os.path.join(FIXTURES, "r_spec_json_roundtrip.json")
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    read = {"intercept": raw["fixed"]["intercept"],
+            "effect": raw["fixed"]["coefficients"]["effect"],
+            "sigma": raw["response"]["sigma"],
+            "intercept_sd": raw["random"]["subject"]["intercept_sd"]}
+    for key, held in R_ROUNDTRIP_VALUES.items():
+        assert read[key].hex() == float.fromhex(held).hex(), key
+    scores = simulate(load_spec(path)).column("score")
+    assert scores[:6] == [float.fromhex(h) for h in R_ROUNDTRIP_HEAD]
 
 
 def test_one_element_arrays_and_empty_arrays_read_as_jsonlite_reads_them(tmp_path):

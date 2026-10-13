@@ -1,0 +1,36 @@
+{
+  "spec_version": "0.3",
+  "name": "spec_json round trip",
+  "seed": 11,
+  "units": {
+    "subject": {
+      "n": 6
+    }
+  },
+  "factors": [
+    {
+      "name": "cond",
+      "levels": ["a", "b"],
+      "contrasts": {
+        "effect": [-0.5, 0.5]
+      },
+      "vary_within": ["subject"]
+    }
+  ],
+  "fixed": {
+    "intercept": -8.468477795831859,
+    "coefficients": {
+      "effect": 7.5420181173831224
+    }
+  },
+  "random": {
+    "subject": {
+      "intercept_sd": 0.3333333333333333
+    }
+  },
+  "response": {
+    "family": "gaussian",
+    "name": "score",
+    "sigma": 8.996392237022519
+  }
+}

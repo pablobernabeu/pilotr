@@ -116,6 +116,35 @@ test_that("the emitted record carries the rule, the gate, the spec and the versi
   expect_true(grepl("tools::md5sum", script, fixed = TRUE))
 })
 
+# A true value taken from a fitted pilot, or a threshold computed from others, can need
+# seventeen significant digits, or sixteen whose digits exceed 2^53. On a build without long
+# doubles, R's parser reads such a decimal one unit in the last place away, as it read these two.
+test_that("the design-analysis script carries every number exactly", {
+  spec <- load_spec(pilotr_example("crossed_mixed_rt"))
+  spec$fixed$coefficients$cond <- 0.09470803828730423
+  script <- generate_design_analysis(spec, focal = c(cond = 0.9923772805192401),
+                                     rule = list(rope = 0.1 + 0.2))
+  for (tok in r_decimal_tokens(script))
+    expect_identical(no_long_double(tok), as.numeric(tok), info = tok)
+  # A threshold typed as a short decimal stays one.
+  expect_true(grepl("ci_mass       <- 0.95\n", script, fixed = TRUE))
+
+  # The assignments that carry numbers need neither brms nor a sampler to evaluate.
+  wanted <- c("spec", "bf_threshold", "rope", "ci_mass", "max_rhat", "max_divergent",
+              "focal_true")
+  env <- new.env(parent = asNamespace("pilotr"))
+  for (e in parse(text = script, keep.source = FALSE))
+    if (is.call(e) && identical(e[[1]], as.name("<-")) && is.name(e[[2]]) &&
+        as.character(e[[2]]) %in% wanted) eval(e, env)
+  expect_identical(env$spec$fixed$coefficients$cond, 0.09470803828730423)
+  # The run's fingerprint is taken from spec_json() of the embedded specification, so reading
+  # the specification back must leave that text as it was.
+  expect_identical(spec_json(env$spec), spec_json(spec))
+  expect_identical(env$focal_true, c(cond = 0.9923772805192401))
+  expect_identical(c(env$bf_threshold, env$rope, env$ci_mass, env$max_rhat, env$max_divergent),
+                   c(10, 0.1 + 0.2, 0.95, 1.01, 0.01))
+})
+
 test_that("the aggregator combines one run and refuses to pool two", {
   spec <- load_spec(pilotr_example("crossed_mixed_rt"))
   agg <- paste(da_parts(generate_design_analysis(spec, focal = c(cond = 0.05),

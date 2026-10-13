@@ -373,28 +373,10 @@ test_that("spec_json writes numbers a build without long doubles reads back", {
   expect_true(grepl('"cond": 0.3333333333333333', txt, fixed = TRUE))
   expect_false(grepl("0.33333333333333331", txt, fixed = TRUE))
 
-  # Read a decimal the way R does when built without long-double arithmetic: accumulate the
-  # mantissa digits in a double, then apply the decimal exponent. Seventeen significant digits
-  # overflow the 53-bit mantissa on the way, so a number written at that width does not come
-  # back. Fifteen and sixteen stay inside it and are correctly rounded everywhere.
-  no_long_double <- function(s) {
-    neg <- substr(s, 1, 1) == "-"
-    if (neg) s <- substring(s, 2)
-    expn <- 0
-    if (grepl("[eE]", s)) {
-      halves <- strsplit(s, "[eE]")[[1]]
-      expn <- as.numeric(halves[2])
-      s <- halves[1]
-    }
-    parts <- strsplit(s, ".", fixed = TRUE)[[1]]
-    if (length(parts) > 1) expn <- expn - nchar(parts[2])
-    ans <- 0
-    for (d in strsplit(paste0(parts, collapse = ""), "")[[1]]) ans <- 10 * ans + as.numeric(d)
-    fac <- 10^abs(expn)
-    ans <- if (expn < 0) ans / fac else ans * fac
-    if (neg) -ans else ans
-  }
-
+  # A build without long-double arithmetic (no_long_double(), in helper-numbers.R) reads a
+  # decimal exactly when its digits stay within 2^53 and its exponent within +/-22, which holds
+  # for the numbers of this document at their shortest widths, 1/3's sixteen digits included. It
+  # would not hold for seventeen digits, and it does not hold for every sixteen-digit number.
   # Blank the string literals first, so that a factor level such as "group 2" is not read as a
   # number, then check every number the document actually carries.
   outside_strings <- gsub('"[^"]*"', '""', txt)
@@ -402,6 +384,96 @@ test_that("spec_json writes numbers a build without long doubles reads back", {
                      gregexpr("-?[0-9][0-9.eE+-]*", outside_strings))[[1]]
   expect_gt(length(toks), 10)
   for (tok in toks) expect_identical(no_long_double(tok), as.numeric(tok))
+})
+
+# jsonlite reads a number with the C library's strtod(), which rounds correctly, and so does
+# Python's json. On a build with long doubles, which include R on x86 Windows and Linux,
+# as.numeric() rounds a decimal twice, first to long double and then to double. spec_json()
+# used to check its 15- and 16-digit forms with as.numeric(), and accepted these three, which
+# load_spec() and Python then read one unit in the last place away.
+test_that("spec_json writes numbers that load_spec reads back as the same double", {
+  vals <- c(-0x1.0efdc5258p+3, 0x1.e2b06cc2p+2, 0x1.1fe271f9p+3)
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$fixed$intercept <- vals[1]
+  spec$fixed$coefficients$grp <- vals[2]
+  spec$response$sigma <- vals[3]
+  spec$response$round <- NULL
+  f <- tempfile(fileext = ".json")
+  on.exit(unlink(f))
+  writeLines(spec_json(spec), f)
+  back <- load_spec(f)
+  expect_identical(c(back$fixed$intercept, back$fixed$coefficients$grp, back$response$sigma),
+                   vals)
+  # With the response unrounded, the saved specification simulated different data in every
+  # cell from the specification it was saved from.
+  expect_identical(simulate_design(back), simulate_design(spec))
+})
+
+test_that("spec_json writes every double so that jsonlite reads it back exactly", {
+  # Two kinds of double, made without the random-number generator. The first has the 32-bit
+  # resolution of runif() over (-10, 10). The second has a full 53-bit mantissa and spans 31
+  # orders of magnitude, so that the exponent forms are written too.
+  i <- seq_len(3000)
+  coarse <- ((i * 2654435761) %% 2^32) / 2^32 * 20 - 10
+  fine <- sin(i) * 10^(i %% 31 - 15)
+  vals <- c(coarse, fine, 1 / 3, 0.1 + 0.2, 1e23, -2.5e-17, 1e-300, .Machine$double.xmax)
+  back <- jsonlite::fromJSON(spec_json(list(values = vals)))$values
+  expect_identical(as.numeric(back), vals)
+})
+
+# Evaluate an exported script as a user would, apart from its library(pilotr) line: the
+# package is already loaded wherever these tests run.
+run_exported <- function(script) {
+  env <- new.env(parent = asNamespace("pilotr"))
+  for (e in parse(text = script, keep.source = FALSE))
+    if (!identical(e, quote(library(pilotr)))) eval(e, env)
+  env
+}
+
+# Nine numbers that generate_r_script() used to write as R literals which a build without long
+# doubles reads one unit in the last place away. The six fitted values the verifier found need
+# seventeen digits, or sixteen whose digits exceed 2^53. The other three are the values that
+# spec_json() wrote one unit away for jsonlite.
+test_that("generate_r_script carries every number of the specification exactly", {
+  spec <- build_spec(list(
+    name = "exact", seed = 11, n_subject = 6, n_item = 4, design_kind = "within",
+    include_items = TRUE, factor_name = "cond", lev1 = "a", lev2 = "b (2)",
+    intercept = -0x1.0efdc5258p+3, effect = 0x1.e2b06cc2p+2,
+    subj_int_sd = 0.9923772805192401, subj_slope_sd = 1.1015114923556097,
+    subj_corr = -0.9531743346778423, item_int_sd = 1.9022786173852906,
+    item_slope_sd = 0.09470803828730423, item_corr = -0.48358814964064667,
+    family = "gaussian", resp_name = "", sigma = 0x1.1fe271f9p+3))
+  spec$response$round <- NULL
+  numbers <- function(s) c(
+    s$fixed$intercept, s$fixed$coefficients$effect, s$response$sigma,
+    s$random$subject$intercept_sd, s$random$subject$slopes$effect,
+    s$random$subject$correlations[["intercept,effect"]], s$random$item$intercept_sd,
+    s$random$item$slopes$effect, s$random$item$correlations[["intercept,effect"]])
+  script <- generate_r_script(spec)
+  run <- run_exported(script)
+  expect_identical(numbers(run$spec), numbers(spec))
+  expect_identical(run$data, simulate_design(spec))
+  # No number is left for R's own parser to read inexactly on some build.
+  for (tok in r_decimal_tokens(script))
+    expect_identical(no_long_double(tok), as.numeric(tok), info = tok)
+})
+
+# R's parser reads a decimal as as.numeric() does. On a build with long doubles, that rounds it
+# twice, to 64 bits and then to 53, and the second rounding can go the wrong way when the first
+# lands on the midpoint between two doubles. Correctly rounded, "-8.46847779583186" is
+# -0x1.0efdc52580001p+3, which a build without long doubles reads, while an x86 build reads its
+# neighbour. A script written on one kind of build can be run on the other, so whichever build
+# writes it, such a decimal never reaches the script as R source.
+test_that("a number is written as R source only where every build reads it alike", {
+  z <- -0x1.0efdc52580001p+3
+  expect_false(pilotr:::.r_reads_back("-8.46847779583186", z))
+  lit <- pilotr:::.num_literal(z)
+  expect_false(identical(lit, "-8.46847779583186"))
+  expect_identical(eval(parse(text = lit)), z)
+  # A value typed with up to four decimal places stays a plain decimal. The last three lie only
+  # 1.6 units of a 64-bit significand from a midpoint, the least that four places allow.
+  for (v in c(10, 0.05, 0.95, 1.01, 0.01, 0.0001, 200.2119, 613.4101, -898.0274))
+    expect_identical(pilotr:::.num_literal(v), sprintf("%.15g", v), info = format(v))
 })
 
 test_that("a label written to imitate the number tag survives spec_json", {

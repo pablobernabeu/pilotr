@@ -170,6 +170,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A NumPy float64 in a specification no longer reaches the simulated data as a NumPy scalar,
   which `to_csv` wrote as `np.float64(...)` under NumPy 2. Every number in the specification
   becomes a Python int or float before anything is drawn, on a copy of the caller's.
+- A specification written by the R twin's `spec_json()` carries exactly the numbers R held, so
+  `load_spec` reads the same doubles. The R writer checked its shorter forms with a reader that
+  rounds twice on R builds with long doubles, and about one number in 5,000 to 7,000 was written
+  one unit in the last place away, which `json` then read as written. The Python package is
+  unchanged. A fixture written by R and a parity check over 20,000 numbers now hold the two
+  packages to the same reading.
 
 ### Deprecated
 

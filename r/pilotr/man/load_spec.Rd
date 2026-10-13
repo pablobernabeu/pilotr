@@ -7,7 +7,8 @@
 load_spec(path, validate = TRUE)
 }
 \arguments{
-\item{path}{Path to a JSON design-specification file.}
+\item{path}{Path to a JSON design-specification file, or the JSON text itself, as the
+scripts from \code{\link[=generate_r_script]{generate_r_script()}} and \code{\link[=generate_design_analysis]{generate_design_analysis()}} embed it.}
 
 \item{validate}{Whether to validate the specification after reading it. \code{TRUE} (the default)
 applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}; \code{FALSE} skips validation, and

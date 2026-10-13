@@ -14,17 +14,21 @@ A length-one character string containing a runnable R script that loads \code{pi
 embeds the specification, and simulates the data.
 }
 \description{
-Embed the specification as an R list literal, so that the returned script reproduces the
-design without any external file. This turns a design built in the no-code application into
-a reproducible script; the application's Verify button runs that script in a clean R session
-and confirms that it reproduces the data bit-for-bit.
+Embed the specification as the JSON text that \code{\link[=spec_json]{spec_json()}} writes, so that the returned
+script reproduces the design without any external file. This turns a design built in the
+no-code application into a reproducible script; the application's Verify button runs that
+script in a clean R session and confirms that it reproduces the data bit-for-bit.
 }
 \details{
-Numbers are emitted at the shortest width that reads back as the same double, rather than
-through \code{deparse()}, which prints 15 significant digits and so does not round-trip:
-\code{deparse(1/3)} reads back as a different double. Since the point of the script is
-bit-for-bit reproduction, the embedded specification has to preserve every coefficient
-exactly.
+Since the point of the script is bit-for-bit reproduction, the embedded specification has to
+preserve every coefficient exactly. The JSON text sits in a raw string that \code{\link[=load_spec]{load_spec()}}
+reads with 'jsonlite', which parses numbers with the C library's \code{strtod()}. That rounds
+correctly, so each number reaches the script as the double it was on every build of R, and
+the numbers stay as readable as in the specification file. Written as R literals, they would
+be left to R's own parser. On a build without long-double arithmetic, such as R on Apple
+silicon, that parser can read a 17-digit decimal one unit in the last place away. \code{deparse()}
+is no alternative either, since it prints 15 significant digits and \code{deparse(1/3)} reads back
+as a different double.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

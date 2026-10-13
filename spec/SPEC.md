@@ -65,6 +65,12 @@ A seed must be a whole number between −9007199254740991 and 9007199254740991, 
 not every one beyond it, while Python reads an integer of any size exactly. A larger seed was
 therefore two different numbers in the two readers, which drew different data.
 
+Both readers convert a decimal with correct rounding, jsonlite through the C library's `strtod()`
+and Python through `float()`, so a number means the same double to both. A writer keeps a value
+exactly by giving enough significant digits for correct rounding to return it, and 17 always
+suffice. R's `spec_json()` writes the shortest such form, and `tools/parity/json_roundtrip.py`
+checks that Python reads back the doubles R wrote.
+
 ## Top-level fields
 
 A specification is a flat object with the nine fields below, of which `name`, `seed`, `units`,

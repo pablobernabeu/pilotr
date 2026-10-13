@@ -101,7 +101,8 @@ R and Python.
 
 `generate_r_script()` emits a stand-alone R script that embeds the specification and
 reproduces the design with no external files. This is convenient for an appendix or a
-preregistration.
+preregistration. The specification travels as the JSON shown above, which `load_spec()` reads
+back to exactly the same numbers on any build of R.
 
 ```{r}
 cat(generate_r_script(spec))

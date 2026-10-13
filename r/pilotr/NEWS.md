@@ -233,6 +233,24 @@
   with a mean of 733.5 and a variance of 407, and a mean of 742 was refused for 4% of them. The
   refusal reads as the Python twin's and asks for a mean of at most 708.
 
+* `spec_json()` writes each number so that 'jsonlite' and 'Python' read back exactly the double
+  R holds. Version 0.3.1 checked each candidate width with `as.numeric()`. On builds with
+  long-double arithmetic, among them R on x86 Windows and Linux, `as.numeric()` rounds a decimal
+  twice, so the check accepted some 15- and 16-digit forms that a correctly rounded reader puts
+  one unit in the last place away, about one number in 5,000 to 7,000. A specification saved and
+  reloaded then simulated different unrounded data, in R and in 'Python' alike. Candidates are
+  now checked with 'jsonlite', the reader `load_spec()` uses.
+
+* `generate_r_script()` and `generate_design_analysis()` embed the specification as the JSON
+  text `spec_json()` writes, and the script reads it with `load_spec()`, so 'jsonlite' recovers
+  every number exactly on every build of R. The specification used to be written as R code. A
+  build without long-double arithmetic, such as R on Apple silicon, can parse a 17-digit decimal
+  in R code one unit in the last place away, and likewise a 16-digit one whose digits exceed
+  2^53. A script carrying a fitted coefficient could then simulate different data there. In a
+  design analysis, the decision rule, the gate and the true values stay plain decimals wherever
+  every build reads them exactly, as it does any value typed with up to four decimal places. Any
+  other value is read through 'jsonlite'.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

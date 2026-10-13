@@ -134,25 +134,114 @@ build_spec <- function(p) {
   jsonlite::unbox(x)
 }
 
-# The shortest decimal string that reads back as exactly this double, or NULL for a
-# non-finite value. Fifteen significant digits is enough for most numbers a user types, and
-# seventeen is enough for every double, so trying the shorter widths first and falling back to
-# seventeen gives both exactness and readability.
+# The shortest decimal string that `reader` reads back as exactly this double, or NULL. Fifteen
+# significant digits is enough for most numbers a user types, and seventeen is enough for every
+# double under a reader that rounds correctly, so trying the shorter widths first gives both
+# exactness and readability. NULL means a value that is not finite, or, for reader = "r", one
+# whose fifteen- and sixteen-digit forms some build of R might read as a different double.
 #
-# The seventeen-digit form is returned without being checked, because on a build of R without
-# long-double arithmetic the check would reject the one form that is certainly right. There
-# `as.numeric()` accumulates the mantissa in a double before applying the decimal exponent, and
-# seventeen digits overflow the 53-bit mantissa on the way, so "0.33333333333333331" reads back
-# one unit in the last place below 1/3. Fifteen and sixteen digits stay within the mantissa and
-# are correctly rounded everywhere, which is also why they are tried first: the shorter form is
-# both the readable one and the one that survives a reader built without long doubles.
-.shortest_double <- function(z) {
+# reader = "json" serves spec_json(). Its document is read by jsonlite in load_spec() and by
+# Python's json, and both round correctly, so each candidate is checked with jsonlite itself.
+# as.numeric() will not do as the check. On a build with long-double arithmetic, which includes
+# R on x86 Windows and Linux, it rounds a decimal twice, first to long double and then to double.
+# It reads "-8.46847779583186" as -0x1.0efdc5258p+3, for one, where jsonlite reads its
+# neighbour, -0x1.0efdc52580001p+3. Checking with it put about one number in 5,000 to 7,000 a
+# unit in the last place away from the value R held. Seventeen digits always round-trip under
+# correct rounding, so that width needs no check.
+#
+# reader = "r" serves numbers written as R source, which R's parser reads with the routine
+# as.numeric() uses. A candidate must also pass .r_reads_back(), and nothing at seventeen digits
+# can, because those digits exceed 2^53.
+.shortest_double <- function(z, reader = c("json", "r")) {
+  reader <- match.arg(reader)
   if (!is.finite(z)) return(NULL)
   for (d in 15:16) {
     s <- sprintf(paste0("%.", d, "g"), z)
-    if (as.numeric(s) == z) return(s)
+    if (.json_reads_back(s, z) && (reader == "json" || .r_reads_back(s, z))) return(s)
   }
-  sprintf("%.17g", z)
+  if (reader == "json") sprintf("%.17g", z) else NULL
+}
+
+# Whether jsonlite, the reader of load_spec(), reads the decimal `s` as exactly the double `z`.
+# jsonlite parses a number with the C library's strtod(), which rounds correctly, as Python's
+# float() does.
+.json_reads_back <- function(s, z) isTRUE(jsonlite::fromJSON(s) == z)
+
+# Whether R's parser reads the decimal `s` as exactly the double `z` on every build, given that a
+# correctly rounded reader does. R reads a decimal with R_strtod5() (src/main/util.c), which
+# accumulates the digits as an integer, divides or multiplies it once by a power of ten built by
+# repeated squaring, and converts the result to double.
+#
+# Without long doubles, that is a single rounding, and so a correct one, provided the integer
+# stays within 2^53 and the power of ten within 10^22, the largest that is exact. With long
+# doubles, the result is first rounded to the long double's significand, 64 bits on x86 and 113
+# where long double has quadruple precision, and then to the double's 53. The second rounding
+# goes astray only when the first lands exactly halfway between two doubles. The exact result
+# is therefore worked out here, and the decimal is refused when it lies within one unit of a
+# 64-bit significand of the midpoint. That is twice as far as a 64-bit rounding can move it.
+#
+# A decimal with k digits after the point lies a multiple of 1/5^k of the spacing of doubles
+# from the double below it. Since 5^k is odd, it lies at least 1/(2 * 5^k) of that spacing from
+# a midpoint, which for k = 4 is 1.6 units of a 64-bit significand. A value typed with up to
+# four decimal places, such as 0.05 or 1.01, is therefore never refused. Of the 15- and 16-digit
+# decimals that the other conditions admit, the margin refuses about one in 1,400. The check
+# against as.numeric() confirms the outcome on the build writing the script.
+.r_reads_back <- function(s, z) {
+  if (!isTRUE(as.numeric(s) == z)) return(FALSE)
+  if (z == 0) return(TRUE)
+  t <- sub("^-", "", s)
+  expn <- 0L
+  if (grepl("e", t, fixed = TRUE)) {
+    expn <- as.integer(sub("^.*e", "", t))
+    t <- sub("e.*$", "", t)
+  }
+  if (grepl(".", t, fixed = TRUE)) expn <- expn - nchar(sub("^.*[.]", "", t))
+  digits <- sub("^0+", "", sub(".", "", t, fixed = TRUE))
+  # At most 2^53 = 9007199254740992, compared in two halves that every build reads exactly.
+  n <- nchar(digits)
+  if (n > 16L) return(FALSE)
+  if (n == 16L) {
+    hi <- as.numeric(substr(digits, 1L, 8L))
+    if (hi > 90071992 || (hi == 90071992 && as.numeric(substr(digits, 9L, 16L)) > 54740992))
+      return(FALSE)
+  }
+  if (abs(expn) > 22L) return(FALSE)
+
+  m <- as.numeric(digits)
+  p10 <- 1
+  for (i in seq_len(abs(expn))) p10 <- p10 * 10
+  a <- abs(z)
+  # r = q - a, where q is the exact quotient or product, to far more than 64 bits.
+  r <- if (expn < 0L) {
+    ap <- .two_prod(a, p10)
+    ((m - ap[1L]) - ap[2L]) / p10
+  } else {
+    mp <- .two_prod(m, p10)
+    (mp[1L] - a) + mp[2L]
+  }
+  # q lies in [2^e, 2^(e + 1)), where doubles are 2^(e - 52) apart and the units of a 64-bit
+  # significand 2^(e - 63). That is a's range, except when q lies just below a power of two.
+  e <- floor(log2(a))
+  if (2^e > a) e <- e - 1
+  if (2^(e + 1) <= a) e <- e + 1
+  if (r < 0 && a == 2^e) e <- e - 1
+  # The midpoint on q's side lies half a spacing from a. A 64-bit rounding reaches it from within
+  # half a unit, 2^(e - 64). The margin is twice that, and the error in r is far smaller still.
+  abs(abs(r) - 2^(e - 53)) > 2^(e - 63)
+}
+
+# The product a * b as an unevaluated sum of two doubles, exactly: Dekker's (1971) algorithm,
+# as Ogita, Rump and Oishi (2005) write it. Veltkamp's split, through the factor 2^27 + 1, cuts
+# each factor into two halves whose pairwise products are exact.
+.two_prod <- function(a, b) {
+  p <- a * b
+  ca <- 134217729 * a
+  a1 <- ca - (ca - a)
+  a2 <- a - a1
+  cb <- 134217729 * b
+  b1 <- cb - (cb - b)
+  b2 <- b - b1
+  c(p, a2 * b2 - (((p - a1 * b1) - a2 * b1) - a1 * b2))
 }
 
 # The wrapper that carries an already-formatted number through jsonlite as a string.
@@ -211,10 +300,13 @@ build_spec <- function(p) {
 #' Writing every number at 17 instead would round-trip but read badly, turning an effect
 #' typed as 0.3 into `0.29999999999999999`.
 #'
-#' Preferring the shorter width is not only a matter of appearance. A build of R without
-#' long-double arithmetic reads 17 significant digits inexactly, because the digits overflow
-#' the 53-bit mantissa before the decimal exponent is applied, so the few values that need
-#' that width are the ones such a build cannot recover. Anything shorter it reads correctly.
+#' A width is accepted only when 'jsonlite' reads it back as exactly the double it was written
+#' from. [load_spec()] reads the file with 'jsonlite', which parses numbers with the C library's
+#' `strtod()`, and the 'Python' package reads it with `json`. Both round correctly, so the two
+#' packages recover the same double. Version 0.3.1 checked each width with R's `as.numeric()`,
+#' which on a build with long-double arithmetic, such as R on x86 Windows and Linux, rounds a
+#' decimal twice, first to long double and then to double. It accepted some 15- and 16-digit
+#' forms that the readers of the file put one unit in the last place away.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing the specification as pretty-printed JSON,
@@ -233,13 +325,27 @@ spec_json <- function(spec) {
     tag)
 }
 
-# A double as an R source literal that parses back to the same bit pattern. deparse() prints
-# 15 significant digits, so deparse(1/3) reads back as a different double.
+# A double as R source that evaluates to the same bit pattern on every build. deparse() prints
+# 15 significant digits, so deparse(1/3) reads back as a different double. A plain decimal is
+# written where R's parser reads one exactly on every build, as it does any value typed with up
+# to four decimal places. Any other number, a fitted value needing 17 digits for instance, is
+# written as a call that has jsonlite read its decimal, since jsonlite rounds correctly on every
+# build.
 .num_literal <- function(z) {
   if (is.na(z)) return("NA_real_")
-  short <- .shortest_double(z)
-  if (is.null(short)) return(if (z > 0) "Inf" else "-Inf")
-  short
+  if (!is.finite(z)) return(if (z > 0) "Inf" else "-Inf")
+  short <- .shortest_double(z, "r")
+  if (!is.null(short)) return(short)
+  sprintf("jsonlite::fromJSON(\"%s\")", .shortest_double(z))
+}
+
+# Text as an R raw string, which the parser takes character for character, quotation marks and
+# backslashes included (R >= 4.0.0). Dashes are added to the delimiter until its closing form, a
+# parenthesis, the dashes and a quotation mark, occurs nowhere in the text.
+.r_raw_string <- function(txt) {
+  dashes <- ""
+  while (grepl(paste0(")", dashes, "\""), txt, fixed = TRUE)) dashes <- paste0(dashes, "-")
+  paste0("r\"", dashes, "(\n", txt, "\n)", dashes, "\"")
 }
 
 # Backtick-quote a list name unless it is already a syntactic R name. Coefficient and
@@ -248,8 +354,8 @@ spec_json <- function(spec) {
   if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", n) && !grepl("^\\.[0-9]", n)) n else paste0("`", n, "`")
 }
 
-# The specification as an R expression, built term by term so that every number keeps full
-# precision. deparse() on the whole list would be shorter but silently rounds the numbers.
+# An R value as an R expression, built term by term so that every number goes through
+# .num_literal(). deparse() would be shorter but silently rounds the numbers.
 .r_literal <- function(x) {
   if (is.null(x)) return("NULL")
   if (is.list(x)) {
@@ -269,17 +375,21 @@ spec_json <- function(spec) {
 
 #' Generate a self-contained, reproducible R script from a specification
 #'
-#' Embed the specification as an R list literal, so that the returned script reproduces the
-#' design without any external file. This turns a design built in the no-code application into
-#' a reproducible script; the application's Verify button runs that script in a clean R session
-#' and confirms that it reproduces the data bit-for-bit.
+#' Embed the specification as the JSON text that [spec_json()] writes, so that the returned
+#' script reproduces the design without any external file. This turns a design built in the
+#' no-code application into a reproducible script; the application's Verify button runs that
+#' script in a clean R session and confirms that it reproduces the data bit-for-bit.
 #'
 #' @details
-#' Numbers are emitted at the shortest width that reads back as the same double, rather than
-#' through `deparse()`, which prints 15 significant digits and so does not round-trip:
-#' `deparse(1/3)` reads back as a different double. Since the point of the script is
-#' bit-for-bit reproduction, the embedded specification has to preserve every coefficient
-#' exactly.
+#' Since the point of the script is bit-for-bit reproduction, the embedded specification has to
+#' preserve every coefficient exactly. The JSON text sits in a raw string that [load_spec()]
+#' reads with 'jsonlite', which parses numbers with the C library's `strtod()`. That rounds
+#' correctly, so each number reaches the script as the double it was on every build of R, and
+#' the numbers stay as readable as in the specification file. Written as R literals, they would
+#' be left to R's own parser. On a build without long-double arithmetic, such as R on Apple
+#' silicon, that parser can read a 17-digit decimal one unit in the last place away. `deparse()`
+#' is no alternative either, since it prints 15 significant digits and `deparse(1/3)` reads back
+#' as a different double.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing a runnable R script that loads `pilotr`,
@@ -295,7 +405,9 @@ generate_r_script <- function(spec) {
     "# Reproducible simulation exported by pilotr.\n",
     "# install.packages(\"pilotr\")   # once available; then run this script as-is.\n",
     "library(pilotr)\n\n",
-    "spec <- ", .r_literal(spec), "\n\n",
+    "# The specification as spec_json() writes it. load_spec() reads it with jsonlite, which\n",
+    "# recovers every number exactly on every build of R.\n",
+    "spec <- load_spec(", .r_raw_string(spec_json(spec)), ")\n\n",
     "data <- simulate_design(spec)              # analysis-ready data frame\n",
     "# write.csv(data, \"data.csv\", row.names = FALSE)\n",
     "# pow  <- power_mixed(spec, n_sims = 200)   # simulation-based power + Type S/M\n"

@@ -18,7 +18,8 @@
 #' key undefined and the R and 'Python' readers settle it differently: one coefficient given
 #' twice was applied twice at its first value in R and once at its second in 'Python'.
 #'
-#' @param path Path to a JSON design-specification file.
+#' @param path Path to a JSON design-specification file, or the JSON text itself, as the
+#'   scripts from [generate_r_script()] and [generate_design_analysis()] embed it.
 #' @param validate Whether to validate the specification after reading it. `TRUE` (the default)
 #'   applies [validate_spec()] with `strict = TRUE`; `FALSE` skips validation, and
 #'   any other value is passed to `validate_spec()` as its `strict` argument.

@@ -26,10 +26,13 @@ back as \code{0.33333333333333298}, and over a sample of 214 doubles 189 failed 
 Writing every number at 17 instead would round-trip but read badly, turning an effect
 typed as 0.3 into \code{0.29999999999999999}.
 
-Preferring the shorter width is not only a matter of appearance. A build of R without
-long-double arithmetic reads 17 significant digits inexactly, because the digits overflow
-the 53-bit mantissa before the decimal exponent is applied, so the few values that need
-that width are the ones such a build cannot recover. Anything shorter it reads correctly.
+A width is accepted only when 'jsonlite' reads it back as exactly the double it was written
+from. \code{\link[=load_spec]{load_spec()}} reads the file with 'jsonlite', which parses numbers with the C library's
+\code{strtod()}, and the 'Python' package reads it with \code{json}. Both round correctly, so the two
+packages recover the same double. Version 0.3.1 checked each width with R's \code{as.numeric()},
+which on a build with long-double arithmetic, such as R on x86 Windows and Linux, rounds a
+decimal twice, first to long double and then to double. It accepted some 15- and 16-digit
+forms that the readers of the file put one unit in the last place away.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
