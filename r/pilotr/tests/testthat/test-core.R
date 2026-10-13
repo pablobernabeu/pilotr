@@ -644,6 +644,85 @@ test_that("generate_r_script emits a self-contained, runnable script", {
   expect_true(grepl("library(pilotr)", rs, fixed = TRUE))
   expect_true(grepl("simulate_design", rs, fixed = TRUE))
   expect_true(grepl("spec <-", rs, fixed = TRUE))
+  # pilotr is on CRAN, where the script said it would be "once available".
+  expect_false(grepl("once available", rs, fixed = TRUE))
+  expect_true(grepl("\n# install.packages(\"pilotr\")   # from CRAN\n", rs, fixed = TRUE))
+  # A path is read, so that the script carries the specification itself. The script used to
+  # embed the path, and then ran only where that file was.
+  path <- pilotr_example("between_2group_gaussian")
+  expect_identical(generate_r_script(path), generate_r_script(load_spec(path)))
+  expect_false(grepl(path, generate_r_script(path), fixed = TRUE))
+  expect_error(generate_r_script(42), "must be a specification list or the path", fixed = TRUE)
+})
+
+# The script closes with the analysis that fits the design. It suggested power_mixed() for every
+# design, and named none of the packages power_mixed() needs.
+test_that("generate_r_script suggests the analysis that fits the design", {
+  script_for <- function(name) generate_r_script(load_spec(pilotr_example(name)))
+  has <- function(script, text) grepl(text, script, fixed = TRUE)
+  cran <- "\n# install.packages(\"pilotr\")   # from CRAN\n"
+  mixed_install <- paste0("\n# install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # from CRAN; ",
+                          "lme4 and lmerTest only for power_mixed()\n")
+
+  # A two-group Gaussian design with one row per subject is the design power_design() takes.
+  for (rs in list(script_for("between_2group_gaussian"), generate_r_script(gaussian_between()))) {
+    expect_true(has(rs, "\n# pow <- power_design(spec, n_sims = 1000)   # power with Type S and Type M\n"))
+    expect_true(has(rs, cran))
+    expect_false(has(rs, "power_mixed("))
+    expect_false(has(rs, "lme4"))
+  }
+
+  # Every other design in a family power_mixed() fits on the scale of its coefficients, whether
+  # crossed, clustered or between subjects, gets power_mixed(), and only then the line naming
+  # lme4 and lmerTest. A Gaussian design crossed with items is not one for power_design().
+  bernoulli <- gaussian_between()
+  bernoulli$fixed$intercept <- 0
+  bernoulli$response <- list(family = "bernoulli", name = "accuracy")
+  mixed <- list(crossed_mixed_rt = script_for("crossed_mixed_rt"),
+                nested_clusters = script_for("nested_clusters"),
+                partial_crossing = script_for("partial_crossing"),
+                poisson_counts_between = script_for("poisson_counts_between"),
+                reading_time_continuous = script_for("reading_time_continuous"),
+                bernoulli_between = generate_r_script(bernoulli))
+  for (nm in names(mixed)) {
+    rs <- mixed[[nm]]
+    expect_true(has(rs, "\n# pow <- power_mixed(spec, n_sims = 200)   # needs lme4 and lmerTest\n"),
+                info = nm)
+    expect_true(has(rs, mixed_install), info = nm)
+    expect_false(has(rs, "power_design("), info = nm)
+    expect_false(has(rs, cran), info = nm)
+  }
+
+  # Ordinal and Beta outcomes, which power_mixed() fits only on the response scale, get the
+  # Bayesian design analysis on the link scale for the design's first coefficient. As both apps'
+  # power tabs suggest, it is written to a file.
+  for (nm in c("ordinal_likert_between", "beta_proportion")) {
+    rs <- script_for(nm)
+    expect_true(has(rs, paste0("\n# generate_design_analysis(spec, focal = \"grp\", ",
+                               "file = \"design_analysis.R\")   ",
+                               "# Bayesian design analysis on the link scale\n")), info = nm)
+    expect_true(has(rs, cran), info = nm)
+    expect_false(has(rs, "power_mixed("), info = nm)
+    expect_false(has(rs, "lme4"), info = nm)
+  }
+
+  # Uncommented, each suggestion runs on the design it was written for.
+  uncomment <- function(rs, pattern)
+    sub("^# ", "", sub("   #.*$", "", grep(pattern, strsplit(rs, "\n")[[1]], value = TRUE)))
+  run <- run_exported(script_for("between_2group_gaussian"))
+  call <- uncomment(script_for("between_2group_gaussian"), "^# pow <- power_design\\(")
+  expect_no_error(eval(parse(text = sub("n_sims = 1000", "n_sims = 20", call)), run))
+  expect_true(is.numeric(run$pow$power))
+  # The design analysis goes to a temporary file, so that the test leaves nothing behind.
+  for (nm in c("ordinal_likert_between", "beta_proportion")) {
+    run <- run_exported(script_for(nm))
+    call <- uncomment(script_for(nm), "^# generate_design_analysis\\(")
+    out <- tempfile(fileext = ".R")
+    call <- sub("\"design_analysis.R\"", encodeString(out, quote = "\""), call, fixed = TRUE)
+    expect_no_warning(eval(parse(text = call), run))
+    expect_true(any(grepl("library(brms)", readLines(out), fixed = TRUE)), info = nm)
+    unlink(out)
+  }
 })
 
 test_that("pilotr_example lists the bundled specs and resolves each to a file", {

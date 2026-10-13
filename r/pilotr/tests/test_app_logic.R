@@ -37,6 +37,10 @@ check(res$power > 0.3 && res$power < 0.7, sprintf("power in plausible range (%.3
 check(all(c("power_mcse", "power_lo", "power_hi", "type_s_lo", "type_s_hi", "type_m_mcse")
           %in% names(res)) && res$power_lo < res$power && res$power < res$power_hi,
       "power_design() returns its Monte Carlo errors from the browser build's engine subset")
+# The R script tab's script suggests the analysis that fits the design, by power_design()'s own
+# rule in power.R, so the subset has to carry that file for spec_builder.R as well.
+check(grepl("# pow <- power_design(spec, n_sims = 1000)", generate_r_script(spec), fixed = TRUE),
+      "the exported script suggests power_design() from the browser build's engine subset")
 
 p_within <- list(name = "ui_crossed", seed = 90210, n_subject = 30, include_items = TRUE,
                  n_item = 24, design_kind = "within", factor_name = "condition",
@@ -49,6 +53,8 @@ cat("=== within crossed mixed-effects RT ===\n")
 check(nrow(d3) == 30 * 24 * 2, "1440 rows (subjects x items x condition)")
 check(!is.null(spec2$random$subject$slopes) && !is.null(spec2$random$item$slopes), "by-subject AND by-item random slopes present")
 check(min(d3$RT) > 200, "RTs above the 200 ms shift")
+check(grepl("# pow <- power_mixed(spec, n_sims = 200)", generate_r_script(spec2), fixed = TRUE),
+      "the exported script of a crossed design suggests power_mixed()")
 
 cat(if (ok) "\nALL APP-LOGIC CHECKS PASSED\n" else "\nSOME CHECKS FAILED\n")
 quit(status = if (ok) 0 else 1)

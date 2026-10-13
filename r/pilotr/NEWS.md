@@ -285,6 +285,24 @@
   running. Passed through `sweep_spec()`, as in `sweep_spec(spec, path, values, power_mixed,
   cl = cl)`, one cluster serves every point of an effect-size sweep as well.
 
+* The no-code app's Verify button runs the script that `generate_r_script()` exports, in a clean
+  R session, and reports reproduction only when the script's data are identical, column by
+  column, to the data the current specification produces. Otherwise, it names the first column
+  and row that differ. It used to simulate from the JSON in that session without running the
+  script, and compared the sums of the response column with a tolerance, so it certified a script
+  it had never run. A specification the engine refuses is now reported beside the button, where a
+  cleared N subjects box used to end the session.
+
+* Exported scripts give the CRAN installation line, naming lme4 and lmerTest only where the
+  suggested analysis needs them, and suggest the analysis that fits the design:
+  `power_design()` for a two-group Gaussian design with one row per subject,
+  `generate_design_analysis()` for ordinal and Beta outcomes, and `power_mixed()` for any other
+  design. Every script used to suggest `power_mixed()`, and its installation line said "once
+  available", although pilotr is on CRAN.
+
+* `generate_r_script()` reads a specification given as the path of its file. It used to embed
+  the path itself, so the script ran only while the file stayed at that path.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

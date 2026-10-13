@@ -7,19 +7,29 @@
 generate_r_script(spec)
 }
 \arguments{
-\item{spec}{A design specification (list), as produced by \code{\link[=build_spec]{build_spec()}}.}
+\item{spec}{A design specification (list), as produced by \code{\link[=build_spec]{build_spec()}}, or the path of a
+specification file for \code{\link[=load_spec]{load_spec()}} to read.}
 }
 \value{
 A length-one character string containing a runnable R script that loads \code{pilotr},
-embeds the specification, and simulates the data.
+embeds the specification and simulates the data, with the installation line and the
+suggested analysis as comments.
 }
 \description{
 Embed the specification as the JSON text that \code{\link[=spec_json]{spec_json()}} writes, so that the returned
 script reproduces the design without any external file. This turns a design built in the
-no-code application into a reproducible script; the application's Verify button runs that
-script in a clean R session and confirms that it reproduces the data bit-for-bit.
+no-code application into a reproducible script. The application's Verify button runs that
+script in a clean R session and checks that its data are identical, bit for bit, to the data
+the application's current specification produces.
 }
 \details{
+The script ends with a commented suggestion of the analysis that fits the design. A two-group
+Gaussian design with one row per subject is sent to \code{\link[=power_design]{power_design()}}, whose t-test takes no
+other. An \code{ordinal} or \code{beta} outcome is sent to \code{\link[=generate_design_analysis]{generate_design_analysis()}}, which writes a
+Bayesian design analysis on the link scale to \code{design_analysis.R}, since \code{\link[=power_mixed]{power_mixed()}} fits
+such an outcome only on the response scale. Any other design is sent to \code{\link[=power_mixed]{power_mixed()}}, and
+only then does the installation line name \code{lme4} and \code{lmerTest}, which it needs.
+
 Since the point of the script is bit-for-bit reproduction, the embedded specification has to
 preserve every coefficient exactly. The JSON text sits in a raw string that \code{\link[=load_spec]{load_spec()}}
 reads with 'jsonlite', which parses numbers with the C library's \code{strtod()}. That rounds

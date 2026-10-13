@@ -15,7 +15,7 @@ library(ggplot2)
 # path as it was. Anything the app uses from pilotr must accordingly be exported, and helpers
 # that only the app needs are defined below. From the source tree, the app sources the engine
 # beside it instead, even in a session where an installed pilotr is loaded.
-ENGINE_FILES <- NULL   # resolved source paths (dev) so the verifier can rebuild in a clean R session
+ENGINE_FILES <- NULL   # resolved source paths (dev), which Verify's clean R session sources too
 if (!exists("simulate_design", mode = "function")) {
   .installed_app <- system.file("app", package = "pilotr")
   if (nzchar(.installed_app) &&
@@ -70,6 +70,34 @@ type_s_text <- function(r)
 type_m_text <- function(r)
   if (is.na(r$type_m_mcse)) sprintf("%.3f", r$type_m) else
     sprintf("%.3f ± %.3f (MCSE)", r$type_m, r$type_m_mcse)
+
+# Where the data Verify's script produced first differ from the reference data, as the phrase
+# its verdict ends with, or NULL when the two are identical. Doubles are compared bit by bit
+# (num.eq = FALSE), so that a zero of the other sign counts as a difference, as the verdict's
+# "bit for bit" says. Verify used to compare the sums of the response column with a tolerance,
+# which let through reversed rows and any change to the other columns.
+.data_difference <- function(ref, script_data) {
+  if (!identical(names(script_data), names(ref)))
+    return(sprintf("the column names: the script gives %s, and the specification %s",
+                   paste(names(script_data), collapse = ", "), paste(names(ref), collapse = ", ")))
+  if (nrow(script_data) != nrow(ref))
+    return(sprintf("the number of rows: the script gives %d, and the specification %d",
+                   nrow(script_data), nrow(ref)))
+  for (column in names(ref)) {
+    a <- ref[[column]]
+    b <- script_data[[column]]
+    if (identical(a, b, num.eq = FALSE)) next
+    if (!identical(typeof(a), typeof(b)) || !identical(attributes(a), attributes(b)))
+      return(sprintf("the type or attributes of column '%s'", column))
+    a <- unclass(a)
+    b <- unclass(b)
+    first_row <- Find(function(i) !identical(a[[i]], b[[i]], num.eq = FALSE), seq_along(a))
+    return(if (is.null(first_row)) sprintf("column '%s'", column)
+           else sprintf("column '%s', at row %d", column, first_row))
+  }
+  if (identical(ref, script_data, num.eq = FALSE)) NULL
+  else "the attributes of the data frame, such as its row names"
+}
 
 # Async only when running as the installed package with future+promises (workers reload the
 # package). From source / serverless this is FALSE and power runs synchronously.
@@ -223,8 +251,9 @@ ui <- fluidPage(
           verbatimTextOutput("power_out"),
           plotOutput("power_plot", height = "300px")),
         tabPanel("Reproducible R script",
-          p("Your no-code design as a self-contained R script. You can download it, or ",
-            "verify that it reproduces this exact data by running it in a clean R session."),
+          p("Your no-code design as a self-contained R script. Download it, or select Verify to ",
+            "run it in a clean R session and check that its data are identical, bit for bit, to ",
+            "the data the current specification produces."),
           downloadButton("dl_rscript", "Download .R"),
           actionButton("verify_code", "Verify (clean R session)"),
           verbatimTextOutput("verify_out"),
@@ -346,33 +375,53 @@ server <- function(input, output, session) {
     filename = function() paste0(input$name, ".R"),
     content = function(file) write_text_download(generate_r_script(current_spec()), file))
 
-  # ---- Verify: run the exported design in a clean R subprocess and compare ----
+  # ---- Verify: run the exported script in a clean R subprocess and compare ----
+  # The clean session runs the text that this tab shows and the download carries, so the verdict
+  # covers what the user takes away. It used to simulate from the JSON there and compare the sums
+  # of the response column, so it certified a script it never ran. The reference is simulated here
+  # from the current specification, which may have changed since the Data tab was last simulated.
   verify_result <- reactiveVal(NULL)
   observeEvent(input$verify_code, {
     spec <- current_spec()
-    ref <- simulate_design(spec); yn <- spec$response$name
-    ref_chk <- if (is.numeric(ref[[yn]])) sum(ref[[yn]]) else paste(ref[[yn]], collapse = "")
+    # A refusal from the engine is reported here. Unguarded, it ended the session, as clearing the
+    # N subjects box showed.
+    ref <- tryCatch(simulate_design(spec), error = function(e) e)
+    if (inherits(ref, "error")) { verify_result(list(msg = paste("error:", conditionMessage(ref)))); return() }
     if (!requireNamespace("callr", quietly = TRUE)) {
       verify_result(list(msg = "Install the 'callr' package to verify in a clean R session.")); return()
     }
-    withProgress(message = "Running the design in a clean R session...", value = 0.5, {
-      res <- tryCatch(callr::r(function(json, files) {
-        if (is.null(files)) library(pilotr) else for (f in files) source(f)
-        s <- jsonlite::fromJSON(json, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE)
-        d <- simulate_design(s); yn <- s$response$name
-        list(n = nrow(d), chk = if (is.numeric(d[[yn]])) sum(d[[yn]]) else paste(d[[yn]], collapse = ""))
-      }, args = list(json = spec_json(spec), files = ENGINE_FILES)), error = function(e) e)
+    script <- generate_r_script(spec)
+    # From the source tree, the script has to run on the engine this app sourced, whatever pilotr
+    # may be installed. The clean session sources the same files, and the script's library(pilotr)
+    # line is dropped.
+    if (!is.null(ENGINE_FILES)) script <- sub("library(pilotr)\n", "", script, fixed = TRUE)
+    withProgress(message = "Running the exported script in a clean R session...", value = 0.5, {
+      res <- tryCatch(callr::r(function(script, files) {
+        for (f in files) source(f)
+        env <- new.env(parent = globalenv())
+        eval(parse(text = script), envir = env)
+        env[["data"]]
+      }, args = list(script = script, files = ENGINE_FILES)), error = function(e) e)
     })
     if (inherits(res, "error")) { verify_result(list(msg = paste("error:", conditionMessage(res)))); return() }
-    ident <- isTRUE(all.equal(res$chk, ref_chk)) && res$n == nrow(ref)
-    verify_result(list(ok = ident, n = res$n, ref_n = nrow(ref)))
+    if (!is.data.frame(res)) {
+      verify_result(list(msg = "The script ran in a clean R session but left no data frame called data."))
+      return()
+    }
+    verify_result(list(diff = .data_difference(ref, res), n = nrow(ref)))
   })
   output$verify_out <- renderText({
     r <- verify_result()
-    if (is.null(r)) return("Select Verify to run the script in a fresh R process and confirm that it reproduces this data.")
+    if (is.null(r)) return(paste0(
+      "Select Verify to run this script in a clean R session and check that its data are ",
+      "identical, bit for bit, to the data the current specification produces."))
     if (!is.null(r$msg)) return(r$msg)
-    if (isTRUE(r$ok)) sprintf("Reproduces identically in a clean R session.\n  %d rows (app) match %d rows (clean run), and the response checksum matches.", r$ref_n, r$n)
-    else sprintf("Mismatch. The app produced %d rows and the clean run produced %d rows, or the checksum differs.", r$ref_n, r$n)
+    if (is.null(r$diff)) sprintf(paste0(
+      "Reproduces bit for bit in a clean R session: the script's data equal the data the ",
+      "current specification produces (%d rows, all columns identical)."), r$n)
+    else paste0(
+      "Does not reproduce in a clean R session: the script's data differ from the data the ",
+      "current specification produces. The first difference is in ", r$diff, ".")
   })
 
   # ---- power: point estimate + curve, capped, async when installed (worker process) ----

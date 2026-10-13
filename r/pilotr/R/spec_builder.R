@@ -377,10 +377,18 @@ spec_json <- function(spec) {
 #'
 #' Embed the specification as the JSON text that [spec_json()] writes, so that the returned
 #' script reproduces the design without any external file. This turns a design built in the
-#' no-code application into a reproducible script; the application's Verify button runs that
-#' script in a clean R session and confirms that it reproduces the data bit-for-bit.
+#' no-code application into a reproducible script. The application's Verify button runs that
+#' script in a clean R session and checks that its data are identical, bit for bit, to the data
+#' the application's current specification produces.
 #'
 #' @details
+#' The script ends with a commented suggestion of the analysis that fits the design. A two-group
+#' Gaussian design with one row per subject is sent to [power_design()], whose t-test takes no
+#' other. An `ordinal` or `beta` outcome is sent to [generate_design_analysis()], which writes a
+#' Bayesian design analysis on the link scale to `design_analysis.R`, since [power_mixed()] fits
+#' such an outcome only on the response scale. Any other design is sent to [power_mixed()], and
+#' only then does the installation line name `lme4` and `lmerTest`, which it needs.
+#'
 #' Since the point of the script is bit-for-bit reproduction, the embedded specification has to
 #' preserve every coefficient exactly. The JSON text sits in a raw string that [load_spec()]
 #' reads with 'jsonlite', which parses numbers with the C library's `strtod()`. That rounds
@@ -391,9 +399,11 @@ spec_json <- function(spec) {
 #' is no alternative either, since it prints 15 significant digits and `deparse(1/3)` reads back
 #' as a different double.
 #'
-#' @param spec A design specification (list), as produced by [build_spec()].
+#' @param spec A design specification (list), as produced by [build_spec()], or the path of a
+#'   specification file for [load_spec()] to read.
 #' @return A length-one character string containing a runnable R script that loads `pilotr`,
-#'   embeds the specification, and simulates the data.
+#'   embeds the specification and simulates the data, with the installation line and the
+#'   suggested analysis as comments.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "a", lev2 = "b", n_subject = 20,
@@ -401,15 +411,50 @@ spec_json <- function(spec) {
 #' cat(generate_r_script(spec))
 #' @export
 generate_r_script <- function(spec) {
+  # A path used to reach spec_json() as a plain string, so the script embedded the path itself
+  # and ran only where that file was. The file is now read, and the closing suggestion is chosen
+  # from the design it holds.
+  if (is.character(spec) && length(spec) == 1L) spec <- load_spec(spec)
+  if (!is.list(spec))
+    stop("`spec` must be a specification list or the path of a specification file",
+         call. = FALSE)
+  hint <- .script_hint(spec)
   paste0(
     "# Reproducible simulation exported by pilotr.\n",
-    "# install.packages(\"pilotr\")   # once available; then run this script as-is.\n",
+    hint[["install"]],
     "library(pilotr)\n\n",
     "# The specification as spec_json() writes it. load_spec() reads it with jsonlite, which\n",
     "# recovers every number exactly on every build of R.\n",
     "spec <- load_spec(", .r_raw_string(spec_json(spec)), ")\n\n",
     "data <- simulate_design(spec)              # analysis-ready data frame\n",
     "# write.csv(data, \"data.csv\", row.names = FALSE)\n",
-    "# pow  <- power_mixed(spec, n_sims = 200)   # simulation-based power + Type S/M\n"
+    hint[["analysis"]]
   )
+}
+
+# The installation line and the closing suggestion of an exported script, both chosen by the
+# design. The script used to suggest power_mixed() for every design, beside an installation line
+# that named none of the packages power_mixed() needs. power_design() takes the two-group Gaussian
+# design with one row per subject, by its own rule. power_mixed() fits an ordinal or Beta outcome
+# only on the response scale, while the specification's coefficients are on the logit scale.
+# Those outcomes therefore get the Bayesian design analysis, written to a file with the first
+# coefficient as the focal effect, as both apps' power tabs suggest. Called without a file, it
+# returns the analysis as a string, and a script run with Rscript or source() discards that.
+# Every other design gets power_mixed(), and the installation line then names lme4 and lmerTest.
+.script_hint <- function(spec) {
+  cran <- "# install.packages(\"pilotr\")   # from CRAN\n"
+  if (is.null(.two_group_refusal(spec)))
+    return(list(
+      install = cran,
+      analysis = "# pow <- power_design(spec, n_sims = 1000)   # power with Type S and Type M\n"))
+  if (isTRUE(spec[["response"]][["family"]] %in% c("ordinal", "beta"))) {
+    focal <- names(spec[["fixed"]][["coefficients"]])
+    focal <- if (length(focal)) encodeString(focal[1L], quote = "\"") else "..."
+    return(list(install = cran, analysis = sprintf(paste0(
+      "# generate_design_analysis(spec, focal = %s, file = \"design_analysis.R\")   ",
+      "# Bayesian design analysis on the link scale\n"), focal)))
+  }
+  list(install = paste0("# install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # from CRAN; ",
+                        "lme4 and lmerTest only for power_mixed()\n"),
+       analysis = "# pow <- power_mixed(spec, n_sims = 200)   # needs lme4 and lmerTest\n")
 }

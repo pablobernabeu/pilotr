@@ -36,7 +36,7 @@ test_that("the installed app simulates in a session that has not attached pilotr
       out$n <- nrow(data())
       out$columns <- names(data())
       # With the package's functions in use, there are no engine files to source, so Verify's
-      # clean session loads the installed package.
+      # clean session runs the exported script as it stands, library(pilotr) included.
       session$setInputs(verify_code = 1)
       out$verify <- output$verify_out
     })
@@ -49,7 +49,9 @@ test_that("the installed app simulates in a session that has not attached pilotr
   expect_identical(res$n, 64L)
   expect_true(all(c("subject", "group", "score") %in% res$columns))
   expect_false(res$attached)
-  expect_match(res$verify, "^Reproduces")
+  expect_identical(res$verify, paste0(
+    "Reproduces bit for bit in a clean R session: the script's data equal the data the current ",
+    "specification produces (64 rows, all columns identical)."))
 })
 
 test_that("every pilotr object the app uses is exported", {

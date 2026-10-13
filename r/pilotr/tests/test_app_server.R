@@ -214,11 +214,57 @@ testServer(app = app_dir, {
   }
   check_routes(out, "The in-app power backend covers", "installed app")
 
-  # verified R-script export: run the design in a clean R subprocess and compare
+  # Verify runs the script the R script tab shows, in a clean R session, and compares its data,
+  # column by column, with what the current specification produces. It used to simulate from
+  # the JSON in that session and compare the sums of the response column with a tolerance, so it
+  # certified a script it never ran.
   session$setInputs(spec_json_in = "", verify_code = 1)
   vo <- output$verify_out
-  check(grepl("reproduces identically", vo, ignore.case = TRUE), "verify: clean R session reproduces the data bit-for-bit")
   cat("  verify:", gsub("\n", " ", vo), "\n")
+  check(identical(vo, sprintf(paste0(
+          "Reproduces bit for bit in a clean R session: the script's data equal the data the ",
+          "current specification produces (%d rows, all columns identical)."),
+          nrow(simulate_design(current_spec())))),
+        "verify: the exported script reproduces the data bit for bit in a clean R session")
+
+  # A script that does not reproduce the data is caught, and the verdict names where the data
+  # first differ. The app sourced the engine into the global environment, which is where Verify
+  # finds generate_r_script(), so each stub is put there and the original restored afterwards.
+  # The first stub changes one coefficient of the script's specification. The second reverses the
+  # script's rows, which leaves unchanged the sum of the response column, all the old check
+  # compared.
+  real_script <- generate_r_script
+  stub <- function(f) assign("generate_r_script", f, envir = globalenv())
+  verdicts <- tryCatch({
+    stub(function(spec) {
+      spec$fixed$coefficients$effect <- spec$fixed$coefficients$effect + 1
+      real_script(spec)
+    })
+    session$setInputs(verify_code = 2)
+    coef <- output$verify_out
+    stub(function(spec) paste0(real_script(spec),
+                               "data <- data[rev(seq_len(nrow(data))), ]\n",
+                               "rownames(data) <- NULL\n"))
+    session$setInputs(verify_code = 3)
+    list(coef = coef, rows = output$verify_out)
+  }, finally = stub(real_script))
+  cat("  verify, one coefficient changed:", verdicts$coef, "\n")
+  cat("  verify, rows reversed:", verdicts$rows, "\n")
+  mismatch <- paste0("Does not reproduce in a clean R session: the script's data differ from the ",
+                     "data the current specification produces. The first difference is in ")
+  check(identical(verdicts$coef, paste0(mismatch, "column 'score', at row 1.")),
+        "verify: a script whose specification changes one coefficient is named at its response column")
+  check(identical(verdicts$rows, paste0(mismatch, "column 'subject', at row 1.")),
+        "verify: a script whose rows come back in reverse order is caught")
+
+  # A specification the engine refuses is reported in the Verify panel. The reference was
+  # simulated unguarded, so a cleared N subjects box ended the session at the click.
+  session$setInputs(n_subject = NA, verify_code = 4)
+  vo_na <- output$verify_out
+  cat("  verify, N cleared:", gsub("\n", " ", vo_na), "\n")
+  check(!session$isClosed() && startsWith(vo_na, "error: ") &&
+          grepl("'units.subject.n' must be a whole number", vo_na, fixed = TRUE),
+        "verify: a specification the engine refuses is reported, and the session stays open")
 })
 
 # The browser build writes the same routing out in its own copy of the text. It is staged as
