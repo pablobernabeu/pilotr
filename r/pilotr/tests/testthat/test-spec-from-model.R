@@ -5,8 +5,9 @@
 # trusted to describe the pilot it came from. Kept modest: two small fits, no replicates.
 
 # A small crossed design with a within factor, a between factor and random slopes, and the
-# maximal fit of its own modelling data.
-sfm_fit <- function() {
+# maximal fit of its own modelling data. `grp` is the true effect of the between factor, and
+# `lmer` the fitter, lme4's or lmerTest's.
+sfm_fit <- function(grp = 0.1, lmer = lme4::lmer) {
   spec <- build_spec(list(name = "pilot", seed = 42, design_kind = "within",
                           include_items = TRUE, n_subject = 30, n_item = 20,
                           factor_name = "cond", lev1 = "a", lev2 = "b",
@@ -16,10 +17,10 @@ sfm_fit <- function() {
                           family = "gaussian", resp_name = "", sigma = 0.3))
   spec$factors[[2]] <- list(name = "grp", levels = c("x", "y"),
                             contrasts = list(grp = c(-0.5, 0.5)), between = "subject")
-  spec$fixed$coefficients$grp <- 0.1
+  spec$fixed$coefficients$grp <- grp
   d <- simulate_design(spec)
   list(spec = spec,
-       fit = lme4::lmer(model_formula(spec), data = model_data(spec, d)))
+       fit = lmer(model_formula(spec), data = model_data(spec, d)))
 }
 
 test_that("spec_from_model round-trips units, placement and estimates from a pilot fit", {
@@ -64,6 +65,196 @@ test_that("spec_from_model round-trips units, placement and estimates from a pil
   expect_identical(nrow(d2), 60L * 40L * 2L)   # subjects x items x within-factor levels
 })
 
+# The messages a call raises, muffled and without message()'s closing newline, together with the
+# call's value.
+sfm_said <- function(expr) {
+  said <- character(0)
+  value <- withCallingHandlers(expr, message = function(m) {
+    said <<- c(said, sub("\n$", "", conditionMessage(m)))
+    invokeRestart("muffleMessage")
+  })
+  list(value = value, said = said)
+}
+
+# The fit's estimates and standard errors, keyed by term.
+sfm_estimates <- function(fit) {
+  list(est = lme4::fixef(fit), se = sqrt(diag(as.matrix(stats::vcov(fit)))))
+}
+
+test_that("spec_from_model says which fixed effects it took from the pilot, and keeps them", {
+  skip_if_not_installed("lme4")
+  f <- sfm_fit()
+  e <- sfm_estimates(f$fit)
+  out <- sfm_said(spec_from_model(f$fit))
+  rec <- out$value
+
+  # The default is unchanged: the coefficients are the pilot's point estimates, as they were.
+  expect_identical(rec$fixed$coefficients, list(effect = e$est[["effect"]], grp = e$est[["grp"]]))
+  expect_identical(attr(rec, "effects"),
+                   list(method = "estimate", level = NA_real_, sesoi = character(0)))
+  expect_identical(suppressMessages(spec_from_model(f$fit, effects = "estimate")), rec)
+
+  # One message lists them with their values and recommends a SESOI or a safeguard value.
+  said <- grep("as the pilot estimated them", out$said, value = TRUE, fixed = TRUE)
+  expect_length(said, 1L)
+  expect_match(said, sprintf("took 'effect' = %s and 'grp' = %s from the fit",
+                             format(e$est[["effect"]], digits = 3),
+                             format(e$est[["grp"]], digits = 3)), fixed = TRUE)
+  expect_match(said, "smallest effect size of interest with `sesoi`", fixed = TRUE)
+  expect_match(said, "effects = \"safeguard\"", fixed = TRUE)
+})
+
+test_that("effects = 'safeguard' takes the bound of each 60% interval nearer zero", {
+  skip_if_not_installed("lme4")
+  f <- sfm_fit()
+  e <- sfm_estimates(f$fit)
+  out <- sfm_said(spec_from_model(f$fit, effects = "safeguard"))
+  rec <- out$value
+
+  # Both estimates are positive, so the bound nearer zero is the lower one, est - qnorm(0.8) se.
+  for (k in c("effect", "grp")) {
+    v <- rec$fixed$coefficients[[k]]
+    expect_gt(v, 0)
+    expect_lt(v, e$est[[k]])
+    expect_equal(v, e$est[[k]] - stats::qnorm(0.8) * e$se[[k]], tolerance = 1e-12)
+  }
+  expect_identical(attr(rec, "effects"),
+                   list(method = "safeguard", level = 0.6, sesoi = character(0)))
+  said <- grep("safeguard values", out$said, value = TRUE, fixed = TRUE)
+  expect_length(said, 1L)
+  expect_match(said, sprintf("took 'effect' = %s and 'grp' = %s from the fit as safeguard values",
+                             format(rec$fixed$coefficients$effect, digits = 3),
+                             format(rec$fixed$coefficients$grp, digits = 3)), fixed = TRUE)
+  expect_match(said, "60% interval, computed with the normal distribution", fixed = TRUE)
+  expect_false(grepl("tends to be underpowered", said, fixed = TRUE))
+
+  # Nothing else changes: the intercept, the variance components and the design are the fit's.
+  asis <- suppressMessages(spec_from_model(f$fit))
+  rec$fixed$coefficients <- asis$fixed$coefficients
+  attr(rec, "effects") <- attr(asis, "effects") <- NULL
+  expect_identical(rec, asis)
+  # The level can be changed. At 70%, both bounds move further from the estimates and stay above
+  # zero, grp's by about a third of its standard error.
+  wide <- suppressMessages(spec_from_model(f$fit, effects = "safeguard", safeguard_level = 0.7))
+  for (k in c("effect", "grp"))
+    expect_equal(wide$fixed$coefficients[[k]],
+                 e$est[[k]] - stats::qnorm(0.85) * e$se[[k]], tolerance = 1e-12)
+  expect_identical(attr(wide, "effects")$level, 0.7)
+})
+
+test_that("the safeguard value of a negative effect is its upper bound", {
+  skip_if_not_installed("lme4")
+  f <- sfm_fit(grp = -0.2)
+  e <- sfm_estimates(f$fit)
+  v <- suppressMessages(spec_from_model(f$fit, effects = "safeguard"))$fixed$coefficients$grp
+  expect_lt(e$est[["grp"]], v)
+  expect_lt(v, 0)
+  expect_equal(v, e$est[["grp"]] + stats::qnorm(0.8) * e$se[["grp"]], tolerance = 1e-12)
+})
+
+test_that("a lmerTest fit takes its safeguard values from Satterthwaite's t", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  fit <- sfm_fit(lmer = lmerTest::lmer)$fit
+  expect_s4_class(fit, "lmerModLmerTest")
+  co <- summary(fit)$coefficients
+  out <- sfm_said(spec_from_model(fit, effects = "safeguard"))
+  for (k in c("effect", "grp"))
+    expect_equal(out$value$fixed$coefficients[[k]],
+                 co[k, "Estimate"] - stats::qt(0.8, co[k, "df"]) * co[k, "Std. Error"],
+                 tolerance = 1e-12)
+  expect_match(grep("safeguard values", out$said, value = TRUE, fixed = TRUE),
+               "computed with the t distribution with Satterthwaite's degrees of freedom",
+               fixed = TRUE)
+})
+
+test_that("a lmerTest fit without Satterthwaite's degrees of freedom takes the normal quantile", {
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  fit <- sfm_fit(lmer = lmerTest::lmer)$fit
+  # lmerTest computes the degrees of freedom from the covariance of the variance parameters that
+  # it keeps in the fit. Blanking that matrix leaves summary() reporting them as NA.
+  skip_if_not(methods::.hasSlot(fit, "vcov_varpar"), "this lmerTest keeps no vcov_varpar slot")
+  fit@vcov_varpar[] <- NA_real_
+  e <- sfm_estimates(fit)
+  out <- sfm_said(spec_from_model(fit, effects = "safeguard"))
+  for (k in c("effect", "grp"))
+    expect_equal(out$value$fixed$coefficients[[k]],
+                 e$est[[k]] - stats::qnorm(0.8) * e$se[[k]], tolerance = 1e-12)
+  expect_match(grep("safeguard values", out$said, value = TRUE, fixed = TRUE),
+               "computed with the normal distribution", fixed = TRUE)
+})
+
+test_that("an effect whose 60% interval includes zero stops the safeguard, pointing to sesoi", {
+  skip_if_not_installed("lme4")
+  # With a true effect of 0.05, this pilot estimates grp at about 0.003 with a standard error of
+  # about 0.039, so its 60% interval holds zero and the pilot leaves even the sign open. A value of
+  # zero would plan a study of no effect at all, so the call stops.
+  f <- sfm_fit(grp = 0.05)
+  err <- tryCatch(suppressMessages(spec_from_model(f$fit, effects = "safeguard")),
+                  error = identity)
+  expect_s3_class(err, "error")
+  msg <- conditionMessage(err)
+  expect_match(msg, "cannot give 'grp' a safeguard value: its 60% interval, from ", fixed = TRUE)
+  expect_match(msg, "includes zero", fixed = TRUE)
+  expect_match(msg, "sesoi = c(grp = ...)", fixed = TRUE)
+  expect_false(grepl("'effect'", msg, fixed = TRUE))
+
+  # A smallest effect size of interest for grp lets the safeguard go ahead for the other effect.
+  out <- sfm_said(spec_from_model(f$fit, effects = "safeguard", sesoi = c(grp = 0.04)))
+  rec <- out$value
+  expect_identical(rec$fixed$coefficients$grp, 0.04)
+  e <- sfm_estimates(f$fit)
+  expect_equal(rec$fixed$coefficients$effect,
+               e$est[["effect"]] - stats::qnorm(0.8) * e$se[["effect"]], tolerance = 1e-12)
+  expect_identical(attr(rec, "effects"), list(method = "safeguard", level = 0.6, sesoi = "grp"))
+  expect_true(any(grepl("set 'grp' = 0.04 from `sesoi` and took 'effect' = ", out$said,
+                        fixed = TRUE)))
+})
+
+test_that("sesoi sets the effects it names and leaves the others as estimated", {
+  skip_if_not_installed("lme4")
+  f <- sfm_fit()
+  e <- sfm_estimates(f$fit)
+  out <- sfm_said(spec_from_model(f$fit, sesoi = c(grp = 0.03)))
+  rec <- out$value
+  expect_identical(rec$fixed$coefficients, list(effect = e$est[["effect"]], grp = 0.03))
+  expect_identical(attr(rec, "effects"), list(method = "estimate", level = NA_real_, sesoi = "grp"))
+  said <- grep("from `sesoi`", out$said, value = TRUE, fixed = TRUE)
+  expect_length(said, 1L)
+  expect_match(said, sprintf(paste0("set 'grp' = 0.03 from `sesoi` and took 'effect' = %s from ",
+                                    "the fit, as the pilot estimated it."),
+                             format(e$est[["effect"]], digits = 3)), fixed = TRUE)
+  # With every effect named, nothing is left to take from the fit, and nothing to recommend.
+  out <- sfm_said(spec_from_model(f$fit, sesoi = c(grp = 0.03, effect = 0.02)))
+  expect_identical(out$value$fixed$coefficients, list(effect = 0.02, grp = 0.03))
+  said <- grep("from `sesoi`", out$said, value = TRUE, fixed = TRUE)
+  expect_identical(said, "spec_from_model() set 'effect' = 0.02 and 'grp' = 0.03 from `sesoi`.")
+})
+
+test_that("spec_from_model refuses an unknown sesoi name and malformed effect arguments", {
+  skip_if_not_installed("lme4")
+  f <- sfm_fit()
+  # The names are checked once the fit's terms have their keys, after the messages about how the
+  # columns were read.
+  expect_error(suppressMessages(spec_from_model(f$fit, sesoi = c(cond = 0.03))),
+               paste0("`sesoi` names 'cond', which is not a coefficient of the returned ",
+                      "specification. Its coefficients are 'effect' and 'grp'."), fixed = TRUE)
+  # The intercept is a location, which a specification keeps out of its coefficients.
+  expect_error(suppressMessages(spec_from_model(f$fit, sesoi = c(intercept = 6, cond = 0.03))),
+               "`sesoi` names 'intercept' and 'cond', which are not coefficients", fixed = TRUE)
+  for (bad in list(0.03, c(grp = NA), c(grp = Inf), list(grp = 0.03), c(grp = "0.03"),
+                   c(0.1, grp = 0.03), c(grp = 0.03, grp = 0.05), numeric(0)))
+    expect_error(spec_from_model(f$fit, sesoi = bad), "`sesoi` must be NULL or", fixed = TRUE)
+  for (bad in list(0, 1, -0.5, 1.5, NA_real_, "0.6", c(0.6, 0.8)))
+    expect_error(spec_from_model(f$fit, effects = "safeguard", safeguard_level = bad),
+                 "`safeguard_level` must be a single number greater than 0 and less than 1",
+                 fixed = TRUE)
+  # No option sets the effects to zero, since design_conditions() builds that null design for a
+  # sweep.
+  expect_error(spec_from_model(f$fit, effects = "zero"), "should be one of")
+})
+
 test_that("spec_from_model re-keys a product column to its interaction", {
   skip_if_not_installed("lme4")
   spec <- load_spec(pilotr_example("reading_time_continuous"))
@@ -86,6 +277,20 @@ test_that("spec_from_model re-keys a product column to its interaction", {
   expect_identical(unname(vb[c("SyntaxPC", "age")]), c("item", "subject"))
   expect_identical(attr(rec, "column_kinds")[["age"]], "predictor")
   expect_identical(rec$response$family, "lognormal")
+
+  # `sesoi` is keyed as the returned specification is, so the interaction is "SyntaxPC:age", and
+  # the product column's name is refused.
+  set <- suppressMessages(spec_from_model(fit, family = "lognormal",
+                                          sesoi = c("SyntaxPC:age" = 0.01)))
+  expect_identical(set$fixed$coefficients[["SyntaxPC:age"]], 0.01)
+  expect_error(suppressMessages(
+    spec_from_model(fit, family = "lognormal", sesoi = c(SyntaxPC_age = 0.01))),
+    "`sesoi` names 'SyntaxPC_age', which is not a coefficient", fixed = TRUE)
+})
+
+test_that("the sesoi example in a refusal quotes a key that is not a syntactic name", {
+  expect_identical(.sesoi_example(c("grp", "SyntaxPC:age")),
+                   "sesoi = c(grp = ..., `SyntaxPC:age` = ...)")
 })
 
 test_that("spec_from_model combines factors between one unit into one factor of cells", {

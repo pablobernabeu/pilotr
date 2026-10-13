@@ -9,6 +9,11 @@
 # fields of a pilotr specification, which can then be scaled up to the sample size being
 # planned.
 #
+# The fixed effects are mapped too. A pilot's point estimates are a poor basis for planning,
+# since they are noisy and, when a pilot is followed up because it looked promising, biased
+# upwards (Albers and Lakens, 2018). Every call therefore says which effects it took from the
+# fit, and the caller can replace them with safeguard values or a smallest effect size of interest.
+#
 # The one thing a fitted model cannot report is which of its numeric predictor columns were
 # contrast-coded factors and which were continuous covariates, because by the time the model is
 # fitted both are columns of numbers. That distinction has to be inferred from the data, and it
@@ -302,13 +307,96 @@
   resp
 }
 
+# Three significant digits, enough for a message to identify a value. The returned specification
+# holds the full number.
+.sig3 <- function(x) vapply(x, function(v) format(v, digits = 3), character(1), USE.NAMES = FALSE)
+
+# The `sesoi` argument that a refusal suggests for the named effects, each value left as a
+# placeholder. A key that is not a syntactic name, such as the interaction "a:b", is quoted with
+# backticks, as c() needs it.
+.sesoi_example <- function(keys) {
+  quoted <- ifelse(make.names(keys) == keys, keys, paste0("`", keys, "`"))
+  paste0("sesoi = c(", paste(sprintf("%s = ...", quoted), collapse = ", "), ")")
+}
+
+# Refuse a `sesoi` that is not a set of named numbers. Whether the names are coefficients of the
+# returned specification is settled once the fit's terms have been given the specification's keys.
+.check_sesoi <- function(sesoi) {
+  if (is.null(sesoi)) return(invisible(NULL))
+  nm <- names(sesoi)
+  if (!is.numeric(sesoi) || !length(sesoi) || is.null(nm) || anyNA(nm) || !all(nzchar(nm)) ||
+      anyDuplicated(nm) > 0L || !all(is.finite(sesoi)))
+    stop("`sesoi` must be NULL or a numeric vector of finite values with distinct, non-empty ",
+         "names, as in sesoi = c(cond = 0.03)", call. = FALSE)
+  invisible(NULL)
+}
+
+# The bound nearer zero of each named term's two-sided interval at `level`, which is the safeguard
+# value of Perugini, Gallucci and Costantini (2014), with the interval itself and whether its
+# quantiles came from a t distribution.
+#
+# The interval is the estimate plus or minus a quantile times the standard error from vcov(fit).
+# For an lme4 fit, the quantile is normal, which treats the standard error as known, so the
+# interval is too narrow when the subjects or items are few. A lmerTest fit carries
+# Satterthwaite's degrees of freedom for each term, and a t quantile on them allows for the
+# uncertainty in the variance components, although only approximately. Unless lmerTest supplies
+# them for every term, every term takes the normal quantile, so that one message describes them
+# all.
+.safeguard_bounds <- function(fit, terms, level) {
+  est <- lme4::fixef(fit)[terms]
+  se <- sqrt(diag(as.matrix(stats::vcov(fit))))[terms]
+  df <- NULL
+  if (inherits(fit, "lmerModLmerTest") && requireNamespace("lmerTest", quietly = TRUE)) {
+    co <- tryCatch(suppressMessages(summary(fit, ddf = "Satterthwaite"))$coefficients,
+                   error = function(e) NULL)
+    if (!is.null(co) && "df" %in% colnames(co) && all(terms %in% rownames(co)) &&
+        all(is.finite(co[terms, "df"]) & co[terms, "df"] > 0))
+      df <- co[terms, "df"]
+  }
+  p <- (1 + level) / 2
+  q <- if (is.null(df)) stats::qnorm(p) else stats::qt(p, df)
+  lo <- est - q * se
+  hi <- est + q * se
+  list(lo = lo, hi = hi, value = ifelse(est > 0, lo, hi), t = !is.null(df))
+}
+
+# The message saying where each coefficient of the returned specification came from, whether
+# `sesoi`, the fit's estimate or a safeguard value read off the fit. When any is the pilot's own
+# estimate, the message also says why that is a poor value to plan a study for.
+.effects_message <- function(coefs, estimates, set, method, level, t_dist) {
+  listed <- function(k) .name_list(sprintf("'%s' = %s", k, .sig3(unlist(coefs[k]))))
+  taken <- setdiff(names(coefs), set)
+  one <- length(taken) == 1L
+  clauses <- if (length(set)) paste0("set ", listed(set), " from `sesoi`") else character(0)
+  if (length(taken))
+    clauses <- c(clauses, if (method == "estimate")
+      paste0("took ", listed(taken), " from the fit, as the pilot estimated ",
+             if (one) "it" else "them")
+    else
+      paste0("took ", listed(taken), " from the fit as ",
+             if (one) "a safeguard value" else "safeguard values", ", the bound nearer zero of ",
+             if (one) "its " else "each one's ", format(100 * level), "% interval, computed with ",
+             if (t_dist) "the t distribution with Satterthwaite's degrees of freedom"
+             else "the normal distribution"))
+  msg <- paste0("spec_from_model() ", paste(clauses, collapse = " and "), ".")
+  if (!length(taken)) return(msg)
+  if (method == "safeguard")
+    return(paste0(msg, " The pilot estimated ", if (one) "it" else "them", " at ",
+                  .name_list(.sig3(estimates[taken])), "."))
+  paste0(msg, " A pilot's estimates are noisy, and a study powered for them tends to be ",
+         "underpowered. Set a smallest effect size of interest with `sesoi`, or use ",
+         "effects = \"safeguard\" (see ?spec_from_model).")
+}
+
 #' Build a design specification from a fitted mixed model
 #'
 #' Read a design specification off a linear mixed model already fitted with `lme4::lmer()` or
 #' `lmerTest::lmer()`. The fixed effects, the random-effect standard deviations and
 #' correlations, and the residual standard deviation are taken from the fit, and the numbers of
 #' subjects and items may be raised at the same time, so that a pilot study or a published model
-#' becomes the starting point of a power analysis, with no numbers left to invent.
+#' becomes the starting point of a power analysis. The fixed effects of a pilot are its point
+#' estimates, and a study powered for them tends to be underpowered. A message names them on
+#' every call, and `sesoi` or `effects = "safeguard"` replaces them (see Details).
 #' Requires the `lme4` package.
 #'
 #' @details
@@ -319,6 +407,37 @@
 #' DeBruine and Barr, 2021). This function performs that transfer, and the specification it
 #' returns can be enlarged and passed straight to [simulate_design()] or
 #' [power_mixed()].
+#'
+#' The fixed effects are another matter. They are the pilot's point estimates, which a small
+#' pilot measures imprecisely, and a pilot followed up because its effect looked promising has
+#' on average overestimated that effect. A study powered for such an estimate therefore tends to
+#' have less power than planned (Albers and Lakens, 2018). The variance components are the part
+#' of a pilot worth carrying over. The effect is better set to a smallest effect size of interest
+#' (SESOI), the smallest effect of theoretical or practical importance. For an effect keyed
+#' `cond`, as in the `crossed_mixed_rt` example, pass `sesoi = c(cond = 0.03)`, or set
+#' `spec$fixed$coefficients$cond <- 0.03` on the returned specification. Every call reports in a
+#' message which coefficients it took from the fit, with their values.
+#'
+#' When no SESOI can be argued for, `effects = "safeguard"` takes safeguard values (Perugini,
+#' Gallucci and Costantini, 2014). Each coefficient not named in `sesoi` becomes the bound of its
+#' two-sided `safeguard_level` interval nearer zero, by default that of the 60% interval. The
+#' interval is the estimate plus or minus a quantile times the standard error from `vcov(fit)`.
+#' For an `lme4` fit, the quantile is normal, `qnorm((1 + safeguard_level) / 2)`, which is 0.84 at
+#' the default. The normal quantile treats the standard error as known, so the interval is too
+#' narrow when the subjects or items are few. For a `lmerTest` fit, the quantile is a t quantile
+#' on the Satterthwaite degrees of freedom that `lmerTest` reports, which allow for the
+#' uncertainty in the variance components, although only approximately. When `lmerTest` cannot
+#' give them for every coefficient, all coefficients take the normal quantile, and the message
+#' names the distribution used. An interval that includes zero stops the call with an error
+#' naming the effect. The pilot then leaves even the sign of the effect open, and a value of zero
+#' would plan a study of no effect at all. Such an effect needs a value in `sesoi`. By default,
+#' the conditions that [design_conditions()] builds for [sweep_spec()] include one with every
+#' named effect at zero, which shows how often a design declares an effect that is not there.
+#'
+#' Whatever their source, the coefficients of the specification are the effects its data are
+#' simulated with. A named numeric `focal` in [power_mixed()] changes only the true values against
+#' which Type S and Type M are computed. The simulated effect stays as it was, so powering a study
+#' for another effect means changing the specification.
 #'
 #' Every number is taken on the scale the model was fitted on, and the returned family is
 #' Gaussian by default, because that is what a `lmer` fit is. A model of log reaction times
@@ -438,15 +557,34 @@
 #'   family which a Gaussian fit cannot provide.
 #' @param round Decimal places for the simulated response, passed through to `response.round`.
 #'   `NULL`, the default, leaves the response unrounded.
+#' @param effects Where the coefficients of the returned specification come from. `"estimate"`,
+#'   the default, takes the fit's point estimates, as earlier versions did. `"safeguard"` takes
+#'   the bound of each coefficient's two-sided `safeguard_level` interval nearer zero, and stops
+#'   with an error when that interval includes zero (see Details). Either way, a coefficient named
+#'   in `sesoi` takes the value given there, and the intercept is the fit's.
+#' @param safeguard_level The confidence level of the intervals behind `effects = "safeguard"`, a
+#'   single number greater than 0 and less than 1. The default of 0.6 follows Perugini, Gallucci
+#'   and Costantini (2014).
+#' @param sesoi `NULL`, the default, or a named numeric vector that sets coefficients to a smallest
+#'   effect size of interest on the scale of the fit, as in `sesoi = c(cond = 0.03)`. The names
+#'   are the returned specification's coefficient keys, which write an interaction as `a:b`, and
+#'   a name that is not among them is refused.
 #' @return A design specification as a nested list, carrying `spec_version` and validated with
 #'   [validate_spec()], so it can be passed directly to [simulate_design()],
 #'   [power_mixed()] or [spec_json()]. Two attributes record the readings that
 #'   the fit did not settle on its own: `group_mapping`, a named character vector giving the
 #'   specification unit each of the fit's grouping factors became, and `column_kinds`, a named
 #'   character vector giving each model-frame column the classification `"factor"` or
-#'   `"predictor"`. Both are attributes rather than fields so that the specification itself stays
-#'   within the portable schema.
-#' @references Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed
+#'   `"predictor"`. A third, `effects`, is a list recording where the coefficients came from. Its
+#'   `method` is the value of `effects`, its `level` the `safeguard_level` applied, or `NA` with
+#'   `"estimate"`, and its `sesoi` the keys of the coefficients set from `sesoi`. All three are
+#'   attributes rather than fields so that the specification itself stays within the portable
+#'   schema.
+#' @references Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are
+#'   biased: Inaccurate effect size estimators and follow-up bias. \emph{Journal of Experimental
+#'   Social Psychology}, 74, 187-195. \doi{10.1016/j.jesp.2017.09.004}
+#'
+#'   Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed
 #'   models. \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
 #'
 #'   DeBruine, L. M. and Barr, D. J. (2021). Understanding mixed-effects models through data
@@ -464,6 +602,10 @@
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
 #'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods}, 53,
 #'   2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'
+#'   Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
+#'   imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.
+#'   \doi{10.1177/1745691614528519}
 #' @seealso [simulate_design()] to simulate from the recovered specification,
 #'   [power_mixed()] to run the power analysis it was read off the fit for, and
 #'   [model_formula()] for the analysis model a specification implies.
@@ -484,11 +626,17 @@
 #'   spec$random$subject$intercept_sd
 #'   attr(spec, "column_kinds")
 #'   head(simulate_design(spec))
+#'
+#'   # The effect is the pilot's estimate. Plan for a smallest effect size of interest, here 0.03
+#'   # on the log scale, or for the bound of the estimate's 60% interval nearer zero.
+#'   spec_from_model(fit, n_subject = 60, n_item = 40, sesoi = c(effect = 0.03))$fixed
+#'   spec_from_model(fit, n_subject = 60, n_item = 40, effects = "safeguard")$fixed
 #' }
 #' }
 #' @export
 spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item = NULL,
-                            family = NULL, round = NULL) {
+                            family = NULL, round = NULL, effects = c("estimate", "safeguard"),
+                            safeguard_level = 0.6, sesoi = NULL) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("spec_from_model() requires the 'lme4' package; please install it.", call. = FALSE)
   .refuse_unless_lmer(fit)
@@ -498,6 +646,11 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   for (a in list(list("n_subject", n_subject), list("n_item", n_item)))
     if (!is.null(a[[2]]) && (!.is_whole(a[[2]]) || a[[2]] < 1))
       stop("`", a[[1]], "` must be a single whole number of at least 1, or NULL", call. = FALSE)
+  effects <- match.arg(effects)
+  if (!.is_scalar_number(safeguard_level) || safeguard_level <= 0 || safeguard_level >= 1)
+    stop("`safeguard_level` must be a single number greater than 0 and less than 1",
+         call. = FALSE)
+  .check_sesoi(sesoi)
 
   mf <- stats::model.frame(fit)
   flist <- lme4::getME(fit, "flist")
@@ -646,6 +799,51 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
     message("spec_from_model() found no intercept in the fit, so fixed.intercept is 0.")
   icept <- if ("(Intercept)" %in% names(fe)) as.numeric(fe[["(Intercept)"]]) else 0
 
+  # ---- where the coefficients come from ----
+  # They are the pilot's point estimates unless the caller chose otherwise. `sesoi` is keyed as the
+  # returned specification is, so an interaction is "a:b" even when the fit named it after the
+  # product column "a_b".
+  spec_keys <- as.character(names(coefs))
+  unknown <- setdiff(names(sesoi), spec_keys)
+  if (length(unknown))
+    stop("`sesoi` names ", .name_list(sprintf("'%s'", unknown)),
+         if (length(unknown) == 1L) ", which is not a coefficient"
+         else ", which are not coefficients", " of the returned specification.",
+         if (length(spec_keys)) paste0(" Its coefficients are ",
+                                       .name_list(sprintf("'%s'", spec_keys)), ".")
+         else " It has none.", call. = FALSE)
+  set <- spec_keys[spec_keys %in% names(sesoi)]
+  for (k in set) coefs[[k]] <- as.numeric(sesoi[[k]])
+  estimates <- stats::setNames(vapply(keys, function(k) as.numeric(fe[[k]]), numeric(1)),
+                               spec_keys)
+  rest <- setdiff(spec_keys, set)
+  t_dist <- FALSE
+  if (effects == "safeguard" && length(rest)) {
+    b <- .safeguard_bounds(fit, keys[match(rest, spec_keys)], safeguard_level)
+    # An interval that holds zero leaves even the sign of the effect open. Its bound nearer zero
+    # is zero itself, which would plan a study of no effect at all, so the caller is asked for a
+    # value instead.
+    open <- !(is.finite(b$lo) & is.finite(b$hi) & (b$lo > 0 | b$hi < 0))
+    if (any(open)) {
+      ko <- rest[open]
+      one <- length(ko) == 1L
+      ivals <- sprintf("from %s to %s", .sig3(b$lo[open]), .sig3(b$hi[open]))
+      stop("spec_from_model() cannot give ", .name_list(sprintf("'%s'", ko)),
+           if (one) " a safeguard value: its " else " safeguard values: their ",
+           format(100 * safeguard_level), "% interval",
+           if (one) paste0(", ", ivals, ", includes zero")
+           else paste0("s include zero (", .name_list(sprintf("%s for '%s'", ivals, ko)), ")"),
+           ", so the pilot does not settle ",
+           if (one) "the sign of the effect" else "the signs of these effects", ". Give ",
+           if (one) "it a smallest effect size" else "them smallest effect sizes",
+           " of interest with `sesoi`, as in ", .sesoi_example(ko), ".", call. = FALSE)
+    }
+    for (i in seq_along(rest)) coefs[[rest[i]]] <- unname(b$value[[i]])
+    t_dist <- b$t
+  }
+  if (length(coefs))
+    message(.effects_message(coefs, estimates, set, effects, safeguard_level, t_dist))
+
   # ---- random effects ----
   vc <- lme4::VarCorr(fit)
   base_of <- function(nm) if (nm %in% gnames) nm else sub("[.][0-9]+$", "", nm)
@@ -696,5 +894,8 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
             " and overstating power. Encode the design as list (between subject) x item set ",
             "(between item), as in SPEC.md's two-list example.", call. = FALSE)
   }
-  structure(spec, group_mapping = mapping, column_kinds = kinds)
+  structure(spec, group_mapping = mapping, column_kinds = kinds,
+            effects = list(method = effects,
+                           level = if (effects == "safeguard") safeguard_level else NA_real_,
+                           sesoi = set))
 }

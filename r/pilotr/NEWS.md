@@ -116,6 +116,17 @@
   browser, shows each rate with its error. The Python twin computes these values with the same
   operations in the same order, and both test suites pin them bit for bit.
 
+* `spec_from_model()` reports which fixed effects it took from the pilot, and gains
+  `effects = "safeguard"`, which replaces each effect by the bound of its 60% interval nearer zero
+  (Perugini, Gallucci and Costantini, 2014), and `sesoi`, which sets named effects to a smallest
+  effect size of interest. A pilot's point estimates are noisy and, when a pilot is followed up
+  because it looked promising, biased upwards, so a study powered for them tends to be
+  underpowered (Albers and Lakens, 2018). An interval that includes zero leaves even the sign of
+  the effect open, so the safeguard then stops with an error that points to `sesoi`. The result
+  records the choice in its `effects` attribute. By default, the coefficients are the pilot's
+  estimates, as before. `?spec_from_model` explains when each choice fits, and that a named
+  `focal` in `power_mixed()` leaves the simulated effect as it is.
+
 ## Fixes
 
 * Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the
@@ -270,6 +281,10 @@
 
 ## References
 
+Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate
+effect size estimators and follow-up bias. *Journal of Experimental Social Psychology, 74*,
+187-195. <doi:10.1016/j.jesp.2017.09.004>
+
 Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H. and
 White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology and
 evolution. *Trends in Ecology & Evolution, 24*(3), 127-135. <doi:10.1016/j.tree.2008.10.008>
@@ -281,6 +296,10 @@ Designs, analytic models, and statistical power. *Annual Review of Psychology, 6
 Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
 generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
 trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
+
+Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
+imprecise power estimates. *Perspectives on Psychological Science, 9*(3), 319-332.
+<doi:10.1177/1745691614528519>
 
 Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
 experiments in which samples of participants respond to samples of stimuli. *Journal of

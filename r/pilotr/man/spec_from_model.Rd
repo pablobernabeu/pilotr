@@ -11,7 +11,10 @@ spec_from_model(
   n_subject = NULL,
   n_item = NULL,
   family = NULL,
-  round = NULL
+  round = NULL,
+  effects = c("estimate", "safeguard"),
+  safeguard_level = 0.6,
+  sesoi = NULL
 )
 }
 \arguments{
@@ -39,6 +42,21 @@ family which a Gaussian fit cannot provide.}
 
 \item{round}{Decimal places for the simulated response, passed through to \code{response.round}.
 \code{NULL}, the default, leaves the response unrounded.}
+
+\item{effects}{Where the coefficients of the returned specification come from. \code{"estimate"},
+the default, takes the fit's point estimates, as earlier versions did. \code{"safeguard"} takes
+the bound of each coefficient's two-sided \code{safeguard_level} interval nearer zero, and stops
+with an error when that interval includes zero (see Details). Either way, a coefficient named
+in \code{sesoi} takes the value given there, and the intercept is the fit's.}
+
+\item{safeguard_level}{The confidence level of the intervals behind \code{effects = "safeguard"}, a
+single number greater than 0 and less than 1. The default of 0.6 follows Perugini, Gallucci
+and Costantini (2014).}
+
+\item{sesoi}{\code{NULL}, the default, or a named numeric vector that sets coefficients to a smallest
+effect size of interest on the scale of the fit, as in \code{sesoi = c(cond = 0.03)}. The names
+are the returned specification's coefficient keys, which write an interaction as \code{a:b}, and
+a name that is not among them is refused.}
 }
 \value{
 A design specification as a nested list, carrying \code{spec_version} and validated with
@@ -47,15 +65,20 @@ A design specification as a nested list, carrying \code{spec_version} and valida
 the fit did not settle on its own: \code{group_mapping}, a named character vector giving the
 specification unit each of the fit's grouping factors became, and \code{column_kinds}, a named
 character vector giving each model-frame column the classification \code{"factor"} or
-\code{"predictor"}. Both are attributes rather than fields so that the specification itself stays
-within the portable schema.
+\code{"predictor"}. A third, \code{effects}, is a list recording where the coefficients came from. Its
+\code{method} is the value of \code{effects}, its \code{level} the \code{safeguard_level} applied, or \code{NA} with
+\code{"estimate"}, and its \code{sesoi} the keys of the coefficients set from \code{sesoi}. All three are
+attributes rather than fields so that the specification itself stays within the portable
+schema.
 }
 \description{
 Read a design specification off a linear mixed model already fitted with \code{lme4::lmer()} or
 \code{lmerTest::lmer()}. The fixed effects, the random-effect standard deviations and
 correlations, and the residual standard deviation are taken from the fit, and the numbers of
 subjects and items may be raised at the same time, so that a pilot study or a published model
-becomes the starting point of a power analysis, with no numbers left to invent.
+becomes the starting point of a power analysis. The fixed effects of a pilot are its point
+estimates, and a study powered for them tends to be underpowered. A message names them on
+every call, and \code{sesoi} or \code{effects = "safeguard"} replaces them (see Details).
 Requires the \code{lme4} package.
 }
 \details{
@@ -66,6 +89,37 @@ from a pilot fit or from a published model (Green and MacLeod, 2016; Kumle et al
 DeBruine and Barr, 2021). This function performs that transfer, and the specification it
 returns can be enlarged and passed straight to \code{\link[=simulate_design]{simulate_design()}} or
 \code{\link[=power_mixed]{power_mixed()}}.
+
+The fixed effects are another matter. They are the pilot's point estimates, which a small
+pilot measures imprecisely, and a pilot followed up because its effect looked promising has
+on average overestimated that effect. A study powered for such an estimate therefore tends to
+have less power than planned (Albers and Lakens, 2018). The variance components are the part
+of a pilot worth carrying over. The effect is better set to a smallest effect size of interest
+(SESOI), the smallest effect of theoretical or practical importance. For an effect keyed
+\code{cond}, as in the \code{crossed_mixed_rt} example, pass \code{sesoi = c(cond = 0.03)}, or set
+\code{spec$fixed$coefficients$cond <- 0.03} on the returned specification. Every call reports in a
+message which coefficients it took from the fit, with their values.
+
+When no SESOI can be argued for, \code{effects = "safeguard"} takes safeguard values (Perugini,
+Gallucci and Costantini, 2014). Each coefficient not named in \code{sesoi} becomes the bound of its
+two-sided \code{safeguard_level} interval nearer zero, by default that of the 60\% interval. The
+interval is the estimate plus or minus a quantile times the standard error from \code{vcov(fit)}.
+For an \code{lme4} fit, the quantile is normal, \code{qnorm((1 + safeguard_level) / 2)}, which is 0.84 at
+the default. The normal quantile treats the standard error as known, so the interval is too
+narrow when the subjects or items are few. For a \code{lmerTest} fit, the quantile is a t quantile
+on the Satterthwaite degrees of freedom that \code{lmerTest} reports, which allow for the
+uncertainty in the variance components, although only approximately. When \code{lmerTest} cannot
+give them for every coefficient, all coefficients take the normal quantile, and the message
+names the distribution used. An interval that includes zero stops the call with an error
+naming the effect. The pilot then leaves even the sign of the effect open, and a value of zero
+would plan a study of no effect at all. Such an effect needs a value in \code{sesoi}. By default,
+the conditions that \code{\link[=design_conditions]{design_conditions()}} builds for \code{\link[=sweep_spec]{sweep_spec()}} include one with every
+named effect at zero, which shows how often a design declares an effect that is not there.
+
+Whatever their source, the coefficients of the specification are the effects its data are
+simulated with. A named numeric \code{focal} in \code{\link[=power_mixed]{power_mixed()}} changes only the true values against
+which Type S and Type M are computed. The simulated effect stays as it was, so powering a study
+for another effect means changing the specification.
 
 Every number is taken on the scale the model was fitted on, and the returned family is
 Gaussian by default, because that is what a \code{lmer} fit is. A model of log reaction times
@@ -183,10 +237,19 @@ if (requireNamespace("lme4", quietly = TRUE)) {
   spec$random$subject$intercept_sd
   attr(spec, "column_kinds")
   head(simulate_design(spec))
+
+  # The effect is the pilot's estimate. Plan for a smallest effect size of interest, here 0.03
+  # on the log scale, or for the bound of the estimate's 60\% interval nearer zero.
+  spec_from_model(fit, n_subject = 60, n_item = 40, sesoi = c(effect = 0.03))$fixed
+  spec_from_model(fit, n_subject = 60, n_item = 40, effects = "safeguard")$fixed
 }
 }
 }
 \references{
+Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are
+biased: Inaccurate effect size estimators and follow-up bias. \emph{Journal of Experimental
+Social Psychology}, 74, 187-195. \doi{10.1016/j.jesp.2017.09.004}
+
 Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed
 models. \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
 
@@ -205,6 +268,10 @@ factor: Designs, analytic models, and statistical power. \emph{Annual Review of 
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
 mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods}, 53,
 2528-2543. \doi{10.3758/s13428-021-01546-0}
+
+Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
+imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.
+\doi{10.1177/1745691614528519}
 }
 \seealso{
 \code{\link[=simulate_design]{simulate_design()}} to simulate from the recovered specification,
