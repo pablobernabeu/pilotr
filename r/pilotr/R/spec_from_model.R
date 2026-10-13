@@ -194,14 +194,15 @@
 
 # The factors placed between the same unit, merged into a single factor of cells.
 #
-# pilotr assigns the levels of each between factor to blocks of its unit on its own, so two
-# factors read as between subjects fell into the same or overlapping blocks. A balanced 2 x 2
-# between-subjects pilot came back as cells of 40, 0, 0 and 40 at 80 subjects, and its refit
-# dropped the second effect and the interaction. A factor of cells keeps every cell. Its contrast
-# columns are the components' columns under their fitted names, so every coefficient key the fit
-# produced still names a column, an interaction such as Aa2:Bb2 included. The cells run in
-# .product_indices() order, the first-listed factor varying slowest, and their labels join the
-# components' labels with ".".
+# Up to specification version 0.3, pilotr assigned the levels of each between factor to blocks of
+# its unit on its own, so two factors read as between subjects fell into the same or overlapping
+# blocks. A balanced 2 x 2 between-subjects pilot came back as cells of 40, 0, 0 and 40 at 80
+# subjects, and its refit dropped the second effect and the interaction. Version 0.4 allocates
+# such factors jointly. A factor of cells keeps every cell in the same way, in a specification
+# that the releases reading 0.3 read too. Its contrast columns are the components' columns under
+# their fitted names, so every coefficient key the fit produced still names a column, an
+# interaction such as Aa2:Bb2 included. The cells run in .product_indices() order, the
+# first-listed factor varying slowest, and their labels join the components' labels with ".".
 .combine_between <- function(factors, used) {
   for (unit in c("subject", "item")) {
     at <- which(vapply(factors, function(f) identical(f[["between"]], unit), logical(1)))
@@ -219,9 +220,9 @@
     used <- c(used, name)
     message("spec_from_model() combined the factors ", .name_list(sprintf("'%s'", nms)), ", ",
             if (length(nms) == 2L) "both" else "all", " constant within ", unit,
-            ", into one factor '", name, "' whose levels are their cells, because pilotr would ",
-            "otherwise assign them to the same or overlapping blocks of ", unit, "s and confound ",
-            "their effects.")
+            ", into one factor '", name, "' whose levels are their cells. It allocates the ",
+            unit, "s as the separate factors would under specification version 0.4, and ",
+            "releases that read only version 0.3 read it too.")
     # make.unique() matters only when a label itself contains ".", which could give two cells
     # one label.
     factors[[at[1L]]] <- list(name = name, levels = make.unique(labels), contrasts = contr,
@@ -469,9 +470,12 @@
 #'
 #' Two or more factors placed between the same unit become one factor whose levels are their
 #' cells, and a message says so. The first-listed factor varies slowest, and each label joins the
-#' components' labels with `"."`. Two between factors over one unit would confound their effects,
-#' because pilotr assigns the levels of each between factor to blocks of its unit on its own, and
-#' [validate_spec()] refuses them. The combined factor carries every component's contrast columns
+#' components' labels with `"."`. Two between factors over one unit need specification version
+#' 0.4, which allocates them jointly. Up to version 0.3, each was assigned to blocks of its unit on
+#' its own, which confounded their effects, and [validate_spec()] refuses them in a specification
+#' declaring an earlier version. The factor of cells allocates the units as version 0.4 allocates
+#' the separate factors, and every release that reads version 0.3 reads it, so the returned
+#' specification declares 0.3. The combined factor carries every component's contrast columns
 #' under the names the fit gave them, so each coefficient the fit estimated, interactions
 #' included, still names a column. Every cell then receives units, in equal numbers whenever the
 #' number of units is a multiple of the number of cells.
@@ -866,8 +870,7 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   }
 
   # ---- assemble ----
-  spec <- list(spec_version = .SPEC_VERSION,
-               name = if (is.null(name)) "from_model" else name,
+  spec <- list(name = if (is.null(name)) "from_model" else name,
                seed = .as_seed(seed),
                units = units)
   if (length(factors)) spec$factors <- factors
@@ -875,6 +878,10 @@ spec_from_model <- function(fit, name = NULL, seed = 1, n_subject = NULL, n_item
   spec$fixed <- list(intercept = icept, coefficients = coefs)
   spec$random <- random
   spec$response <- .model_response(fit, family, round, yname)
+  # The lowest version that reads the specification, first, as spec_json() writes it. The factor
+  # of cells built above keeps a factorial between design within 0.3, where two between factors
+  # would need 0.4, so the releases that read 0.3 read this specification too.
+  spec <- c(list(spec_version = .required_spec_version(spec)), spec)
   validate_spec(spec)
   # A warning, where the readings above are messages, because this specification would plan a
   # larger study than the pilot ran. The power computed from it would be too high, and nothing

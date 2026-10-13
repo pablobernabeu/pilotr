@@ -198,3 +198,25 @@ def test_a_within_factor_that_omits_a_unit_of_the_design_warns_in_either_mode():
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             validate_spec(spec)
+
+
+def test_a_within_factor_that_omits_a_unit_of_the_design_is_refused_from_version_0_4():
+    s = crossed()
+    s["spec_version"] = "0.4"
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        validate_spec(s)
+    s["factors"][0]["vary_within"] = "subject"
+    msg = ("factors[1].vary_within lists 'subject' but not 'item'. pilotr crosses a within factor "
+           "with every unit of the design, so it varies within 'item' as well; list every unit, or "
+           "make it between 'item' if items carry it. This specification declares 0.4, which "
+           "refuses it.")
+    refused(s, msg)
+    with pytest.raises(ValueError) as e:
+        validate_spec(s, strict=False)
+    assert msg in str(e.value)
+    s["factors"][0]["vary_within"] = "item"
+    refused(s, "factors[1].vary_within lists 'item' but not 'subject'. pilotr crosses a within "
+               "factor with every unit of the design, so it varies within 'subject' as well; list "
+               "every unit, or make it between 'item' if items carry it. This specification "
+               "declares 0.4, which refuses it.")

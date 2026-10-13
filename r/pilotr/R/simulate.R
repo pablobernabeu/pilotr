@@ -201,6 +201,20 @@ simulate_design <- function(spec, validate = TRUE) {
   within <- Filter(function(f) !is.null(f[["vary_within"]]), factors)
   between <- Filter(function(f) !is.null(f[["between"]]), factors)
   within_sizes <- vapply(within, function(f) length(f[["levels"]]), integer(1))
+  # The between factors of each unit, in listed order, with their level counts and the number of
+  # cells, the combinations of their levels. Version 0.4 allocates the factors of one unit jointly,
+  # one block of units per cell. Up to 0.3, each was allocated on its own, which put two
+  # factors over one unit in the same or overlapping blocks. With one factor per unit, the two
+  # rules coincide, and neither draws anything.
+  joint <- list()
+  for (f in between) {
+    unit <- if (f[["between"]] == "subject") "subject" else "item"
+    g <- .orelse(joint[[unit]], list(names = character(0), sizes = integer(0)))
+    g$names <- c(g$names, f[["name"]])
+    g$sizes <- c(g$sizes, length(f[["levels"]]))
+    joint[[unit]] <- g
+  }
+  for (unit in names(joint)) joint[[unit]]$cells <- prod(joint[[unit]]$sizes)
 
   rng <- make_rng(spec[["seed"]])
   per_subject <- if (has_item) units[["item"]][["per_subject"]] else NULL
@@ -221,11 +235,15 @@ simulate_design <- function(spec, validate = TRUE) {
       level_idx <- list()
       if (length(within)) for (m in seq_along(within))
         level_idx[[within[[m]][["name"]]]] <- combo[m]
-      for (f in between) {
-        n_lev <- length(f[["levels"]])
-        unit <- if (f[["between"]] == "subject") s else t
-        n_unit <- if (f[["between"]] == "subject") S else I
-        level_idx[[f[["name"]]]] <- ((unit - 1) * n_lev) %/% n_unit
+      # Unit u of N takes cell floor((u - 1) * C / N) of the C cells. A cell is read as one level
+      # per factor, the first-listed factor varying slowest, as in .product_indices().
+      for (unit in names(joint)) {
+        g <- joint[[unit]]
+        cell <- if (unit == "subject") ((s - 1) * g$cells) %/% S else ((t - 1) * g$cells) %/% I
+        for (k in rev(seq_along(g$names))) {
+          level_idx[[g$names[k]]] <- cell %% g$sizes[k]
+          cell <- cell %/% g$sizes[k]
+        }
       }
       cvals <- list(); labels <- list()
       for (f in factors) {

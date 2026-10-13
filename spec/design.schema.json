@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/pablobernabeu/pilotr/main/spec/design.schema.json",
   "title": "pilotr design specification",
-  "description": "Version 0.3. A specification with no spec_version field is a 0.2 specification. The schema states which fields each object may hold and their types, ranges and allowed values. It also states which parameters each response family requires and refuses. The R and Python implementations enforce the same rules through validate_spec() in strict mode, its default, and add the rules that relate one value to another or to the implementation. Every coefficient and random-slope key names a contrast column or a predictor, a contrast has one value per level and thresholds increase. A uniform predictor's min lies below its max, per_subject does not exceed the number of items, and a unit named by a factor, a predictor, a grouping factor or random.item exists. A correlation key names two terms of its group and gives each pair once. A specification using a 0.3 feature declares 0.3 or later, and none declares a version newer than the implementation. Names do not collide (see Names in SPEC.md), and no two factors are between the same unit (see Factors in SPEC.md).",
+  "description": "Version 0.4. A specification with no spec_version field is a 0.2 specification. The schema states which fields each object may hold and their types, ranges and allowed values. It also states which parameters each response family requires and refuses. The R and Python implementations enforce the same rules through validate_spec() in strict mode, its default, and add the rules that relate one value to another or to the implementation. Every coefficient and random-slope key names a contrast column or a predictor, a contrast has one value per level and thresholds increase. A uniform predictor's min lies below its max, per_subject does not exceed the number of items, and a unit named by a factor, a predictor, a grouping factor or random.item exists. A correlation key names two terms of its group and gives each pair once. A specification using a 0.3 feature declares 0.3 or later and one using a 0.4 feature 0.4 or later. None declares a version newer than the implementation. Names do not collide (see Names in SPEC.md). Below version 0.4, no two factors are between the same unit, and from 0.4 a within factor lists every unit of the design (see Factors in SPEC.md).",
   "type": "object",
   "required": ["name", "seed", "units", "fixed", "response"],
   "additionalProperties": false,
@@ -10,7 +10,7 @@
     "spec_version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+$",
-      "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, because a 0.2 implementation reads such a design differently and generates different data without reporting a problem."
+      "description": "The specification version this design is written to. Absent means 0.2. Required to be \"0.3\" or later by any design using a 0.3 feature, and \"0.4\" or later by one with several between factors on one unit, which 0.4 allocates jointly. An earlier implementation reads such a design differently and generates different data without reporting a problem. pilotr writes the lowest version a design needs, never below 0.3, so that the releases reading 0.3 read it unless it uses a 0.4 feature."
     },
     "name": { "type": "string" },
     "seed": {

@@ -151,9 +151,12 @@ ties them together.
 
 Two or more factors placed between the same unit become one factor whose levels are their
 cells, and a message says so. The first-listed factor varies slowest, and each label joins the
-components' labels with \code{"."}. Two between factors over one unit would confound their effects,
-because pilotr assigns the levels of each between factor to blocks of its unit on its own, and
-\code{\link[=validate_spec]{validate_spec()}} refuses them. The combined factor carries every component's contrast columns
+components' labels with \code{"."}. Two between factors over one unit need specification version
+0.4, which allocates them jointly. Up to version 0.3, each was assigned to blocks of its unit on
+its own, which confounded their effects, and \code{\link[=validate_spec]{validate_spec()}} refuses them in a specification
+declaring an earlier version. The factor of cells allocates the units as version 0.4 allocates
+the separate factors, and every release that reads version 0.3 reads it, so the returned
+specification declares 0.3. The combined factor carries every component's contrast columns
 under the names the fit gave them, so each coefficient the fit estimated, interactions
 included, still names a column. Every cell then receives units, in equal numbers whenever the
 number of units is a multiple of the number of cells.

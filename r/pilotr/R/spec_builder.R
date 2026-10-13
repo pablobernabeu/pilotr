@@ -53,6 +53,9 @@ default_response_name <- function(family) {
 #' dominate a Beta likelihood (see [brms_bridge()]). Unrounded, the data keep the distribution the
 #' specification describes. They can then differ between R and 'Python' in their last bits where
 #' the two do not share a maths library, as the cross-language vignette sets out.
+#'
+#' The specification declares the lowest `spec_version` that reads it, and nothing built here
+#' needs a version above 0.3, so the releases of either package that read 0.3 read it too.
 #' @return A design specification as a nested list, ready for
 #'   [simulate_design()], [spec_json()], or the
 #'   power and precision functions.
@@ -78,7 +81,6 @@ build_spec <- function(p) {
   }
 
   spec <- list(
-    spec_version = .SPEC_VERSION,
     name = p$name, seed = .as_seed(p$seed),
     units = units,
     factors = list(factor),
@@ -108,7 +110,10 @@ build_spec <- function(p) {
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   if (p$family == "beta") resp$phi <- p$phi
   spec$response <- resp
-  spec
+  # The lowest version that reads the specification, first, where spec_json() has always written
+  # it. Stamping .SPEC_VERSION would make every specification the apps export unreadable by the
+  # releases that read 0.3, although nothing built here needs 0.4.
+  c(list(spec_version = .required_spec_version(spec)), spec)
 }
 
 # Fields that stay JSON arrays even when they hold a single value. Everything else of length

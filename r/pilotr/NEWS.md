@@ -33,14 +33,24 @@
   interaction two keys, such as `cond:age` and `age:cond`, since brms estimates one coefficient
   for both. A coefficient whose column does not vary is reported in a warning.
 
-* A specification with two or more factors between the same unit is refused. pilotr assigns the
-  levels of each between factor to blocks of units on its own, so two such factors fell into the
-  same or overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells of
-  20, 0, 0 and 20, and the second effect and the interaction could not be estimated. The refusal
-  names the encoding that works in every version, one between factor whose levels are the
-  cells. `spec_from_model()` now builds that factor itself when it reads two factors between
-  one unit off a fitted pilot, and says so in a message. It used to write a specification that
-  left half the cells of a 2 × 2 pilot empty.
+* A specification with two or more factors between the same unit is refused unless it declares
+  specification version 0.4, which allocates such factors jointly. pilotr assigned the levels of
+  each between factor to blocks of units on its own, so two such factors fell into the same or
+  overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells of 20, 0, 0
+  and 20, and the second effect and the interaction could not be estimated. The refusal names the
+  encoding that works in every version, one between factor whose levels are the cells.
+  `spec_from_model()` now builds that factor itself when it reads two factors between one unit
+  off a fitted pilot, and says so in a message. It used to write a specification that left half
+  the cells of a 2 × 2 pilot empty.
+
+* Specification version 0.4 allocates several between factors on one unit jointly, so a 2 × 2
+  between-subjects design over 40 subjects has four cells of 10. The units fall into one block
+  per combination of levels, with the first-listed factor varying slowest, and nothing is drawn.
+  A specification using this must declare `"spec_version": "0.4"`, a version pilotr 0.3.x
+  refuses to read. One that does not still gets the refusal introduced above, which names both
+  remedies. `build_spec()` and `spec_from_model()` declare the lowest version a specification
+  needs, so their output stays readable by earlier releases unless it uses a 0.4 feature. A 0.4
+  specification whose `vary_within` omits a unit of the design is refused.
 
 * `spec_from_model()` warns when the pilot was counterbalanced, each subject seeing each item
   under one condition, because the specification it returns crosses every subject with every
@@ -324,7 +334,7 @@
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
   validation alike. pilotr has always crossed a within factor with every unit, so the list
-  changed nothing. From spec version 0.4 such a list will be refused.
+  changed nothing. From spec version 0.4, such a list is refused.
 
 ## Documentation
 

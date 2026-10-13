@@ -293,6 +293,15 @@ def name_cases():
          _mut(lambda s: s["factors"][0].__setitem__("vary_within", ["subject"]))),
         ("vary_within omitting the subject unit (warns)",
          _mut(lambda s: s["factors"][0].__setitem__("vary_within", "item"))),
+        ("vary_within omitting the item unit, declaring 0.3 (warns)",
+         _mut(lambda s: (s.__setitem__("spec_version", "0.3"),
+                         s["factors"][0].__setitem__("vary_within", ["subject"])))),
+        ("vary_within omitting the item unit, declaring 0.4",
+         _mut(lambda s: (s.__setitem__("spec_version", "0.4"),
+                         s["factors"][0].__setitem__("vary_within", ["subject"])))),
+        ("vary_within omitting the subject unit, declaring 0.4",
+         _mut(lambda s: (s.__setitem__("spec_version", "0.4"),
+                         s["factors"][0].__setitem__("vary_within", "item")))),
     ]
 
 
@@ -304,13 +313,21 @@ def _between_factor(name, unit, contrasts):
 
 
 def allocation_cases():
-    """Factors between one unit, which pilotr assigns to the same or overlapping blocks of it.
+    """Factors between one unit. Below specification version 0.4, pilotr assigned them to the
+    same or overlapping blocks of it, and version 0.4 allocates them jointly.
 
-    The last is accepted: a factor between subjects and another between items do not alias.
+    A specification declaring a version below 0.4 is refused for them. The rest are accepted: a
+    factor between subjects and another between items do not alias, and version 0.4 allocates
+    several factors on one unit jointly.
     """
     a = _between_factor("A", "subject", {"a": [-0.5, 0.5]})
     b = _between_factor("B", "subject", {"b": [-0.5, 0.5]})
     c = _between_factor("C", "subject", {"c1": [-1, 1, 0], "c2": [-1, 0, 1]})
+
+    def declaring(version, factors):
+        return _mut(lambda s: (s.__setitem__("spec_version", version),
+                               s["factors"].extend(factors)))
+
     return [
         ("two factors between subject", _mut(lambda s: s["factors"].extend([a, b]))),
         ("three factors between subject", _mut(lambda s: s["factors"].extend([a, b, c]))),
@@ -318,6 +335,11 @@ def allocation_cases():
          _mut(lambda s: s["factors"].extend([dict(a, between="item"), dict(b, between="item")]))),
         ("one factor between subject and one between item",
          _mut(lambda s: s["factors"].extend([a, dict(b, between="item")]))),
+        ("two factors between subject, declaring 0.3", declaring("0.3", [a, b])),
+        ("two factors between subject, declaring 0.4", declaring("0.4", [a, b])),
+        ("three factors between subject, declaring 0.4", declaring("0.4", [a, b, c])),
+        ("two factors between item, declaring 0.4",
+         declaring("0.4", [dict(a, between="item"), dict(b, between="item")])),
     ]
 
 
@@ -455,6 +477,11 @@ def file_cases():
                              s["fixed"]["coefficients"].__setitem__("z", 0.1)))),
         ("random 0", _with(g, lambda s: s.__setitem__("random", 0))),
         ("random []", _with(g, lambda s: s.__setitem__("random", []))),
+        # Two factors between subjects, allocated jointly from version 0.4.
+        ("two between factors, declaring 0.4",
+         _with(_between, lambda s: (s.__setitem__("spec_version", "0.4"),
+                                    s["factors"].append(dict(_DOSE)),
+                                    s["fixed"]["coefficients"].__setitem__("dose", 2.0)))),
         # The Poisson cap is a refusal raised while simulating, below and above 708.4.
         ("poisson mean 700",
          _with(_poisson, lambda s: s["fixed"].__setitem__("intercept", math.log(700)))),
@@ -538,6 +565,9 @@ def power_cases():
          _two_group(lambda s: s["factors"][0].update(levels=["a", "b", "c"],
                                                      contrasts={"grp": [-1, 0, 1]}))),
         ("two between factors", _two_group(lambda s: s["factors"].append(dict(_DOSE)))),
+        ("two between factors, declaring 0.4",
+         _two_group(lambda s: (s.__setitem__("spec_version", "0.4"),
+                               s["factors"].append(dict(_DOSE))))),
         ("no factor", _two_group(lambda s: (s.__setitem__("factors", []),
                                             s["fixed"].__setitem__("coefficients", {})))),
         ("lognormal response",

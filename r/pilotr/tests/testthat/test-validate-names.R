@@ -173,6 +173,24 @@ test_that("a within factor that omits a unit of the design warns, in either mode
   expect_silent(validate_spec(s))
 })
 
+test_that("a within factor that omits a unit of the design is refused from version 0.4", {
+  s <- names_crossed()
+  s$spec_version <- "0.4"
+  expect_silent(validate_spec(s))
+  s$factors[[1]]$vary_within <- "subject"
+  msg <- paste0("factors[1].vary_within lists 'subject' but not 'item'. pilotr crosses a within ",
+                "factor with every unit of the design, so it varies within 'item' as well; list ",
+                "every unit, or make it between 'item' if items carry it. This specification ",
+                "declares 0.4, which refuses it.")
+  refused(s, msg)
+  expect_error(validate_spec(s, strict = FALSE), msg, fixed = TRUE)
+  s$factors[[1]]$vary_within <- "item"
+  refused(s, paste0("factors[1].vary_within lists 'item' but not 'subject'. pilotr crosses a ",
+                    "within factor with every unit of the design, so it varies within 'subject' ",
+                    "as well; list every unit, or make it between 'item' if items carry it. This ",
+                    "specification declares 0.4, which refuses it."))
+})
+
 test_that("model_data() reads every factor's levels before writing any contrast column", {
   # The first contrast column carried the factor's own name and overwrote the labels, so the
   # second matched numbers against labels and came out NA in every row.

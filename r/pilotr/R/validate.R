@@ -20,8 +20,10 @@
 # and cannot be fixed retrospectively, but a specification that uses a 0.3 feature can be made
 # to say so, and every implementation from 0.3 onwards refuses what it does not understand.
 
-# The specification version this implementation writes and understands.
-.SPEC_VERSION <- "0.3"
+# The newest specification version this implementation understands. What it writes declares the
+# lowest version that reads it (.required_spec_version()), so that a specification needing nothing
+# newer stays readable by the releases that know only 0.3.
+.SPEC_VERSION <- "0.4"
 
 # Features introduced in 0.3. A specification using any of them is read differently by a 0.2
 # implementation, so it has to declare 0.3 or later.
@@ -54,6 +56,42 @@
       found <- c(found, "interaction random slopes")
   }
   unique(found)
+}
+
+# The names of the well-formed factors between each of `units`, kept for a unit only when it has
+# two or more. Up to version 0.3, each between factor was assigned to blocks of its unit on its
+# own, so two over one unit fell into the same or overlapping blocks. Version 0.4 allocates them
+# jointly (simulate_design()). .spec_0_4_features() and .check_names() both read this, so the
+# feature that needs 0.4 and the refusal below 0.4 cannot drift apart.
+.shared_between <- function(factors, units) {
+  out <- list()
+  if (!is.list(factors) || !is.null(names(factors))) return(out)
+  for (unit in units) {
+    on_unit <- character(0)
+    for (f in factors)
+      if (is.list(f) && !is.null(names(f)) && is.null(f[["vary_within"]]) &&
+          .is_name(f[["name"]]) && identical(f[["between"]], unit))
+        on_unit <- c(on_unit, f[["name"]])
+    if (length(on_unit) > 1L) out[[unit]] <- on_unit
+  }
+  out
+}
+
+# Features introduced in 0.4. A specification using any of them is read differently by an earlier
+# implementation, so it has to declare 0.4 or later. One declaring less is refused by
+# .check_names(), in words that name both remedies. Only well-formed parts are inspected, as for
+# the 0.3 features.
+.spec_0_4_features <- function(spec) {
+  if (length(.shared_between(spec[["factors"]], c("subject", "item"))))
+    "several between factors on one unit" else character(0)
+}
+
+# The lowest specification version that reads `spec` as written, never below 0.3. build_spec() and
+# spec_from_model() declare it, so that what they write stays readable by the releases that read
+# 0.3 (R 0.3.1, Python 0.3.0) unless it uses a 0.4 feature. 0.3 is what build_spec() has declared
+# since 0.3.0, and a lower version would gain no reader, since releases before 0.3 ignore the field.
+.required_spec_version <- function(spec) {
+  if (length(.spec_0_4_features(spec))) "0.4" else "0.3"
 }
 
 # The largest seed both twins read exactly. jsonlite reads a JSON integer as a double, which holds
@@ -162,20 +200,25 @@
 #' gives one pair twice, a factor both between and within a unit, and a `random.item` entry in a
 #' design without items each validated and then changed the data in silence. The rules are set
 #' out under Names in the specification. A within factor whose `vary_within` leaves out a unit of
-#' the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
+#' the design draws a warning in either mode, since pilotr crosses it with every unit anyway, and
+#' a specification declaring version 0.4 is refused for it.
 #'
-#' At most one factor may be between each unit. pilotr assigns the levels of each between factor
-#' to blocks of its unit on its own, so two between factors over one unit fall into the same or
-#' overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
-#' and 20, and its effects could not be estimated apart. Such a design is written as one between
-#' factor whose levels are the cells, as the specification shows under Worked encodings, and
-#' [spec_from_model()] builds that factor from a fitted pilot.
+#' Several factors may be between one unit only in a specification declaring version 0.4 or
+#' later, which allocates them jointly, one block of units per combination of their levels. Up to
+#' version 0.3, pilotr assigned the levels of each between factor to blocks of its unit on its
+#' own, so two between factors over one unit fell into the same or overlapping blocks. A 2 x 2
+#' between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and its effects could
+#' not be estimated apart, so a specification declaring an earlier version is refused for them.
+#' Every version reads the same design written as one between factor whose levels are the cells,
+#' as the specification shows under Worked encodings, and [spec_from_model()] builds that factor
+#' from a fitted pilot.
 #'
 #' Version negotiation covers the other direction. A specification that uses a feature
 #' introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
-#' later. A specification declaring a version newer than this implementation is refused
-#' outright. A specification with no `spec_version` is treated as 0.2, which is
-#' what every specification written before the field existed is.
+#' later, and one that uses a feature introduced in 0.4 must declare 0.4. A specification
+#' declaring a version newer than this implementation is refused outright. A specification with
+#' no `spec_version` is treated as 0.2, which is what every specification written before the
+#' field existed is.
 #'
 #' Every field is read by its exact name, as the 'Python' twin reads it, and a list that repeats
 #' a name within one object is refused, as [load_spec()] refuses a file that does. A seed must
@@ -220,6 +263,9 @@ validate_spec <- function(spec, strict = TRUE) {
   # ---- version ----
   declared <- .orelse(spec[["spec_version"]], "0.2")
   sv <- .parse_version(.SPEC_VERSION)
+  # The declared version as a (major, minor) pair, kept for the rules that changed with 0.4. It
+  # stays NULL when the version cannot be read, and those rules then apply as they did before 0.4.
+  dv <- NULL
   # A version is one string or one number. Anything else used to reach .parse_version(), where an
   # empty array or object stopped with "subscript out of bounds" and a two-element array was read
   # by its first element, while the Python twin called both malformed.
@@ -540,7 +586,7 @@ validate_spec <- function(spec, strict = TRUE) {
   }
 
   # ---- names and structure ----
-  found <- .check_names(spec, has_item, units_ok = is.list(u) && !is.null(names(u)))
+  found <- .check_names(spec, has_item, units_ok = is.list(u) && !is.null(names(u)), version = dv)
   problems <- c(problems, found$problems)
   soft <- c(soft, found$soft)
 
@@ -558,9 +604,15 @@ validate_spec <- function(spec, strict = TRUE) {
 # column was overwritten the twins also disagreed, R replacing the earlier column and Python
 # appending a second one under the same name, so one specification gave two different tables.
 # Only well-formed parts are inspected, since a malformed one is reported by its own check.
-# Returns the refusals and the warnings, in the order both twins report them.
-.check_names <- function(spec, has_item, units_ok) {
+# `version` is the declared version as validate_spec() parsed it, or NULL when it could not be
+# read. Returns the refusals and the warnings, in the order both twins report them.
+.check_names <- function(spec, has_item, units_ok, version = NULL) {
   problems <- character(0); soft <- character(0)
+  # Two rules changed with 0.4: several between factors on one unit became valid, and a
+  # vary_within that leaves out a unit of the design became an error. The comparison is the
+  # twin's tuple comparison, major first.
+  from_0_4 <- !is.null(version) &&
+    (version[1] > 0L || (version[1] == 0L && version[2] >= 4L))
   bad <- function(...) problems <<- c(problems, paste0(...))
   is_obj <- function(x) is.list(x) && !is.null(names(x))
   is_arr <- function(x) is.list(x) && is.null(names(x))
@@ -588,26 +640,26 @@ validate_spec <- function(spec, strict = TRUE) {
           "one of them")
   }
 
-  # The simulator assigns the levels of each between factor to blocks of its unit on its own, so
-  # two such factors over one unit fell into the same or overlapping blocks. A 2 x 2
-  # between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and neither the
-  # second effect nor the interaction could then be estimated. One factor whose levels are the
-  # cells keeps every cell, and spec_from_model() writes that encoding for a fitted pilot.
-  for (unit in c("subject", if (has_item) "item")) {
-    on_unit <- character(0)
-    for (f in factors)
-      if (is_obj(f) && is.null(f[["vary_within"]]) && .is_name(f[["name"]]) &&
-          identical(f[["between"]], unit))
-        on_unit <- c(on_unit, f[["name"]])
-    if (length(on_unit) > 1L)
-      bad("the factors ", .name_list(sprintf("'%s'", on_unit)), " are ",
-          if (length(on_unit) == 2L) "both" else "all", " between '", unit, "'. pilotr assigns ",
-          "the levels of each between factor to blocks of ", unit, "s on its own, so the blocks ",
-          "of these factors coincide or overlap, which leaves some combinations of their levels ",
-          "without ", unit, "s and confounds their effects. Encode the design as one between ",
-          "factor whose levels are the cells, give it the contrast columns of these factors and ",
-          "key each interaction as 'a:b', as spec_from_model() in R does for a fitted pilot. ",
-          "Specification version 0.4 will allocate several between factors jointly.")
+  # Up to version 0.3, the simulator assigned the levels of each between factor to blocks of its
+  # unit on its own, so two such factors over one unit fell into the same or overlapping blocks.
+  # A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and neither
+  # the second effect nor the interaction could then be estimated. Version 0.4 allocates such
+  # factors jointly, so a specification has to declare it to have them. The other remedy, one
+  # factor whose levels are the cells, keeps every cell in every version, and spec_from_model()
+  # writes that encoding for a fitted pilot.
+  shared <- if (from_0_4) list() else .shared_between(factors, c("subject", if (has_item) "item"))
+  for (unit in names(shared)) {
+    on_unit <- shared[[unit]]
+    bad("the factors ", .name_list(sprintf("'%s'", on_unit)), " are ",
+        if (length(on_unit) == 2L) "both" else "all", " between '", unit, "'. Below ",
+        "specification version 0.4, pilotr assigns the levels of each between factor to blocks ",
+        "of ", unit, "s on its own. The blocks of these factors then coincide or overlap, which ",
+        "leaves some combinations of their levels without ", unit, "s and confounds their ",
+        "effects. Declare spec_version \"0.4\", which allocates several between factors jointly. ",
+        "Alternatively, encode the design as one between factor whose levels are the cells, give ",
+        "it the contrast columns of these factors and key each interaction as 'a:b', as ",
+        "spec_from_model() in R does for a fitted pilot. Earlier releases of pilotr read that ",
+        "encoding too.")
   }
 
   # Every column of the simulated data, in the order the simulator writes them.
@@ -713,7 +765,8 @@ validate_spec <- function(spec, strict = TRUE) {
         "remove random.item")
 
   # pilotr crosses a within factor with every unit of the design, whatever vary_within lists,
-  # so an incomplete list has never changed the data. It is a warning until spec_version 0.4.
+  # so an incomplete list has never changed the data. It draws a warning below version 0.4 and
+  # is refused from 0.4.
   if (units_ok) {
     design_units <- c("subject", if (has_item) "item")
     for (i in seq_along(factors)) {
@@ -722,13 +775,17 @@ validate_spec <- function(spec, strict = TRUE) {
       vw <- f[["vary_within"]]
       if (!is.character(vw) || !length(vw) || anyNA(vw) || !all(vw %in% design_units)) next
       miss <- setdiff(design_units, vw)
-      if (length(miss))
-        soft <- c(soft, paste0(
-          "factors[", i, "].vary_within lists ", .name_list(sprintf("'%s'", unique(vw))),
-          " but not ", .name_list(sprintf("'%s'", miss)), ". pilotr crosses a within factor ",
-          "with every unit of the design, so it varies within ",
-          .name_list(sprintf("'%s'", miss)), " as well; list every unit, or make it between ",
-          "'item' if items carry it. From spec_version 0.4 this is an error."))
+      if (!length(miss)) next
+      text <- paste0(
+        "factors[", i, "].vary_within lists ", .name_list(sprintf("'%s'", unique(vw))),
+        " but not ", .name_list(sprintf("'%s'", miss)), ". pilotr crosses a within factor ",
+        "with every unit of the design, so it varies within ",
+        .name_list(sprintf("'%s'", miss)), " as well; list every unit, or make it between ",
+        "'item' if items carry it.")
+      if (from_0_4)
+        bad(text, " This specification declares ", version[1], ".", version[2],
+            ", which refuses it.")
+      else soft <- c(soft, paste0(text, " From spec_version 0.4 this is an error."))
     }
   }
 

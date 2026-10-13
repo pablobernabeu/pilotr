@@ -36,6 +36,9 @@ onto the nearest value inside the interval at that many decimals. At four decima
 dominate a Beta likelihood (see \code{\link[=brms_bridge]{brms_bridge()}}). Unrounded, the data keep the distribution the
 specification describes. They can then differ between R and 'Python' in their last bits where
 the two do not share a maths library, as the cross-language vignette sets out.
+
+The specification declares the lowest \code{spec_version} that reads it, and nothing built here
+needs a version above 0.3, so the releases of either package that read 0.3 read it too.
 }
 \examples{
 build_spec(list(name = "demo", seed = 1, design_kind = "between",

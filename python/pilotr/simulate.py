@@ -330,6 +330,16 @@ def _simulate(spec) -> Dataset:
     predictors = spec.get("predictors", [])
     within = [f for f in factors if f.get("vary_within")]
     between = [f for f in factors if f.get("between")]
+    # The between factors of each unit, in listed order, with their level counts and the number
+    # of cells, the combinations of their levels. Version 0.4 allocates the factors of one unit
+    # jointly, one block of units per cell. Up to 0.3, each was allocated on its own, which
+    # put two factors over one unit in the same or overlapping blocks. With one factor per unit,
+    # the two rules coincide, and neither draws anything.
+    joint = {}
+    for f in between:
+        joint.setdefault("subject" if f["between"] == "subject" else "item", []).append(f)
+    joint = {unit: (fs, [len(f["levels"]) for f in fs], math.prod(len(f["levels"]) for f in fs))
+             for unit, fs in joint.items()}
 
     rng = RNG(spec["seed"])
     per_subject = spec["units"]["item"].get("per_subject") if has_item else None
@@ -351,11 +361,15 @@ def _simulate(spec) -> Dataset:
                 level_idx = {}
                 for f, li in zip(within, combo):
                     level_idx[f["name"]] = li
-                for f in between:
-                    n_lev = len(f["levels"])
-                    unit = s if f["between"] == "subject" else t
-                    n_unit = S if f["between"] == "subject" else I
-                    level_idx[f["name"]] = ((unit - 1) * n_lev) // n_unit
+                # Unit u of N takes cell floor((u - 1) * C / N) of the C cells. A cell is read as
+                # one level per factor, the first-listed factor varying slowest, as in
+                # itertools.product.
+                for unit, (fs, sizes, n_cells) in joint.items():
+                    cell = (((s - 1) * n_cells) // S if unit == "subject"
+                            else ((t - 1) * n_cells) // I)
+                    for f, size in zip(reversed(fs), reversed(sizes)):
+                        level_idx[f["name"]] = cell % size
+                        cell //= size
                 cvals, labels = {}, {}
                 for f in factors:
                     li = level_idx[f["name"]]

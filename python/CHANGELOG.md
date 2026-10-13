@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Specification version 0.4 allocates several between factors on one unit jointly, so a 2 × 2
+  between-subjects design over 40 subjects has four cells of 10. The units fall into one block
+  per combination of levels, with the first-listed factor varying slowest, and nothing is drawn.
+  A specification using this must declare `"spec_version": "0.4"`, a version pilotr 0.3.0
+  refuses to read. One that does not still gets the refusal described under Changed, which names
+  both remedies. A 0.4 specification whose `vary_within` omits a unit of the design is refused.
+  `SPEC_VERSION` is now "0.4", the newest version this release reads. The R package's
+  `build_spec()` and `spec_from_model()` declare the lowest version a specification needs, so
+  the specifications the no-code app exports stay readable by pilotr 0.3.0 unless they use a 0.4
+  feature.
 - Every rate carries its Monte Carlo error. `power` and `power_mixed` gain `power_mcse`,
   `power_lo` and `power_hi`, the standard error and 95% Wilson interval of power. Both also gain
   `type_m_mcse`, the standard error of Type M, and a Wilson interval for Type S, `type_s_lo` and
@@ -48,12 +58,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `power_curve` refuses the same designs.
 - The replicates of `power`, `power_curve` and `power_mixed` skip validation, since the
   specification is validated once before them. Each replicate used to validate it again.
-- `validate_spec` refuses a specification with two or more factors between the same unit.
-  pilotr assigns the levels of each between factor to blocks of units on its own, so two such
-  factors fell into the same or overlapping blocks. A 2 × 2 between-subjects design over 40
-  subjects produced cells of 20, 0, 0 and 20, and the second effect and the interaction could
-  not be estimated. The refusal names the encoding that works in every version, one between
-  factor whose levels are the cells, and reads the same in the R twin.
+- `validate_spec` refuses a specification with two or more factors between the same unit unless
+  it declares specification version 0.4, which allocates such factors jointly. pilotr assigned
+  the levels of each between factor to blocks of units on its own, so two such factors fell into
+  the same or overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells
+  of 20, 0, 0 and 20, and the second effect and the interaction could not be estimated. The
+  refusal names the encoding that works in every version, one between factor whose levels are
+  the cells, and reads the same in the R twin.
 - The crossed mixed-effects example on the power page states that every subject sees every item
   in both conditions. It points a counterbalanced study, which has half the observations and
   lower power, to the two-list encoding of the specification, and says that its power comes from
@@ -241,7 +252,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
   validation alike. pilotr has always crossed a within factor with every unit, so the list
-  changed nothing. From spec version 0.4 such a list will be refused.
+  changed nothing. From spec version 0.4, such a list is refused.
 
 ## [0.3.0] - 2026-08-27
 

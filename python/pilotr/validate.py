@@ -28,8 +28,10 @@ import math
 import numbers
 import os
 
-# The specification version this implementation writes and understands.
-SPEC_VERSION = "0.3"
+# The newest specification version this implementation understands. The R twin's build_spec()
+# and spec_from_model() write the lowest version a specification needs (_required_spec_version()),
+# so that one needing nothing newer stays readable by the releases that know only 0.3.
+SPEC_VERSION = "0.4"
 
 # The largest seed both twins read exactly. R's jsonlite reads a JSON integer as a double, which
 # holds every integer up to 2**53 - 1 and no longer every one beyond it, while Python's json reads
@@ -161,6 +163,49 @@ def _features_0_3(spec) -> list:
     return list(dict.fromkeys(found))
 
 
+def _shared_between(factors, units) -> dict:
+    """The names of the well-formed factors between each of `units`, kept for a unit only when it
+    has two or more.
+
+    Up to version 0.3, each between factor was assigned to blocks of its unit on its own, so two
+    over one unit fell into the same or overlapping blocks. Version 0.4 allocates them jointly
+    (`simulate`). `_features_0_4` and `_check_names` both read this, so the feature that needs
+    0.4 and the refusal below 0.4 cannot drift apart.
+    """
+    out = {}
+    if not isinstance(factors, list):
+        return out
+    for unit in units:
+        on_unit = [f["name"] for f in factors
+                   if isinstance(f, dict) and f.get("vary_within") is None
+                   and _is_name(f.get("name")) and f.get("between") == unit]
+        if len(on_unit) > 1:
+            out[unit] = on_unit
+    return out
+
+
+def _features_0_4(spec) -> list:
+    """Features introduced in 0.4. A specification using any of them is read differently by an
+    earlier implementation, so it has to declare 0.4 or later. One declaring less is refused by
+    `_check_names`, in words that name both remedies. Only well-formed parts are inspected, as for
+    the 0.3 features.
+    """
+    if _shared_between(spec.get("factors"), ("subject", "item")):
+        return ["several between factors on one unit"]
+    return []
+
+
+def _required_spec_version(spec) -> str:
+    """The lowest specification version that reads `spec` as written, never below 0.3.
+
+    The R twin's build_spec() and spec_from_model() declare it, so that what they write stays
+    readable by the releases that read 0.3 (R 0.3.1, Python 0.3.0) unless it uses a 0.4 feature.
+    0.3 is what build_spec() has declared since 0.3.0, and a lower version would gain no reader,
+    since releases before 0.3 ignore the field.
+    """
+    return "0.4" if _features_0_4(spec) else "0.3"
+
+
 def validate_spec(spec, strict: bool = True):
     """Validate a design specification, returning it so the call can be chained.
 
@@ -175,11 +220,19 @@ def validate_spec(spec, strict: bool = True):
     a design without items each validated and then changed the data in silence. The rules are set
     out under Names in the specification.
 
-    At most one factor may be between each unit. pilotr assigns the levels of each between factor
-    to blocks of its unit on its own, so two between factors over one unit fall into the same or
-    overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
-    and 20, and its effects could not be estimated apart. Such a design is written as one between
-    factor whose levels are the cells, as the specification shows under Worked encodings.
+    Several factors may be between one unit only in a specification declaring version 0.4 or
+    later, which allocates them jointly, one block of units per combination of their levels. Up to
+    version 0.3, pilotr assigned the levels of each between factor to blocks of its unit on its
+    own, so two between factors over one unit fell into the same or overlapping blocks. A 2 x 2
+    between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and its effects could
+    not be estimated apart, so a specification declaring an earlier version is refused for them.
+    Every version reads the same design written as one between factor whose levels are the cells,
+    as the specification shows under Worked encodings.
+
+    Version negotiation covers the other direction. A specification that uses a feature introduced
+    in 0.3 must declare 0.3 or later, and one that uses a feature introduced in 0.4 must declare
+    0.4. A specification declaring a version newer than `SPEC_VERSION` is refused outright, and
+    one with no ``spec_version`` is treated as 0.2.
 
     Parameters
     ----------
@@ -584,9 +637,12 @@ def validate_spec(spec, strict: bool = True):
                             "support")
 
     # ---- names and structure ----
-    # An empty object is no object to R, which reads `{}` as an unnamed empty list.
+    # An empty object is no object to R, which reads `{}` as an unnamed empty list. The declared
+    # version goes with it for the rules that changed with 0.4. It is None when the version cannot
+    # be read, and those rules then apply as they did before 0.4.
     found, found_soft = _check_names(spec, has_item,
-                                     units_ok=isinstance(units, dict) and len(units) > 0)
+                                     units_ok=isinstance(units, dict) and len(units) > 0,
+                                     version=dv)
     problems.extend(found)
     soft.extend(found_soft)
 
@@ -597,7 +653,7 @@ def validate_spec(spec, strict: bool = True):
     return spec
 
 
-def _check_names(spec, has_item, units_ok):
+def _check_names(spec, has_item, units_ok, version=None):
     """The rules that look at a specification's names together.
 
     They run after the per-field checks and mirror the R twin's ``.check_names()`` line for line.
@@ -605,13 +661,17 @@ def _check_names(spec, has_item, units_ok):
     overwrite a column without a word. Where a column was overwritten the twins also disagreed,
     R replacing the earlier column and Python appending a second one under the same name, so one
     specification gave two different tables. Only well-formed parts are inspected, since a
-    malformed one is reported by its own check.
+    malformed one is reported by its own check. `version` is the declared version as
+    `validate_spec` parsed it, a (major, minor) pair, or None when it could not be read.
 
     Returns the refusals and the warnings, in the order both twins report them.
     """
     problems: list[str] = []
     soft: list[str] = []
     bad = problems.append
+    # Two rules changed with 0.4: several between factors on one unit became valid, and a
+    # vary_within that leaves out a unit of the design became an error.
+    from_0_4 = version is not None and version >= (0, 4)
     factors = spec.get("factors") if isinstance(spec.get("factors"), list) else []
     predictors = spec.get("predictors") if isinstance(spec.get("predictors"), list) else []
     rs = spec.get("random") if isinstance(spec.get("random"), dict) else {}
@@ -638,25 +698,26 @@ def _check_names(spec, has_item, units_ok):
             bad("factors[%d] sets both 'vary_within' and 'between'; a factor has to set exactly "
                 "one of them" % i)
 
-    # The simulator assigns the levels of each between factor to blocks of its unit on its own,
-    # so two such factors over one unit fell into the same or overlapping blocks. A 2 x 2
-    # between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and neither the
-    # second effect nor the interaction could then be estimated. One factor whose levels are the
-    # cells keeps every cell, and R's spec_from_model() writes that encoding for a fitted pilot.
-    for unit in ["subject"] + (["item"] if has_item else []):
-        on_unit = [f["name"] for f in factors
-                   if isinstance(f, dict) and f.get("vary_within") is None
-                   and _is_name(f.get("name")) and f.get("between") == unit]
-        if len(on_unit) > 1:
-            bad("the factors %s are %s between '%s'. pilotr assigns the levels of each between "
-                "factor to blocks of %ss on its own, so the blocks of these factors coincide or "
-                "overlap, which leaves some combinations of their levels without %ss and "
-                "confounds their effects. Encode the design as one between factor whose levels "
-                "are the cells, give it the contrast columns of these factors and key each "
-                "interaction as 'a:b', as spec_from_model() in R does for a fitted pilot. "
-                "Specification version 0.4 will allocate several between factors jointly."
-                % (_name_list("'%s'" % n for n in on_unit),
-                   "both" if len(on_unit) == 2 else "all", unit, unit, unit))
+    # Up to version 0.3, the simulator assigned the levels of each between factor to blocks of its
+    # unit on its own, so two such factors over one unit fell into the same or overlapping
+    # blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and
+    # neither the second effect nor the interaction could then be estimated. Version 0.4
+    # allocates such factors jointly, so a specification has to declare it to have them. The
+    # other remedy, one factor whose levels are the cells, keeps every cell in every version, and
+    # R's spec_from_model() writes that encoding for a fitted pilot.
+    shared = {} if from_0_4 else _shared_between(factors,
+                                                 ["subject"] + (["item"] if has_item else []))
+    for unit, on_unit in shared.items():
+        bad("the factors %s are %s between '%s'. Below specification version 0.4, pilotr assigns "
+            "the levels of each between factor to blocks of %ss on its own. The blocks of these "
+            "factors then coincide or overlap, which leaves some combinations of their levels "
+            "without %ss and confounds their effects. Declare spec_version \"0.4\", which "
+            "allocates several between factors jointly. Alternatively, encode the design as one "
+            "between factor whose levels are the cells, give it the contrast columns of these "
+            "factors and key each interaction as 'a:b', as spec_from_model() in R does for a "
+            "fitted pilot. Earlier releases of pilotr read that encoding too."
+            % (_name_list("'%s'" % n for n in on_unit),
+               "both" if len(on_unit) == 2 else "all", unit, unit, unit))
 
     # Every column of the simulated data, in the order the simulator writes them.
     cols: list[str] = []
@@ -771,7 +832,8 @@ def _check_names(spec, has_item, units_ok):
             "remove random.item")
 
     # pilotr crosses a within factor with every unit of the design, whatever vary_within lists,
-    # so an incomplete list has never changed the data. It is a warning until spec_version 0.4.
+    # so an incomplete list has never changed the data. It draws a warning below version 0.4 and
+    # is refused from 0.4.
     if units_ok:
         design_units = ["subject"] + (["item"] if has_item else [])
         for i, f in enumerate(factors, start=1):
@@ -783,14 +845,17 @@ def _check_names(spec, has_item, units_ok):
             if not isinstance(vw, list) or not vw or not all(w in design_units for w in vw):
                 continue
             miss = [u for u in design_units if u not in vw]
-            if miss:
-                quoted = _name_list("'%s'" % u for u in miss)
-                soft.append(
-                    "factors[%d].vary_within lists %s but not %s. pilotr crosses a within factor "
+            if not miss:
+                continue
+            quoted = _name_list("'%s'" % u for u in miss)
+            text = ("factors[%d].vary_within lists %s but not %s. pilotr crosses a within factor "
                     "with every unit of the design, so it varies within %s as well; list every "
-                    "unit, or make it between 'item' if items carry it. From spec_version 0.4 "
-                    "this is an error."
+                    "unit, or make it between 'item' if items carry it."
                     % (i, _name_list("'%s'" % w for w in dict.fromkeys(vw)), quoted, quoted))
+            if from_0_4:
+                bad(text + " This specification declares %d.%d, which refuses it." % version)
+            else:
+                soft.append(text + " From spec_version 0.4 this is an error.")
 
     return problems, soft
 

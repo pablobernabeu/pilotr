@@ -34,20 +34,25 @@ column already exists, a level listed twice, a correlation that pairs a term wit
 gives one pair twice, a factor both between and within a unit, and a \code{random.item} entry in a
 design without items each validated and then changed the data in silence. The rules are set
 out under Names in the specification. A within factor whose \code{vary_within} leaves out a unit of
-the design draws a warning in either mode, since pilotr crosses it with every unit anyway.
+the design draws a warning in either mode, since pilotr crosses it with every unit anyway, and
+a specification declaring version 0.4 is refused for it.
 
-At most one factor may be between each unit. pilotr assigns the levels of each between factor
-to blocks of its unit on its own, so two between factors over one unit fall into the same or
-overlapping blocks. A 2 x 2 between-subjects design over 40 subjects gave cells of 20, 0, 0
-and 20, and its effects could not be estimated apart. Such a design is written as one between
-factor whose levels are the cells, as the specification shows under Worked encodings, and
-\code{\link[=spec_from_model]{spec_from_model()}} builds that factor from a fitted pilot.
+Several factors may be between one unit only in a specification declaring version 0.4 or
+later, which allocates them jointly, one block of units per combination of their levels. Up to
+version 0.3, pilotr assigned the levels of each between factor to blocks of its unit on its
+own, so two between factors over one unit fell into the same or overlapping blocks. A 2 x 2
+between-subjects design over 40 subjects gave cells of 20, 0, 0 and 20, and its effects could
+not be estimated apart, so a specification declaring an earlier version is refused for them.
+Every version reads the same design written as one between factor whose levels are the cells,
+as the specification shows under Worked encodings, and \code{\link[=spec_from_model]{spec_from_model()}} builds that factor
+from a fitted pilot.
 
 Version negotiation covers the other direction. A specification that uses a feature
 introduced in 0.3 is read differently by a 0.2 implementation, so it must declare 0.3 or
-later. A specification declaring a version newer than this implementation is refused
-outright. A specification with no \code{spec_version} is treated as 0.2, which is
-what every specification written before the field existed is.
+later, and one that uses a feature introduced in 0.4 must declare 0.4. A specification
+declaring a version newer than this implementation is refused outright. A specification with
+no \code{spec_version} is treated as 0.2, which is what every specification written before the
+field existed is.
 
 Every field is read by its exact name, as the 'Python' twin reads it, and a list that repeats
 a name within one object is refused, as \code{\link[=load_spec]{load_spec()}} refuses a file that does. A seed must

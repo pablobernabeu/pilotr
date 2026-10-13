@@ -13,7 +13,7 @@ library(bslib)
 library(ggplot2)
 # Load whatever engine files were staged beside this app rather than naming them.
 # This file used to carry its own copy of the staging list, and the two drifted:
-# validate.R defines .SPEC_VERSION, which build_spec() stamps onto every spec, and
+# validate.R defines the version that build_spec() stamps onto every spec, and
 # the omission shipped a deployed app whose every Simulate click failed. Reading
 # the directory leaves the staging step in build_shinylive.R as the only list.
 local({

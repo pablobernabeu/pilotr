@@ -1,4 +1,4 @@
-# The `pilotr` design specification (v0.3)
+# The `pilotr` design specification (v0.4)
 
 A design specification is a single JSON object describing a data-generating process (DGP) for
 an experiment. It is the contract shared by the web application, the R package and the Python
@@ -23,11 +23,12 @@ implementation reading the file. Every coefficient and slope key names a contras
 predictor, a contrast has one value per level and thresholds increase. A uniform predictor's
 `min` lies below its `max`, `per_subject` does not exceed the number of items, and a unit that a
 factor, a predictor, a grouping factor or `random.item` names exists. A correlation key names two
-terms of its group, and each pair is given once. A specification that uses a 0.3 feature declares
-0.3 or later, and none may declare a version newer than the implementation. Names do not collide
-(see [Names](#names)), and at most one factor is between each unit (see [Factors](#factors)).
-Lenient validation (`strict = FALSE`) reports an unknown field as a warning where the schema
-refuses it.
+terms of its group, and each pair is given once. A specification that uses a feature introduced
+in 0.3 or 0.4 declares that version or later, and none may declare a version newer than the
+implementation. Names do not collide (see [Names](#names)). Below version 0.4, at most one factor
+is between each unit, and from 0.4 a within factor lists every unit of the design (see
+[Factors](#factors)). Lenient validation (`strict = FALSE`) reports an unknown field as a warning
+where the schema refuses it.
 
 ## Versioning
 
@@ -40,6 +41,19 @@ data while reporting success, which is the worst failure mode available to a rep
 The 0.3 features are observation-level predictors, `dist`, `reliability`, the `exgaussian` family,
 the `correlated` flag and interaction random slopes. An implementation from 0.3 onwards refuses a
 specification declaring a version newer than it understands, and never reads it in part.
+
+Version 0.4 adds one feature, several between factors on one unit, which it allocates jointly (see
+[Factors](#factors)). Up to 0.3, each between factor was allocated on its own, so two over one
+unit fell into the same or overlapping blocks. A specification that has them and declares an
+earlier version is therefore refused. Version 0.4 also refuses a within factor whose
+`vary_within` leaves out a unit of the design, which draws only a warning in a specification
+declaring an earlier version.
+
+An implementation that writes a specification declares the lowest version the specification
+needs, and never one below 0.3. The R package's `build_spec()` and `spec_from_model()` therefore
+declare 0.3 unless the specification uses a 0.4 feature, so the releases that read 0.3, R 0.3.1
+and Python 0.3.0 among them, read what they write. Declaring 0.2 would gain no reader, since
+releases before 0.3 ignore the field.
 
 ## Reading a specification
 
@@ -127,27 +141,38 @@ effect is misspelled generates exactly the data of a null design and reports suc
 * `vary_within`: the factor varies *within* units (a within-unit factor), expanding each unit
   combination into one row per level. pilotr crosses a within factor with every unit of the
   design, whatever the list names, so in a design with items the list is `["subject", "item"]`.
-  A list that leaves a unit out has never changed the data. It is deprecated and draws a
-  warning, and from spec version 0.4 it will be refused. A factor whose levels are carried by
-  the items, each item appearing at one level only, is `"between": "item"` instead. Since a
-  within factor is crossed with every unit, each subject–item pair of the design is observed at
-  every level. A counterbalanced design, which shows each subject each item at one level only,
-  is written with a list factor between subjects and an item-set factor between items, as in the
-  [worked encodings](#worked-encodings) below.
+  A list that leaves a unit out has never changed the data. It draws a warning in a
+  specification declaring a version below 0.4 and is refused from 0.4. A factor whose levels
+  are carried by the items, each item appearing at one level only, is `"between": "item"`
+  instead. Since a within factor is crossed with every unit, each subject–item pair of the
+  design is observed at every level. A counterbalanced design, which shows each subject each
+  item at one level only, is written with a list factor between subjects and an item-set factor
+  between items, as in the [worked encodings](#worked-encodings) below.
 * `between`: `"subject"` or `"item"`. The factor assigns each unit one level and does not
   expand rows. With `N` units and `L` levels, unit `u` (counted from 1) takes the level with
   index `⌊(u − 1)·L/N⌋` (counted from 0), so the units fall into `L` consecutive blocks in level
   order. The blocks are equal when `N` is a multiple of `L` and otherwise differ in size by one.
+  Several between factors on one unit are allocated together, as set out below.
 
 A factor sets exactly one of `vary_within` and `between`, and lists each level once.
 
-Each between factor is allocated by that rule on its own, so two between factors over the same
-unit would fall into the same or overlapping blocks. Over 40 subjects, two two-level factors
-would give cells of 20, 0, 0 and 20, and neither the second effect nor the interaction could be
-estimated. A specification in which two or more factors are between the same unit is therefore
-refused. A factorial between design is written as one factor whose levels are the cells, as in
-the first of the [worked encodings](#worked-encodings). Specification version 0.4 will allocate
-several between factors jointly.
+From version 0.4, the between factors of one unit are allocated jointly. Taken in listed order,
+with `L_1, …, L_k` levels, they have `C = L_1·…·L_k` combinations of levels, the cells. Unit `u`
+of `N` takes cell `⌊(u − 1)·C/N⌋`, counted from 0, so the units fall into `C` consecutive blocks.
+The blocks are equal when `N` is a multiple of `C` and otherwise differ in size by one. A cell is
+read as one level per factor, with the first-listed factor varying slowest and the last fastest.
+With two factors, the second of three levels, cell `c` holds level `⌊c/3⌋` of the first factor and
+level `c mod 3` of the second. With one factor, this is the rule above. Over 40 subjects, two
+two-level factors give four cells of 10. The allocation is integer arithmetic and draws nothing.
+
+Up to version 0.3, each between factor was allocated by the rule above on its own, so two between
+factors over the same unit fell into the same or overlapping blocks. Over 40 subjects, two
+two-level factors gave cells of 20, 0, 0 and 20, and neither the second effect nor the interaction
+could be estimated. Two or more factors between the same unit are therefore refused in a
+specification declaring a version earlier than 0.4. A factorial between design is written either
+as several between factors in a 0.4 specification or as one factor whose levels are the cells,
+which every version reads, as in the first of the [worked encodings](#worked-encodings). The two
+allocate the units alike and, given the same seed, draw the same responses.
 
 ### Continuous predictors
 
@@ -267,15 +292,17 @@ When `K` is a multiple of the factor's `L` levels, each group lies wholly in one
 subjects in 12 sites and a two-level between factor, sites 1 to 6 are all in the first
 condition and sites 7 to 12 in the second, which randomises whole clusters. When `L` is a
 multiple of `K`, each level lies wholly in one group, and otherwise a group can straddle two
-levels. A design randomised within clusters, each cluster holding both conditions, is written
+levels. The cells of several between factors on the unit nest in the same way, their number `C`
+taking the part of `L`. With 12 sites and a 2 × 2 design, each site lies wholly in one of the four
+cells. A design randomised within clusters, each cluster holding both conditions, is written
 with a between factor whose levels nest in the groups, as in the last of the
 [worked encodings](#worked-encodings).
 
 ### Worked encodings
 
-Three common designs have no field of their own and are written with the fields above. Each is
-also a case of the parity harness in `tools/parity/cases/`, so its data are held bit-identical
-across the two implementations and anchored by a recorded hash.
+Three common designs are written with the fields above in forms that need no version above 0.3.
+Each is also a case of the parity harness in `tools/parity/cases/`, so its data are held
+bit-identical across the two implementations and anchored by a recorded hash.
 
 A 2 × 2 between-subjects design is one between factor whose four levels are the cells. Its
 contrast columns carry the two main effects, and the coefficient keyed `a:b` the interaction, as
@@ -295,6 +322,17 @@ The file's 40 subjects fall into four blocks of 10, one per cell. A factor with 
 takes one contrast column per degree of freedom, and its interaction with another factor one key
 per pair of columns. `spec_from_model()` in R writes this encoding itself when it reads two
 factors between the same unit off a fitted pilot.
+
+From version 0.4, the same design can also be written as two between factors, `A` with contrast
+`a` and `B` with contrast `b`, as in
+[`two_between_joint.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/two_between_joint.json).
+Its subjects fall into the same four cells in the same order, and with the same seed it draws the
+same scores. The two data sets differ only in their label columns, which are `A` and `B` in one
+and `cell` in the other. A release that reads no version above 0.3 reads only the encoding with
+one factor, which is why `spec_from_model()` keeps it.
+[`three_by_two_joint.json`](https://github.com/pablobernabeu/pilotr/blob/main/tools/parity/cases/three_by_two_joint.json)
+crosses a 3 × 2 design between 12 subjects, two to a cell, with a 2 × 2 design between 8 items
+and a within factor.
 
 A two-list counterbalanced design shows each subject each item once, at one of two levels, and
 swaps the levels between two lists of subjects. It is written with a list factor between
@@ -615,8 +653,8 @@ Step 5 iterates the observations as nested loops, outermost first,
 `for s in 1..S: for t in 1..I: for (each within-factor level-combination, factors in
 listed order, levels in listed order): emit row`. The level combinations run with the last
 within factor varying fastest. Under partial crossing, a subject's items run in ascending order.
-A between factor assigns each unit a level by the block rule under [Factors](#factors) and does
-not expand rows.
+A between factor assigns each unit a level by the block rule under [Factors](#factors), jointly
+with any other between factor on the same unit, and does not expand rows.
 
 ### Extending the draw order
 
@@ -624,7 +662,8 @@ A new feature must consume no draws at all when it is not used, so that every sp
 written before it stays bit-identical. Each of the 0.3 additions is built that way: an
 observation-level predictor only appears when declared, a uniform draw costs the same as the
 normal it replaces, a `reliability` of 1 or absent draws nothing, and a family branch is
-reached only when that family is selected.
+reached only when that family is selected. The joint allocation of 0.4 draws nothing either, and
+with one between factor per unit it allocates as earlier versions did.
 
 ### Replicate seeds
 
@@ -672,6 +711,17 @@ A between factor with `L` levels over `N` units gives unit `t`, counted from 1, 
 index `⌊(t − 1) · L / N⌋`, counted from 0. An additional grouping factor with `K` groups over `N`
 units puts unit `t` in group `⌊(t − 1) · K / N⌋`, counted from 0 and written to the data counted
 from 1. Both are exact integer arithmetic and draw nothing.
+
+From version 0.4, the `k` between factors of one unit, in listed order with `L_1, …, L_k`
+levels, are allocated together. With one factor, the result is the level above.
+
+```
+C ← L_1 · L_2 · … · L_k
+c ← ⌊(t − 1) · C / N⌋
+for j = k, k − 1, …, 1:
+    level_j ← c mod L_j
+    c ← ⌊c / L_j⌋
+```
 
 ### Predictor values
 

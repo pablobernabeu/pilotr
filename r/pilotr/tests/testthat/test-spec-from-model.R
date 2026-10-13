@@ -315,10 +315,14 @@ test_that("spec_from_model combines factors between one unit into one factor of 
   said <- character(0)
   keep <- function(m) { said <<- c(said, conditionMessage(m)); invokeRestart("muffleMessage") }
   rec <- withCallingHandlers(spec_from_model(fit, n_subject = 80), message = keep)
+  # The message gives the reason that holds from specification version 0.4, which allocates two
+  # between factors jointly: the factor of cells keeps the specification readable by releases
+  # that read only 0.3. It used to say that the factors would otherwise confound their effects.
   expect_true(any(grepl(paste0(
     "spec_from_model() combined the factors 'A' and 'B', both constant within subject, into one ",
-    "factor 'A_B' whose levels are their cells, because pilotr would otherwise assign them to the ",
-    "same or overlapping blocks of subjects and confound their effects."), said, fixed = TRUE)))
+    "factor 'A_B' whose levels are their cells. It allocates the subjects as the separate factors ",
+    "would under specification version 0.4, and releases that read only version 0.3 read it too."),
+    said, fixed = TRUE)))
 
   # One factor of cells, the first-listed factor varying slowest, carrying both factors' fitted
   # contrast columns, so that every coefficient key the fit produced still names a column.
@@ -329,6 +333,10 @@ test_that("spec_from_model combines factors between one unit into one factor of 
   expect_identical(f$levels, c("a1.b1", "a1.b2", "a2.b1", "a2.b2"))
   expect_identical(f$contrasts, list(Aa2 = c(0, 0, 1, 1), Bb2 = c(0, 1, 0, 1)))
   expect_setequal(names(rec$fixed$coefficients), c("Aa2", "Bb2", "Aa2:Bb2"))
+  # Every release that reads version 0.3 reads a factor of cells, so the specification declares
+  # 0.3, where two factors between subjects would have needed 0.4.
+  expect_identical(names(rec)[1], "spec_version")
+  expect_identical(rec$spec_version, "0.3")
 
   d2 <- simulate_design(rec)
   expect_identical(as.vector(table(d2$A_B[!duplicated(d2$subject)])), rep(20L, 4))
@@ -350,7 +358,8 @@ test_that("factors between items combine too, keeping each cell's contrasts and 
          contrasts = list(Bb2 = c(0, 1, 0), Bb3 = c(0, 0, 1)), between = "item"))
   expect_message(out <- .combine_between(facs, used = c("A", "B", "cond", "A_B")),
                  paste0("combined the factors 'A' and 'B', both constant within item, into one ",
-                        "factor 'A_B_'"), fixed = TRUE)
+                        "factor 'A_B_' whose levels are their cells. It allocates the items as ",
+                        "the separate factors would"), fixed = TRUE)
   # The combined factor takes the first component's place, and the within factor is untouched.
   expect_identical(vapply(out, function(f) f$name, character(1)), c("A_B_", "cond"))
   expect_identical(out[[2]], facs[[2]])
