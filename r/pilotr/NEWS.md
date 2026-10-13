@@ -83,6 +83,28 @@
   and `precision_design()` and the sweeps carry them as a column. A formula given by the user is
   fitted as written, by `lmer()`, or by `lm()` when it has no random terms, whatever the family.
 
+* `calibrate_response(tune = "all")` holds the intercept and rescales only what carries
+  variance, since the intercept is a location. Multiplying the intercept too raised every
+  response of the lognormal families, less any shift, to the power of the scaling factor. The
+  documented example turned a median reaction time of 600 ms into 16.6 hours. For `poisson` and
+  `beta`, the search for the factor began where every term, the intercept included, is zero.
+  `poisson_counts_between`, whose own total variance is 0.27, was refused a target of 1 by a
+  message that put the family's residual alone at 1.64. A target of 2 returned an intercept of
+  11.4, too large to simulate. The example now calibrates to either target and simulates.
+  Through a log or logit link, the output changes materially. For `gaussian` and `exgaussian`,
+  only the intercept of the output changes, and no power or precision result for a coefficient
+  does. `scale_intercept = TRUE` restores the old behaviour.
+
+## New features
+
+* `calibrate_response()` gains `denominator = "random"`, which calibrates the random components
+  plus the residual. The coefficient of a contrast coded `c(-0.5, 0.5)` is then Cohen's d in the
+  sense of Westfall, Kenny and Judd (2014). The documentation no longer calls the total, which
+  includes the fixed effects, the right denominator for an effect size, and
+  `?response_variance` shows how to turn a published d into a coefficient. In
+  `reading_time_continuous`, whose fixed effects carry 15% of the total, `cond` calibrates to
+  0.127 against the random components and the residual, and to 0.117 against the total.
+
 ## Fixes
 
 * The no-code app, installed or in the browser, sends a design its power tab cannot analyse to
@@ -244,6 +266,10 @@ Designs, analytic models, and statistical power. *Annual Review of Psychology, 6
 Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
 generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
 trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
+
+Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
+experiments in which samples of participants respond to samples of stimuli. *Journal of
+Experimental Psychology: General, 143*(5), 2020-2045. <doi:10.1037/xge0000014>
 
 # pilotr 0.3.1
 

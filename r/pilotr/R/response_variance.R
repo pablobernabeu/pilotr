@@ -154,12 +154,11 @@
 #' for a typical design is a handful.
 #'
 #' Every component is on the scale the linear predictor lives on, which is what makes them
-#' comparable and what makes their total the right denominator for an effect size. For
-#' `lognormal` and `shifted_lognormal` that is the log of the response, which is also the scale the
-#' auto-derived analysis model works on. For `bernoulli`, `poisson`, `ordinal` and `beta` it is the
-#' latent scale behind the link, so the residual is the distribution-specific variance used to
-#' compute the intraclass correlation and R-squared of a generalised mixed model (Nakagawa, Johnson
-#' and Schielzeth, 2017).
+#' comparable. For `lognormal` and `shifted_lognormal` that is the log of the response, which is
+#' also the scale the auto-derived analysis model works on. For `bernoulli`, `poisson`, `ordinal`
+#' and `beta` it is the latent scale behind the link, so the residual is the distribution-specific
+#' variance used to compute the intraclass correlation and R-squared of a generalised mixed model
+#' (Nakagawa, Johnson and Schielzeth, 2017).
 #'
 #' Three of those four are derived from the process pilotr simulates and are exact for it. A
 #' `bernoulli` row is drawn as `1[u < invlogit(eta)]`, equivalently `logit(u) < eta`,
@@ -174,16 +173,47 @@
 #' against 1.10 for the lognormal approximation. Read the Poisson residual as an order of magnitude
 #' when counts are rare.
 #'
+#' The total includes the variance the fixed effects contribute. It is the denominator of an
+#' R-squared, and of an effect or a region of practical equivalence stated in standard deviations
+#' of the outcome, but it is not the denominator of Cohen's d. For designs in which participants
+#' respond to stimuli, Westfall, Kenny and Judd (2014) define d as the difference between two
+#' condition means divided by the standard deviation within a condition. The square of that
+#' standard deviation sums the random intercept variances, the residual and the random slope
+#' variances, each slope variance weighted by the squared contrast code. The fixed effects are left
+#' out (see also Brysbaert and Stevens, 2018). In a balanced design with codes that sum to zero,
+#' that is `total - fixed`. Covariates belong to the fixed part, so a d defined this way is
+#' conditional on them.
+#'
+#' A published d therefore converts to a coefficient as `b = d * sqrt(total - fixed) / (c2 - c1)`,
+#' where `c2 - c1` is the difference between the contrast's two codes. For codes of -0.5 and 0.5,
+#' that difference is 1. The d is on the scale of the linear predictor, so for the families with a
+#' link it is a latent-scale d. [calibrate_response()] with `denominator = "random"` rescales a
+#' design so that `total - fixed` is 1, after which the coefficient of a contrast coded -0.5 and
+#' 0.5 is d.
+#'
 #' @param spec A design specification (path or list).
 #' @return A named list of variance components: `fixed`, one entry per grouping factor,
 #'   `residual`, and `total` (their sum).
-#' @references Nakagawa, S., Johnson, P. C. D. and Schielzeth, H. (2017). The coefficient of
-#'   determination R2 and intra-class correlation coefficient from generalized linear mixed-effects
-#'   models revisited and expanded. \emph{Journal of the Royal Society Interface}, 14(134),
-#'   20170213. \doi{10.1098/rsif.2017.0213}
+#' @references
+#' Brysbaert, M. and Stevens, M. (2018). Power analysis and effect size in mixed effects models: A
+#'   tutorial. \emph{Journal of Cognition}, 1(1), 9. \doi{10.5334/joc.10}
+#'
+#' Nakagawa, S., Johnson, P. C. D. and Schielzeth, H. (2017). The coefficient of determination R2
+#'   and intra-class correlation coefficient from generalized linear mixed-effects models revisited
+#'   and expanded. \emph{Journal of the Royal Society Interface}, 14(134), 20170213.
+#'   \doi{10.1098/rsif.2017.0213}
+#'
+#' Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
+#'   experiments in which samples of participants respond to samples of stimuli. \emph{Journal of
+#'   Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 #' @examples
 #' spec <- pilotr_example("crossed_mixed_rt")
 #' response_variance(spec)
+#'
+#' # The coefficient that gives the related-unrelated contrast, coded -0.5 and 0.5, a published d
+#' # of 0.2 on the log scale of this design.
+#' v <- response_variance(spec)
+#' 0.2 * sqrt(v$total - v$fixed) / (0.5 - (-0.5))
 #'
 #' # Every family reports a residual, including those whose outcome is discrete, so the components
 #' # are a complete decomposition and their ratios read as the design's intraclass correlations.
@@ -230,50 +260,96 @@ response_variance <- function(spec) {
   out
 }
 
-# The factor by which to multiply every scale-carrying term so that the total variance reaches the
-# target, given how this family's residual responds to that multiplication.
+# The variance calibrate_response() brings to the target, split into the structural part, which
+# scales by k squared, and the residual. For denominator = "total", it is the whole total. For
+# denominator = "random", it is the total less the fixed component, which is what Cohen's d
+# divides by.
 #
-# Scaling the intercept, the coefficients and the random-effect standard deviations all by k
-# multiplies each row's linear predictor by k. The design values are untouched, the random-effect
-# covariance scales by k squared, and the number of draws consumed does not change, so the same
-# deviates are drawn and eta(k) is k times eta(1) row by row. That is exact in real arithmetic and
-# holds to about 5e-13 in relative terms in floating point, which is far below anything a variance
-# summary resolves. The identity is what lets the eta-dependent families be solved without
-# simulating again at every candidate k.
+# The random part is summed from the grouping factors' components. Taking it as
+# total - fixed - residual can leave a rounding remainder where a design with no random effects
+# should give exactly zero. A positive remainder would then let a residual fixed by the link be
+# closed by an enormous factor, where the design should be refused.
+.calibrated_variance <- function(spec, parts, denominator) {
+  if (identical(denominator, "total"))
+    return(list(total = parts$total, structural = parts$total - parts$residual,
+                residual = parts$residual, label = "fixed or random"))
+  random <- sum(vapply(names(spec[["random"]]), function(g) parts[[g]], numeric(1)))
+  list(total = random + parts$residual, structural = random, residual = parts$residual,
+       label = "random-effect")
+}
+
+# The factor by which to multiply every scale-carrying term so that the calibrated variance `v`
+# reaches the target, given how this family's residual responds to that multiplication.
 #
-# The structural part therefore always scales by k squared, and the three residual kinds differ only
-# in what happens to the residual:
+# Scaling the coefficients and the random-effect standard deviations by k, and holding the
+# intercept b0, moves each row's linear predictor from eta to b0 + k * (eta - b0). The design
+# values are untouched, the random-effect covariance scales by k squared, and the number of draws
+# consumed does not change, so the same deviates are drawn and the identity holds row by row.
+# Scaling the intercept as well, as scale_intercept = TRUE does, is the same identity with b0 = 0,
+# eta(k) = k * eta(1). Either is exact in real arithmetic. In floating point, a fresh simulation
+# agrees with it to within 1e-9 of the linear predictor's standard deviation, on the shipped
+# examples and for k from 0.1 to 10. That is far below anything a variance summary resolves. The
+# identity is what lets the eta-dependent families be solved without simulating again at every
+# candidate k.
+#
+# The intercept adds nothing to the fixed or random components, so the structural part always
+# scales by k squared, and the three residual kinds differ only in what happens to the residual:
 #
 #   free      it scales too, so the target is reached in closed form
 #   constant  it cannot move, so the structural part alone has to make up the difference, which is
 #             impossible when the link's own residual already exceeds the target
 #   eta       it moves with the linear predictor, so k is found numerically, cheaply, by reusing the
 #             one eta vector
-.calibration_factor <- function(spec, parts, target_var, kind) {
-  structural <- parts$total - parts$residual
+.calibration_factor <- function(spec, v, target_var, kind, scale_intercept = FALSE) {
+  family <- spec[["response"]][["family"]]
 
-  if (identical(kind, "free")) return(sqrt(target_var / parts$total))
+  if (identical(kind, "free")) return(sqrt(target_var / v$total))
 
   if (identical(kind, "constant")) {
-    if (target_var <= parts$residual)
+    if (target_var <= v$residual)
       stop(sprintf(
         "the %s family's own residual variance is %.6g on the latent scale, which already meets or exceeds the target of %.6g, and no rescaling of the design can move it; raise `target_var` above %.6g",
-        spec[["response"]][["family"]], parts$residual, target_var, parts$residual),
+        family, v$residual, target_var, v$residual),
         call. = FALSE)
-    if (structural <= 0)
-      stop("this design has no fixed or random variance to rescale", call. = FALSE)
-    return(sqrt((target_var - parts$residual) / structural))
+    if (v$structural <= 0)
+      stop(sprintf("this design has no %s variance to rescale", v$label), call. = FALSE)
+    return(sqrt((target_var - v$residual) / v$structural))
   }
 
-  # kind == "eta": total(k) = k^2 * structural + residual(k * eta), increasing in k, so bracket and
-  # solve. The residual is recomputed from the scaled eta, with no fresh simulation.
+  # kind == "eta": total(k) = k^2 * structural + residual(b0 + k * (eta - b0)), where b0 is the
+  # intercept, or 0 when it is scaled with the rest. The residual is recomputed from the moved
+  # linear predictor, with no fresh simulation. Both residuals are convex in eta (checked
+  # numerically for eta from -12 to 12, and for the beta with phi from 0.2 to 500), so total(k) is
+  # convex in k. At k = 0 every row sits at b0, and total(0) is the residual the intercept alone
+  # implies. Centred contrasts and predictors make the rows' deviations from b0 average zero, apart
+  # from the small mean that the realised predictor values and random effects leave. The total is
+  # then flat at k = 0 and rises from there, so a target at or below total(0) is out of reach and
+  # anything above it is bracketed and solved.
+  # When the deviations do not average zero, the total can fall before it rises, and a target in
+  # that dip is refused although some k reaches it. With the intercept held, that happens when a
+  # contrast is coded 0 and 1 or a predictor's mean is not zero. Coded that way,
+  # poisson_counts_between falls from 0.2213 at k = 0 to 0.2096 at k = 0.485. With b0 = 0, the
+  # deviations average the intercept itself, and scale_intercept = TRUE keeps that refusal, as it
+  # keeps the rest of the old behaviour. Both refusals say where the search starts.
   eta1 <- .eta_draw(spec)
-  total_at <- function(k) k * k * structural + .residual_variance(spec[["response"]], k * eta1)
+  b0 <- if (scale_intercept) 0 else spec[["fixed"]][["intercept"]]
+  total_at <- function(k)
+    k * k * v$structural + .residual_variance(spec[["response"]], b0 + k * (eta1 - b0))
   lo <- total_at(0)
-  if (target_var <= lo)
+  if (target_var <= lo) {
+    if (!scale_intercept)
+      stop(sprintf(
+        "with every coefficient and random-effect standard deviation set to zero, the intercept alone gives the %s family a residual variance of %.6g on the latent scale, which already meets or exceeds the target of %.6g; raise `target_var` above %.6g",
+        family, lo, target_var, lo), call. = FALSE)
+    # Holding the intercept starts the search from the residual at the intercept, so it is worth
+    # suggesting only when that residual lies below the target.
+    held <- .residual_variance(spec[["response"]], spec[["fixed"]][["intercept"]])
     stop(sprintf(
-      "even with every effect set to zero the %s family contributes a residual variance of %.6g on the latent scale, which already meets or exceeds the target of %.6g; raise `target_var` above %.6g",
-      spec[["response"]][["family"]], lo, target_var, lo), call. = FALSE)
+      "with every term set to zero, the intercept included, the %s family's residual variance at a linear predictor of zero is %.6g on the latent scale, which already meets or exceeds the target of %.6g; raise `target_var` above %.6g%s",
+      family, lo, target_var, lo,
+      if (held < target_var) ", or hold the intercept with scale_intercept = FALSE" else ""),
+      call. = FALSE)
+  }
   hi <- 1
   while (total_at(hi) < target_var && hi < 1e6) hi <- hi * 2
   if (total_at(hi) < target_var)
@@ -287,7 +363,10 @@ response_variance <- function(spec) {
 #' Adjust a specification so that the total variance of its linear predictor, plus the residual
 #' variance of its response family, comes to `target_var`. Calibrating to 1 puts the outcome on a
 #' unit scale, which is what lets a region of practical equivalence or a smallest effect size of
-#' interest be stated in standard-deviation units and read the same way across designs.
+#' interest be stated in standard-deviation units and read the same way across designs. The total
+#' includes the variance the fixed effects contribute, so a coefficient calibrated against it is in
+#' standard deviations of the outcome and is not Cohen's d. With `denominator = "random"`, the
+#' target applies to the total less that fixed component, the variance that d divides by.
 #'
 #' @details
 #' `tune = "sigma"` holds the fixed effects and the random-effect standard deviations where they
@@ -297,11 +376,11 @@ response_variance <- function(spec) {
 #' residual standard deviation can bring the total down, and the error says so rather than
 #' returning a negative variance.
 #'
-#' `tune = "all"` multiplies the intercept, every coefficient and every random-effect standard
-#' deviation, and the residual standard deviation where there is one, by a common factor. For the
-#' families with a free residual that leaves every ratio between components unchanged, so it
-#' rescales the outcome without altering the design's character. It is also the only option for the
-#' families whose residual is fixed by the link.
+#' `tune = "all"` holds the intercept and multiplies every coefficient and every random-effect
+#' standard deviation, and the residual standard deviation where there is one, by a common factor.
+#' For the families with a free residual that leaves every ratio between components unchanged, so
+#' it rescales the outcome without altering the design's character. It is also the only option for
+#' the families whose residual is fixed by the link.
 #'
 #' For those, the residual cannot be rescaled at all, so the structural part alone has to close the
 #' gap and the target has to exceed the link's own contribution. A `bernoulli` or `ordinal` design
@@ -309,26 +388,77 @@ response_variance <- function(spec) {
 #' is not merely difficult but impossible, and the error says so rather than returning something
 #' plausible. For `poisson` and `beta` the residual moves with the linear predictor, so the factor
 #' is solved numerically; that costs one extra simulation rather than one per candidate, because
-#' scaling every term by `k` multiplies each row's linear predictor by exactly `k`.
+#' scaling the coefficients and the random-effect standard deviations by `k` moves each row's
+#' linear predictor from `eta` to exactly `b0 + k * (eta - b0)`, where `b0` is the intercept. The
+#' search starts at `k = 0`, where every row sits at the intercept, so a target at or below the
+#' residual variance that the intercept alone implies is refused.
+#'
+#' The intercept is held because it is a location. It adds nothing to the fixed or random
+#' components, so scaling it changes none of them and only moves the outcome. For `poisson` and
+#' `beta`, whose residual depends on the location, scaling the intercept would reach the target
+#' partly by moving the mean count or proportion. In the first example below, the median reaction
+#' time of 600 ms stays near 600 ms. The intercept is the location when the contrasts and
+#' predictors are centred, as codes of -0.5 and 0.5 are. Scaling the coefficient of a contrast
+#' coded 0 and 1, or of a predictor whose mean is not zero, moves the location as well.
+#'
+#' `scale_intercept = TRUE` multiplies the intercept by the same factor, as pilotr 0.3.0 and 0.3.1
+#' did. For `gaussian` and `exgaussian`, that is a change of units, and no power or precision
+#' result for a coefficient changes. Through a log or logit link, it changes the outcome itself.
+#' For the lognormal families, it raises the response, less any shift, to the power of the factor,
+#' which turned that median of 600 ms into 16.6 hours. For `poisson`, it refuses targets that a
+#' held intercept reaches, and it can return an intercept too large to simulate.
+#'
+#' `denominator` says what `target_var` is a target for. `"total"`, the default, is the total that
+#' [response_variance()] reports, fixed component included. `"random"` is that total less the fixed
+#' component, leaving the random-effect components and the residual. In a balanced design, that is
+#' the variance within a condition. Westfall, Kenny and Judd (2014) define Cohen's d for designs in
+#' which participants respond to stimuli by dividing a difference between condition means by the
+#' square root of that variance. Once it is calibrated to 1, the coefficient of a two-level factor
+#' coded -0.5 and 0.5 is d, on the scale of the linear predictor and conditional on any covariates.
+#' The fixed component comes on top, so the total then exceeds `target_var`. With
+#' `tune = "sigma"`, the residual standard deviation makes up what the random components leave of
+#' the target. [response_variance()] gives the conversion of a published d into a coefficient.
 #'
 #' @param spec A design specification (path or list).
-#' @param target_var The total variance to calibrate to. Defaults to 1.
+#' @param target_var The variance to calibrate to, as `denominator` defines it. Defaults to 1.
 #' @param tune Either `"sigma"` (the default), which solves for the residual standard deviation
 #'   alone, or `"all"`, which scales every variance-contributing term by a common factor.
+#' @param scale_intercept With `tune = "all"`, whether the intercept is scaled with the rest.
+#'   `FALSE` (the default) holds it, and `TRUE` reproduces pilotr 0.3.0 and 0.3.1.
+#' @param denominator Either `"total"` (the default), the total variance with the fixed component
+#'   included, or `"random"`, the random-effect components plus the residual, as in Cohen's d.
 #' @return The specification, with the tuned parameters replaced.
+#' @references
+#' Brysbaert, M. and Stevens, M. (2018). Power analysis and effect size in mixed effects models: A
+#'   tutorial. \emph{Journal of Cognition}, 1(1), 9. \doi{10.5334/joc.10}
+#'
+#' Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
+#'   experiments in which samples of participants respond to samples of stimuli. \emph{Journal of
+#'   Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 #' @examples
 #' spec <- pilotr_example("crossed_mixed_rt")
 #' calibrated <- calibrate_response(spec, target_var = 1, tune = "all")
 #' round(response_variance(calibrated)$total, 6)
+#' calibrated$fixed$intercept   # held at 6, so the median reaction time stays near 600 ms
+#'
+#' # Calibrate the random components plus the residual, so that the coefficient of `cond`, coded
+#' # -0.5 and 0.5, is Cohen's d on the log scale.
+#' d_scale <- calibrate_response(spec, target_var = 1, tune = "all", denominator = "random")
+#' d_scale$fixed$coefficients$cond
 #' @seealso [response_variance()] for the decomposition this works from.
 #' @export
-calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all")) {
+calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all"),
+                               scale_intercept = FALSE, denominator = c("total", "random")) {
   spec <- .as_spec(spec)
   tune <- match.arg(tune)
+  denominator <- match.arg(denominator)
   if (!is.numeric(target_var) || length(target_var) != 1L || is.na(target_var) || target_var <= 0)
     stop("`target_var` must be a single positive number", call. = FALSE)
+  if (!is.logical(scale_intercept) || length(scale_intercept) != 1L || is.na(scale_intercept))
+    stop("`scale_intercept` must be TRUE or FALSE", call. = FALSE)
 
   parts <- response_variance(spec)
+  v <- .calibrated_variance(spec, parts, denominator)
   family <- spec[["response"]][["family"]]
   beta <- spec[["response"]][["beta"]]
   kind <- .residual_kind(family)
@@ -339,30 +469,34 @@ calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all")) {
       stop("the ", family, " family has no residual standard deviation to tune, ",
            "since its residual variance is fixed by the link rather than by a parameter; ",
            "use tune = \"all\" to rescale the rest of the design instead", call. = FALSE)
-    structural <- parts$total - parts$residual
-    if (structural >= target_var)
+    random_only <- identical(denominator, "random")
+    if (v$structural >= target_var)
       stop(sprintf(
-        "the fixed and random effects alone contribute a variance of %.6g, which already meets or exceeds the target of %.6g, so no residual standard deviation can reach it; lower the effect sizes, raise `target_var`, or use tune = \"all\"",
-        structural, target_var), call. = FALSE)
+        "the %s alone contribute a variance of %.6g, which already meets or exceeds the target of %.6g, so no residual standard deviation can reach it; lower the %s, raise `target_var`, or use tune = \"all\"",
+        if (random_only) "random effects" else "fixed and random effects", v$structural,
+        target_var, if (random_only) "random-effect standard deviations" else "effect sizes"),
+        call. = FALSE)
     if (identical(family, "exgaussian")) {
       # The exponential component's variance is beta^2 and is being held fixed, so only the
       # normal component is free to absorb the difference.
-      free <- target_var - structural - beta^2
+      free <- target_var - v$structural - beta^2
       if (free <= 0)
         stop(sprintf(
           "with beta held at %.6g the exponential component alone contributes %.6g, leaving nothing for sigma; lower beta or use tune = \"all\"",
           beta, beta^2), call. = FALSE)
       spec[["response"]][["sigma"]] <- sqrt(free)
     } else {
-      spec[["response"]][["sigma"]] <- sqrt(target_var - structural)
+      spec[["response"]][["sigma"]] <- sqrt(target_var - v$structural)
     }
     return(spec)
   }
 
-  if (parts$total <= 0)
+  if (v$total <= 0)
     stop("this design has no variance to rescale", call. = FALSE)
-  k <- .calibration_factor(spec, parts, target_var, kind)
-  spec[["fixed"]][["intercept"]] <- spec[["fixed"]][["intercept"]] * k
+  k <- .calibration_factor(spec, v, target_var, kind, scale_intercept)
+  # The intercept is a location, which adds nothing to the fixed or random components, so it is
+  # held unless the caller asks for the behaviour of pilotr 0.3.0 and 0.3.1.
+  if (scale_intercept) spec[["fixed"]][["intercept"]] <- spec[["fixed"]][["intercept"]] * k
   for (nm in names(spec[["fixed"]][["coefficients"]]))
     spec[["fixed"]][["coefficients"]][[nm]] <- spec[["fixed"]][["coefficients"]][[nm]] * k
   for (g in names(spec[["random"]])) {
