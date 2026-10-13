@@ -60,6 +60,11 @@ family's scale, so a point-and-click design stays valid. The advanced 'paste a J
 accepts designs beyond the point-and-click controls, such as continuous predictors,
 interactions and nesting.
 
+'Data', 'Summary & plot' and the data download show the last simulation, and the 'Data' tab and
+the name of the downloaded file give the seed it used. 'Design spec', 'Power', 'R script' and the
+specification download follow the controls as they stand. When the controls change the design
+after a simulation, a note above the tabs says so until you select Simulate again.
+
 ## One specification, three interfaces
 
 The app does not own the design. The specification does. Download the specification (`.json`)

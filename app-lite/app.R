@@ -55,6 +55,13 @@ FAMILY_DEFAULTS <- list(
 PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0", "#C8922A", "#5A5A5A")
 pal <- function(k) if (k <= length(PALETTE)) PALETTE[seq_len(k)] else grDevices::hcl.colors(k, "Dynamic")
 
+# Shown above the tabs while the controls differ from the specification of the last simulation, in
+# the words the installed app uses.
+CONTROLS_CHANGED <- paste0(
+  "The controls have changed since the last Simulate: the JSON and the specification download ",
+  "follow the controls, while the data, summary, plot and data download show the last ",
+  "simulation. Select Simulate to bring them together.")
+
 theme <- bs_theme(version = 5, primary = "#2C6FB0", "border-radius" = "0.5rem")
 
 copy_btn <- function(target, label = "Copy")
@@ -99,7 +106,9 @@ app_css <- tags$style(HTML(
   "  margin-top: 1.6rem; padding-top: .9rem; border-top: 1px solid #e7eef5; font-size: .92rem; }",
   ".guide-links a { text-decoration: none; color: #2C6FB0; font-weight: 500; }",
   ".guide-links a:hover { text-decoration: underline; }",
-  ".guide-links .sep { color: #c4ccd4; }"))
+  ".guide-links .sep { color: #c4ccd4; }",
+  # The main area spaces its children apart, so the note's container takes no room while empty.
+  "#sim_note:empty { display: none; }"))
 
 # ---------------------------------------------------------------------------------------------
 guide <- card(
@@ -237,6 +246,7 @@ ui <- page_sidebar(
   ),
   computing_js,
   app_css,
+  uiOutput("sim_note"),
   navset_card_tab(
     id = "tabs",
     nav_panel("Guide", guide),
@@ -331,25 +341,46 @@ server <- function(input, output, session) {
     if (length(f) >= 1 && !is.null(f[[1]]$name)) f[[1]]$name else NA_character_
   }
 
-  sim_data <- eventReactive(input$simulate, {
-    s <- current_spec(); if (is.null(s)) return(NULL); simulate_design(s)
+  # Simulate keeps the specification it ran beside the data it made, and the Data tab, the summary,
+  # the plot and the data download read the two together. The summary and the plot used to take
+  # the response and factor names from the controls, so a new family or response name after a
+  # simulation stopped both. The download simulated afresh from the controls. The Design spec tab
+  # and the specification download follow the controls, and sim_note says when the two have
+  # parted.
+  sim <- eventReactive(input$simulate, {
+    s <- current_spec(); if (is.null(s)) return(NULL)
+    list(spec = s, data = simulate_design(s))
   }, ignoreNULL = FALSE)
 
-  data_req <- function() {
-    d <- sim_data()
-    validate(need(!is.null(d), parse_error() %||% "Please correct the specification, then select Simulate."))
-    d
+  sim_req <- function() {
+    s <- sim()
+    validate(need(!is.null(s), parse_error() %||% "Please correct the specification, then select Simulate."))
+    s
   }
+  # The last simulation, or NULL when it failed or its pasted specification did not load.
+  last_sim <- function() tryCatch(sim(), error = function(e) NULL)
 
   output$json <- renderText(spec_json(spec_req()))
 
   output$dims <- renderText({
-    d <- data_req(); sprintf("Simulated %d rows x %d columns.", nrow(d), ncol(d))
+    s <- sim_req()
+    sprintf("Simulated %d rows x %d columns (seed %s).", nrow(s$data), ncol(s$data),
+            format(s$spec$seed, scientific = FALSE))
   })
-  output$head <- renderTable(head(data_req(), 12), striped = TRUE, hover = TRUE, spacing = "xs")
+  output$head <- renderTable(head(sim_req()$data, 12), striped = TRUE, hover = TRUE, spacing = "xs")
+  # A simulation that failed shows nothing that could be out of date. A specification the controls
+  # cannot build counts as a change, since the Design spec tab then gives the reason.
+  output$sim_note <- renderUI({
+    last <- last_sim()
+    if (is.null(last)) return(NULL)
+    live <- tryCatch({ s <- current_spec(); if (is.null(s)) NULL else spec_json(s) },
+                     error = function(e) NULL)
+    if (identical(live, spec_json(last$spec))) return(NULL)
+    tags$div(class = "alert alert-warning", role = "status", CONTROLS_CHANGED)
+  })
 
   output$summary <- renderPrint({
-    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    s <- sim_req(); d <- s$data; yn <- resp_name(s$spec); gn <- group_name(s$spec)
     y <- d[[yn]]
     if (is.na(gn) || is.null(d[[gn]])) {
       if (is.numeric(y)) print(round(c(mean = mean(y), sd = sd(y), min = min(y), max = max(y)), 3))
@@ -364,13 +395,15 @@ server <- function(input, output, session) {
   })
 
   output$plot <- renderPlot({
-    d <- data_req(); yn <- resp_name(current_spec()); gn <- group_name(current_spec())
+    s <- sim_req(); d <- s$data; yn <- resp_name(s$spec); gn <- group_name(s$spec)
     y <- d[[yn]]; base <- theme_minimal(base_size = 14)
     has_grp <- !is.na(gn) && !is.null(d[[gn]])
+    # The boxes take as many fill colours as the factor has levels. Two stopped the plot of a
+    # pasted three-level design with "Insufficient values in manual scale".
     if (has_grp && is.numeric(y)) {
       ggplot(d, aes(.data[[gn]], .data[[yn]], fill = .data[[gn]])) +
         geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
-        scale_fill_manual(values = pal(2), guide = "none") +
+        scale_fill_manual(values = pal(length(unique(d[[gn]]))), guide = "none") +
         labs(x = gn, y = yn, title = paste(yn, "by", gn)) + base
     } else if (has_grp) {
       ggplot(d, aes(.data[[yn]], fill = .data[[gn]])) +
@@ -449,48 +482,65 @@ server <- function(input, output, session) {
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
   power_plot <- reactiveVal(NULL)
 
+  # Power needs at least 4 subjects, two to a group. Below that, power_design() stops in t.test()
+  # or runs on a single degree of freedom, and the curve keeps too few grid points of 4 or more
+  # for target_n() to solve. A cleared N subjects box reaches the specification as NA.
+  n_subject_problem <- function(spec) {
+    n <- spec[["units"]][["subject"]][["n"]]
+    if (length(n) != 1L || is.na(n) || n < 4) "Set N subjects to at least 4 before running power."
+  }
+  # An error in an observer closes the session, and the design goes with it, so the power buttons
+  # report any error in the Power tab.
+  power_failed <- function(e) { power_out(paste("error:", conditionMessage(e))); power_plot(NULL) }
+
   observeEvent(input$run_power, {
-    spec <- current_spec()
-    if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); return() }
-    if (!gaussian_two_group(spec)) { power_out(not_supported_msg(spec)); power_plot(NULL); return() }
-    ns <- nsims(); r <- power_design(spec, n_sims = ns)
-    power_out(paste0(
-      sprintf("Power: %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])\n",
-              r$power, r$power_mcse, r$power_lo, r$power_hi),
-      "Type S: ", type_s_text(r), "   |   Type M: ", type_m_text(r), "\n",
-      sprintf("True effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
-              r$true_effect, r$mean_estimate, ns)))
+    tryCatch({
+      spec <- current_spec()
+      if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); return() }
+      problem <- if (gaussian_two_group(spec)) n_subject_problem(spec) else not_supported_msg(spec)
+      if (!is.null(problem)) { power_out(problem); power_plot(NULL); return() }
+      ns <- nsims(); r <- power_design(spec, n_sims = ns)
+      power_out(paste0(
+        sprintf("Power: %.3f (MCSE %.3f; 95%% Wilson [%.3f, %.3f])\n",
+                r$power, r$power_mcse, r$power_lo, r$power_hi),
+        "Type S: ", type_s_text(r), "   |   Type M: ", type_m_text(r), "\n",
+        sprintf("True effect: %.3f   |   mean estimate: %.3f   (n_sims = %d)",
+                r$true_effect, r$mean_estimate, ns)))
+    }, error = power_failed)
   })
 
   observeEvent(input$run_curve, {
-    spec <- current_spec()
-    if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); power_plot(NULL); return() }
-    if (!gaussian_two_group(spec)) { power_out(not_supported_msg(spec)); power_plot(NULL); return() }
-    base_n <- spec$units$subject$n
-    grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
-    grid <- grid[grid >= 4]
-    ns   <- min(nsims(), N_SIMS_CURVE)
-    # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
-    # independent points, as it assumes. Every point used to keep the design's seed.
-    seeds <- replicate_seeds(spec$seed, length(grid))
-    pw   <- vapply(seq_along(grid), function(j) {
-      s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
-      power_design(s, n_sims = ns)$power
-    }, numeric(1))
-    # A dashed target line leaves the reader to judge the crossing. target_n() estimates
-    # it instead, and reports its refusal when the curve does not settle the question,
-    # which is more use than a number the sweep cannot support.
-    solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = ns),
-                                target = 0.8),
-                       error = function(e) conditionMessage(e))
-    power_out(paste0(
-      sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
-              ns, paste(grid, collapse = ", ")),
-      if (is.character(solved)) paste0("Target power 0.80: ", solved)
-      else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
-                   solved$n, solved$n_lo, solved$n_hi)))
-    power_plot(list(grid = grid, pw = pw,
-                    solved = if (is.character(solved)) NULL else solved))
+    tryCatch({
+      spec <- current_spec()
+      if (is.null(spec)) { power_out(parse_error() %||% "Please correct the specification first."); power_plot(NULL); return() }
+      problem <- if (gaussian_two_group(spec)) n_subject_problem(spec) else not_supported_msg(spec)
+      if (!is.null(problem)) { power_out(problem); power_plot(NULL); return() }
+      base_n <- spec$units$subject$n
+      grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
+      grid <- grid[grid >= 4]
+      ns   <- min(nsims(), N_SIMS_CURVE)
+      # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
+      # independent points, as it assumes. Every point used to keep the design's seed.
+      seeds <- replicate_seeds(spec$seed, length(grid))
+      pw   <- vapply(seq_along(grid), function(j) {
+        s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
+        power_design(s, n_sims = ns)$power
+      }, numeric(1))
+      # A dashed target line leaves the reader to judge the crossing. target_n() estimates
+      # it instead, and reports its refusal when the curve does not settle the question,
+      # which is more use than a number the sweep cannot support.
+      solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = ns),
+                                  target = 0.8),
+                         error = function(e) conditionMessage(e))
+      power_out(paste0(
+        sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
+                ns, paste(grid, collapse = ", ")),
+        if (is.character(solved)) paste0("Target power 0.80: ", solved)
+        else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
+                     solved$n, solved$n_lo, solved$n_hi)))
+      power_plot(list(grid = grid, pw = pw,
+                      solved = if (is.character(solved)) NULL else solved))
+    }, error = power_failed)
   })
 
   # The script above shows "Computing…" the instant a power button is clicked. Clearing it
@@ -548,11 +598,17 @@ server <- function(input, output, session) {
       s <- current_spec()
       write_text_download(if (is.null(s)) "{}" else spec_json(s), file)
     })
+  # The data the Data tab shows, named after the specification and seed that made them.
   output$dl_data <- downloadHandler(
-    function() paste0(current_spec()$name %||% "design", ".csv"),
+    function() {
+      s <- last_sim()
+      if (is.null(s)) "design.csv"
+      else paste0(s$spec$name %||% "design", "_seed", format(s$spec$seed, scientific = FALSE),
+                  ".csv")
+    },
     content = function(file) {
-      s <- current_spec()
-      if (is.null(s)) writeLines("", file) else write.csv(simulate_design(s), file, row.names = FALSE)
+      s <- last_sim()
+      if (is.null(s)) writeLines("", file) else write.csv(s$data, file, row.names = FALSE)
     })
 
   # Keep the download links live even while their tab is hidden, so a click always works

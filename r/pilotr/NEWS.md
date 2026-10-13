@@ -153,6 +153,23 @@
   coefficients are on the scale it analyses, and ordinal and Beta designs are sent to
   `generate_design_analysis()` and `brms_bridge()`.
 
+* The no-code app, installed or in the browser, keeps the session open after an input its power
+  tab cannot use, and says what is wrong. An N of 2, a cleared N subjects box or a pasted
+  three-level design ended the session, and the design was lost with it. The Power tab now asks
+  for at least 4 subjects and reports any other error as text. In the installed app, a pasted
+  specification that `load_spec()` refuses made the power buttons do nothing, and its refusal now
+  appears there.
+
+* In the no-code app, installed or in the browser, the Data tab, the summary, the plot and the
+  data download show the last simulation, labelled with its own seed, and a note above the tabs
+  says when the controls have changed since. The summary and the plot failed after a change of
+  family or response name and lost the grouping after a change of factor name. The data download
+  was simulated afresh from the controls, so it could differ from the table on screen, and the
+  installed app's Data tab printed the Seed box, which after a change or under a pasted
+  specification was not the seed of the data. The download is now named after the simulated
+  specification and its seed. The plot of a pasted design whose factor has more than two levels
+  used to stop with "Insufficient values in manual scale" and now draws.
+
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
   records its singular-fit notice among the optimiser's messages, so every singular fit was also
   counted as a fit with warnings, and a run could not show whether any fit had failed to

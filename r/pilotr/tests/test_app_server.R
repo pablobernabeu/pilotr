@@ -83,7 +83,7 @@ testServer(app = app_dir, {
     family = "gaussian", resp_name = "", sigma = 10)
   check(jsonlite::validate(output$json), "server renders valid JSON spec")
   session$setInputs(simulate = 1)
-  d <- data()
+  d <- sim()$data
   check(nrow(d) == 64 && all(c("subject", "group", "score") %in% names(d)), "Simulate produces the 64-row data set")
   session$setInputs(n_sims = 300, run_power = 1)
   po <- output$power_out
@@ -139,7 +139,7 @@ testServer(app = app_dir, {
   # build_spec() keeps a seed of 2^31 or more, which it used to turn into NA. The caption
   # formatted the seed with %d, which stops on a double outside the integer range.
   session$setInputs(seed = 3e9, simulate = 2)
-  check(identical(nrow(data()), 64L) && grepl("(seed 3000000000)", output$dims, fixed = TRUE),
+  check(identical(nrow(sim()$data), 64L) && grepl("(seed 3000000000)", output$dims, fixed = TRUE),
         "a seed of 3e9 simulates and the caption prints it in full")
   session$setInputs(seed = 2024, simulate = 3)
 
@@ -147,7 +147,7 @@ testServer(app = app_dir, {
   spec_txt <- paste(readLines(file.path(here, "..", "..", "..", "spec", "examples",
                                         "reading_time_continuous.json")), collapse = "\n")
   session$setInputs(spec_json_in = spec_txt, simulate = 4)
-  di <- data()
+  di <- sim()$data
   check("SyntaxPC" %in% names(di) && nrow(di) == 4000,
         "advanced paste-spec path simulates a continuous-predictor design")
 
@@ -265,6 +265,121 @@ testServer(app = app_dir, {
   check(!session$isClosed() && startsWith(vo_na, "error: ") &&
           grepl("'units.subject.n' must be a whole number", vo_na, fixed = TRUE),
         "verify: a specification the engine refuses is reported, and the session stays open")
+})
+
+# The checks below start a session of their own each time, from the values the controls start at
+# with fewer simulations. An error in an observer closes the session, and a check that followed
+# it would read a closed session. tests/test_app_lite_server.R makes the same checks of the
+# browser build.
+start_inputs <- list(
+  name = "t", seed = 2024, n_subject = 64, design_kind = "between", include_items = FALSE,
+  n_item = 24, factor_name = "group", lev1 = "control", lev2 = "treatment", intercept = 100,
+  effect = 5, family = "gaussian", resp_name = "", sigma = 10, n_sims = 100, spec_json_in = "")
+
+# An output as text, or the error it stops with.
+shown <- function(value)
+  tryCatch(paste(unlist(value), collapse = ""),
+           error = function(e) paste("ERROR:", conditionMessage(e)))
+# The levels a plot draws along its x axis, from the coordinate map Shiny keeps for clicks and
+# brushes, or NULL when the plot stops. A plot by group puts the factor's levels there. After a
+# change of factor name, the plot used to draw the response there, without its grouping.
+x_levels <- function(value)
+  tryCatch(as.character(unlist(value$coordmap$panels[[1]]$domain$discrete_limits$x)),
+           error = function(e) NULL)
+# The lines write.csv() gives a data frame, which is how the app writes the data download.
+csv_lines <- function(d) {
+  tf <- tempfile(fileext = ".csv")
+  on.exit(unlink(tf))
+  write.csv(d, tf, row.names = FALSE)
+  readLines(tf)
+}
+
+# Two Gaussian designs between subjects, as JSON to paste, that the power tab cannot analyse. A
+# factor with three levels is refused by power_design(), and two factors with two levels each are
+# refused by validate_spec(), since pilotr would confound them. The three-level design carries a
+# seed of its own, 99. build_spec() is the engine's, which the app put in the global environment.
+pasted_designs <- function() {
+  base <- build_spec(list(name = "pasted", seed = 99, design_kind = "between", n_subject = 60,
+                          factor_name = "group", lev1 = "a", lev2 = "b", intercept = 0,
+                          effect = 0.5, family = "gaussian", resp_name = "y", sigma = 1))
+  three <- base
+  three$factors[[1]]$levels <- c("a", "b", "c")
+  three$factors[[1]]$contrasts <- list(effect = c(-1, 0, 1))
+  two_by_two <- base
+  two_by_two$factors[[2]] <- list(name = "dose", levels = c("low", "high"),
+                                  contrasts = list(dose = c(-0.5, 0.5)), between = "subject")
+  list(three = spec_json(three), two_by_two = spec_json(two_by_two))
+}
+
+# The power buttons keep the session open and say why they cannot run. An N of 2 stopped
+# power_design() in t.test() with "not enough observations", and a cleared N reached it as NA.
+# Either error ended the session, and with it the design. On the curve, an N of 2 left a single
+# grid point. A pasted design that load_spec() refuses did nothing, since the refusal reached the
+# observer as a validation error, which Shiny drops without a word.
+survival <- list(
+  list(what = "an N of 2", set = list(n_subject = 2),
+       says = "Set N subjects to at least 4 before running power."),
+  list(what = "a cleared N", set = list(n_subject = NA),
+       says = "Set N subjects to at least 4 before running power."),
+  list(what = "a pasted three-level design", paste = "three",
+       says = "The in-app power backend covers"),
+  list(what = "a pasted 2 x 2 design", paste = "two_by_two",
+       says = "are both between 'subject'"))
+buttons <- c(run_power = "Run power", run_curve = "Power curve")
+for (case in survival) for (button in names(buttons)) {
+  testServer(app = app_dir, {
+    do.call(session$setInputs, start_inputs)
+    if (!is.null(case$set)) do.call(session$setInputs, case$set)
+    if (!is.null(case$paste)) session$setInputs(spec_json_in = pasted_designs()[[case$paste]])
+    do.call(session$setInputs, setNames(list(1L), button))
+    check(!session$isClosed() && grepl(case$says, shown(output$power_out), fixed = TRUE),
+          sprintf("installed app: %s keeps the session open when %s is selected, and says why",
+                  case$what, buttons[[button]]))
+  })
+}
+
+# Data, Summary & plot and the data download show the last simulation, labelled with its own seed,
+# and a note says when the controls have changed since. Before, a new family or response name
+# stopped the summary and the plot, and a new factor name dropped their grouping. The Data tab
+# printed the Seed box, and the download simulated afresh from the controls.
+moved_on <- paste0(
+  "The controls have changed since the last Simulate: the JSON and the specification download ",
+  "follow the controls, while the data, summary, plot and data download show the last ",
+  "simulation. Select Simulate to bring them together.")
+testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  session$setInputs(simulate = 1)
+  simulated <- simulate_design(current_spec())
+  check(identical(shown(output$sim_note), ""),
+        "installed app: no note while the controls match the last simulation")
+  changes <- list(list(family = "bernoulli"), list(resp_name = "rt"), list(factor_name = "arm"))
+  for (change in changes) {
+    do.call(session$setInputs, change)
+    label <- sprintf("%s = \"%s\"", names(change), change[[1]])
+    check(grepl("Mean (SD) of score by group", shown(output$summary), fixed = TRUE),
+          sprintf("installed app: after %s, the summary describes the last simulation", label))
+    check(identical(x_levels(output$plot), c("control", "treatment")),
+          sprintf("installed app: after %s, the plot draws the last simulation by group", label))
+    do.call(session$setInputs, start_inputs[names(change)])
+  }
+  session$setInputs(seed = 7)
+  check(grepl("(seed 2024)", shown(output$dims), fixed = TRUE),
+        "installed app: the Data tab gives the seed of the last simulation, not the Seed box's")
+  check(grepl(moved_on, shown(output$sim_note), fixed = TRUE),
+        "installed app: a note says that the controls have changed since the last Simulate")
+  download <- tryCatch(output$dl_data, error = function(e) "")
+  check(identical(basename(download), "t_seed2024.csv") &&
+          identical(readLines(download), csv_lines(simulated)),
+        "installed app: the data download holds the last simulation and is named with its seed")
+  session$setInputs(simulate = 2)
+  check(grepl("(seed 7)", shown(output$dims), fixed = TRUE) &&
+          identical(shown(output$sim_note), ""),
+        "installed app: simulating again brings the data and the controls together")
+  session$setInputs(spec_json_in = pasted_designs()$three, simulate = 3)
+  check(grepl("(seed 99)", shown(output$dims), fixed = TRUE),
+        "installed app: a pasted specification is shown with its own seed")
+  check(identical(x_levels(output$plot), c("a", "b", "c")),
+        "installed app: a pasted three-level design plots its three groups")
 })
 
 # The browser build writes the same routing out in its own copy of the text. It is staged as

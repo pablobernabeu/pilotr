@@ -9,6 +9,7 @@
 ^cran-comments\.md$
 ^tests/test_app_logic\.R$
 ^tests/test_app_server\.R$
+^tests/test_app_lite_server\.R$
 ^\.github$
 ^doc$
 ^docs$

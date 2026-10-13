@@ -33,8 +33,8 @@ test_that("the installed app simulates in a session that has not attached pilotr
         lev2 = "treatment", intercept = 100, effect = 5, family = "gaussian",
         resp_name = "", sigma = 10, shift = 200, spec_json_in = "")
       session$setInputs(simulate = 1)
-      out$n <- nrow(data())
-      out$columns <- names(data())
+      out$n <- nrow(sim()$data)
+      out$columns <- names(sim()$data)
       # With the package's functions in use, there are no engine files to source, so Verify's
       # clean session runs the exported script as it stands, library(pilotr) included.
       session$setInputs(verify_code = 1)

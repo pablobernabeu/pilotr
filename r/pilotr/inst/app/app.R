@@ -116,6 +116,19 @@ FAMILY_DEFAULTS <- list(
   beta              = list(intercept = 0,   effect = 0.8, phi = 8)
 )
 
+# Fill colours for the plots, as many as the data has levels, from the palette of app-lite/app.R. A
+# pasted specification can carry a factor with any number of levels, and the fixed pair of colours
+# used before stopped the plot of a three-level design with "Insufficient values in manual scale".
+PALETTE <- c("#2C6FB0", "#B0402C", "#2E8B57", "#8E6FB0", "#C8922A", "#5A5A5A")
+pal <- function(k) if (k <= length(PALETTE)) PALETTE[seq_len(k)] else grDevices::hcl.colors(k, "Dynamic")
+
+# Shown above the tabs while the controls differ from the specification of the last simulation, in
+# the words app-lite/app.R uses.
+CONTROLS_CHANGED <- paste0(
+  "The controls have changed since the last Simulate: the JSON and the specification download ",
+  "follow the controls, while the data, summary, plot and data download show the last ",
+  "simulation. Select Simulate to bring them together.")
+
 guide_tab <- tabPanel(
   "Guide",
   tags$div(
@@ -231,6 +244,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       width = 8,
+      uiOutput("sim_note"),
       tabsetPanel(
         id = "tabs",
         guide_tab,
@@ -308,16 +322,38 @@ server <- function(input, output, session) {
     ))
   })
 
-  data <- eventReactive(input$simulate, simulate_design(current_spec()), ignoreNULL = FALSE)
+  # Simulate keeps the specification it ran beside the data it made, and the Data tab, the summary,
+  # the plot and the data download read the two together. The summary and the plot used to take
+  # the response and factor names from the controls, so a new family or response name after a
+  # simulation stopped both. The Data tab printed the Seed box, and the download simulated afresh
+  # from the controls. The JSON tab and the specification download follow the controls, and
+  # sim_note says when the two have parted.
+  sim <- eventReactive(input$simulate, {
+    s <- current_spec()
+    list(spec = s, data = simulate_design(s))
+  }, ignoreNULL = FALSE)
 
   output$json <- renderText(spec_json(current_spec()))
   # The seed through format(), since %d stops on a whole double beyond R's integer range and
   # build_spec() keeps such a seed.
-  output$dims <- renderText({ d <- data(); sprintf("Simulated %d rows x %d columns (seed %s).", nrow(d), ncol(d), format(input$seed, scientific = FALSE)) })
-  output$head <- renderTable(head(data(), 10), striped = TRUE, spacing = "xs")
+  output$dims <- renderText({
+    s <- sim()
+    sprintf("Simulated %d rows x %d columns (seed %s).", nrow(s$data), ncol(s$data),
+            format(s$spec$seed, scientific = FALSE))
+  })
+  output$head <- renderTable(head(sim()$data, 10), striped = TRUE, spacing = "xs")
+  # A simulation that failed shows nothing that could be out of date. A specification the controls
+  # cannot build counts as a change, since the JSON tab then gives the reason.
+  output$sim_note <- renderUI({
+    last <- tryCatch(sim(), error = function(e) NULL)
+    if (is.null(last)) return(NULL)
+    live <- tryCatch(spec_json(current_spec()), error = function(e) NULL)
+    if (identical(live, spec_json(last$spec))) return(NULL)
+    tags$div(class = "alert alert-warning", role = "status", CONTROLS_CHANGED)
+  })
 
   output$summary <- renderPrint({
-    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    s <- sim(); d <- s$data; spec <- s$spec; yn <- spec$response$name; fn <- .grp_col(spec)
     has_grp <- !is.null(fn) && fn %in% names(d)
     if (is.numeric(d[[yn]])) {
       if (has_grp) {
@@ -329,15 +365,14 @@ server <- function(input, output, session) {
   })
 
   output$plot <- renderPlot({
-    d <- data(); spec <- current_spec(); yn <- spec$response$name; fn <- .grp_col(spec)
+    s <- sim(); d <- s$data; spec <- s$spec; yn <- spec$response$name; fn <- .grp_col(spec)
     has_grp <- !is.null(fn) && fn %in% names(d)
-    pal2 <- c("#2C6FB0", "#B0402C")
     base <- theme_minimal(base_size = 14)
     if (is.numeric(d[[yn]])) {
       if (has_grp)
         ggplot(d, aes(.data[[fn]], .data[[yn]], fill = .data[[fn]])) +
           geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
-          scale_fill_manual(values = pal2, guide = "none") +
+          scale_fill_manual(values = pal(length(unique(d[[fn]]))), guide = "none") +
           labs(x = fn, y = yn, title = paste("Distribution of", yn)) + base
       else
         ggplot(d, aes(.data[[yn]])) +
@@ -346,7 +381,7 @@ server <- function(input, output, session) {
     } else if (has_grp)
       ggplot(d, aes(.data[[yn]], fill = .data[[fn]])) +
         geom_bar(position = "dodge") +
-        scale_fill_manual(values = pal2, name = fn) +
+        scale_fill_manual(values = pal(length(unique(d[[fn]]))), name = fn) +
         labs(x = yn, y = "count", title = paste("Counts of", yn)) + base
     else
       ggplot(d, aes(.data[[yn]])) +
@@ -487,51 +522,71 @@ server <- function(input, output, session) {
         "    power_mixed(load_spec(\"design.json\"), n_sims=200)"))
   }
 
+  # Power needs at least 4 subjects, two to a group. Below that, power_design() stops in t.test()
+  # or runs on a single degree of freedom, and the curve keeps too few grid points of 4 or more
+  # for target_n() to solve. A cleared N subjects box reaches the specification as NA.
+  n_subject_problem <- function(spec) {
+    n <- spec[["units"]][["subject"]][["n"]]
+    if (length(n) != 1L || is.na(n) || n < 4) "Set N subjects to at least 4 before running power."
+  }
+  # An error in an observer closes the session, and the design goes with it, so the power buttons
+  # report any error in the Power tab. A pasted specification that load_spec() refuses is one. It
+  # reaches the observer as a validation error, which Shiny drops without a word when nothing
+  # catches it, and the click used to do nothing.
+  power_failed <- function(e) power_result(list(msg = paste("error:", conditionMessage(e))))
+
   observeEvent(input$run_power, {
     power_curve_data(NULL)
-    spec <- current_spec()
-    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported(spec))); return() }
-    n <- .n_sims_input(input$n_sims)
-    if (.async_ok) {
-      power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
-      p <- promises::future_promise({ pilotr::power_design(spec, n_sims = n) }, seed = TRUE)
-      promises::then(p, onFulfilled = function(res) power_result(res),
-                        onRejected = function(e) power_result(list(msg = paste("error:", conditionMessage(e)))))
-    } else {
-      withProgress(message = sprintf("Simulating %d datasets...", n), value = 0.5,
-                   power_result(power_design(spec, n_sims = n)))
-    }
+    tryCatch({
+      spec <- current_spec()
+      problem <- if (gaussian_two_group(spec)) n_subject_problem(spec) else not_supported(spec)
+      if (!is.null(problem)) { power_result(list(msg = problem)); return() }
+      n <- .n_sims_input(input$n_sims)
+      if (.async_ok) {
+        power_result(list(msg = sprintf("Running %d simulations in a background worker...", n)))
+        p <- promises::future_promise({ pilotr::power_design(spec, n_sims = n) }, seed = TRUE)
+        promises::then(p, onFulfilled = function(res) power_result(res),
+                          onRejected = function(e) power_result(list(msg = paste("error:", conditionMessage(e)))))
+      } else {
+        withProgress(message = sprintf("Simulating %d datasets...", n), value = 0.5,
+                     power_result(power_design(spec, n_sims = n)))
+      }
+    }, error = power_failed)
   })
 
   observeEvent(input$run_curve, {
-    spec <- current_spec()
-    if (!gaussian_two_group(spec)) { power_result(list(msg = not_supported(spec))); power_curve_data(NULL); return() }
-    n <- .n_sims_input(input$n_sims)
-    base_n <- spec$units$subject$n
-    grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
-    # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
-    # independent points, as it assumes. Every point used to keep the design's seed.
-    seeds <- replicate_seeds(spec$seed, length(grid))
-    withProgress(message = "Computing the power curve...", value = 0.3, {
-      pw <- vapply(seq_along(grid), function(j) {
-        s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
-        power_design(s, n_sims = n)$power
-      }, numeric(1))
-    })
-    # A dashed target line leaves the reader to judge the crossing. target_n() estimates
-    # it instead, and reports its refusal when the curve does not settle the question,
-    # which is more use than a number the sweep cannot support.
-    solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = n),
-                                target = 0.8),
-                       error = function(e) conditionMessage(e))
-    power_result(list(msg = paste0(
-      sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
-              n, paste(grid, collapse = ", ")),
-      if (is.character(solved)) paste0("Target power 0.80: ", solved)
-      else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
-                   solved$n, solved$n_lo, solved$n_hi))))
-    power_curve_data(list(grid = grid, pw = pw,
-                          solved = if (is.character(solved)) NULL else solved))
+    power_curve_data(NULL)
+    tryCatch({
+      spec <- current_spec()
+      problem <- if (gaussian_two_group(spec)) n_subject_problem(spec) else not_supported(spec)
+      if (!is.null(problem)) { power_result(list(msg = problem)); return() }
+      n <- .n_sims_input(input$n_sims)
+      base_n <- spec$units$subject$n
+      grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
+      # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
+      # independent points, as it assumes. Every point used to keep the design's seed.
+      seeds <- replicate_seeds(spec$seed, length(grid))
+      withProgress(message = "Computing the power curve...", value = 0.3, {
+        pw <- vapply(seq_along(grid), function(j) {
+          s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
+          power_design(s, n_sims = n)$power
+        }, numeric(1))
+      })
+      # A dashed target line leaves the reader to judge the crossing. target_n() estimates
+      # it instead, and reports its refusal when the curve does not settle the question,
+      # which is more use than a number the sweep cannot support.
+      solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = n),
+                                  target = 0.8),
+                         error = function(e) conditionMessage(e))
+      power_result(list(msg = paste0(
+        sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
+                n, paste(grid, collapse = ", ")),
+        if (is.character(solved)) paste0("Target power 0.80: ", solved)
+        else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
+                     solved$n, solved$n_lo, solved$n_hi))))
+      power_curve_data(list(grid = grid, pw = pw,
+                            solved = if (is.character(solved)) NULL else solved))
+    }, error = power_failed)
   })
 
   # Render as text (not print) to keep the message free of a trailing NULL. Shiny skips
@@ -577,9 +632,13 @@ server <- function(input, output, session) {
   output$dl_spec <- downloadHandler(
     filename = function() paste0(input$name, ".json"),
     content = function(file) write_text_download(spec_json(current_spec()), file))
+  # The data the Data tab shows, named after the specification and seed that made them.
   output$dl_data <- downloadHandler(
-    filename = function() paste0(input$name, "_seed", format(input$seed, scientific = FALSE), ".csv"),
-    content = function(file) write.csv(simulate_design(current_spec()), file, row.names = FALSE))
+    filename = function() {
+      s <- sim()$spec
+      paste0(s$name, "_seed", format(s$seed, scientific = FALSE), ".csv")
+    },
+    content = function(file) write.csv(sim()$data, file, row.names = FALSE))
 }
 
 shinyApp(ui, server)
