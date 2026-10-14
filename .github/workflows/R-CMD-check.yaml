@@ -70,6 +70,11 @@ jobs:
   # nothing tested them: every cell above uses use-public-rspm, which resolves to the latest
   # release. The twin of the Python minimum-versions job in python-tests.yml. A failure here means
   # a floor needs raising to what actually works, not that the job is too strict.
+  #
+  # The job runs on oldrel-3, as depictr's does, because neither floor can be built on the current
+  # R. R 4.6.0 hid SET_BODY, SET_CLOENV and SET_FORMALS, so no testthat before 3.3.0 compiles there,
+  # and ggplot2 3.4.0 fails to lazy-load there. On release, both floors failed to install,
+  # install_version() only warned, and the check went on to pass on the current releases.
   minimum-versions:
     name: Declared minimum dependencies
     runs-on: ubuntu-latest
@@ -81,6 +86,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
+          r-version: 'oldrel-3'
           use-public-rspm: true
 
       # Everything without a declared floor, resolved normally, so that the step below is the only
@@ -91,16 +97,29 @@ jobs:
           dependencies: '"hard"'
           extra-packages: |
             any::rcmdcheck
-            any::remotes
             any::lme4
             any::lmerTest
 
+      # The floors are read from DESCRIPTION, so this job tests whatever the file declares. pak stops
+      # on a failed build, where install_version() warned and carried on, and each installed version
+      # is then compared with its floor, so that a floor quietly left uninstalled fails the job.
       - name: Install the declared Suggests floors over whatever resolved above
         run: |
-          remotes::install_version("ggplot2", version = "3.4.0", upgrade = "never")
-          remotes::install_version("testthat", version = "3.0.0", upgrade = "never")
-          for (p in c("ggplot2", "testthat"))
-            cat(p, "at", as.character(utils::packageVersion(p)), "\n")
+          suggests <- read.dcf("r/pilotr/DESCRIPTION", fields = "Suggests")[1, 1]
+          entries <- trimws(strsplit(suggests, ",")[[1]])
+          parts <- regmatches(entries, regexec("^([A-Za-z0-9.]+)\\s*\\(>=\\s*([0-9.-]+)\\)$", entries))
+          parts <- parts[lengths(parts) == 3]
+          floors <- setNames(vapply(parts, `[`, "", 3), vapply(parts, `[`, "", 2))
+          if (!length(floors)) stop("DESCRIPTION declares no Suggests floor to test.", call. = FALSE)
+          pak::pkg_install(paste0(names(floors), "@", floors), ask = FALSE)
+          for (p in names(floors)) {
+            got <- as.character(utils::packageVersion(p))
+            cat(p, "at", got, "\n")
+            if (!identical(got, floors[[p]])) {
+              stop(p, " is at ", got, ", not at its declared floor ", floors[[p]], ".",
+                   call. = FALSE)
+            }
+          }
         shell: Rscript {0}
 
       # Vignettes are skipped so that knitr and rmarkdown, which carry no declared floor, cannot

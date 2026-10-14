@@ -361,6 +361,12 @@
 * `generate_r_script()` reads a specification given as the path of its file. It used to embed
   the path itself, so the script ran only while the file stayed at that path.
 
+* The tests need testthat 3.1.5, which added `expect_no_error()` and `expect_no_warning()`, so
+  DESCRIPTION now asks for it in place of 3.0.0. The continuous-integration job meant to test the
+  declared floors had never installed them: on R 4.6, testthat 3.0.0 does not compile and
+  ggplot2 3.4.0 does not load, and the job went on to pass on the current releases. It now runs
+  on an older R, reads the floors from DESCRIPTION and fails unless each one is installed.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
