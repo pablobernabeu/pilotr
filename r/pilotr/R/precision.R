@@ -60,6 +60,8 @@
 #'   specification and takes the true values from it. A named numeric vector maps coefficient names
 #'   to their true values, and a character vector names them without their true values. Interaction
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name `a_b`.
+#'   A list of coefficient sets, which [power_mixed()] tests jointly, is refused, since a set has no
+#'   single estimate to build an interval around.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
 #'   [model_formula()], and the response family chooses the fitter. A formula given here is
 #'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
@@ -155,6 +157,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_design() requires the 'lme4' package; please install it.", call. = FALSE)
   fallback <- match.arg(fallback)
+  .refuse_focal_sets(focal, "precision_design()")
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
   cl <- .check_cluster(cl)
@@ -353,6 +356,7 @@ precision_curve <- function(spec, focal = NULL, subject_ns, formula = NULL, prep
                             fallback = c("singular", "warning")) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_curve() requires the 'lme4' package; please install it.", call. = FALSE)
+  .refuse_focal_sets(focal, "precision_curve()")
   spec <- .as_spec(spec)
   seeds <- match.arg(seeds)
   fallback <- match.arg(fallback)

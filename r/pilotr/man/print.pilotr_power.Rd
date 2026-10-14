@@ -24,3 +24,8 @@ precision of the estimate is as visible as the estimate. The second gives Type S
 Wilson interval and Type M beside its Monte Carlo standard error, both taken over the
 significant replicates alone.
 }
+\details{
+A result whose \code{focal} named sets of coefficients lists the coefficients of each set before the
+first table, which has one row per set and no true value. It has no second table, since a joint
+test has no single estimate from which Type S or Type M could be taken.
+}

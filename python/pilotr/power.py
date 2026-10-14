@@ -502,6 +502,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
     a Type I error rate of its own. It is simulated only in the R package, whose ``power_mixed()``
     and ``precision_design()`` take a ladder of models as their ``formula``.
 
+    This function has no joint test of several coefficients, such as the two contrasts of a
+    three-level factor or the two coefficients of its interaction with a two-level factor. The
+    power of such a multi-degree-of-freedom test differs from that of either coefficient. The R
+    package's ``power_mixed()`` plans it when its ``focal`` names sets of coefficients, as in
+    ``list(interaction = c("A1_B", "A2_B"))``.
+
     This is pilotr's own simulation loop over the portable design specification, not a
     wrapper around an existing power package. It covers territory pioneered by simr (Green
     and MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Vo and Draschkow,

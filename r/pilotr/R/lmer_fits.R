@@ -81,8 +81,10 @@
 # "lme4::glmer (binomial), Wald z". With `test = FALSE`, the only inference made is the interval
 # precision_design() builds, the estimate plus or minus 1.96 standard errors, a Wald z interval.
 # A one-sided test is named with its direction, "stats::lm, t, one-sided (greater)", so that a
-# result read later says which test its power belongs to. The two-sided label is unchanged.
-.fitter_label <- function(formula, family, test, auto, alternative = "two.sided") {
+# result read later says which test its power belongs to. The two-sided label is unchanged. A joint
+# test of a set of coefficients (see .joint_test()) is named by its own statistic, the F or the
+# chi-square of which each single-coefficient test is the one-degree-of-freedom case.
+.fitter_label <- function(formula, family, test, auto, alternative = "two.sided", joint = FALSE) {
   k <- .model_kind(formula, family, auto)
   fitter <- if (!is.null(k$glm_family))
     sprintf("%s (%s)", if (k$has_re) "lme4::glmer" else "stats::glm", k$glm_family)
@@ -90,6 +92,9 @@
   else "stats::lm"
   inference <- if (!test || !is.null(k$glm_family)) "Wald z"
     else if (k$has_re) "Satterthwaite t" else "t"
+  if (test && joint)
+    inference <- c("Wald z" = "Wald chi-square", "Satterthwaite t" = "Satterthwaite F",
+                   t = "F")[[inference]]
   if (test && alternative != "two.sided")
     inference <- sprintf("%s, one-sided (%s)", inference, alternative)
   paste(fitter, inference, sep = ", ")
@@ -200,9 +205,11 @@
 # response family choose the fitter (see .fit_model()). `formula` may be a ladder from
 # .as_ladder(), whose rule .fit_rule() applies, and the record then names the rung kept as `rung`.
 # `alternative` chooses the p-value the power functions test against, two-sided or one-sided (see
-# .one_sided_p()).
+# .one_sided_p()). `sets`, the sets of coefficients a list `focal` names, asks for each set's joint
+# test in place of the single coefficients, and `fnames` then holds the sets' names (see
+# .joint_record()). A joint test is applied to the fit the ladder's rule kept.
 .design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE, auto = TRUE,
-                        alternative = "two.sided") {
+                        alternative = "two.sided", sets = NULL) {
   s <- spec; s[["seed"]] <- seeds[i]
   d <- prep(simulate_design(s, validate = FALSE))
   f <- .fit_rule(formula, d, family = spec[["response"]][["family"]], test = test, auto = auto)
@@ -213,6 +220,7 @@
                   error = if (length(f$messages)) f$messages[1] else NA_character_,
                   rung = f$rung),
              .fit_record_failed()))
+  if (!is.null(sets)) return(c(.joint_record(f, sets), list(rung = f$rung)))
 
   co <- if (test) tryCatch(summary(f$fit)$coefficients, error = function(e) NULL) else NULL
   # The test's column is named for its reference distribution: Pr(>|t|) for lmerTest's
@@ -247,7 +255,15 @@
 }
 
 # Resolve the `focal` argument to a character vector of names and, where given, their true values.
+# A list names sets of coefficients, each tested jointly, which have no true value, and the sets
+# are returned as `sets`.
 .resolve_focal <- function(focal, spec) {
+  if (is.list(focal)) {
+    sets <- .as_focal_sets(focal)
+    nms <- names(sets)
+    return(list(names = nms, true = stats::setNames(rep(NA_real_, length(nms)), nms),
+                sets = sets))
+  }
   if (is.null(focal)) {
     nms <- .default_focal(spec)
     coeffs <- spec[["fixed"]][["coefficients"]]

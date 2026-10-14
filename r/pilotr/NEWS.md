@@ -210,6 +210,21 @@
   an earlier version therefore gives the one-sided power at alpha, in the direction of the true
   effect, as `power * (1 - type_s)`.
 
+* `focal` in `power_mixed()` and `power_curve_mixed()` accepts named sets of coefficients, each
+  tested jointly, so the power of a multi-degree-of-freedom effect, such as a three-level factor
+  or its interaction, can be planned. `list(interaction = c("A1_B", "A2_B"))` tests the two
+  coefficients of a 3 × 2 interaction together. Each coefficient could only be tested by itself,
+  and the power of the joint test differs from that of either coefficient. A linear mixed model
+  has Satterthwaite's F from `lmerTest::contest()`, a `glmer()` or `glm()` fit a Wald chi-square
+  and an `lm()` fit the F test of the model with and without the set, so a set of one
+  coefficient reproduces the single-coefficient test. Each set's power carries its Monte Carlo
+  error and Wilson interval, and `fitter` names the joint test. A joint test has neither a single
+  estimate nor a direction, so Type S and Type M are `NA` and a one-sided `alternative` is
+  refused. The result records the sets, its printout lists their coefficients and a sweep adds a
+  `coefficients` column. `precision_design()` and `precision_curve()` refuse sets, since a set has
+  no single interval. The Python twin's `power_mixed()` has no joint test, and its documentation
+  says so.
+
 ## Fixes
 
 * Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the

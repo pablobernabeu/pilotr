@@ -22,7 +22,9 @@ precision_design(
 \item{focal}{The focal effects. \code{NULL}, the default, analyses every coefficient in the
 specification and takes the true values from it. A named numeric vector maps coefficient names
 to their true values, and a character vector names them without their true values. Interaction
-effects follow the model's column naming, so a specification key \code{a:b} is the focal name \code{a_b}.}
+effects follow the model's column naming, so a specification key \code{a:b} is the focal name \code{a_b}.
+A list of coefficient sets, which \code{\link[=power_mixed]{power_mixed()}} tests jointly, is refused, since a set has no
+single estimate to build an interval around.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
 \code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is

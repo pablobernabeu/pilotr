@@ -109,13 +109,32 @@
 #' `power * (1 - type_s)`. Type M is recovered only when that result's Type S is 0, since the
 #' wrong-signed replicates cannot otherwise be told apart from the others.
 #'
+#' A factor with more than two levels enters the model as several contrast columns, and its
+#' interaction with another factor as several product columns. The hypothesis a study
+#' preregisters about such an effect is then often the joint test of those coefficients, and its
+#' power differs from that of any one of them. A named list as `focal`, such as
+#' `list(interaction = c("A1_B", "A2_B"))` for the interaction of a three-level factor with a
+#' two-level one, plans that test. Each set is tested against the hypothesis that all its
+#' coefficients are zero. A linear mixed model has Satterthwaite's F from `lmerTest::contest()`
+#' (Kuznetsova et al., 2017), a `glmer()` or `glm()` fit has the Wald chi-square of the set's
+#' estimates and their covariance matrix, and an `lm()` fit has the F test that compares the model
+#' with and without the set. A set of one coefficient therefore gives the p-value of the
+#' single-coefficient test, with F equal to t squared or a chi-square equal to z squared. Under a
+#' ladder of models, each set is tested on the fit the simplification rule kept. `fitter`
+#' names the joint test, as in `"lmerTest::lmer, Satterthwaite F"`. A joint test has no direction,
+#' so `alternative` must stay `"two.sided"`. Nor has it a single estimate, so the true value, the
+#' mean estimate, Type S and Type M are `NA`. A likelihood-ratio test is not offered, since it would
+#' refit every replicate by maximum likelihood and is anti-conservative for fixed effects in small
+#' samples (Pinheiro and Bates, 2000).
+#'
 #' @param spec A design specification (path or list).
 #' @param focal The fixed effects to test. `NULL`, the default, tests every coefficient in the
 #'   specification and takes the true values from it. A character vector names the effects and
 #'   leaves the true values unknown, which suppresses Type S and Type M. A named numeric vector
 #'   gives both, which is how to test against a value other than the one simulated. Interaction
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name
-#'   `a_b`.
+#'   `a_b`. A named list of character vectors names sets of coefficients, each tested jointly, as
+#'   in `list(interaction = c("A1_B", "A2_B"))` (see Details).
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
 #'   [model_formula()], and the response family chooses the fitter. A formula given here is
 #'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
@@ -160,6 +179,10 @@
 #'   Carlo standard error of `type_m`, are `NA` wherever their rate is, and `type_m_mcse` also
 #'   when a single replicate reached significance.
 #'
+#'   A list `focal` adds a per-run element `sets`, the sets as given, and names the per-effect
+#'   elements by set. Each set's `true_effect`, `mean_estimate` and Type S and Type M quantities
+#'   are then `NA`, and `fitter` names the joint test.
+#'
 #'   `power` is the proportion of significant results among the replicates that returned an
 #'   estimate for that effect, not among `n_sims`. The counts report the fit outcomes separately,
 #'   because a fit can return a usable estimate while still being boundary-singular or carrying a
@@ -192,6 +215,13 @@
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 #'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 #'   Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'
+#'   Kuznetsova, A., Brockhoff, P. B. and Christensen, R. H. B. (2017). lmerTest package: Tests
+#'   in linear mixed effects models. \emph{Journal of Statistical Software}, 82(13), 1-26.
+#'   \doi{10.18637/jss.v082.i13}
+#'
+#'   Pinheiro, J. C. and Bates, D. M. (2000). \emph{Mixed-effects models in S and S-PLUS}.
+#'   Springer. \doi{10.1007/b98882}
 #'
 #'   Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed models.
 #'   \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
@@ -236,6 +266,7 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
          call. = FALSE)
   alternative <- match.arg(alternative)
   fallback <- match.arg(fallback)
+  .check_focal_sets(focal, alternative)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
   cl <- .check_cluster(cl)
@@ -281,9 +312,11 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
   interactions <- if (withheld) .us(.interaction_keys(spec)) else character(0)
 
   seeds <- replicate_seeds(spec[["seed"]], n_sims)
+  # A list `focal` gives sets, each tested jointly. A set has no single estimate, so its estimates
+  # and its true value stay NA, and so do the mean estimate, Type S and Type M below.
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,
                    prep = prep, formula = formula, fnames = fnames, test = TRUE, auto = auto,
-                   alternative = alternative)
+                   alternative = alternative, sets = fo$sets)
 
   n_returned <- sum(vapply(res, function(r) isTRUE(r$fitted), logical(1)))
   coef_names <- NULL
@@ -330,11 +363,12 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     }
   }
   .warn_no_fits(res, n_returned, .last_rung(formula))
-  .warn_absent_focal(seen, n_returned, coef_names)
+  if (is.null(fo$sets)) .warn_absent_focal(seen, n_returned, coef_names)
+  else .warn_untested_sets(fo$sets, seen, n_returned, coef_names)
 
   out <- c(list(n_sims = n_sims, alpha = alpha,
                 fitter = .analysis_label(formula, family, test = TRUE, auto = auto,
-                                         alternative = alternative)),
+                                         alternative = alternative, joint = !is.null(fo$sets))),
            .fit_counts(res, n_sims, n_returned),
            list(power = power, power_mcse = mcse, power_lo = lo, power_hi = hi,
                 n_significant = n_sig, true_effect = fo$true[fnames],
@@ -344,6 +378,8 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
   # its result is the one it always was.
   if (!is.null(ladder))
     out <- c(out, list(rung_shares = .rung_shares(res, ladder), fallback = ladder$fallback))
+  # The sets, so that the result names the coefficients behind each of its rates.
+  if (!is.null(fo$sets)) out$sets <- fo$sets
   class(out) <- c("pilotr_power", "list")
   out
 }
@@ -356,6 +392,10 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 #' precision of the estimate is as visible as the estimate. The second gives Type S beside its
 #' Wilson interval and Type M beside its Monte Carlo standard error, both taken over the
 #' significant replicates alone.
+#'
+#' A result whose `focal` named sets of coefficients lists the coefficients of each set before the
+#' first table, which has one row per set and no true value. It has no second table, since a joint
+#' test has no single estimate from which Type S or Type M could be taken.
 #'
 #' @param x A `pilotr_power` object, as returned by [power_mixed()].
 #' @param digits Number of decimal places for the reported rates and for the interval bounds.
@@ -378,19 +418,33 @@ print.pilotr_power <- function(x, digits = 3, ...) {
                       collapse = ", ")))
   if (x$n_singular > 0.25 * max(x$n_attempted, 1))
     cat("  note: many fits were boundary-singular, so this model is richer than the design supports\n")
+  # The rows of a result with sets name the sets, so the coefficients of each are listed first.
+  if (!is.null(x$sets)) {
+    cat("  each set of coefficients tested jointly:\n")
+    for (k in names(x$sets)) cat(sprintf("    %s: %s\n", k, paste(x$sets[[k]], collapse = ", ")))
+  }
   # The bounds take `digits` as the rates do. They were written with three decimals whatever
   # `digits` said.
   interval <- function(lo, hi)
     ifelse(is.na(lo), NA_character_, sprintf("[%.*f, %.*f]", digits, lo, digits, hi))
   effect <- names(x$power)
-  print(data.frame(
+  rates <- data.frame(
     effect = effect,
     true = unname(x$true_effect),
     power = round(unname(x$power), digits),
     mcse = round(unname(x$power_mcse), digits),
     ci95 = interval(unname(x$power_lo), unname(x$power_hi)),
     n_sig = unname(x$n_significant),
-    row.names = NULL, stringsAsFactors = FALSE), row.names = FALSE)
+    row.names = NULL, stringsAsFactors = FALSE)
+  # A set has no true value, and neither Type S nor Type M, since a joint test has no single
+  # estimate to compare with one. Their columns would hold NA alone, so they are left out.
+  if (!is.null(x$sets)) {
+    rates$true <- NULL
+    print(rates, row.names = FALSE)
+    cat("  Type S and Type M are not defined for a joint test, which has no single estimate\n")
+    return(invisible(x))
+  }
+  print(rates, row.names = FALSE)
   # Only the n_sig significant replicates inform Type S and Type M, so each is shown with its
   # uncertainty, in a second table that keeps both within 80 columns. A result saved by a version
   # that did not report the uncertainty prints the two rates alone.
@@ -449,7 +503,8 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'
 #' @param spec A design specification (path or list).
 #' @param subject_ns A numeric vector of subject counts to evaluate.
-#' @param focal The fixed effects to test, as in [power_mixed()].
+#' @param focal The fixed effects to test, or the named sets of coefficients to test jointly, as
+#'   in [power_mixed()].
 #' @param n_sims Number of Monte Carlo replicates per point. A power estimate carries a Monte
 #'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, reported alongside it as
 #'   `power_mcse`. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
@@ -467,6 +522,8 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, the `n_attempted`, `n_returned`,
 #'   `n_converged`, `n_singular` and `n_warning` fit counts, and `fitter`, as in [power_mixed()].
 #'   `fitter` names the direction of a one-sided test.
+#'   With sets of coefficients in `focal`, `effect` holds each set's name, a column `coefficients`
+#'   after it lists the set's coefficients, and `fitter` names the joint test.
 #'   `n_singular` typically falls as the sample size rises, so reading it down the sweep shows
 #'   where the model becomes supportable.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
@@ -511,6 +568,7 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
   spec <- .as_spec(spec)
   seeds <- match.arg(seeds)
   alternative <- match.arg(alternative)
+  .check_focal_sets(focal, alternative)
   workers <- .check_workers(workers)
   # One pool for the whole sweep, handed to every grid point. Since 0.3.0, when the sweep moved
   # into sweep_spec(), `workers` had travelled to power_mixed(), which started and stopped a pool
@@ -539,5 +597,11 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
     n_singular = x$n_singular, n_warning = x$n_warning,
     fitter = if (is.null(x$fitter)) NA_character_ else x$fitter,
     row.names = NULL, stringsAsFactors = FALSE)
+  # A row of a result with sets is named by its set, and a column after `effect` lists the
+  # coefficients the set holds. A result without sets keeps its columns as they were.
+  if (!is.null(x$sets)) {
+    coefficients <- unname(vapply(x$sets[out$effect], paste, character(1), collapse = ", "))
+    out <- cbind(out[1L], coefficients = coefficients, out[-1L], stringsAsFactors = FALSE)
+  }
   .add_rung_columns(out, x$rung_shares)
 }

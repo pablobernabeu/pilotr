@@ -25,7 +25,8 @@ specification and takes the true values from it. A character vector names the ef
 leaves the true values unknown, which suppresses Type S and Type M. A named numeric vector
 gives both, which is how to test against a value other than the one simulated. Interaction
 effects follow the model's column naming, so a specification key \code{a:b} is the focal name
-\code{a_b}.}
+\code{a_b}. A named list of character vectors names sets of coefficients, each tested jointly, as
+in \code{list(interaction = c("A1_B", "A2_B"))} (see Details).}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
 \code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
@@ -79,6 +80,10 @@ response fitted on its own scale, and so is the \code{type_s} of an interaction 
 \code{type_s_lo} and \code{type_s_hi}, the Wilson interval of \code{type_s}, and \code{type_m_mcse}, the Monte
 Carlo standard error of \code{type_m}, are \code{NA} wherever their rate is, and \code{type_m_mcse} also
 when a single replicate reached significance.
+
+A list \code{focal} adds a per-run element \code{sets}, the sets as given, and names the per-effect
+elements by set. Each set's \code{true_effect}, \code{mean_estimate} and Type S and Type M quantities
+are then \code{NA}, and \code{fitter} names the joint test.
 
 \code{power} is the proportion of significant results among the replicates that returned an
 estimate for that effect, not among \code{n_sims}. The counts report the fit outcomes separately,
@@ -195,6 +200,24 @@ Results from earlier versions were two-sided. A one-sided power at \code{alpha},
 the true effect, can be read off a two-sided result at \code{2 * alpha}: it is
 \code{power * (1 - type_s)}. Type M is recovered only when that result's Type S is 0, since the
 wrong-signed replicates cannot otherwise be told apart from the others.
+
+A factor with more than two levels enters the model as several contrast columns, and its
+interaction with another factor as several product columns. The hypothesis a study
+preregisters about such an effect is then often the joint test of those coefficients, and its
+power differs from that of any one of them. A named list as \code{focal}, such as
+\code{list(interaction = c("A1_B", "A2_B"))} for the interaction of a three-level factor with a
+two-level one, plans that test. Each set is tested against the hypothesis that all its
+coefficients are zero. A linear mixed model has Satterthwaite's F from \code{lmerTest::contest()}
+(Kuznetsova et al., 2017), a \code{glmer()} or \code{glm()} fit has the Wald chi-square of the set's
+estimates and their covariance matrix, and an \code{lm()} fit has the F test that compares the model
+with and without the set. A set of one coefficient therefore gives the p-value of the
+single-coefficient test, with F equal to t squared or a chi-square equal to z squared. Under a
+ladder of models, each set is tested on the fit the simplification rule kept. \code{fitter}
+names the joint test, as in \code{"lmerTest::lmer, Satterthwaite F"}. A joint test has no direction,
+so \code{alternative} must stay \code{"two.sided"}. Nor has it a single estimate, so the true value, the
+mean estimate, Type S and Type M are \code{NA}. A likelihood-ratio test is not offered, since it would
+refit every replicate by maximum likelihood and is anti-conservative for fixed effects in small
+samples (Pinheiro and Bates, 2000).
 }
 \examples{
 \donttest{
@@ -227,6 +250,13 @@ generalized linear mixed models by simulation. \emph{Methods in Ecology and Evol
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+
+Kuznetsova, A., Brockhoff, P. B. and Christensen, R. H. B. (2017). lmerTest package: Tests
+in linear mixed effects models. \emph{Journal of Statistical Software}, 82(13), 1-26.
+\doi{10.18637/jss.v082.i13}
+
+Pinheiro, J. C. and Bates, D. M. (2000). \emph{Mixed-effects models in S and S-PLUS}.
+Springer. \doi{10.1007/b98882}
 
 Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed models.
 \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}

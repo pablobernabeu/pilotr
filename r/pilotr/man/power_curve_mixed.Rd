@@ -20,7 +20,8 @@ power_curve_mixed(
 
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
-\item{focal}{The fixed effects to test, as in \code{\link[=power_mixed]{power_mixed()}}.}
+\item{focal}{The fixed effects to test, or the named sets of coefficients to test jointly, as
+in \code{\link[=power_mixed]{power_mixed()}}.}
 
 \item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte
 Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported alongside it as
@@ -45,6 +46,8 @@ A data frame with one row per sample size and focal effect, with columns \code{n
 \code{type_s_lo}, \code{type_s_hi}, \code{type_m}, \code{type_m_mcse}, the \code{n_attempted}, \code{n_returned},
 \code{n_converged}, \code{n_singular} and \code{n_warning} fit counts, and \code{fitter}, as in \code{\link[=power_mixed]{power_mixed()}}.
 \code{fitter} names the direction of a one-sided test.
+With sets of coefficients in \code{focal}, \code{effect} holds each set's name, a column \code{coefficients}
+after it lists the set's coefficients, and \code{fitter} names the joint test.
 \code{n_singular} typically falls as the sample size rises, so reading it down the sweep shows
 where the model becomes supportable.
 }
