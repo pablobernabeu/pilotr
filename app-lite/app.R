@@ -36,6 +36,9 @@ N_SIMS_MAX     <- 3000L
 # The in-browser sweep runs one power analysis per grid point, so it takes the lower of the
 # requested count and this, to stay responsive.
 N_SIMS_CURVE   <- 200L
+# The largest N subjects the curve's grid is extended to, where 8 times N is more, again to stay
+# responsive. The installed app stops at 8 times N.
+N_CURVE_MAX    <- 2000L
 
 # Favicon embedded as a data URI so the serverless build stays self-contained (no separate asset).
 FAVICON <- "data:image/png;base64,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"
@@ -78,6 +81,62 @@ type_s_text <- function(r)
 type_m_text <- function(r)
   if (is.na(r$type_m_mcse)) sprintf("%.3f", r$type_m) else
     sprintf("%.3f ± %.3f (MCSE)", r$type_m, r$type_m_mcse)
+
+# The power curve over N subjects, on a grid extended until it brackets the 0.80 target. The grid
+# starts at half, three quarters, one, one and a half and twice `n`, at least 4. While the top
+# point's power falls short of the target by more than twice its Monte Carlo standard error,
+# sqrt(p (1 - p) / n_sims), a point half as large again is added above it, up to `cap` subjects.
+# While the bottom point's power exceeds the target by more than that, a point two thirds its
+# size is added below it, down to 4. The grid holds one point for each of `seeds`, so 10 at most.
+# The fixed grid stopped at twice N, which for the default design is the target itself (127.5
+# subjects by power.t.test()). About half of all runs were then refused, and the rest solved low,
+# since a run solved only when its top point happened to land above 0.80.
+#
+# power_at(size, seed) gives the power at `size` subjects. Each point takes the next of `seeds` in
+# the order the points are computed, so a point added below the grid never changes the seed, or
+# the power, of a point already computed. Returns the grid in increasing order, with the power and
+# the seed at each point. The installed app carries the same function, with a higher cap.
+power_curve_grid <- function(n, cap, n_sims, seeds, power_at, target = 0.8) {
+  grid <- unique(pmax(4, round(n * c(0.5, 0.75, 1, 1.5, 2))))
+  pw <- vapply(seq_along(grid), function(k) power_at(grid[k], seeds[k]), numeric(1))
+  margin <- function(p) 2 * sqrt(p * (1 - p) / n_sims)
+  while (length(grid) < length(seeds)) {
+    top <- max(grid)
+    p <- pw[which.max(grid)]
+    if (top >= cap || p >= target + margin(p)) break
+    size <- min(cap, round(top * 1.5))
+    pw <- c(pw, power_at(size, seeds[length(grid) + 1L]))
+    grid <- c(grid, size)
+  }
+  while (length(grid) < length(seeds)) {
+    bottom <- min(grid)
+    p <- pw[which.min(grid)]
+    if (bottom <= 4 || p <= target - margin(p)) break
+    size <- max(4, round(bottom / 1.5))
+    pw <- c(pw, power_at(size, seeds[length(grid) + 1L]))
+    grid <- c(grid, size)
+  }
+  ord <- order(grid)
+  list(grid = grid[ord], pw = pw[ord], seeds = seeds[seq_along(grid)][ord])
+}
+
+# The total N at which the two-sample t-test that power_design() simulates reaches a power of 0.80,
+# by stats::power.t.test(), shown beside the curve's own solve as a check on it. Only for a plain
+# design, without random effects or continuous predictors, since either adds variance that the
+# `sd` of power.t.test() leaves out. NULL otherwise, and for an effect of zero, which no sample
+# size detects. The installed app carries the same function.
+t_test_n80 <- function(spec) {
+  if (length(spec[["random"]]) || length(spec[["predictors"]])) return(NULL)
+  tryCatch({
+    f <- Filter(function(x) !is.null(x[["between"]]), spec[["factors"]])[[1]]
+    contrast <- names(f[["contrasts"]])[1]
+    delta <- abs(spec[["fixed"]][["coefficients"]][[contrast]] *
+                   diff(f[["contrasts"]][[contrast]]))
+    if (length(delta) != 1L || !is.finite(delta) || delta == 0) NULL
+    else 2 * stats::power.t.test(delta = delta, sd = spec[["response"]][["sigma"]],
+                                 power = 0.8)$n
+  }, error = function(e) NULL)
+}
 
 # Immediate client-side feedback. webR runs the server in a worker, so the main thread can
 # repaint on click while the computation is still in flight.
@@ -280,8 +339,8 @@ ui <- page_sidebar(
                         actionButton("run_curve", "Power curve over N", class = "btn-outline-primary")))
         ),
         tags$small(class = "text-muted", sprintf(
-          "Two-group Gaussian, computed in your browser. The curve uses at most %d simulations a point, to stay responsive.",
-          N_SIMS_CURVE)),
+          "Two-group Gaussian, computed in your browser. The curve adds sample sizes until it brackets a power of 0.80, with at most %d simulations a point and %d subjects, to stay responsive.",
+          N_SIMS_CURVE, N_CURVE_MAX)),
         verbatimTextOutput("power_out"),
         plotOutput("power_plot", height = "320px")))),
     nav_panel("R script",
@@ -527,30 +586,32 @@ server <- function(input, output, session) {
       problem <- if (gaussian_two_group(spec)) n_subject_problem(spec) else not_supported_msg(spec)
       if (!is.null(problem)) { power_out(problem); power_plot(NULL); return() }
       base_n <- spec$units$subject$n
-      grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2)))
-      grid <- grid[grid >= 4]
       ns   <- min(nsims(), N_SIMS_CURVE)
-      # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
-      # independent points, as it assumes. Every point used to keep the design's seed.
-      seeds <- replicate_seeds(spec$seed, length(grid))
-      pw   <- vapply(seq_along(grid), function(j) {
-        s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
+      # Each point takes its own seed, so that target_n() below fits independent points, as it
+      # assumes. Every point used to keep the design's seed.
+      curve <- power_curve_grid(base_n, min(8 * base_n, N_CURVE_MAX), ns,
+                                replicate_seeds(spec$seed, 10L), function(size, seed) {
+        s <- spec; s$units$subject$n <- as.integer(size); s$seed <- seed
         power_design(s, n_sims = ns)$power
-      }, numeric(1))
+      })
       # A dashed target line leaves the reader to judge the crossing. target_n() estimates
       # it instead, and reports its refusal when the curve does not settle the question,
       # which is more use than a number the sweep cannot support.
-      solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = ns),
+      solved <- tryCatch(target_n(data.frame(n_subject = curve$grid, power = curve$pw,
+                                             n_sims = ns),
                                   target = 0.8),
                          error = function(e) conditionMessage(e))
+      reference <- t_test_n80(spec)
       power_out(paste0(
         sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
-                ns, paste(grid, collapse = ", ")),
+                ns, paste(curve$grid, collapse = ", ")),
         if (is.character(solved)) paste0("Target power 0.80: ", solved)
         else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
-                     solved$n, solved$n_lo, solved$n_hi)))
-      power_plot(list(grid = grid, pw = pw,
-                      solved = if (is.character(solved)) NULL else solved))
+                     solved$n, solved$n_lo, solved$n_hi),
+        if (!is.null(reference))
+          sprintf("\nAnalytic reference: N = %.1f subjects in two equal groups, by stats::power.t.test().",
+                  reference)))
+      power_plot(c(curve, list(solved = if (is.character(solved)) NULL else solved)))
     }, error = power_failed)
   })
 

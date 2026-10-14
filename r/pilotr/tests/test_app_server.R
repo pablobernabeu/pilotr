@@ -1,7 +1,9 @@
 # Headless test of the live Shiny reactive graph via shiny::testServer (no browser). Drives
 # the real server in the installed-package app dir: sets inputs, checks the JSON output,
-# triggers Simulate and the (synchronous, from-source) power analysis. A staged copy of the
-# browser build is then driven for the text it gives the designs its power tab cannot analyse.
+# triggers Simulate and the (synchronous, from-source) power analysis and power curve. A staged
+# copy of the browser build is then driven for the text it gives the designs its power tab cannot
+# analyse. tests/testthat/test-run-app.R covers run_app() and the asynchronous path, which needs
+# the package's namespace.
 
 library(shiny)
 args <- commandArgs(trailingOnly = FALSE)
@@ -39,18 +41,59 @@ route_designs <- function(build_spec) {
        prop = between("beta", phi = 8), crossed = crossed)
 }
 
-# The power at each point of an app's curve, worked out as sweep_spec() would: point j of the grid
-# takes replicate_seeds(seed, J)[j] as its seed. Both apps put the engine in the global
-# environment, which is where this finds power_design() and replicate_seeds().
-curve_at_grid_seeds <- function(spec, grid, n_sims) {
-  seeds <- replicate_seeds(spec$seed, length(grid))
-  vapply(seq_along(grid), function(j) {
+# The power at each point of an app's curve, worked out from the size and seed the curve gives
+# that point. Both apps put the engine in the global environment, which is where this finds
+# power_design() and replicate_seeds().
+power_at_points <- function(spec, curve, n_sims) {
+  vapply(seq_along(curve$grid), function(j) {
     s <- spec
-    s$units$subject$n <- as.integer(grid[j])
-    s$seed <- seeds[j]
+    s$units$subject$n <- as.integer(curve$grid[j])
+    s$seed <- curve$seeds[j]
     power_design(s, n_sims = n_sims)$power
   }, numeric(1))
 }
+
+# The power curve starts from half, three quarters, one, one and a half and twice N subjects. Each
+# point takes the next of replicate_seeds(seed, 10) in the order the points are computed, which is
+# the starting grid in increasing order, then any points added above it in increasing order, then
+# any added below it in decreasing order. A point added below therefore never changes the seed of
+# a point already computed. These are the seeds the points of `grid` should carry by that rule.
+expected_seeds <- function(seed, n, grid) {
+  start <- unique(pmax(4, round(n * c(0.5, 0.75, 1, 1.5, 2))))
+  run_order <- c(start, sort(grid[grid > max(start)]),
+                 sort(grid[grid < min(start)], decreasing = TRUE))
+  replicate_seeds(seed, 10)[match(grid, run_order)]
+}
+
+# Stand-ins for power_design() of known power, so that the checks of how the curve extends its
+# grid run in moments. Each gives the power at n subjects. They are not flat, since a curve whose
+# power is the same at every point is refused for having no trend before anything else is asked of
+# it. `crossing` is the normal approximation to the power of the default design, a Gaussian effect
+# of 5 with an SD of 10, which crosses 0.80 at 125.6 subjects.
+stand_ins <- list(
+  below = function(n) 0.1 + n / 10000,
+  above = function(n) 0.95 + n / 10000,
+  crossing = function(n) pnorm(0.25 * sqrt(n) - 1.96))
+
+# Puts a stand-in for power_design() in the global environment, where both apps look for the
+# engine, and records the size and seed of each call in `calls`. The app sources the engine there
+# again whenever a session starts, so this is called inside the session, and `restore` returns the
+# engine's own function.
+stub_power <- function(power, calls) {
+  real <- get("power_design", envir = globalenv())
+  calls$n <- numeric(0)
+  calls$seed <- numeric(0)
+  assign("power_design", function(spec, n_sims = 1000, ...) {
+    calls$n <- c(calls$n, spec$units$subject$n)
+    calls$seed <- c(calls$seed, spec$seed)
+    list(power = power(spec$units$subject$n))
+  }, envir = globalenv())
+  function() assign("power_design", real, envir = globalenv())
+}
+
+# The analytic sample size of the default design, from the two-sample t-test that power_design()
+# simulates, which both apps print beside the curve's own solve.
+analytic_default <- 2 * stats::power.t.test(delta = 5, sd = 10, power = 0.8)$n
 
 # The not-supported text sends each design to the analysis that fits it. power_mixed() in R fits
 # every family but ordinal and Beta, which go to the Bayesian design analysis. Python's
@@ -128,12 +171,13 @@ testServer(app = app_dir, {
         "a count below the minimum is clamped to 100")
   session$setInputs(n_sims = 300, run_power = 4)
 
-  # The power curve gives each grid point its own seed, by sweep_spec()'s rule, so the points it
-  # hands target_n() are independent. Every point used to keep the design's seed.
+  # The power curve gives each point its own seed, so the points it hands target_n() are
+  # independent. Every point used to keep the design's seed.
   session$setInputs(n_sims = 100, run_curve = 1)
   pc <- power_curve_data()
-  check(identical(pc$pw, curve_at_grid_seeds(current_spec(), pc$grid, 100)),
-        "the power curve gives each grid point its own seed")
+  check(identical(pc$seeds, expected_seeds(2024, 64, pc$grid)) &&
+          identical(pc$pw, power_at_points(current_spec(), pc, 100)),
+        "the power curve gives each point its own seed, in the order the points are computed")
   session$setInputs(n_sims = 300)
 
   # build_spec() keeps a seed of 2^31 or more, which it used to turn into NA. The caption
@@ -407,6 +451,83 @@ testServer(app = app_dir, {
         "installed app: a between design leaves out the hidden, ticked Counterbalanced lists")
 })
 
+# The power curve extends its grid until the grid brackets the 0.80 target. The grid used to stop
+# at twice N subjects, which for the default design is the target itself, 127.5 subjects by
+# power.t.test(), so about half of all runs were refused and those that solved were biased low.
+# While the top point's power falls short of 0.80 by more than twice its Monte Carlo error, a point
+# half as large again is added above it, up to 8 N subjects. While the bottom point's power exceeds
+# 0.80 by more than that, a point two thirds its size is added below it, down to 4 subjects. The
+# grid holds 10 points at most. tests/test_app_lite_server.R makes the same checks of the browser
+# build, whose cap is lower.
+extensions <- list(
+  list(what = "a power below the target throughout", power = "below",
+       grid = c(32, 48, 64, 96, 128, 192, 288, 432, 512),
+       says = "does not reach a power of 0.8"),
+  list(what = "a power above the target throughout", power = "above",
+       grid = c(4, 6, 9, 14, 21, 32, 48, 64, 96, 128),
+       says = "does not reach a power of 0.8"),
+  list(what = "a power that crosses the target above twice N", power = "crossing",
+       grid = c(32, 48, 64, 96, 128, 192),
+       says = "Target power 0.80: N = 126 subjects"))
+reference <- sprintf("Analytic reference: N = %.1f subjects", analytic_default)
+for (case in extensions) testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  calls <- new.env()
+  restore <- stub_power(stand_ins[[case$power]], calls)
+  tryCatch(session$setInputs(run_curve = 1), finally = restore())
+  pc <- power_curve_data()
+  text <- shown(output$power_out)
+  check(identical(pc$grid, case$grid) && grepl(case$says, text, fixed = TRUE),
+        sprintf("installed app: %s gives the grid %s and the line '%s'", case$what,
+                paste(case$grid, collapse = ", "), case$says))
+  check(identical(calls$seed, replicate_seeds(2024, 10)[seq_along(calls$n)]) &&
+          identical(pc$seeds, expected_seeds(2024, 64, pc$grid)),
+        sprintf("installed app: with %s, each point takes the next seed in the order computed",
+                case$what))
+  check(grepl(reference, text, fixed = TRUE),
+        sprintf("installed app: with %s, the default design's analytic sample size is shown",
+                case$what))
+})
+
+# The analytic sample size is shown only for a plain design, without random effects or continuous
+# predictors, since either adds variance that the `sd` of power.t.test() leaves out.
+testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  by_subject <- current_spec()
+  by_subject$random <- list(subject = list(intercept_sd = 5))
+  with_age <- current_spec()
+  with_age$predictors <- list(list(name = "age", varies_by = "subject", mean = 0, sd = 1))
+  with_age$fixed$coefficients$age <- 1
+  designs <- list("a by-subject intercept" = by_subject, "a continuous predictor" = with_age)
+  for (i in seq_along(designs)) {
+    calls <- new.env()
+    restore <- stub_power(stand_ins$crossing, calls)
+    tryCatch(session$setInputs(spec_json_in = spec_json(designs[[i]]), run_curve = i),
+             finally = restore())
+    text <- shown(output$power_out)
+    check(grepl("Target power 0.80: N = ", text, fixed = TRUE) &&
+            !grepl("Analytic reference", text, fixed = TRUE),
+          sprintf("installed app: a design with %s solves its curve without an analytic reference",
+                  names(designs)[i]))
+  }
+})
+
+# With the engine itself, at the 200 simulations a point the browser build runs, the default design
+# solves at each of six seeds, and the mean of the six is within 5% of the analytic 127.5 subjects.
+# The grid that stopped at twice N refused some of these runs.
+solves <- new.env()
+for (seed in c(2024, 1:5)) testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  session$setInputs(seed = seed, n_sims = 200, run_curve = 1)
+  pc <- power_curve_data()
+  solves[[as.character(seed)]] <- if (is.null(pc$solved)) NA_real_ else pc$solved$n
+  cat(sprintf("  seed %d: %s\n", seed, gsub("\n", " | ", shown(output$power_out))))
+})
+solved_n <- unlist(mget(as.character(c(2024, 1:5)), envir = solves))
+check(!anyNA(solved_n) && abs(mean(solved_n) / analytic_default - 1) < 0.05,
+      sprintf("installed app: the default design solves at seeds 2024 and 1 to 5 (N = %s), to a mean within 5%% of %.1f",
+              paste(solved_n, collapse = ", "), analytic_default))
+
 # The browser build writes the same routing out in its own copy of the text. It is staged as
 # build_shinylive.R stages it, with the engine files app-lite/engine-files.txt names beside
 # app-lite/app.R, and each design is pasted in as a specification.
@@ -453,8 +574,9 @@ testServer(app = lite, {
         "browser app: Type M is shown with its Monte Carlo standard error")
   session$setInputs(run_curve = 1)
   pc <- power_plot()
-  check(identical(pc$pw, curve_at_grid_seeds(current_spec(), pc$grid, 100)),
-        "browser app: the power curve gives each grid point its own seed")
+  check(identical(pc$seeds, expected_seeds(2024, 64, pc$grid)) &&
+          identical(pc$pw, power_at_points(current_spec(), pc, 100)),
+        "browser app: the power curve gives each point its own seed, in the order the points are computed")
 })
 
 cat(if (ok) "TESTSERVER OK\n" else "TESTSERVER FAILED\n")

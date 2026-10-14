@@ -148,10 +148,14 @@ sharing that process. The architecture is therefore split according to how the t
 | Serverless demo | `app-lite/` exported with shinylive to a static site on GitHub Pages | unbounded, each browser computes via WebAssembly | a low-cost link for design, simulation and Gaussian power |
 | Shared hosted instance | shinyapps.io or ShinyProxy | low and costly | best avoided as the main channel, since it blocks and the prototype's free tier allowed 25 hours per month |
 
-The installable app runs power asynchronously (via `future`/`promises`) so that it does not
-block. The serverless build is single-user-per-browser and runs synchronously. Both are driven
-by the same spec, so a user can design in the browser demo and then run heavy power locally from
-the downloaded spec.
+In the installable app, each power analysis and power curve runs in one R process, and the
+session that asked for it waits for the result. With `future` and `promises` installed,
+`run_app()` runs it in a background process, which leaves the app's own R process free for
+other sessions, such as a second browser tab. Heavy runs belong in `power_design()` or
+`power_mixed()` called from the console, whose `workers` argument spreads the replicates over
+local cores. The serverless build is single-user-per-browser and runs synchronously. Both are
+driven by the same spec, so a user can design in the browser demo and then run heavy power
+locally from the downloaded spec.
 
 ```bash
 # build the serverless static site (downloads webR assets on first run)

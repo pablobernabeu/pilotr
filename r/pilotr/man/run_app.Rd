@@ -10,10 +10,13 @@ run_app(..., async = NULL)
 \item{...}{passed to \code{\link[shiny:runApp]{shiny::runApp()}} (e.g. \code{port},
 \code{launch.browser}).}
 
-\item{async}{If TRUE (default when 'future' and 'promises' are installed), set a
-multisession future plan so power runs execute in a background worker and do not block
-the UI. This keeps the app responsive on your own machine while a long power run
-completes in the background.}
+\item{async}{If TRUE (the default when 'future' and 'promises' are installed), the app runs
+each power analysis and power curve in a background R process. That leaves the app's own R
+process free for other sessions, such as a second browser tab, while the session that
+started the run waits for it. A parallel future plan you have set is used as it stands. Over a
+sequential plan, the default, \code{run_app()} sets a multisession plan of two workers while the
+app runs. Either way, the plan in force before the call is in force again once the app stops.
+With FALSE, power runs in the app's own R process and no plan is set.}
 }
 \value{
 No return value; called for its side effect of launching the Shiny application,
@@ -21,9 +24,14 @@ which blocks the R session until the app is closed.
 }
 \description{
 Runs the bundled Shiny app locally. When the package is installed, the app calls the
-package's functions directly. Running locally gives each user a private R process, so
-work is not blocked by a shared process, and power simulations can be parallelised across
-the user's own cores.
+package's functions directly. Running locally gives each user a private R process, so no one
+else's work waits on theirs.
+}
+\details{
+Each power analysis and power curve in the app runs in one R process, and the session that
+asked for it waits for the result. Its controls and outputs do not update until the run ends.
+For a heavy run, download the specification and call \code{\link[=power_design]{power_design()}} or \code{\link[=power_mixed]{power_mixed()}} from
+the console, where \code{workers} spreads the replicates over your local cores.
 }
 \examples{
 \dontrun{

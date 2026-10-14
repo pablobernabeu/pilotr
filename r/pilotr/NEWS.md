@@ -211,6 +211,28 @@
   specification and its seed. The plot of a pasted design whose factor has more than two levels
   used to stop with "Insufficient values in manual scale" and now draws.
 
+* The no-code app's power curve, installed or in the browser, extends its grid until it brackets
+  the 0.80 target. The grid stopped at twice the current N, which for the default design is the
+  target itself (127.5 subjects by `power.t.test()`), so about half of all runs were refused and
+  those that solved were biased low, at 122 subjects on average in an emulation of 3,000 runs. A
+  point half as large again is now added above the grid while the top point's power falls short
+  of 0.80 by more than twice its Monte Carlo error, and a point two thirds the size is added below
+  it while the bottom point's power exceeds 0.80 by as much. The grid stops at 8 times N in the
+  installed app and at 2,000 subjects in the browser, and holds 10 points at most. Each point keeps
+  the seed it was first given. At the six seeds the app's tests use, the default design now solves
+  every time, to a mean of 129 subjects, where three of the six were refused. For a design without
+  random effects or continuous predictors, the Power tab also gives the sample size
+  `power.t.test()` computes, as a check on the curve's.
+
+* `run_app()` restores the caller's future plan when the app stops, sets a plan only over a
+  sequential one, with two workers in place of one for every core, and honours `async = FALSE`,
+  which the app ignored. It used to end by setting a sequential plan, discarding any plan set
+  before. With `async`, the power curve now runs in the background process as well as the power
+  analysis. The documentation of `run_app()`, the README and the article on the no-code app say
+  what this does: it frees the app's R process for other sessions, while the session that started
+  a run waits for its result. They used to say that the app does not block and that its
+  simulations use all of your local cores.
+
 * `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
   records its singular-fit notice among the optimiser's messages, so every singular fit was also
   counted as a fit with warnings, and a run could not show whether any fit had failed to

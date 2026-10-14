@@ -39,6 +39,45 @@ shown <- function(value)
 x_levels <- function(value)
   tryCatch(as.character(unlist(value$coordmap$panels[[1]]$domain$discrete_limits$x)),
            error = function(e) NULL)
+# The power curve starts from half, three quarters, one, one and a half and twice N subjects. Each
+# point takes the next of replicate_seeds(seed, 10) in the order the points are computed, which is
+# the starting grid in increasing order, then any points added above it in increasing order, then
+# any added below it in decreasing order. These are the seeds the points of `grid` should carry by
+# that rule. replicate_seeds() is the staged engine's, which the app sources into the global
+# environment.
+expected_seeds <- function(seed, n, grid) {
+  start <- unique(pmax(4, round(n * c(0.5, 0.75, 1, 1.5, 2))))
+  run_order <- c(start, sort(grid[grid > max(start)]),
+                 sort(grid[grid < min(start)], decreasing = TRUE))
+  replicate_seeds(seed, 10)[match(grid, run_order)]
+}
+
+# Stand-ins for power_design() of known power at n subjects, as in tests/test_app_server.R, which
+# says why none is flat. `crossing` is the normal approximation to the power of the default design.
+stand_ins <- list(
+  below = function(n) 0.1 + n / 10000,
+  above = function(n) 0.95 + n / 10000,
+  crossing = function(n) pnorm(0.25 * sqrt(n) - 1.96))
+
+# Puts a stand-in for power_design() in the global environment, where the app sourced the engine,
+# and records the size and seed of each call in `calls`. The app sources the engine there again
+# whenever a session starts, so this is called inside the session, and `restore` returns the
+# engine's own function.
+stub_power <- function(power, calls) {
+  real <- get("power_design", envir = globalenv())
+  calls$n <- numeric(0)
+  calls$seed <- numeric(0)
+  assign("power_design", function(spec, n_sims = 1000, ...) {
+    calls$n <- c(calls$n, spec$units$subject$n)
+    calls$seed <- c(calls$seed, spec$seed)
+    list(power = power(spec$units$subject$n))
+  }, envir = globalenv())
+  function() assign("power_design", real, envir = globalenv())
+}
+
+# The analytic sample size of the default design, which the app prints beside the curve's solve.
+analytic_default <- 2 * stats::power.t.test(delta = 5, sd = 10, power = 0.8)$n
+
 # The lines write.csv() gives a data frame, which is how the app writes the data download.
 csv_lines <- function(d) {
   tf <- tempfile(fileext = ".csv")
@@ -163,6 +202,82 @@ testServer(app = stage, {
           grepl("\"spec_version\": \"0.3\"", json, fixed = TRUE),
         "browser app: a between design leaves out the hidden, ticked Counterbalanced lists")
 })
+
+# The power curve extends its grid until the grid brackets the 0.80 target, by the rule
+# tests/test_app_server.R sets out, except that the browser build stops at 2000 subjects where 8 N
+# is more, to stay responsive. The grid used to stop at twice N subjects, which for the default
+# design is the target itself, so about half of all runs were refused.
+extensions <- list(
+  list(what = "a power below the target throughout", power = "below", n = 64,
+       grid = c(32, 48, 64, 96, 128, 192, 288, 432, 512),
+       says = "does not reach a power of 0.8"),
+  list(what = "a power above the target throughout", power = "above", n = 64,
+       grid = c(4, 6, 9, 14, 21, 32, 48, 64, 96, 128),
+       says = "does not reach a power of 0.8"),
+  list(what = "a power that crosses the target above twice N", power = "crossing", n = 64,
+       grid = c(32, 48, 64, 96, 128, 192),
+       says = "Target power 0.80: N = 126 subjects"),
+  list(what = "a power below the target from N = 300", power = "below", n = 300,
+       grid = c(150, 225, 300, 450, 600, 900, 1350, 2000),
+       says = "does not reach a power of 0.8"))
+for (case in extensions) testServer(app = stage, {
+  do.call(session$setInputs, start_inputs)
+  session$setInputs(n_subject = case$n)
+  calls <- new.env()
+  restore <- stub_power(stand_ins[[case$power]], calls)
+  tryCatch(session$setInputs(run_curve = 1), finally = restore())
+  pc <- power_plot()
+  text <- shown(output$power_out)
+  check(identical(pc$grid, case$grid) && grepl(case$says, text, fixed = TRUE),
+        sprintf("browser app: %s gives the grid %s and the line '%s'", case$what,
+                paste(case$grid, collapse = ", "), case$says))
+  check(identical(calls$seed, replicate_seeds(2024, 10)[seq_along(calls$n)]) &&
+          identical(pc$seeds, expected_seeds(2024, case$n, pc$grid)),
+        sprintf("browser app: with %s, each point takes the next seed in the order computed",
+                case$what))
+})
+
+# The analytic sample size is shown for the plain default design, and not for a design with random
+# effects or continuous predictors, since either adds variance that the `sd` of power.t.test()
+# leaves out.
+testServer(app = stage, {
+  do.call(session$setInputs, start_inputs)
+  by_subject <- current_spec()
+  by_subject$random <- list(subject = list(intercept_sd = 5))
+  with_age <- current_spec()
+  with_age$predictors <- list(list(name = "age", varies_by = "subject", mean = 0, sd = 1))
+  with_age$fixed$coefficients$age <- 1
+  designs <- list("the default design" = NULL, "a by-subject intercept" = by_subject,
+                  "a continuous predictor" = with_age)
+  for (i in seq_along(designs)) {
+    if (!is.null(designs[[i]]))
+      session$setInputs(use_pasted = TRUE, pasted = spec_json(designs[[i]]))
+    calls <- new.env()
+    restore <- stub_power(stand_ins$crossing, calls)
+    tryCatch(session$setInputs(run_curve = i), finally = restore())
+    text <- shown(output$power_out)
+    shows <- grepl(sprintf("Analytic reference: N = %.1f subjects", analytic_default), text,
+                   fixed = TRUE)
+    check(grepl("Target power 0.80: N = ", text, fixed = TRUE) && shows == (i == 1L),
+          sprintf("browser app: a curve for %s %s the analytic sample size", names(designs)[i],
+                  if (i == 1L) "shows" else "solves without"))
+  }
+})
+
+# With the engine itself, at the 200 simulations a point the browser build runs, the default design
+# solves at each of six seeds, and the mean of the six is within 5% of the analytic 127.5 subjects.
+solves <- new.env()
+for (seed in c(2024, 1:5)) testServer(app = stage, {
+  do.call(session$setInputs, start_inputs)
+  session$setInputs(seed = seed, n_sims = 300, run_curve = 1)
+  pc <- power_plot()
+  solves[[as.character(seed)]] <- if (is.null(pc$solved)) NA_real_ else pc$solved$n
+  cat(sprintf("  seed %d: %s\n", seed, gsub("\n", " | ", shown(output$power_out))))
+})
+solved_n <- unlist(mget(as.character(c(2024, 1:5)), envir = solves))
+check(!anyNA(solved_n) && abs(mean(solved_n) / analytic_default - 1) < 0.05,
+      sprintf("browser app: the default design solves at seeds 2024 and 1 to 5 (N = %s), to a mean within 5%% of %.1f",
+              paste(solved_n, collapse = ", "), analytic_default))
 
 cat(if (ok) "LITE TESTSERVER OK\n" else "LITE TESTSERVER FAILED\n")
 quit(status = if (ok) 0 else 1)

@@ -99,10 +99,71 @@ type_m_text <- function(r)
   else "the attributes of the data frame, such as its row names"
 }
 
-# Async only when running as the installed package with future+promises (workers reload the
-# package). From source / serverless this is FALSE and power runs synchronously.
-.async_ok <- isNamespaceLoaded("pilotr") &&
+# Power runs in a background R process only when run_app() asks for it, through this option, and
+# only from the installed package, which a worker can load. From source, and under
+# shiny::runApp() on this directory, power runs in this process. The app used to run power in
+# the background whenever future and promises were installed, so run_app(async = FALSE) changed
+# nothing. A background run leaves this process free for other sessions. The session that started
+# it still waits for the result, since Shiny holds a session's inputs and outputs until the
+# promise its observer returned has settled.
+.async_ok <- isTRUE(getOption("pilotr.app_async")) && isNamespaceLoaded("pilotr") &&
   nzchar(system.file(package = "future")) && nzchar(system.file(package = "promises"))
+
+# The power curve over N subjects, on a grid extended until it brackets the 0.80 target. The grid
+# starts at half, three quarters, one, one and a half and twice `n`, at least 4. While the top
+# point's power falls short of the target by more than twice its Monte Carlo standard error,
+# sqrt(p (1 - p) / n_sims), a point half as large again is added above it, up to `cap` subjects.
+# While the bottom point's power exceeds the target by more than that, a point two thirds its
+# size is added below it, down to 4. The grid holds one point for each of `seeds`, so 10 at most.
+# The fixed grid stopped at twice N, which for the default design is the target itself (127.5
+# subjects by power.t.test()). About half of all runs were then refused, and the rest solved low,
+# since a run solved only when its top point happened to land above 0.80.
+#
+# power_at(size, seed) gives the power at `size` subjects. Each point takes the next of `seeds` in
+# the order the points are computed, so a point added below the grid never changes the seed, or
+# the power, of a point already computed. Returns the grid in increasing order, with the power and
+# the seed at each point. app-lite/app.R carries the same function, with a lower cap.
+power_curve_grid <- function(n, cap, n_sims, seeds, power_at, target = 0.8) {
+  grid <- unique(pmax(4, round(n * c(0.5, 0.75, 1, 1.5, 2))))
+  pw <- vapply(seq_along(grid), function(k) power_at(grid[k], seeds[k]), numeric(1))
+  margin <- function(p) 2 * sqrt(p * (1 - p) / n_sims)
+  while (length(grid) < length(seeds)) {
+    top <- max(grid)
+    p <- pw[which.max(grid)]
+    if (top >= cap || p >= target + margin(p)) break
+    size <- min(cap, round(top * 1.5))
+    pw <- c(pw, power_at(size, seeds[length(grid) + 1L]))
+    grid <- c(grid, size)
+  }
+  while (length(grid) < length(seeds)) {
+    bottom <- min(grid)
+    p <- pw[which.min(grid)]
+    if (bottom <= 4 || p <= target - margin(p)) break
+    size <- max(4, round(bottom / 1.5))
+    pw <- c(pw, power_at(size, seeds[length(grid) + 1L]))
+    grid <- c(grid, size)
+  }
+  ord <- order(grid)
+  list(grid = grid[ord], pw = pw[ord], seeds = seeds[seq_along(grid)][ord])
+}
+
+# The total N at which the two-sample t-test that power_design() simulates reaches a power of 0.80,
+# by stats::power.t.test(), shown beside the curve's own solve as a check on it. Only for a plain
+# design, without random effects or continuous predictors, since either adds variance that the
+# `sd` of power.t.test() leaves out. NULL otherwise, and for an effect of zero, which no sample
+# size detects. app-lite/app.R carries the same function.
+t_test_n80 <- function(spec) {
+  if (length(spec[["random"]]) || length(spec[["predictors"]])) return(NULL)
+  tryCatch({
+    f <- Filter(function(x) !is.null(x[["between"]]), spec[["factors"]])[[1]]
+    contrast <- names(f[["contrasts"]])[1]
+    delta <- abs(spec[["fixed"]][["coefficients"]][[contrast]] *
+                   diff(f[["contrasts"]][[contrast]]))
+    if (length(delta) != 1L || !is.finite(delta) || delta == 0) NULL
+    else 2 * stats::power.t.test(delta = delta, sd = spec[["response"]][["sigma"]],
+                                 power = 0.8)$n
+  }, error = function(e) NULL)
+}
 
 # Reasonable intercept/effect (and noise) defaults per family, on each family's own scale.
 # Switching family resets these so a point-and-click design stays valid: a Gaussian-scale
@@ -167,9 +228,10 @@ guide_tab <- tabPanel(
     tags$h5("Power and design analysis"),
     tags$p("The in-app backend estimates power for the two-group Gaussian design with one row ",
            "per subject. It reports power and the Type S and Type M errors of Gelman and Carlin ",
-           "(2014), each with its Monte Carlo error, and draws a power curve over sample size. ",
-           "It then solves that curve for the sample size ",
-           "at which power reaches 0.80 and reports a confidence interval on it. The heavier ",
+           "(2014), each with its Monte Carlo error, and draws a power curve over sample size, ",
+           "adding sample sizes until the curve brackets a power of 0.80. It then solves that ",
+           "curve for the sample size at which power reaches 0.80 and reports a confidence ",
+           "interval on it. The heavier ",
            "analyses stay with the packages themselves: crossed mixed-effects power (via lme4) ",
            "in R and in Python, and precision/ROPE design analysis in R. The specification you ",
            "build here drives all three interfaces."),
@@ -470,7 +532,7 @@ server <- function(input, output, session) {
       "current specification produces. The first difference is in ", r$diff, ".")
   })
 
-  # ---- power: point estimate + curve, capped, async when installed (worker process) ----
+  # ---- power: point estimate + curve, capped, in a worker when run_app() asks for it ----
   power_result     <- reactiveVal(NULL)
   power_curve_data <- reactiveVal(NULL)
   # power_design() t-tests every row, so it runs only for a Gaussian design with one two-level
@@ -565,6 +627,27 @@ server <- function(input, output, session) {
     }, error = power_failed)
   })
 
+  # Reports a computed curve: the text in the Power tab and the curve for the plot.
+  report_curve <- function(curve, spec, n) {
+    # A dashed target line leaves the reader to judge the crossing. target_n() estimates
+    # it instead, and reports its refusal when the curve does not settle the question,
+    # which is more use than a number the sweep cannot support.
+    solved <- tryCatch(target_n(data.frame(n_subject = curve$grid, power = curve$pw, n_sims = n),
+                                target = 0.8),
+                       error = function(e) conditionMessage(e))
+    reference <- t_test_n80(spec)
+    power_result(list(msg = paste0(
+      sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
+              n, paste(curve$grid, collapse = ", ")),
+      if (is.character(solved)) paste0("Target power 0.80: ", solved)
+      else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
+                   solved$n, solved$n_lo, solved$n_hi),
+      if (!is.null(reference))
+        sprintf("\nAnalytic reference: N = %.1f subjects in two equal groups, by stats::power.t.test().",
+                reference))))
+    power_curve_data(c(curve, list(solved = if (is.character(solved)) NULL else solved)))
+  }
+
   observeEvent(input$run_curve, {
     power_curve_data(NULL)
     tryCatch({
@@ -573,30 +656,36 @@ server <- function(input, output, session) {
       if (!is.null(problem)) { power_result(list(msg = problem)); return() }
       n <- .n_sims_input(input$n_sims)
       base_n <- spec$units$subject$n
-      grid <- unique(round(base_n * c(0.5, 0.75, 1, 1.5, 2))); grid <- grid[grid >= 4]
-      # Each point takes its own seed, by the rule of sweep_spec(), so that target_n() below fits
-      # independent points, as it assumes. Every point used to keep the design's seed.
-      seeds <- replicate_seeds(spec$seed, length(grid))
-      withProgress(message = "Computing the power curve...", value = 0.3, {
-        pw <- vapply(seq_along(grid), function(j) {
-          s <- spec; s$units$subject$n <- as.integer(grid[j]); s$seed <- seeds[j]
-          power_design(s, n_sims = n)$power
-        }, numeric(1))
-      })
-      # A dashed target line leaves the reader to judge the crossing. target_n() estimates
-      # it instead, and reports its refusal when the curve does not settle the question,
-      # which is more use than a number the sweep cannot support.
-      solved <- tryCatch(target_n(data.frame(n_subject = grid, power = pw, n_sims = n),
-                                  target = 0.8),
-                         error = function(e) conditionMessage(e))
-      power_result(list(msg = paste0(
-        sprintf("Power curve at n_sims = %d per point. N subjects = %s.\n",
-                n, paste(grid, collapse = ", ")),
-        if (is.character(solved)) paste0("Target power 0.80: ", solved)
-        else sprintf("Target power 0.80: N = %d subjects (95%% interval %d to %d).",
-                     solved$n, solved$n_lo, solved$n_hi))))
-      power_curve_data(list(grid = grid, pw = pw,
-                            solved = if (is.character(solved)) NULL else solved))
+      cap <- 8 * base_n
+      # Each point takes its own seed, so that target_n() fits independent points, as it assumes.
+      # Every point used to keep the design's seed.
+      seeds <- replicate_seeds(spec$seed, 10L)
+      # The whole curve runs in one background process when run_app() asks for it, since each
+      # point the grid adds depends on the power at the last. It is the costlier of the two
+      # buttons, and it used to run in this process even under run_app(async = TRUE).
+      if (.async_ok) {
+        power_result(list(msg = sprintf(
+          "Running %d simulations at each of up to 10 sample sizes in a background worker...", n)))
+        p <- promises::future_promise({
+          power_curve_grid(base_n, cap, n, seeds, function(size, seed) {
+            s <- spec; s$units$subject$n <- as.integer(size); s$seed <- seed
+            pilotr::power_design(s, n_sims = n)$power
+          })
+        }, seed = TRUE)
+        promises::then(p, onFulfilled = function(curve) report_curve(curve, spec, n),
+                          onRejected = power_failed)
+      } else {
+        # One step of the bar for each point, of the 10 a grid can hold.
+        withProgress(message = "Computing the power curve...", value = 0, {
+          curve <- power_curve_grid(base_n, cap, n, seeds, function(size, seed) {
+            s <- spec; s$units$subject$n <- as.integer(size); s$seed <- seed
+            pw <- power_design(s, n_sims = n)$power
+            incProgress(1 / length(seeds), detail = sprintf("N = %d", as.integer(size)))
+            pw
+          })
+        })
+        report_curve(curve, spec, n)
+      }
     }, error = power_failed)
   })
 

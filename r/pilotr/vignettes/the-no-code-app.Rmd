@@ -30,8 +30,12 @@ One way is to run it on your own machine. With the package installed, launch the
 pilotr::run_app()
 ```
 
-Each user runs their own R process, so a heavy power run never blocks anyone else, and
-simulations use all of your local cores.
+Each user runs their own R process, so a power run never holds up anyone else. Within the app,
+each power analysis or power curve runs in one R process, and the app waits for its result. With
+the future and promises packages installed, `run_app()` runs it in a background process, leaving
+the app free for other sessions, such as a second browser tab. For a heavy run, download
+the specification and call `power_design()` or `power_mixed()` from the console, whose `workers`
+argument spreads the replicates over your local cores.
 
 The other way needs nothing installed. A serverless build runs entirely in the browser
 through WebAssembly, with no server and nothing uploaded. Try it at the
@@ -50,13 +54,15 @@ Then read the tabs. 'Design spec' holds the exact JSON specification, the
 portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
 summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
 and Type M errors, together with a power curve over sample size and the sample size at which
-that curve reaches 0.80, with a confidence interval on it. The tab runs this analysis for a
-two-group Gaussian design with one row per subject, and for any other design it explains how to
-run it in the installed package. 'R script' emits a self-contained, reproducible R script, which
-ends by suggesting the analysis that fits the design. In the installed app, Verify runs that
-script in a clean R session and checks that its data are identical, bit for bit, to the data the
-current specification produces. The comparison is with the specification in force when you
-select Verify, so it does not depend on when you last selected Simulate.
+that curve reaches 0.80, with a confidence interval on it. The curve adds sample sizes until it
+brackets a power of 0.80, and for a design without random effects or continuous predictors the
+tab also gives the sample size `power.t.test()` computes, as a check. The tab runs this analysis
+for a two-group Gaussian design with one row per subject, and for any other design it explains
+how to run it in the installed package. 'R script' emits a self-contained, reproducible R
+script, which ends by suggesting the analysis that fits the design. In the installed app, Verify
+runs that script in a clean R session and checks that its data are identical, bit for bit, to
+the data the current specification produces. The comparison is with the specification in force
+when you select Verify, so it does not depend on when you last selected Simulate.
 
 Changing the response family resets the intercept and effect to sensible values for that
 family's scale, so a point-and-click design stays valid. The advanced 'paste a JSON spec' box
