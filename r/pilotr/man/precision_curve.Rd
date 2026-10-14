@@ -13,7 +13,8 @@ precision_curve(
   rope = 0.05,
   n_sims = 60,
   workers = 1,
-  seeds = c("independent", "shared")
+  seeds = c("independent", "shared"),
+  fallback = c("singular", "warning")
 )
 }
 \arguments{
@@ -25,7 +26,9 @@ specification.}
 \item{subject_ns}{A numeric vector of subject counts to evaluate.}
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived via
-\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter, as in \code{\link[=precision_design]{precision_design()}}.}
+\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter, as in \code{\link[=precision_design]{precision_design()}}. A
+ladder of models, as in \code{\link[=precision_design]{precision_design()}}, simulates a simplification rule at every sample
+size.}
 
 \item{prep}{Optional data-preparation function; if \code{NULL} it is derived via
 \code{\link[=model_data]{model_data()}}.}
@@ -48,12 +51,14 @@ identical to a serial run. One pool of that many processes serves the whole swee
 
 \item{seeds}{How the sample sizes are seeded: \code{"independent"}, the default, or \code{"shared"}, as
 in \code{\link[=sweep_spec]{sweep_spec()}}'s \code{.seeds}.}
+
+\item{fallback}{The rule of a ladder, \code{"singular"} or \code{"warning"}, as in \code{\link[=precision_design]{precision_design()}}.}
 }
 \value{
 A data frame with one row per focal effect and sample size, adding an \code{n_subject}
 column to the columns returned by \code{\link[=precision_design]{precision_design()}}, including the Monte Carlo standard
 errors, the Wilson interval bounds, and the \code{n_returned}, \code{n_converged}, \code{n_singular} and
-\code{n_warning} fit counts.
+\code{n_warning} fit counts, and for a ladder the share of each rung at each sample size.
 }
 \description{
 Sweep the number of subjects and report the ROPE decision probabilities at each size. Pass the

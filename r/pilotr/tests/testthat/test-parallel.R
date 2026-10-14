@@ -113,6 +113,22 @@ test_that("a curve over sample size starts one worker pool for the whole sweep",
                                    rope = 0.02, n_sims = 2))
 })
 
+test_that("a ladder runs on workers as it runs serially", {
+  # The ladder reaches the workers as the formula, with the rule it applies.
+  skip_on_cran()
+  skip_if_not_installed("lme4")
+  skip_if_not_installed("lmerTest")
+  skip_unless_workers_load_this_pilotr()
+  spec <- crossed_within_par()
+  ladder <- c("maximal", "zcp", "intercepts")
+  expect_identical(power_mixed(spec, formula = ladder, n_sims = 4, workers = 2),
+                   power_mixed(spec, formula = ladder, n_sims = 4))
+  expect_identical(precision_design(spec, formula = ladder, fallback = "warning", rope = 0.02,
+                                    n_sims = 4, workers = 2),
+                   precision_design(spec, formula = ladder, fallback = "warning", rope = 0.02,
+                                    n_sims = 4))
+})
+
 test_that("an analysis given a cluster runs on it and leaves it running", {
   skip_on_cran()
   skip_unless_workers_load_this_pilotr()

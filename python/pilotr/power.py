@@ -497,6 +497,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
     grouping factor besides ``subject`` and ``item``. The R package's ``power_mixed()`` fits
     the model the specification implies and tests every coefficient.
 
+    Every replicate is analysed with this one model, singular or not. A preregistered
+    simplification rule, which moves to a simpler model whenever a fit is singular, has power and
+    a Type I error rate of its own. It is simulated only in the R package, whose ``power_mixed()``
+    and ``precision_design()`` take a ladder of models as their ``formula``.
+
     This is pilotr's own simulation loop over the portable design specification, not a
     wrapper around an existing power package. It covers territory pioneered by simr (Green
     and MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Vo and Draschkow,

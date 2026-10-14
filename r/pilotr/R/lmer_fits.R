@@ -197,18 +197,21 @@
 # `test` chooses between the linear fitters. Satterthwaite p-values come from lmerTest and cost
 # noticeably more than the plain fit, so precision analysis, which needs only estimates and standard
 # errors, asks for the cheaper one. `auto` says whether pilotr derived the formula, which lets the
-# response family choose the fitter (see .fit_model()). `alternative` chooses the p-value the
-# power functions test against, two-sided or one-sided (see .one_sided_p()).
+# response family choose the fitter (see .fit_model()). `formula` may be a ladder from
+# .as_ladder(), whose rule .fit_rule() applies, and the record then names the rung kept as `rung`.
+# `alternative` chooses the p-value the power functions test against, two-sided or one-sided (see
+# .one_sided_p()).
 .design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE, auto = TRUE,
                         alternative = "two.sided") {
   s <- spec; s[["seed"]] <- seeds[i]
   d <- prep(simulate_design(s, validate = FALSE))
-  f <- .fit_model(formula, d, family = spec[["response"]][["family"]], test = test, auto = auto)
+  f <- .fit_rule(formula, d, family = spec[["response"]][["family"]], test = test, auto = auto)
   na <- stats::setNames(rep(NA_real_, length(fnames)), fnames)
   absent <- stats::setNames(logical(length(fnames)), fnames)
   if (is.null(f$fit))
     return(c(list(present = absent, est = na, se = na, p = na, coef_names = NULL,
-                  error = if (length(f$messages)) f$messages[1] else NA_character_),
+                  error = if (length(f$messages)) f$messages[1] else NA_character_,
+                  rung = f$rung),
              .fit_record_failed()))
 
   co <- if (test) tryCatch(summary(f$fit)$coefficients, error = function(e) NULL) else NULL
@@ -231,7 +234,8 @@
                 else .one_sided_p(co, fn, pcol, f$fit, alternative)
   }
   list(present = present, est = e, se = s_e, p = pv, coef_names = names(est), fitted = TRUE,
-       singular = f$singular, warned = length(f$messages) > 0L, converged = f$converged)
+       singular = f$singular, warned = length(f$messages) > 0L, converged = f$converged,
+       rung = f$rung)
 }
 
 # The focal coefficient names for a specification, in the naming the auto-derived model uses.

@@ -143,6 +143,22 @@
   browser, shows each rate with its error. The Python twin computes these values with the same
   operations in the same order, and both test suites pin them bit for bit.
 
+* `power_mixed()` and `precision_design()` simulate a preregistered simplification rule. An
+  analysis plan that drops the random correlations, then the slopes, whenever a fit is singular
+  analyses each replicate with a model that depends on its data. Its power and Type I error rate
+  are therefore not those of the maximal model, which pilotr fitted to every replicate. `formula`
+  takes a ladder of models, and `fallback`, `"singular"` or `"warning"`, says when a replicate
+  moves on to the next rung. Each replicate keeps the first fit the rule accepts, or else the last
+  rung's fit. `model_formula()` gains `structure = c("maximal", "zcp", "intercepts")`. A ladder
+  written as those names, such as `c("maximal", "zcp", "intercepts")`, is fitted with the model
+  the family needs, and a list of formulas is fitted as written. `power_mixed()` returns and
+  prints the share of the replicates analysed at each rung as `rung_shares`, and
+  `precision_design()`, `precision_curve()` and the sweeps return it as `rung_<name>` columns.
+  `precision_curve()` gains `fallback` as well. The power vignette runs the rule on its priming
+  design, null condition included, since a rule that can end on random intercepts alone can
+  reject a true null hypothesis too often (Barr et al., 2013; Matuschek et al., 2017). A single
+  formula, the default included, gives the results it gave before.
+
 * `spec_from_model()` reports which fixed effects it took from the pilot, and gains
   `effects = "safeguard"`, which replaces each effect by the bound of its 60% interval nearer zero
   (Perugini, Gallucci and Costantini, 2014), and `sesoi`, which sets named effects to a smallest
@@ -509,6 +525,10 @@ Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are bi
 effect size estimators and follow-up bias. *Journal of Experimental Social Psychology, 74*,
 187-195. <doi:10.1016/j.jesp.2017.09.004>
 
+Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects structure for
+confirmatory hypothesis testing: Keep it maximal. *Journal of Memory and Language, 68*(3),
+255-278. <doi:10.1016/j.jml.2012.11.001>
+
 Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H. and
 White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology and
 evolution. *Trends in Ecology & Evolution, 24*(3), 127-135. <doi:10.1016/j.tree.2008.10.008>
@@ -524,6 +544,10 @@ trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026
 Matsumoto, M., Wada, I., Kuramoto, A. and Ashihara, H. (2007). Common defects in initialization
 of pseudorandom number generators. *ACM Transactions on Modeling and Computer Simulation,
 17*(4), 15. <doi:10.1145/1276927.1276928>
+
+Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing Type I error
+and power in linear mixed models. *Journal of Memory and Language, 94*, 305-315.
+<doi:10.1016/j.jml.2017.01.001>
 
 Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 imprecise power estimates. *Perspectives on Psychological Science, 9*(3), 319-332.

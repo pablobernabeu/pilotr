@@ -152,6 +152,58 @@ power package underneath it. It covers territory pioneered by
 differs in being driven by the cross-language specification, in reporting Type S and Type M
 errors alongside power and in built-in parallelisation.
 
+## A preregistered simplification rule
+
+The power above is that of an analysis that reports the maximal model whatever its fit. Many
+analysis plans preregister a rule instead: fit the maximal model, and when the fit is singular,
+drop the correlations between the random effects, then the slopes
+([Barr et al., 2013](https://doi.org/10.1016/j.jml.2012.11.001);
+[Matuschek et al., 2017](https://doi.org/10.1016/j.jml.2017.01.001)). Each replicate is then
+analysed with a model that depends on its data, so the rule has a power and a Type I error rate
+of its own. `model_formula()` builds the two simpler models, `"zcp"`, the zero-correlation model,
+and `"intercepts"`, with random intercepts alone.
+
+```{r}
+model_formula(spec_c, "zcp")
+model_formula(spec_c, "intercepts")
+```
+
+Given the names of the three models as `formula`, `power_mixed()` and `precision_design()` fit
+them to each replicate in turn, as the rungs of a ladder. Each replicate keeps the first fit that
+is not singular, or the intercepts-only fit when every rung is singular, and
+`fallback = "warning"` also moves on from a fit with a convergence warning. The result gives the
+share of the replicates analysed at each rung, and its fit counts describe the fits that were
+kept.
+
+```{r, eval = FALSE}
+pm_rule <- power_mixed(spec_c, formula = c("maximal", "zcp", "intercepts"),
+                       fallback = "singular", n_sims = 200)
+pm_rule$rung_shares
+```
+
+A rule that can end on random intercepts alone ignores, whenever it gets there, how much the
+effect varies over subjects and items, and a test that ignores that variation rejects a true null
+hypothesis too often (Barr et al., 2013). Run the null condition through the same ladder to see
+how often. `design_conditions()` puts it first.
+
+```{r, eval = FALSE}
+sweep_spec(spec_c, "fixed$coefficients", design_conditions(effect = 0.06),
+           power_mixed, formula = c("maximal", "zcp", "intercepts"), n_sims = 200)
+```
+
+`tools/calibration/simplification_rule.R` in the source repository runs these replicates, 200 in
+each condition, and analyses each of them with the maximal model, with the rule and with random
+intercepts alone. With the effect, the maximal model was singular in 152 of the 200 replicates.
+The rule kept the maximal fit in the other 48, and of the 152 it kept the zero-correlation fit in
+23 and the intercepts-only fit in 129. It raised power from 0.69 to 0.735, each with a Monte
+Carlo standard error of about 0.03. Random intercepts alone gave 0.835, but not all of that gain
+is real. Relative to the spread of its estimates, the intercepts-only model reported standard
+errors about 15% smaller than the maximal model did, in both conditions. In the null condition,
+the three analyses rejected in 2, 3 and 6 of the 200 replicates, where a test at its nominal
+level would reject in 10. The slopes of this design are small beside its residual variation,
+which leaves the intercepts-only model little to ignore. Where the effect varies more over
+subjects or items, it ignores more, and the null condition shows what that costs.
+
 ## Which model each family gets
 
 `power_mixed()` and `precision_design()` choose the fitter by the response family, so that the

@@ -4,10 +4,13 @@
 \alias{model_formula}
 \title{Derive the lmer formula implied by a specification}
 \usage{
-model_formula(spec)
+model_formula(spec, structure = c("maximal", "zcp", "intercepts"))
 }
 \arguments{
 \item{spec}{A design specification (path or list).}
+
+\item{structure}{The random-effects structure: \code{"maximal"}, the default, \code{"zcp"} or
+\code{"intercepts"} (see Details).}
 }
 \value{
 A \link[stats:formula]{stats::formula} object suitable for fitting with \code{lme4} or
@@ -19,6 +22,18 @@ Construct the mixed-model formula (with response \code{.y}, as produced by
 structure of a specification. Interaction coefficients written \code{a:b} become
 formula terms \code{a_b}.
 }
+\details{
+The three structures are the usual steps of a rule that simplifies a model when its fit is
+singular or fails to converge (Barr et al., 2013; Bates et al., 2015; Matuschek et al., 2017).
+\code{"maximal"} has every random slope the specification declares, correlated with the intercept
+where the specification correlates them, and uncorrelated (\code{||}) where it does not. \code{"zcp"}, the
+zero-correlation-parameter model, keeps those slopes and estimates no correlation among them,
+writing \code{||} for every grouping factor with a slope. Since \code{\link[=model_data]{model_data()}} supplies numeric
+contrast columns, \code{||} does remove the correlations, which it does not for a factor. A grouping
+factor without slopes keeps \code{(1 | g)}, since lme4 refuses \code{(1 || g)}. \code{"intercepts"} keeps a
+random intercept for each grouping factor and drops every slope. \code{\link[=power_mixed]{power_mixed()}} and
+\code{\link[=precision_design]{precision_design()}} take these names as the rungs of such a rule.
+}
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
   include_items = TRUE, n_subject = 10, n_item = 8, factor_name = "cond",
@@ -27,4 +42,18 @@ spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
   family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
 model_formula(spec)
+model_formula(spec, "zcp")
+model_formula(spec, "intercepts")
+}
+\references{
+Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects
+structure for confirmatory hypothesis testing: Keep it maximal. \emph{Journal of Memory and
+Language}, 68(3), 255-278. \doi{10.1016/j.jml.2012.11.001}
+
+Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed models.
+\emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
+
+Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
+Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
+94, 305-315. \doi{10.1016/j.jml.2017.01.001}
 }

@@ -1,0 +1,34 @@
+Power and Type I error under a preregistered simplification rule
+
+Produced by tools/calibration/simplification_rule.R with 200 replicates a condition, under
+R version 4.6.1 (2026-06-24 ucrt) with lme4 2.0.1 and lmerTest 3.2.1.
+Rerun it to regenerate this file. Nothing here is timed or dated, so a rerun that changes a
+line has changed a result.
+
+The power vignette's priming design: 24 subjects crossed with 18 items, by-subject and by-item
+intercepts and slopes, an effect of 0.06 on the log scale, two-sided tests at alpha 0.05 with
+Satterthwaite's degrees of freedom. The replicates are those of sweep_spec() over
+design_conditions(effect = 0.06) with power_mixed(), and each is analysed three ways:
+
+  maximal     the model the specification implies, (1 + effect | subject) + (1 + effect | item),
+              with singular fits kept
+  rule        the ladder c("maximal", "zcp", "intercepts") with fallback = "singular"
+  intercepts  random intercepts alone, (1 | subject) + (1 | item)
+
+Over the first 10 replicates of each condition, power_mixed() returned the same counts
+for each analysis, and the same rungs for the rule.
+
+The rate is the Type I error rate where the effect is 0 and power where it is 0.06, with its
+Monte Carlo standard error and 95% Wilson interval. sd_ratio is the standard deviation of the
+estimates over the mean standard error reported for them, which exceeds 1 when the standard
+errors are too small. n_singular counts the replicates whose analysed fit was singular, and
+the shares are those of the rule's replicates kept at the maximal, zero-correlation and
+intercepts-only rungs, in that order.
+
+  analysis  effect  n_sig  n_returned   rate   mcse            ci95  sd_ratio  n_singular             shares
+   maximal    0.00      2         200  0.010  0.007  [0.003, 0.036]     0.771         138                  -
+   maximal    0.06    138         200  0.690  0.033  [0.623, 0.750]     0.987         152                  -
+      rule    0.00      3         200  0.015  0.009  [0.005, 0.043]     0.833           0  0.310 0.075 0.615
+      rule    0.06    147         200  0.735  0.031  [0.670, 0.791]     1.064           0  0.240 0.115 0.645
+intercepts    0.00      6         200  0.030  0.012  [0.014, 0.064]     0.923           0                  -
+intercepts    0.06    167         200  0.835  0.026  [0.777, 0.880]     1.156           0                  -

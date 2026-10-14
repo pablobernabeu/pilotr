@@ -68,6 +68,21 @@
 #' true values still come from the specification and are on its scale, which need not be the
 #' model's. A named numeric `focal` gives the true values on the model's scale.
 #'
+#' An analysis plan may instead preregister a simplification rule: fit the maximal model, and when
+#' the fit is singular or fails to converge, drop the correlations, then the slopes (Barr et al.,
+#' 2013; Matuschek et al., 2017). `formula` given as a ladder of models simulates such a rule. Each
+#' replicate fits the rungs in turn and keeps the first fit that `fallback` accepts, or the last
+#' rung's fit when it accepts none. `c("maximal", "zcp", "intercepts")` names structures that
+#' [model_formula()] builds, which are fitted as the default model is, with the fitter the family
+#' chooses. A list of formulas gives rungs that are fitted as written. Power, Type S and Type M are
+#' then those of the rule, `rung_shares` gives the share of the replicates analysed at each rung,
+#' and the fit counts describe the fit each replicate kept. A rule that can end on random
+#' intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
+#' items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
+#' al., 2013). Run the null condition of [design_conditions()] through the same ladder to see how
+#' often, as the power vignette does. A single formula is unaffected by `fallback`, and its result
+#' is the one it always was.
+#'
 #' Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 #' proportion over a finite number of replicates is an estimate rather than a fact. At the default
 #' 100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
@@ -103,7 +118,14 @@
 #'   `a_b`.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
 #'   [model_formula()], and the response family chooses the fitter. A formula given here is
-#'   fitted as a linear model whatever the family (see Details).
+#'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+#'   simplification rule: a character vector of [model_formula()] structures, such as
+#'   `c("maximal", "zcp", "intercepts")`, fitted as the derived model is, or a list of formulas,
+#'   fitted as written. A rung takes its name from the ladder, or else from its structure or its
+#'   position.
+#' @param fallback When a replicate moves on to the next rung of a ladder: `"singular"`, the
+#'   default, after a fit that is boundary-singular or failed, and `"warning"` also after a fit with
+#'   a warning or an optimiser convergence message. It has no effect on a single formula.
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL` it
 #'   is derived via [model_data()].
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
@@ -149,7 +171,17 @@
 #'   of the variance estimates that produce it. A large `n_singular` means the model being fitted is
 #'   richer than the design can support at that sample size, which is common in crossed designs
 #'   (Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
-#' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+#'
+#'   A ladder adds two per-run elements: `rung_shares`, the share of the replicates analysed at
+#'   each rung, named by rung and summing to 1, and `fallback`, the rule applied. A replicate in
+#'   which no rung's fit met the rule counts at the last rung. The fit counts then describe the
+#'   fit each replicate kept, so `n_singular` counts the replicates left with a singular fit at
+#'   the last rung.
+#' @references Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects
+#'   structure for confirmatory hypothesis testing: Keep it maximal. \emph{Journal of Memory and
+#'   Language}, 68(3), 255-278. \doi{10.1016/j.jml.2012.11.001}
+#'
+#'   Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 #'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 #'   9(6), 641-651. \doi{10.1177/1745691614551642}
 #'
@@ -196,15 +228,20 @@
 #' @export
 power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
                         n_sims = 100, alpha = 0.05, workers = 1, cl = NULL,
-                        alternative = c("two.sided", "greater", "less")) {
+                        alternative = c("two.sided", "greater", "less"),
+                        fallback = c("singular", "warning")) {
   if (!requireNamespace("lme4", quietly = TRUE) ||
       !requireNamespace("lmerTest", quietly = TRUE))
     stop("power_mixed() requires the 'lme4' and 'lmerTest' packages; please install them.",
          call. = FALSE)
   alternative <- match.arg(alternative)
+  fallback <- match.arg(fallback)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
   cl <- .check_cluster(cl)
+  # A ladder is read and checked here, once, and travels to the replicate loop as the formula.
+  ladder <- .as_ladder(formula, fallback, spec)
+  if (!is.null(ladder)) formula <- ladder
   if (is.null(cl) && workers > 1L) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
@@ -215,11 +252,14 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 
 # The replicate loop behind power_mixed(), run on the PSOCK cluster `cl` when there is one. The
 # cluster is the caller's or one power_mixed() started, and power_curve_mixed() hands one to every
-# grid point through sweep_spec().
+# grid point through sweep_spec(). `formula` is NULL, a single formula or a ladder.
 .power_mixed_impl <- function(spec, focal, formula, prep, n_sims, alpha, cl = NULL,
                               alternative = "two.sided") {
-  auto <- is.null(formula)
-  if (auto) formula <- model_formula(spec)
+  ladder <- if (inherits(formula, "pilotr_ladder")) formula
+  # The response family chooses the fitter for the model pilotr derives, a ladder's structures
+  # included, and a formula the user gives is fitted as written.
+  auto <- is.null(formula) || isTRUE(ladder$derived)
+  if (is.null(formula)) formula <- model_formula(spec)
   if (is.null(prep)) prep <- .default_prep(spec)
   fo <- .resolve_focal(focal, spec)
   fnames <- fo$names
@@ -289,24 +329,29 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
       }
     }
   }
-  .warn_no_fits(res, n_returned, formula)
+  .warn_no_fits(res, n_returned, .last_rung(formula))
   .warn_absent_focal(seen, n_returned, coef_names)
 
   out <- c(list(n_sims = n_sims, alpha = alpha,
-                fitter = .fitter_label(formula, family, test = TRUE, auto = auto,
-                                       alternative = alternative)),
+                fitter = .analysis_label(formula, family, test = TRUE, auto = auto,
+                                         alternative = alternative)),
            .fit_counts(res, n_sims, n_returned),
            list(power = power, power_mcse = mcse, power_lo = lo, power_hi = hi,
                 n_significant = n_sig, true_effect = fo$true[fnames],
                 mean_estimate = mean_est, type_s = type_s, type_s_lo = s_lo, type_s_hi = s_hi,
                 type_m = type_m, type_m_mcse = m_mcse))
+  # A ladder adds its rule and where the replicates ended on it. A single model adds nothing, so
+  # its result is the one it always was.
+  if (!is.null(ladder))
+    out <- c(out, list(rung_shares = .rung_shares(res, ladder), fallback = ladder$fallback))
   class(out) <- c("pilotr_power", "list")
   out
 }
 
 #' Print a simulation-based power result
 #'
-#' Shows the fit accounting and then two tables with one row per focal effect. The first gives
+#' Shows the fit accounting, with the share of the replicates analysed at each rung when the result
+#' comes from a ladder, and then two tables with one row per focal effect. The first gives
 #' each power estimate beside its Monte Carlo standard error and Wilson interval, so that the
 #' precision of the estimate is as visible as the estimate. The second gives Type S beside its
 #' Wilson interval and Type M beside its Monte Carlo standard error, both taken over the
@@ -323,6 +368,14 @@ print.pilotr_power <- function(x, digits = 3, ...) {
   if (!is.null(x$fitter)) cat(sprintf("  fitter: %s\n", x$fitter))
   cat(sprintf("  fits: %d attempted, %d returned, %d converged cleanly, %d singular, %d with warnings\n",
               x$n_attempted, x$n_returned, x$n_converged, x$n_singular, x$n_warning))
+  # Where a simplification rule left the replicates. A single model has no rungs and prints as it
+  # did.
+  if (!is.null(x$rung_shares))
+    cat(sprintf("  analysed at each rung, moving on from %s: %s\n",
+                if (identical(x$fallback, "warning")) "singular fits and fits with warnings"
+                else "singular fits",
+                paste(sprintf("%s %.*f", names(x$rung_shares), digits, x$rung_shares),
+                      collapse = ", ")))
   if (x$n_singular > 0.25 * max(x$n_attempted, 1))
     cat("  note: many fits were boundary-singular, so this model is richer than the design supports\n")
   # The bounds take `digits` as the rates do. They were written with three decimals whatever
@@ -472,9 +525,10 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
              .name = "n_subject", .seeds = seeds)
 }
 
-# Flatten a pilotr_power object into one data-frame row per focal effect, for the sweeps.
+# Flatten a pilotr_power object into one data-frame row per focal effect, for the sweeps. A
+# ladder's shares become one column per rung, `rung_<name>`, as in precision_design().
 .as_power_frame <- function(x) {
-  data.frame(
+  out <- data.frame(
     effect = names(x$power), true = unname(x$true_effect),
     power = unname(x$power), power_mcse = unname(x$power_mcse),
     power_lo = unname(x$power_lo), power_hi = unname(x$power_hi),
@@ -485,4 +539,5 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
     n_singular = x$n_singular, n_warning = x$n_warning,
     fitter = if (is.null(x$fitter)) NA_character_ else x$fitter,
     row.names = NULL, stringsAsFactors = FALSE)
+  .add_rung_columns(out, x$rung_shares)
 }

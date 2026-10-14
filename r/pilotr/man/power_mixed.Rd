@@ -13,7 +13,8 @@ power_mixed(
   alpha = 0.05,
   workers = 1,
   cl = NULL,
-  alternative = c("two.sided", "greater", "less")
+  alternative = c("two.sided", "greater", "less"),
+  fallback = c("singular", "warning")
 )
 }
 \arguments{
@@ -28,7 +29,11 @@ effects follow the model's column naming, so a specification key \code{a:b} is t
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
 \code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
-fitted as a linear model whatever the family (see Details).}
+fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+simplification rule: a character vector of \code{\link[=model_formula]{model_formula()}} structures, such as
+\code{c("maximal", "zcp", "intercepts")}, fitted as the derived model is, or a list of formulas,
+fitted as written. A rung takes its name from the ladder, or else from its structure or its
+position.}
 
 \item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL} it
 is derived via \code{\link[=model_data]{model_data()}}.}
@@ -54,6 +59,10 @@ every grid point.}
 \item{alternative}{The alternative hypothesis of every focal effect's test: \code{"two.sided"}, the
 default, or \code{"greater"} or \code{"less"} for a one-sided test of a directional prediction (see
 Details).}
+
+\item{fallback}{When a replicate moves on to the next rung of a ladder: \code{"singular"}, the
+default, after a fit that is boundary-singular or failed, and \code{"warning"} also after a fit with
+a warning or an optimiser convergence message. It has no effect on a single formula.}
 }
 \value{
 An object of class \code{pilotr_power}, a list whose per-run elements are \code{n_sims},
@@ -82,6 +91,12 @@ remain interpretable and discarding them would bias the result: singularity is n
 of the variance estimates that produce it. A large \code{n_singular} means the model being fitted is
 richer than the design can support at that sample size, which is common in crossed designs
 (Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
+
+A ladder adds two per-run elements: \code{rung_shares}, the share of the replicates analysed at
+each rung, named by rung and summing to 1, and \code{fallback}, the rule applied. A replicate in
+which no rung's fit met the rule counts at the last rung. The fit counts then describe the
+fit each replicate kept, so \code{n_singular} counts the replicates left with a singular fit at
+the last rung.
 }
 \description{
 For each replicate, simulate from the ground-truth specification, fit the model the
@@ -140,6 +155,21 @@ response. With such a formula, or a \code{prep} that changes the response, and \
 true values still come from the specification and are on its scale, which need not be the
 model's. A named numeric \code{focal} gives the true values on the model's scale.
 
+An analysis plan may instead preregister a simplification rule: fit the maximal model, and when
+the fit is singular or fails to converge, drop the correlations, then the slopes (Barr et al.,
+2013; Matuschek et al., 2017). \code{formula} given as a ladder of models simulates such a rule. Each
+replicate fits the rungs in turn and keeps the first fit that \code{fallback} accepts, or the last
+rung's fit when it accepts none. \code{c("maximal", "zcp", "intercepts")} names structures that
+\code{\link[=model_formula]{model_formula()}} builds, which are fitted as the default model is, with the fitter the family
+chooses. A list of formulas gives rungs that are fitted as written. Power, Type S and Type M are
+then those of the rule, \code{rung_shares} gives the share of the replicates analysed at each rung,
+and the fit counts describe the fit each replicate kept. A rule that can end on random
+intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
+items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
+al., 2013). Run the null condition of \code{\link[=design_conditions]{design_conditions()}} through the same ladder to see how
+often, as the power vignette does. A single formula is unaffected by \code{fallback}, and its result
+is the one it always was.
+
 Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 proportion over a finite number of replicates is an estimate rather than a fact. At the default
 100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
@@ -182,6 +212,10 @@ if (requireNamespace("lme4", quietly = TRUE) &&
 }
 }
 \references{
+Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects
+structure for confirmatory hypothesis testing: Keep it maximal. \emph{Journal of Memory and
+Language}, 68(3), 255-278. \doi{10.1016/j.jml.2012.11.001}
+
 Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
 (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
 9(6), 641-651. \doi{10.1177/1745691614551642}

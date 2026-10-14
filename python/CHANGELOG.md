@@ -60,6 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The `power_mixed` docstring and the power guide say that a preregistered simplification rule,
+  which moves to a simpler model whenever a fit is singular, is simulated only in the R package.
+  There, `power_mixed()` and `precision_design()` take a ladder of models and report the share of
+  the replicates analysed with each. `power_mixed` here analyses every replicate with its one
+  model.
 - `power_curve` gives each grid point its own replicates. Every point reused the specification's
   seed, so neighbouring points shared their random numbers, while `solve_curve` treats them as
   independent. Over 1,000 emulated curves a setting, its nominal 95% intervals covered the true

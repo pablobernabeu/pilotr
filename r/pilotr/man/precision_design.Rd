@@ -12,7 +12,8 @@ precision_design(
   rope = 0.05,
   n_sims = 100,
   workers = 1,
-  cl = NULL
+  cl = NULL,
+  fallback = c("singular", "warning")
 )
 }
 \arguments{
@@ -25,7 +26,10 @@ effects follow the model's column naming, so a specification key \code{a:b} is t
 
 \item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
 \code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
-fitted as a linear model whatever the family (see Details).}
+fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+simplification rule: a character vector of \code{\link[=model_formula]{model_formula()}} structures, such as
+\code{c("maximal", "zcp", "intercepts")}, fitted as the derived model is, or a list of formulas,
+fitted as written, as in \code{\link[=power_mixed]{power_mixed()}}.}
 
 \item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL}
 it is derived via \code{\link[=model_data]{model_data()}}, which log-transforms the outcome and
@@ -53,6 +57,10 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 \item{cl}{A cluster made by \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to run the replicates on, in place of one
 started for this call, in which case \code{workers} is ignored. The cluster is left running for its
 owner to stop, and through \code{\link[=sweep_spec]{sweep_spec()}} one cluster serves every grid point.}
+
+\item{fallback}{When a replicate moves on to the next rung of a ladder: \code{"singular"}, the
+default, after a fit that is boundary-singular or failed, and \code{"warning"} also after a fit with
+a warning or an optimiser convergence message. It has no effect on a single formula.}
 }
 \value{
 A data frame with one row per focal effect and columns \code{param}, \code{true},
@@ -78,6 +86,11 @@ retained, since their fixed-effect estimates remain interpretable and
 discarding them would bias the result. A large \code{n_singular} means the model
 being fitted is richer than the design can support at that sample size, which
 is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017).
+
+A ladder adds one column per rung, \verb{rung_<name>}, holding the share of the replicates
+analysed at that rung, the same on every row. The shares sum to 1, and a replicate in which no
+rung's fit met the rule counts at the last rung. The fit counts then describe the fit each
+replicate kept.
 }
 \description{
 A fast frequentist analogue of a Bayesian highest-density-interval-versus-ROPE design
@@ -118,6 +131,11 @@ has no random terms, whatever the family. With such a formula, or a \code{prep} 
 response, and \code{focal = NULL}, the true values still come from the specification and are on its
 scale, which need not be the model's. A named numeric \code{focal} gives the true values on the
 model's scale.
+
+\code{formula} given as a ladder of models simulates a preregistered simplification rule, as in
+\code{\link[=power_mixed]{power_mixed()}}. Each replicate fits the rungs in turn and keeps the first fit that \code{fallback}
+accepts, or the last rung's fit when it accepts none. The intervals and decisions are then those
+of the rule, and one column per rung gives the share of the replicates analysed at it.
 }
 \examples{
 \donttest{

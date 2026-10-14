@@ -68,6 +68,17 @@ def test_replicate_seeds_gives_the_affine_mechanism():
     assert "Matsumoto" in doc and "10.1145/1276927.1276928" in doc
 
 
+def test_power_mixed_says_that_a_simplification_rule_is_simulated_in_r_only():
+    # The R twin's power_mixed() and precision_design() simulate a preregistered rule that
+    # simplifies the model when a fit is singular. This backend fits one model, so its guide and
+    # docstring say where the rule is.
+    from pilotr import power_mixed
+
+    for text in (re.sub(r"\s+", " ", power_mixed.__doc__), _text("python", "docs", "power.md")):
+        assert "simplification rule" in text
+        assert "only in the R package" in text
+
+
 def _lag1(xs):
     """The lag-1 Pearson correlation, written out because statistics.correlation needs 3.10."""
     a, b = xs[:-1], xs[1:]

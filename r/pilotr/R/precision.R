@@ -50,6 +50,11 @@
 #' scale, which need not be the model's. A named numeric `focal` gives the true values on the
 #' model's scale.
 #'
+#' `formula` given as a ladder of models simulates a preregistered simplification rule, as in
+#' [power_mixed()]. Each replicate fits the rungs in turn and keeps the first fit that `fallback`
+#' accepts, or the last rung's fit when it accepts none. The intervals and decisions are then those
+#' of the rule, and one column per rung gives the share of the replicates analysed at it.
+#'
 #' @param spec A design specification (path or list).
 #' @param focal The focal effects. `NULL`, the default, analyses every coefficient in the
 #'   specification and takes the true values from it. A named numeric vector maps coefficient names
@@ -57,7 +62,13 @@
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name `a_b`.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
 #'   [model_formula()], and the response family chooses the fitter. A formula given here is
-#'   fitted as a linear model whatever the family (see Details).
+#'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+#'   simplification rule: a character vector of [model_formula()] structures, such as
+#'   `c("maximal", "zcp", "intercepts")`, fitted as the derived model is, or a list of formulas,
+#'   fitted as written, as in [power_mixed()].
+#' @param fallback When a replicate moves on to the next rung of a ladder: `"singular"`, the
+#'   default, after a fit that is boundary-singular or failed, and `"warning"` also after a fit with
+#'   a warning or an optimiser convergence message. It has no effect on a single formula.
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL`
 #'   it is derived via [model_data()], which log-transforms the outcome and
 #'   builds the contrast and interaction columns, so focal names follow the
@@ -103,6 +114,11 @@
 #'   discarding them would bias the result. A large `n_singular` means the model
 #'   being fitted is richer than the design can support at that sample size, which
 #'   is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017).
+#'
+#'   A ladder adds one column per rung, `rung_<name>`, holding the share of the replicates
+#'   analysed at that rung, the same on every row. The shares sum to 1, and a replicate in which no
+#'   rung's fit met the rule counts at the last rung. The fit counts then describe the fit each
+#'   replicate kept.
 #' @references Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed
 #'   models. \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
 #'
@@ -134,13 +150,18 @@
 #' }
 #' @export
 precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, rope = 0.05,
-                             n_sims = 100, workers = 1, cl = NULL) {
+                             n_sims = 100, workers = 1, cl = NULL,
+                             fallback = c("singular", "warning")) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_design() requires the 'lme4' package; please install it.", call. = FALSE)
+  fallback <- match.arg(fallback)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
   cl <- .check_cluster(cl)
   rope <- .as_rope(rope)
+  # A ladder is read and checked here, once, and travels to the replicate loop as the formula.
+  ladder <- .as_ladder(formula, fallback, spec)
+  if (!is.null(ladder)) formula <- ladder
   if (is.null(cl) && workers > 1L) {
     cl <- parallel::makeCluster(workers)
     on.exit(parallel::stopCluster(cl), add = TRUE)
@@ -151,10 +172,13 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 
 # The replicate loop behind precision_design(), run on the PSOCK cluster `cl` when there is one,
 # which precision_curve() hands to every grid point through sweep_spec(). `rope` arrives as the
-# region c(lower, upper) that .as_rope() returns.
+# region c(lower, upper) that .as_rope() returns. `formula` is NULL, a single formula or a ladder.
 .precision_design_impl <- function(spec, focal, formula, prep, rope, n_sims, cl = NULL) {
-  auto <- is.null(formula)
-  if (auto) formula <- model_formula(spec)
+  ladder <- if (inherits(formula, "pilotr_ladder")) formula
+  # The response family chooses the fitter for the model pilotr derives, a ladder's structures
+  # included, and a formula the user gives is fitted as written.
+  auto <- is.null(formula) || isTRUE(ladder$derived)
+  if (is.null(formula)) formula <- model_formula(spec)
   if (is.null(prep)) prep <- .default_prep(spec)
   fo <- .resolve_focal(focal, spec)
   fnames <- fo$names
@@ -199,11 +223,11 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     p_out[f] <- ro$p; out_mcse[f] <- ro$p_mcse; out_lo[f] <- ro$p_lo; out_hi[f] <- ro$p_hi
     p_ins[f] <- ri$p; ins_mcse[f] <- ri$p_mcse; ins_lo[f] <- ri$p_lo; ins_hi[f] <- ri$p_hi
   }
-  .warn_no_fits(res, n_returned, formula)
+  .warn_no_fits(res, n_returned, .last_rung(formula))
   .warn_absent_focal(seen, n_returned, coef_names)
 
   cnt <- .fit_counts(res, n_sims, n_returned)
-  data.frame(
+  out <- data.frame(
     param = fnames, true = unname(fo$true[fnames]),
     mean_ci_width = unname(width),
     p_meaningful = unname(p_out), p_meaningful_mcse = unname(out_mcse),
@@ -212,8 +236,10 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
     p_equivalent_lo = unname(ins_lo), p_equivalent_hi = unname(ins_hi),
     n_attempted = cnt$n_attempted, n_returned = cnt$n_returned,
     n_converged = cnt$n_converged, n_singular = cnt$n_singular, n_warning = cnt$n_warning,
-    fitter = .fitter_label(formula, family, test = FALSE, auto = auto),
+    fitter = .analysis_label(formula, family, test = FALSE, auto = auto),
     row.names = NULL, stringsAsFactors = FALSE)
+  # A ladder adds the share of the replicates at each rung, and a single model adds nothing.
+  .add_rung_columns(out, if (!is.null(ladder)) .rung_shares(res, ladder))
 }
 
 # The default data-preparation function, built in its own small frame so that only the
@@ -279,7 +305,9 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   specification.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
 #' @param formula Optional `lme4` formula; if `NULL` it is derived via
-#'   [model_formula()], and the response family chooses the fitter, as in [precision_design()].
+#'   [model_formula()], and the response family chooses the fitter, as in [precision_design()]. A
+#'   ladder of models, as in [precision_design()], simulates a simplification rule at every sample
+#'   size.
 #' @param prep Optional data-preparation function; if `NULL` it is derived via
 #'   [model_data()].
 #' @param rope The region of practical equivalence, as in [precision_design()]: a non-negative
@@ -297,10 +325,11 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   identical to a serial run. One pool of that many processes serves the whole sweep.
 #' @param seeds How the sample sizes are seeded: `"independent"`, the default, or `"shared"`, as
 #'   in [sweep_spec()]'s `.seeds`.
+#' @param fallback The rule of a ladder, `"singular"` or `"warning"`, as in [precision_design()].
 #' @return A data frame with one row per focal effect and sample size, adding an `n_subject`
 #'   column to the columns returned by [precision_design()], including the Monte Carlo standard
 #'   errors, the Wilson interval bounds, and the `n_returned`, `n_converged`, `n_singular` and
-#'   `n_warning` fit counts.
+#'   `n_warning` fit counts, and for a ladder the share of each rung at each sample size.
 #' @seealso [solve_curve()] to solve the returned curve for a target decision probability,
 #'   [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
 #' @examples
@@ -320,13 +349,16 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #' @export
 precision_curve <- function(spec, focal = NULL, subject_ns, formula = NULL, prep = NULL,
                             rope = 0.05, n_sims = 60, workers = 1,
-                            seeds = c("independent", "shared")) {
+                            seeds = c("independent", "shared"),
+                            fallback = c("singular", "warning")) {
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("precision_curve() requires the 'lme4' package; please install it.", call. = FALSE)
   spec <- .as_spec(spec)
   seeds <- match.arg(seeds)
+  fallback <- match.arg(fallback)
   workers <- .check_workers(workers)
   .as_rope(rope)                    # a malformed region is refused before any worker starts
+  .as_ladder(formula, fallback, spec)   # and so is a malformed ladder
   # One pool for the whole sweep, handed to every grid point. Since 0.3.0 `workers` had travelled
   # to precision_design(), which started and stopped a pool at every point.
   cl <- NULL
@@ -336,5 +368,5 @@ precision_curve <- function(spec, focal = NULL, subject_ns, formula = NULL, prep
   }
   sweep_spec(spec, "units$subject$n", subject_ns, precision_design,
              focal = focal, formula = formula, prep = prep, rope = rope,
-             n_sims = n_sims, cl = cl, .name = "n_subject", .seeds = seeds)
+             n_sims = n_sims, cl = cl, fallback = fallback, .name = "n_subject", .seeds = seeds)
 }

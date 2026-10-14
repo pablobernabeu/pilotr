@@ -62,9 +62,33 @@ model_data <- function(spec, d) {
 #' structure of a specification. Interaction coefficients written `a:b` become
 #' formula terms `a_b`.
 #'
+#' @details
+#' The three structures are the usual steps of a rule that simplifies a model when its fit is
+#' singular or fails to converge (Barr et al., 2013; Bates et al., 2015; Matuschek et al., 2017).
+#' `"maximal"` has every random slope the specification declares, correlated with the intercept
+#' where the specification correlates them, and uncorrelated (`||`) where it does not. `"zcp"`, the
+#' zero-correlation-parameter model, keeps those slopes and estimates no correlation among them,
+#' writing `||` for every grouping factor with a slope. Since [model_data()] supplies numeric
+#' contrast columns, `||` does remove the correlations, which it does not for a factor. A grouping
+#' factor without slopes keeps `(1 | g)`, since lme4 refuses `(1 || g)`. `"intercepts"` keeps a
+#' random intercept for each grouping factor and drops every slope. [power_mixed()] and
+#' [precision_design()] take these names as the rungs of such a rule.
+#'
 #' @param spec A design specification (path or list).
+#' @param structure The random-effects structure: `"maximal"`, the default, `"zcp"` or
+#'   `"intercepts"` (see Details).
 #' @return A [stats::formula] object suitable for fitting with `lme4` or
 #'   `lmerTest`.
+#' @references Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects
+#'   structure for confirmatory hypothesis testing: Keep it maximal. \emph{Journal of Memory and
+#'   Language}, 68(3), 255-278. \doi{10.1016/j.jml.2012.11.001}
+#'
+#'   Bates, D., Kliegl, R., Vasishth, S. and Baayen, H. (2015). Parsimonious mixed models.
+#'   \emph{arXiv}. \doi{10.48550/arXiv.1506.04967}
+#'
+#'   Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing
+#'   Type I error and power in linear mixed models. \emph{Journal of Memory and Language},
+#'   94, 305-315. \doi{10.1016/j.jml.2017.01.001}
 #' @examples
 #' spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",
 #'   include_items = TRUE, n_subject = 10, n_item = 8, factor_name = "cond",
@@ -73,8 +97,11 @@ model_data <- function(spec, d) {
 #'   item_int_sd = 0.08, item_slope_sd = 0.02, item_corr = -0.1,
 #'   family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
 #' model_formula(spec)
+#' model_formula(spec, "zcp")
+#' model_formula(spec, "intercepts")
 #' @export
-model_formula <- function(spec) {
+model_formula <- function(spec, structure = c("maximal", "zcp", "intercepts")) {
+  structure <- match.arg(structure)
   fixed <- vapply(names(spec[["fixed"]][["coefficients"]]), .us, character(1))
   rs <- spec[["random"]]
   # `|` only when the process actually correlates the terms, `||` otherwise. Emitting `|`
@@ -82,11 +109,15 @@ model_formula <- function(spec) {
   # zero, which spends degrees of freedom on a parameter known to be absent and makes a
   # boundary-singular fit the likely outcome. Since model_data() supplies numeric contrast
   # columns, with no factors among them, `||` does decorrelate here, without the partial-effect
-  # caveat that applies to `||` on a factor.
-  re <- vapply(names(rs), function(g)
-    sprintf("(%s %s %s)", paste(c("1", vapply(names(rs[[g]][["slopes"]]), .us, character(1))),
-                                collapse = " + "), .re_bar(rs[[g]]), g),
-    character(1))
+  # caveat that applies to `||` on a factor. The two simpler structures drop the correlations, or
+  # the slopes as well, and a group left with its intercept alone takes `|` in each.
+  re <- vapply(names(rs), function(g) {
+    slopes <- if (structure == "intercepts") character(0)
+              else vapply(names(rs[[g]][["slopes"]]), .us, character(1))
+    bar <- if (structure == "maximal") .re_bar(rs[[g]])
+           else if (length(slopes)) "||" else "|"
+    sprintf("(%s %s %s)", paste(c("1", slopes), collapse = " + "), bar, g)
+  }, character(1))
   # Anchor the formula in the global environment, away from this function's evaluation
   # frame. print.formula omits its `<environment: ...>` line only for the global
   # environment, so any other choice trails a raw memory address that changes on every

@@ -236,6 +236,12 @@ all four variance components when two of them are as small as these slopes. Such
 also notes that a fit may be on the boundary whenever a variance component is below 0.01. On
 the log scale every fit draws that notice, so it counts towards none of these.
 
+Every replicate here is analysed with the one model, singular or not. An analysis plan may
+instead preregister a simplification rule, such as dropping the slopes whenever a fit is
+singular, and such a rule has power and a Type I error rate of its own. It is simulated only in
+the R package, whose `power_mixed()` and `precision_design()` take a ladder of models as their
+`formula` and report the share of the replicates analysed with each model.
+
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
 `true_effect`). Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if
 Powell's does not converge. statsmodels' default chain of optimisers stopped short of the
