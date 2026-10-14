@@ -11,7 +11,8 @@ power_curve_mixed(
   n_sims = 60,
   alpha = 0.05,
   workers = 1,
-  seeds = c("independent", "shared")
+  seeds = c("independent", "shared"),
+  alternative = c("two.sided", "greater", "less")
 )
 }
 \arguments{
@@ -26,7 +27,7 @@ Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported alongs
 \code{power_mcse}. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
 too coarse to support a claim about a design; raise it to at least 200 for planning.}
 
-\item{alpha}{Two-sided significance level.}
+\item{alpha}{Significance level of the test, two-sided unless \code{alternative} says otherwise.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates at
 each grid point. The default of 1 runs serially, and any worker count returns results
@@ -34,12 +35,16 @@ identical to a serial run. One pool of that many processes serves the whole swee
 
 \item{seeds}{How the sample sizes are seeded: \code{"independent"}, the default, or \code{"shared"}, as
 in \code{\link[=sweep_spec]{sweep_spec()}}'s \code{.seeds}.}
+
+\item{alternative}{The alternative hypothesis of every test, \code{"two.sided"}, \code{"greater"} or
+\code{"less"}, as in \code{\link[=power_mixed]{power_mixed()}}.}
 }
 \value{
 A data frame with one row per sample size and focal effect, with columns \code{n_subject},
 \code{effect}, \code{true}, \code{power}, \code{power_mcse}, \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{type_s},
 \code{type_s_lo}, \code{type_s_hi}, \code{type_m}, \code{type_m_mcse}, the \code{n_attempted}, \code{n_returned},
 \code{n_converged}, \code{n_singular} and \code{n_warning} fit counts, and \code{fitter}, as in \code{\link[=power_mixed]{power_mixed()}}.
+\code{fitter} names the direction of a one-sided test.
 \code{n_singular} typically falls as the sample size rises, so reading it down the sweep shows
 where the model becomes supportable.
 }

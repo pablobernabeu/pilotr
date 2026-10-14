@@ -45,6 +45,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   counts give the same doubles in both languages, and both test suites pin them. The power guide
   draws the band around its curve from `power_lo` and `power_hi`, where it had computed a Wald
   band by hand, which narrows to nothing where power reaches 0 or 1.
+- `power`, `power_curve` and `power_mixed` gain `alternative`, which plans the one-sided test of
+  a directional prediction with `"greater"` or `"less"`. Every earlier result was two-sided, and
+  the default, `"two.sided"`, leaves every number as it was. The values are spelt as in the R
+  twin, and scipy's `"two-sided"` is refused, so that a call means the same in both languages.
+  The one-sided p-value comes from the statistic behind the two-sided one, the t of
+  `scipy.stats.ttest_ind` or the Wald z of MixedLM. Type S and Type M are taken over the
+  replicates significant in the tested direction. `power` records the test in a new key,
+  `alternative`, and the `backend` of `power_mixed` names the direction. On the same replicates,
+  a one-sided test at alpha rejects exactly where the two-sided test at 2 alpha rejects with the
+  estimate in the tested direction. A two-sided result at 2 alpha from an earlier version
+  therefore gives the one-sided power at alpha, in the direction of the true effect, as
+  `power * (1 - type_s)`.
 
 ### Changed
 

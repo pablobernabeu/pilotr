@@ -90,9 +90,9 @@ def _same(a, b):
 def test_power_reports_the_monte_carlo_error_of_power_type_s_and_type_m():
     pytest.importorskip("scipy")
     r = power(_two_group(), n_sims=100)
-    assert list(r) == ["n_sims", "alpha", "power", "power_mcse", "power_lo", "power_hi",
-                       "n_significant", "true_effect", "mean_estimate", "type_s", "type_s_lo",
-                       "type_s_hi", "type_m", "type_m_mcse"]
+    assert list(r) == ["n_sims", "alpha", "alternative", "power", "power_mcse", "power_lo",
+                       "power_hi", "n_significant", "true_effect", "mean_estimate", "type_s",
+                       "type_s_lo", "type_s_hi", "type_m", "type_m_mcse"]
     assert ({k: r[k] for k in _POWER_KEYS}
             == _rate_with_error(r["n_significant"], r["n_sims"], "power"))
     wrong = round(r["type_s"] * r["n_significant"])

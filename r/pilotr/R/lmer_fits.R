@@ -80,7 +80,9 @@
 # The fitter and the test behind a run's estimates, as the result reports them, for example
 # "lme4::glmer (binomial), Wald z". With `test = FALSE`, the only inference made is the interval
 # precision_design() builds, the estimate plus or minus 1.96 standard errors, a Wald z interval.
-.fitter_label <- function(formula, family, test, auto) {
+# A one-sided test is named with its direction, "stats::lm, t, one-sided (greater)", so that a
+# result read later says which test its power belongs to. The two-sided label is unchanged.
+.fitter_label <- function(formula, family, test, auto, alternative = "two.sided") {
   k <- .model_kind(formula, family, auto)
   fitter <- if (!is.null(k$glm_family))
     sprintf("%s (%s)", if (k$has_re) "lme4::glmer" else "stats::glm", k$glm_family)
@@ -88,7 +90,24 @@
   else "stats::lm"
   inference <- if (!test || !is.null(k$glm_family)) "Wald z"
     else if (k$has_re) "Satterthwaite t" else "t"
+  if (test && alternative != "two.sided")
+    inference <- sprintf("%s, one-sided (%s)", inference, alternative)
   paste(fitter, inference, sep = ", ")
+}
+
+# The one-sided p-value of the coefficient `fn`, from the statistic behind its two-sided p-value in
+# the coefficient table `co`, whose p-value column is `pcol`. The upper tail tests "greater" and
+# the lower tail "less". A z is referred to the normal distribution. A t is referred to the t
+# distribution with the degrees of freedom of its two-sided test. For lmerTest those are
+# Satterthwaite's, which the table holds in its `df` column, and for lm() they are the residual
+# degrees of freedom. Each two-sided p-value is twice the tail beyond |statistic|, computed by the
+# same function, so the one-sided p-value is exactly half of it when the statistic lies in the
+# tested direction.
+.one_sided_p <- function(co, fn, pcol, fit, alternative) {
+  lower <- alternative == "less"
+  if (identical(pcol, "Pr(>|z|)")) return(stats::pnorm(co[fn, "z value"], lower.tail = lower))
+  df <- if ("df" %in% colnames(co)) co[fn, "df"] else stats::df.residual(fit)
+  stats::pt(co[fn, "t value"], df, lower.tail = lower)
 }
 
 # Fit one replicate's model and record what the fitter reported. Returns the fit (NULL if it
@@ -178,8 +197,10 @@
 # `test` chooses between the linear fitters. Satterthwaite p-values come from lmerTest and cost
 # noticeably more than the plain fit, so precision analysis, which needs only estimates and standard
 # errors, asks for the cheaper one. `auto` says whether pilotr derived the formula, which lets the
-# response family choose the fitter (see .fit_model()).
-.design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE, auto = TRUE) {
+# response family choose the fitter (see .fit_model()). `alternative` chooses the p-value the
+# power functions test against, two-sided or one-sided (see .one_sided_p()).
+.design_rep <- function(i, spec, seeds, prep, formula, fnames, test = TRUE, auto = TRUE,
+                        alternative = "two.sided") {
   s <- spec; s[["seed"]] <- seeds[i]
   d <- prep(simulate_design(s, validate = FALSE))
   f <- .fit_model(formula, d, family = spec[["response"]][["family"]], test = test, auto = auto)
@@ -206,7 +227,8 @@
     # untested, and assumes nothing about it. A coefficient that lm() could not estimate, whose
     # row summary() leaves out, is treated in the same way.
     if (!is.na(pcol) && fn %in% rownames(co))
-      pv[fn] <- co[fn, pcol]
+      pv[fn] <- if (alternative == "two.sided") co[fn, pcol]
+                else .one_sided_p(co, fn, pcol, f$fit, alternative)
   }
   list(present = present, est = e, se = s_e, p = pv, coef_names = names(est), fitted = TRUE,
        singular = f$singular, warned = length(f$messages) > 0L, converged = f$converged)

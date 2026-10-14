@@ -12,7 +12,8 @@ power_mixed(
   n_sims = 100,
   alpha = 0.05,
   workers = 1,
-  cl = NULL
+  cl = NULL,
+  alternative = c("two.sided", "greater", "less")
 )
 }
 \arguments{
@@ -37,7 +38,7 @@ standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
 \code{type_m} average over the significant replicates alone, so they settle more
 slowly still. At least 200 replicates are advisable for study planning.}
 
-\item{alpha}{Two-sided significance level.}
+\item{alpha}{Significance level of the test, two-sided unless \code{alternative} says otherwise.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because the replicate seeds are derived once from the
@@ -49,6 +50,10 @@ started for this call, in which case \code{workers} is ignored. The cluster is l
 owner to stop. Through \code{\link[=sweep_spec]{sweep_spec()}}, as in
 \code{sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed, cl = cl)}, one cluster serves
 every grid point.}
+
+\item{alternative}{The alternative hypothesis of every focal effect's test: \code{"two.sided"}, the
+default, or \code{"greater"} or \code{"less"} for a one-sided test of a directional prediction (see
+Details).}
 }
 \value{
 An object of class \code{pilotr_power}, a list whose per-run elements are \code{n_sims},
@@ -57,11 +62,14 @@ and whose per-effect elements are vectors named by focal effect: \code{power}, \
 \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s},
 \code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect each of
 those has length one, so \code{result$power} reads as it always has. \code{fitter} names the fitter and
-its test, such as \code{"lme4::glmer (binomial), Wald z"}. \code{mean_estimate} and \code{type_m} are \code{NA}
-for an \code{ordinal} or \code{beta} response fitted on its own scale, and so is the \code{type_s} of an
-interaction (see Details). \code{type_s_lo} and \code{type_s_hi}, the Wilson interval of \code{type_s}, and
-\code{type_m_mcse}, the Monte Carlo standard error of \code{type_m}, are \code{NA} wherever their rate is,
-and \code{type_m_mcse} also when a single replicate reached significance.
+its test, such as \code{"lme4::glmer (binomial), Wald z"}, with the direction of a one-sided test
+added, as in \code{"lme4::glmer (binomial), Wald z, one-sided (greater)"}. Under a one-sided
+test, \code{n_significant} and the design-analysis quantities count the replicates significant in
+the tested direction. \code{mean_estimate} and \code{type_m} are \code{NA} for an \code{ordinal} or \code{beta}
+response fitted on its own scale, and so is the \code{type_s} of an interaction (see Details).
+\code{type_s_lo} and \code{type_s_hi}, the Wilson interval of \code{type_s}, and \code{type_m_mcse}, the Monte
+Carlo standard error of \code{type_m}, are \code{NA} wherever their rate is, and \code{type_m_mcse} also
+when a single replicate reached significance.
 
 \code{power} is the proportion of significant results among the replicates that returned an
 estimate for that effect, not among \code{n_sims}. The counts report the fit outcomes separately,
@@ -139,6 +147,24 @@ the significant replicates alone, which may be few. Each carries its own Monte C
 Type S has a Wilson interval, since its standard error would be zero whenever no sign is wrong.
 Type M has its standard error, the standard deviation of the exaggeration ratios over the square
 root of their number.
+
+A directional prediction calls for a one-sided test, which \code{alternative} selects for every
+focal effect. \code{"greater"} tests whether the coefficient is positive and \code{"less"} whether it is
+negative. The one-sided p-value is the upper or lower tail of the statistic behind the
+two-sided one. That is Satterthwaite's t, the t of \code{stats::lm()} with its residual degrees of
+freedom, or a Wald z referred to the normal distribution. The one-sided p-value is half the
+two-sided one when the estimate lies in the tested direction. A one-sided test at \code{alpha}
+therefore rejects in exactly the replicates in which the two-sided test at \code{2 * alpha} rejects
+with the estimate in that direction. Type S and Type M are taken over the replicates
+significant in the tested direction. When that is the direction of the true effect, Type S is
+0 by construction, and Type M is the exaggeration among the replicates that would support the
+prediction. \code{fitter} names the direction, as in
+\code{"lmerTest::lmer, Satterthwaite t, one-sided (greater)"}.
+
+Results from earlier versions were two-sided. A one-sided power at \code{alpha}, in the direction of
+the true effect, can be read off a two-sided result at \code{2 * alpha}: it is
+\code{power * (1 - type_s)}. Type M is recovered only when that result's Type S is 0, since the
+wrong-signed replicates cannot otherwise be told apart from the others.
 }
 \examples{
 \donttest{

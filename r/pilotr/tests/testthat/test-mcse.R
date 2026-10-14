@@ -63,7 +63,8 @@ two_group <- function(effect = 5) {
 
 test_that("power_design() reports the Monte Carlo error of power, Type S and Type M", {
   r <- power_design(two_group(), n_sims = 100)
-  expect_identical(names(r), c("n_sims", "alpha", "power", "power_mcse", "power_lo", "power_hi",
+  expect_identical(names(r), c("n_sims", "alpha", "alternative", "power", "power_mcse",
+                               "power_lo", "power_hi",
                                "n_significant", "true_effect", "mean_estimate", "type_s",
                                "type_s_lo", "type_s_hi", "type_m", "type_m_mcse"))
   # Still a plain list, with no class or print method, so code that reads it is unaffected.

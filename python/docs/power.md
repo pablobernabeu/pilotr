@@ -60,6 +60,29 @@ grouping factor besides `subject`, and its message names what it found. The R pa
 by-subject random effects are allowed, since with one row per subject they vary independently
 from row to row.
 
+## Directional predictions
+
+A preregistration that predicts the direction of an effect can test it one-sided. In `power`,
+`power_curve` and `power_mixed`, `alternative="greater"` tests whether the effect is positive
+and `alternative="less"` whether it is negative. The values are spelt as in the R package, so
+`"two.sided"` is the default, and scipy's spelling `"two-sided"` is refused. Here the second
+group is predicted to score higher than the first.
+
+```python exec="true" source="material-block" session="pow"
+one_sided = power(spec, n_sims=500, alternative="greater")
+print(table([{k: one_sided[k] for k in ("alternative", "power", "type_s", "type_m")}]))
+```
+
+The one-sided p-value comes from the same t as the two-sided one, and it is half the two-sided
+p-value when the estimate lies in the predicted direction. A one-sided test at α = 0.05
+therefore rejects in exactly the replicates in which the two-sided test at 0.10 rejects with the
+estimate in that direction. Its power exceeds the two-sided power above. Type S and Type M
+are taken over the replicates significant in the predicted direction. Type S is therefore 0 by
+construction, and Type M is the exaggeration among the replicates that would support the
+prediction. `power_mixed` takes its one-sided p-value from the same Wald z, and its `backend`
+names the direction. Results from earlier versions were two-sided. In the direction of the true
+effect, a one-sided power at α is the two-sided power at 2α times one minus the Type S at 2α.
+
 ## Power over sample size
 
 `power_curve` sweeps the number of subjects and reports power at each:

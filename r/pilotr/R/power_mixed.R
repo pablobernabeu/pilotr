@@ -76,6 +76,24 @@
 #' Type M has its standard error, the standard deviation of the exaggeration ratios over the square
 #' root of their number.
 #'
+#' A directional prediction calls for a one-sided test, which `alternative` selects for every
+#' focal effect. `"greater"` tests whether the coefficient is positive and `"less"` whether it is
+#' negative. The one-sided p-value is the upper or lower tail of the statistic behind the
+#' two-sided one. That is Satterthwaite's t, the t of `stats::lm()` with its residual degrees of
+#' freedom, or a Wald z referred to the normal distribution. The one-sided p-value is half the
+#' two-sided one when the estimate lies in the tested direction. A one-sided test at `alpha`
+#' therefore rejects in exactly the replicates in which the two-sided test at `2 * alpha` rejects
+#' with the estimate in that direction. Type S and Type M are taken over the replicates
+#' significant in the tested direction. When that is the direction of the true effect, Type S is
+#' 0 by construction, and Type M is the exaggeration among the replicates that would support the
+#' prediction. `fitter` names the direction, as in
+#' `"lmerTest::lmer, Satterthwaite t, one-sided (greater)"`.
+#'
+#' Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction of
+#' the true effect, can be read off a two-sided result at `2 * alpha`: it is
+#' `power * (1 - type_s)`. Type M is recovered only when that result's Type S is 0, since the
+#' wrong-signed replicates cannot otherwise be told apart from the others.
+#'
 #' @param spec A design specification (path or list).
 #' @param focal The fixed effects to test. `NULL`, the default, tests every coefficient in the
 #'   specification and takes the true values from it. A character vector names the effects and
@@ -92,7 +110,7 @@
 #'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and
 #'   `type_m` average over the significant replicates alone, so they settle more
 #'   slowly still. At least 200 replicates are advisable for study planning.
-#' @param alpha Two-sided significance level.
+#' @param alpha Significance level of the test, two-sided unless `alternative` says otherwise.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because the replicate seeds are derived once from the
 #'   specification's seed, any worker count returns results identical to a serial run. The
@@ -102,17 +120,23 @@
 #'   owner to stop. Through [sweep_spec()], as in
 #'   `sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed, cl = cl)`, one cluster serves
 #'   every grid point.
+#' @param alternative The alternative hypothesis of every focal effect's test: `"two.sided"`, the
+#'   default, or `"greater"` or `"less"` for a one-sided test of a directional prediction (see
+#'   Details).
 #' @return An object of class `pilotr_power`, a list whose per-run elements are `n_sims`,
 #'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
 #'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s`,
 #'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect each of
 #'   those has length one, so `result$power` reads as it always has. `fitter` names the fitter and
-#'   its test, such as `"lme4::glmer (binomial), Wald z"`. `mean_estimate` and `type_m` are `NA`
-#'   for an `ordinal` or `beta` response fitted on its own scale, and so is the `type_s` of an
-#'   interaction (see Details). `type_s_lo` and `type_s_hi`, the Wilson interval of `type_s`, and
-#'   `type_m_mcse`, the Monte Carlo standard error of `type_m`, are `NA` wherever their rate is,
-#'   and `type_m_mcse` also when a single replicate reached significance.
+#'   its test, such as `"lme4::glmer (binomial), Wald z"`, with the direction of a one-sided test
+#'   added, as in `"lme4::glmer (binomial), Wald z, one-sided (greater)"`. Under a one-sided
+#'   test, `n_significant` and the design-analysis quantities count the replicates significant in
+#'   the tested direction. `mean_estimate` and `type_m` are `NA` for an `ordinal` or `beta`
+#'   response fitted on its own scale, and so is the `type_s` of an interaction (see Details).
+#'   `type_s_lo` and `type_s_hi`, the Wilson interval of `type_s`, and `type_m_mcse`, the Monte
+#'   Carlo standard error of `type_m`, are `NA` wherever their rate is, and `type_m_mcse` also
+#'   when a single replicate reached significance.
 #'
 #'   `power` is the proportion of significant results among the replicates that returned an
 #'   estimate for that effect, not among `n_sims`. The counts report the fit outcomes separately,
@@ -171,11 +195,13 @@
 #'   run this over a grid of sample sizes or effect sizes.
 #' @export
 power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
-                        n_sims = 100, alpha = 0.05, workers = 1, cl = NULL) {
+                        n_sims = 100, alpha = 0.05, workers = 1, cl = NULL,
+                        alternative = c("two.sided", "greater", "less")) {
   if (!requireNamespace("lme4", quietly = TRUE) ||
       !requireNamespace("lmerTest", quietly = TRUE))
     stop("power_mixed() requires the 'lme4' and 'lmerTest' packages; please install them.",
          call. = FALSE)
+  alternative <- match.arg(alternative)
   spec <- .as_spec(spec)
   workers <- .check_workers(workers)
   cl <- .check_cluster(cl)
@@ -184,13 +210,14 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
   .power_mixed_impl(spec, focal = focal, formula = formula, prep = prep,
-                    n_sims = n_sims, alpha = alpha, cl = cl)
+                    n_sims = n_sims, alpha = alpha, cl = cl, alternative = alternative)
 }
 
 # The replicate loop behind power_mixed(), run on the PSOCK cluster `cl` when there is one. The
 # cluster is the caller's or one power_mixed() started, and power_curve_mixed() hands one to every
 # grid point through sweep_spec().
-.power_mixed_impl <- function(spec, focal, formula, prep, n_sims, alpha, cl = NULL) {
+.power_mixed_impl <- function(spec, focal, formula, prep, n_sims, alpha, cl = NULL,
+                              alternative = "two.sided") {
   auto <- is.null(formula)
   if (auto) formula <- model_formula(spec)
   if (is.null(prep)) prep <- .default_prep(spec)
@@ -215,7 +242,8 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
 
   seeds <- replicate_seeds(spec[["seed"]], n_sims)
   res <- .p_lapply(seq_len(n_sims), .design_rep, cl = cl, spec = spec, seeds = seeds,
-                   prep = prep, formula = formula, fnames = fnames, test = TRUE, auto = auto)
+                   prep = prep, formula = formula, fnames = fnames, test = TRUE, auto = auto,
+                   alternative = alternative)
 
   n_returned <- sum(vapply(res, function(r) isTRUE(r$fitted), logical(1)))
   coef_names <- NULL
@@ -232,6 +260,8 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
     ok <- which(!is.na(pv))
     seen[f] <- length(ok)
     if (!length(ok)) next
+    # Under a one-sided test, the replicates significant in the tested direction, so Type S and
+    # Type M below are taken over them alone.
     sig <- ok[pv[ok] < alpha]
     rate <- .rate_with_error(length(sig), length(ok), "power")
     power[f] <- rate$power; mcse[f] <- rate$power_mcse
@@ -263,7 +293,8 @@ power_mixed <- function(spec, focal = NULL, formula = NULL, prep = NULL,
   .warn_absent_focal(seen, n_returned, coef_names)
 
   out <- c(list(n_sims = n_sims, alpha = alpha,
-                fitter = .fitter_label(formula, family, test = TRUE, auto = auto)),
+                fitter = .fitter_label(formula, family, test = TRUE, auto = auto,
+                                       alternative = alternative)),
            .fit_counts(res, n_sims, n_returned),
            list(power = power, power_mcse = mcse, power_lo = lo, power_hi = hi,
                 n_significant = n_sig, true_effect = fo$true[fnames],
@@ -370,16 +401,19 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, reported alongside it as
 #'   `power_mcse`. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
 #'   too coarse to support a claim about a design; raise it to at least 200 for planning.
-#' @param alpha Two-sided significance level.
+#' @param alpha Significance level of the test, two-sided unless `alternative` says otherwise.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run. One pool of that many processes serves the whole sweep.
 #' @param seeds How the sample sizes are seeded: `"independent"`, the default, or `"shared"`, as
 #'   in [sweep_spec()]'s `.seeds`.
+#' @param alternative The alternative hypothesis of every test, `"two.sided"`, `"greater"` or
+#'   `"less"`, as in [power_mixed()].
 #' @return A data frame with one row per sample size and focal effect, with columns `n_subject`,
 #'   `effect`, `true`, `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `type_s`,
 #'   `type_s_lo`, `type_s_hi`, `type_m`, `type_m_mcse`, the `n_attempted`, `n_returned`,
 #'   `n_converged`, `n_singular` and `n_warning` fit counts, and `fitter`, as in [power_mixed()].
+#'   `fitter` names the direction of a one-sided test.
 #'   `n_singular` typically falls as the sample size rises, so reading it down the sweep shows
 #'   where the model becomes supportable.
 #' @references Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis
@@ -415,13 +449,15 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   other axis, and [design_conditions()] for effect-size grids.
 #' @export
 power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha = 0.05,
-                              workers = 1, seeds = c("independent", "shared")) {
+                              workers = 1, seeds = c("independent", "shared"),
+                              alternative = c("two.sided", "greater", "less")) {
   if (!requireNamespace("lme4", quietly = TRUE) ||
       !requireNamespace("lmerTest", quietly = TRUE))
     stop("power_curve_mixed() requires the 'lme4' and 'lmerTest' packages; please install them.",
          call. = FALSE)
   spec <- .as_spec(spec)
   seeds <- match.arg(seeds)
+  alternative <- match.arg(alternative)
   workers <- .check_workers(workers)
   # One pool for the whole sweep, handed to every grid point. Since 0.3.0, when the sweep moved
   # into sweep_spec(), `workers` had travelled to power_mixed(), which started and stopped a pool
@@ -432,7 +468,7 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
   sweep_spec(spec, "units$subject$n", subject_ns, power_mixed,
-             focal = focal, n_sims = n_sims, alpha = alpha, cl = cl,
+             focal = focal, n_sims = n_sims, alpha = alpha, cl = cl, alternative = alternative,
              .name = "n_subject", .seeds = seeds)
 }
 

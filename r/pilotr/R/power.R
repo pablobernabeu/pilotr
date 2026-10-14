@@ -28,25 +28,42 @@
 #' because its standard error is zero whenever no sign is wrong. Type M has its standard error,
 #' the standard deviation of the exaggeration ratios over the square root of their number.
 #'
+#' A directional prediction calls for a one-sided test, which `alternative` selects. The estimate
+#' is the mean of the second level minus that of the first, whose true value is `true_effect`.
+#' `"greater"` tests whether it is positive and `"less"` whether it is negative, by
+#' `stats::t.test()` with the same `alternative`. The one-sided p-value is half the two-sided one
+#' when the estimate lies in the tested direction. A one-sided test at `alpha` therefore rejects in
+#' exactly the replicates in which the two-sided test at `2 * alpha` rejects with the estimate in
+#' that direction. Type S and Type M are taken over the replicates significant in the tested
+#' direction. When that is the direction of the true effect, Type S is 0 by construction, and
+#' Type M is the exaggeration among the replicates that would support the prediction.
+#'
+#' Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction of
+#' the true effect, can be read off a two-sided result at `2 * alpha`: it is
+#' `power * (1 - type_s)`. Type M is recovered only when that result's Type S is 0, since the
+#' wrong-signed replicates cannot otherwise be told apart from the others.
+#'
 #' @param spec A design specification (path or list) for a two-group Gaussian design with one
 #'   row per subject (see Details).
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 #'   standard error of about `sqrt(p * (1 - p) / n_sims)`, reported as `power_mcse`, and
 #'   `type_s` and `type_m` average over the significant replicates alone, so they settle more
 #'   slowly still. At least 200 replicates are advisable for study planning.
-#' @param alpha Two-sided significance level.
+#' @param alpha Significance level of the test, two-sided unless `alternative` says otherwise.
 #' @param workers Number of local worker processes over which to spread the replicates.
 #'   The default of 1 runs serially. Because every replicate takes its own seed from
 #'   [replicate_seeds()], any worker count returns results identical to a serial run.
 #' @param cl A cluster made by [parallel::makeCluster()] to run the replicates on, in place of one
 #'   started for this call, in which case `workers` is ignored. The cluster is left running for its
 #'   owner to stop, and through [sweep_spec()] one cluster serves every grid point.
-#' @return A list with elements `n_sims`, `alpha`, `power`, `power_mcse` (its Monte Carlo
-#'   standard error), `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`,
-#'   `true_effect` and `mean_estimate`. Then come `type_s` (sign-error rate among significant
-#'   replicates), `type_s_lo` and `type_s_hi` (its 95% Wilson interval), `type_m` (mean
-#'   exaggeration ratio among significant replicates) and `type_m_mcse` (its Monte Carlo
-#'   standard error). Both design-analysis quantities are `NaN` when no replicate reached
+#' @param alternative The test's alternative hypothesis: `"two.sided"`, the default, or
+#'   `"greater"` or `"less"` for a one-sided test of a directional prediction (see Details).
+#' @return A list with elements `n_sims`, `alpha`, `alternative`, `power`, `power_mcse` (its
+#'   Monte Carlo standard error), `power_lo` and `power_hi` (its 95% Wilson interval),
+#'   `n_significant`, `true_effect` and `mean_estimate`. Then come `type_s` (sign-error rate
+#'   among significant replicates), `type_s_lo` and `type_s_hi` (its 95% Wilson interval),
+#'   `type_m` (mean exaggeration ratio among significant replicates) and `type_m_mcse` (its Monte
+#'   Carlo standard error). Both design-analysis quantities are `NaN` when no replicate reached
 #'   significance and when the true effect is zero, as in the null condition
 #'   [design_conditions()] produces: neither is defined without a true value to compare
 #'   against, and Type M divides by it. Their interval and standard error are `NaN` then too,
@@ -66,7 +83,9 @@
 #' # n_sims is small so the example runs quickly. Use 200 or more for real planning.
 #' power_design(spec, n_sims = 50)
 #' @export
-power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NULL) {
+power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NULL,
+                         alternative = c("two.sided", "greater", "less")) {
+  alternative <- match.arg(alternative)
   spec <- .as_spec(spec)
   refusal <- .two_group_refusal(spec)
   if (!is.null(refusal)) stop(refusal, call. = FALSE)
@@ -89,9 +108,12 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
     on.exit(parallel::stopCluster(cl), add = TRUE)
   }
   res <- .p_lapply(seq_len(n_sims), .power_design_rep, cl = cl, spec = spec, seeds = seeds,
-                   yname = yname, fname = fname, lev0 = lev0, lev1 = lev1)
+                   yname = yname, fname = fname, lev0 = lev0, lev1 = lev1,
+                   alternative = alternative)
   est <- vapply(res, `[[`, numeric(1), 1L)
   pv  <- vapply(res, `[[`, numeric(1), 2L)
+  # Under a one-sided test, these are the replicates significant in the tested direction, so Type
+  # S and Type M below are taken over them alone.
   sig <- which(pv < alpha)
   n_sig <- length(sig)
   # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
@@ -105,7 +127,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
   # significant replicates. The result stays a plain list, as code written for earlier versions
   # expects.
   type_s_ci <- if (usable) .type_s_interval(sum(wrong), n_sig, true_effect) else c(NaN, NaN)
-  c(list(n_sims = n_sims, alpha = alpha),
+  c(list(n_sims = n_sims, alpha = alpha, alternative = alternative),
     .rate_with_error(n_sig, n_sims, "power"),
     list(n_significant = n_sig, true_effect = true_effect, mean_estimate = mean(est),
          type_s = if (usable) mean(wrong) else NaN,
@@ -154,11 +176,15 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
 }
 
 # One Monte Carlo replicate of the two-group analysis. Kept at top level, out of a closure, so
-# that only the arguments travel to PSOCK workers. Returns c(estimate, p).
-.power_design_rep <- function(i, spec, seeds, yname, fname, lev0, lev1) {
+# that only the arguments travel to PSOCK workers. Returns c(estimate, p). t.test() takes a
+# one-sided p-value from the same t as the two-sided one, the upper tail for "greater" and the
+# lower for "less", so it is half the two-sided p-value when t lies in the tested direction.
+.power_design_rep <- function(i, spec, seeds, yname, fname, lev0, lev1,
+                              alternative = "two.sided") {
   s <- spec; s[["seed"]] <- seeds[i]           # same seeds as the Python port
   d <- simulate_design(s, validate = FALSE)
   g0 <- d[[yname]][d[[fname]] == lev0]
   g1 <- d[[yname]][d[[fname]] == lev1]
-  c(mean(g1) - mean(g0), stats::t.test(g1, g0, var.equal = TRUE)$p.value)
+  c(mean(g1) - mean(g0),
+    stats::t.test(g1, g0, var.equal = TRUE, alternative = alternative)$p.value)
 }

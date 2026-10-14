@@ -33,6 +33,21 @@ from .mcse import _rate_with_error, _type_m_mcse, _type_s_interval
 from .validate import _is_whole, _name_list
 
 
+# The alternatives a test may take, spelt as in the R twin, whose default is the first.
+_ALTERNATIVES = ("two.sided", "greater", "less")
+
+
+def _check_alternative(alternative):
+    """Validate `alternative` as one of the R twin's three values and return it.
+
+    scipy spells the two-sided test "two-sided", and that spelling is refused here like any other,
+    so that a call means the same in both twins and a result records one spelling.
+    """
+    if not isinstance(alternative, str) or alternative not in _ALTERNATIVES:
+        raise ValueError("alternative must be 'two.sided', 'greater' or 'less'")
+    return alternative
+
+
 def _check_workers(workers):
     """Validate `workers` as a single positive whole number and return it as an int.
 
@@ -100,19 +115,25 @@ def _two_group_refusal(spec):
     return _CORRELATED_ROWS % what
 
 
-def _power_replicate(seed, spec, fname, lev0, lev1, yname):
-    """One two-group replicate: simulate at `seed`, t-test, return (estimate, p-value)."""
+def _power_replicate(seed, spec, fname, lev0, lev1, yname, alternative="two.sided"):
+    """One two-group replicate: simulate at `seed`, t-test, return (estimate, p-value).
+
+    scipy takes a one-sided p-value from the same t as the two-sided one, the upper tail for
+    "greater" and the lower for "less", so it is half the two-sided p-value when t lies in the
+    tested direction, as R's ``t.test()`` gives it.
+    """
     from scipy import stats  # lazy: imported in each worker process on first use
 
     # The specification was validated and normalised once, before the loop.
     d = _simulate(dict(spec, seed=seed))
     g0 = [r[yname] for r in d.rows if r[fname] == lev0]
     g1 = [r[yname] for r in d.rows if r[fname] == lev1]
-    t = stats.ttest_ind(g1, g0, equal_var=True)
+    t = stats.ttest_ind(g1, g0, equal_var=True,
+                        alternative="two-sided" if alternative == "two.sided" else alternative)
     return statistics.mean(g1) - statistics.mean(g0), t.pvalue
 
 
-def power(spec, n_sims=1000, alpha=0.05, workers=1):
+def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
     """Simulation-based power and design analysis for a two-group Gaussian design.
 
     Repeatedly simulate from the specification, apply a two-sample t-test, and report power
@@ -129,6 +150,22 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     20 items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3.
     With no true effect, a t-test of every row is significant in about half of all replicates.
 
+    A directional prediction calls for a one-sided test, which `alternative` selects. The
+    estimate is the mean of the second level minus that of the first, whose true value is
+    `true_effect`. ``"greater"`` tests whether it is positive and ``"less"`` whether it is
+    negative, by ``scipy.stats.ttest_ind`` with the same alternative. The one-sided p-value is
+    half the two-sided one when the estimate lies in the tested direction. A one-sided test at
+    `alpha` therefore rejects in exactly the replicates in which the two-sided test at
+    ``2 * alpha`` rejects with the estimate in that direction. Type S and Type M are taken over
+    the replicates significant in the tested direction. When that is the direction of the true
+    effect, Type S is 0 by construction, and Type M is the exaggeration among the replicates that
+    would support the prediction.
+
+    Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction
+    of the true effect, can be read off a two-sided result at ``2 * alpha``: it is
+    ``power * (1 - type_s)``. Type M is recovered only when that result's Type S is 0, since the
+    wrong-signed replicates cannot otherwise be told apart from the others.
+
     Parameters
     ----------
     spec : dict, str or os.PathLike
@@ -137,19 +174,23 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     n_sims : int, optional
         Number of Monte Carlo replicates (default 1000).
     alpha : float, optional
-        Two-sided significance level (default 0.05).
+        Significance level of the test (default 0.05), two-sided unless `alternative` says
+        otherwise.
     workers : int, optional
         Number of local worker processes over which to spread the replicates (default 1,
         serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
+    alternative : {"two.sided", "greater", "less"}, optional
+        The test's alternative hypothesis (default ``"two.sided"``), spelt as in the R twin.
+        ``"greater"`` and ``"less"`` give a one-sided test of a directional prediction.
 
     Returns
     -------
     dict
-        Keys: `n_sims`, `alpha`, `power`, `power_mcse` (its Monte Carlo standard error),
-        `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`, `true_effect`,
-        `mean_estimate`, `type_s`, `type_s_lo` and `type_s_hi` (its 95% Wilson interval),
-        `type_m` and `type_m_mcse` (its Monte Carlo standard error). Both design-analysis
+        Keys: `n_sims`, `alpha`, `alternative`, `power`, `power_mcse` (its Monte Carlo
+        standard error), `power_lo` and `power_hi` (its 95% Wilson interval), `n_significant`,
+        `true_effect`, `mean_estimate`, `type_s`, `type_s_lo` and `type_s_hi` (its 95% Wilson
+        interval), `type_m` and `type_m_mcse` (its Monte Carlo standard error). Both design-analysis
         quantities are `nan` when no replicate reached significance and when the true effect is
         zero, as in a null condition: neither is defined without a true value to compare
         against, and Type M divides by it. Their interval and standard error are `nan` then too,
@@ -169,6 +210,8 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
         If the design is not Gaussian, does not have exactly one two-level between factor, or
         has rows that are correlated because of an item unit, a within factor or a grouping
         factor besides ``subject``.
+    ValueError
+        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``.
 
     Notes
     -----
@@ -176,16 +219,17 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1):
     `power` or `dev` extra.
     """
     workers = _check_workers(workers)
+    alternative = _check_alternative(alternative)
     from scipy import stats as _stats  # noqa: F401  fail fast before simulating
 
     if workers == 1:
-        return _power_impl(spec, n_sims, alpha, None)
+        return _power_impl(spec, n_sims, alpha, None, alternative)
     from concurrent.futures import ProcessPoolExecutor
     with ProcessPoolExecutor(max_workers=workers) as executor:
-        return _power_impl(spec, n_sims, alpha, executor)
+        return _power_impl(spec, n_sims, alpha, executor, alternative)
 
 
-def _power_impl(spec, n_sims, alpha, executor):
+def _power_impl(spec, n_sims, alpha, executor, alternative="two.sided"):
     """The replicate loop behind `power`, taking an optional executor so that sweep
     functions can start one process pool and reuse it across grid points."""
     spec = _as_spec(spec)
@@ -205,11 +249,13 @@ def _power_impl(spec, n_sims, alpha, executor):
 
     base_seed = spec["seed"]
     rep = functools.partial(_power_replicate, spec=spec, fname=fname,
-                            lev0=lev0, lev1=lev1, yname=yname)
+                            lev0=lev0, lev1=lev1, yname=yname, alternative=alternative)
     results = _map_replicates(rep, replicate_seeds(base_seed, n_sims), executor)
     estimates = [r[0] for r in results]
     pvals = [r[1] for r in results]
 
+    # Under a one-sided test, the replicates significant in the tested direction, so Type S and
+    # Type M below are taken over them alone.
     sig = [i for i, p in enumerate(pvals) if p < alpha]
     # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
     # stay nan when the true effect is zero. The alternative was a division by zero, alongside a
@@ -227,7 +273,8 @@ def _power_impl(spec, n_sims, alpha, executor):
         type_s = type_s_lo = type_s_hi = type_m = type_m_mcse = float("nan")
 
     return {
-        "n_sims": n_sims, "alpha": alpha, **_rate_with_error(len(sig), n_sims, "power"),
+        "n_sims": n_sims, "alpha": alpha, "alternative": alternative,
+        **_rate_with_error(len(sig), n_sims, "power"),
         "n_significant": len(sig), "true_effect": true_effect,
         "mean_estimate": statistics.mean(estimates),
         "type_s": type_s, "type_s_lo": type_s_lo, "type_s_hi": type_s_hi,
@@ -358,12 +405,12 @@ def _fit_mixed(model):
             return None
 
 
-def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
+def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift, alternative="two.sided"):
     """One mixed-model replicate: simulate at `seed` and fit MixedLM.
 
     Returns a dict with the estimate and Wald z p-value of ``cc`` and the fit's flags,
     ``singular``, ``warned`` and ``converged``, or None when no fit returned a finite estimate and
-    p-value.
+    p-value. The p-value is two-sided, or one-sided for ``"greater"`` or ``"less"``.
     """
     import math, warnings
     import pandas as pd
@@ -397,6 +444,14 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
         return None
     m, notices = fit
     est, p = float(m.fe_params["cc"]), float(m.pvalues["cc"])
+    if alternative != "two.sided":
+        from scipy.stats import norm
+        # statsmodels gives the two-sided p-value as twice the normal tail beyond |z|. The
+        # one-sided p-value is the tail on the tested side of the same z, the upper for "greater"
+        # and the lower for "less", which is the upper tail beyond -z. Taking both from norm.sf
+        # makes it exactly half the two-sided one when z lies in the tested direction.
+        z = float(m.tvalues["cc"])
+        p = float(norm.sf(z if alternative == "greater" else -z))
     # A Hessian that is not positive definite can leave the effect without a standard error, and
     # such a replicate has no test to count towards power.
     if not (math.isfinite(est) and math.isfinite(p)):
@@ -412,7 +467,7 @@ def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift):
             "converged": bool(m.converged) and not singular and not warned}
 
 
-def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
+def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided"):
     """Crossed mixed-effects simulation-based power in Python, via statsmodels MixedLM with
     by-subject and by-item random intercepts and slopes as (independent) variance components.
 
@@ -469,6 +524,16 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     null hypothesis in 0.043 of 300 replicates (Monte Carlo standard error 0.012). On the same
     data, lme4's Satterthwaite test of the same model rejected in 0.030.
 
+    A directional prediction calls for a one-sided test, which `alternative` selects.
+    ``"greater"`` tests whether the coefficient of ``cc`` is positive and ``"less"`` whether it is
+    negative. The one-sided p-value is the normal tail on the tested side of the same Wald z, so
+    it is half the two-sided p-value when the estimate lies in the tested direction. A one-sided
+    test at `alpha` therefore rejects in exactly the replicates in which the two-sided test at
+    ``2 * alpha`` rejects with the estimate in that direction. Type S and Type M are taken over
+    the replicates significant in the tested direction, and `backend` names the direction. A
+    two-sided result at ``2 * alpha`` from an earlier version gives the one-sided power at
+    `alpha`, in the direction of the true effect, as ``power * (1 - type_s)``.
+
     Parameters
     ----------
     spec : dict, str or os.PathLike
@@ -478,11 +543,14 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         Number of Monte Carlo replicates (default 50, smaller than `power`'s 1000 because
         each replicate fits a mixed model).
     alpha : float, optional
-        Two-sided significance level (default 0.05).
+        Significance level of the test (default 0.05), two-sided unless `alternative` says
+        otherwise.
     workers : int, optional
         Number of local worker processes over which to spread the replicates (default 1,
         serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
+    alternative : {"two.sided", "greater", "less"}, optional
+        The test's alternative hypothesis (default ``"two.sided"``), as in `power`.
 
     Returns
     -------
@@ -513,7 +581,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     Raises
     ------
     ValueError
-        If the spec has no item unit (`power_mixed` requires a crossed design).
+        If the spec has no item unit (`power_mixed` requires a crossed design), or if
+        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``.
     NotImplementedError
         If the design does not have exactly one within-unit factor.
 
@@ -534,6 +603,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     process when parallel).
     """
     workers = _check_workers(workers)
+    alternative = _check_alternative(alternative)
     import pandas as _pd  # noqa: F401  fail fast before simulating
     import statsmodels.formula.api as _smf  # noqa: F401
 
@@ -567,7 +637,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
         warnings.warn(_LINEAR_ON_LINK % (fam, _LINK_SCALE[fam]), UserWarning, stacklevel=2)
 
     rep = functools.partial(_power_mixed_replicate, spec=spec, fname=fname, l2c=l2c,
-                            yname=yname, fam=fam, shift=shift)
+                            yname=yname, fam=fam, shift=shift, alternative=alternative)
     seeds = replicate_seeds(base, n_sims)
     if workers == 1:
         results = _map_replicates(rep, seeds, None)
@@ -579,6 +649,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     est = [r["est"] for r in fits]
     pv = [r["p"] for r in fits]
 
+    # Under a one-sided test, the replicates significant in the tested direction.
     sig = [i for i, p in enumerate(pv) if p < alpha]
     # See _power_impl: a zero true effect leaves both design-analysis quantities undefined, and
     # their Monte Carlo errors with them. Type M's is withheld with Type M.
@@ -587,8 +658,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1):
     ratios = [abs(est[i]) / abs(beta) for i in sig] if usable and not withheld else []
     type_s_lo, type_s_hi = (_type_s_interval(n_wrong, len(sig), beta) if usable
                             else (float("nan"), float("nan")))
+    # The backend names the direction of a one-sided test, as the R twin's `fitter` does.
+    tests = ("Wald z tests" if alternative == "two.sided"
+             else "one-sided Wald z tests, %s" % alternative)
     return {
-        "backend": "statsmodels MixedLM (crossed variance components, REML; Wald z tests)",
+        "backend": "statsmodels MixedLM (crossed variance components, REML; %s)" % tests,
         "n_sims": n_sims, "alpha": alpha,
         # The R twin's fit counts, with its meanings. n_converged used to count every fit that
         # returned, the count now called n_returned.
@@ -612,7 +686,8 @@ _CURVE_KEYS = ("power", "power_mcse", "power_lo", "power_hi", "type_s", "type_s_
                "type_m", "type_m_mcse", "n_sims", "n_significant")
 
 
-def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="independent"):
+def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="independent",
+                alternative="two.sided"):
     """Power curve over sample size for a two-group Gaussian design.
 
     Sweep the number of subjects and compute `power` at each grid point.
@@ -640,13 +715,16 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     n_sims : int, optional
         Replicates per grid point (default 1000).
     alpha : float, optional
-        Significance level (default 0.05).
+        Significance level (default 0.05), two-sided unless `alternative` says otherwise.
     workers : int, optional
         Number of local worker processes over which to spread the replicates at each grid
         point (default 1, serial). One process pool is started and reused across the whole
         sweep, and any worker count returns results identical to a serial run.
     seeds : {"independent", "shared"}, optional
         How the grid points are seeded (default ``"independent"``). See above.
+    alternative : {"two.sided", "greater", "less"}, optional
+        The alternative hypothesis of the test at every grid point (default ``"two.sided"``), as
+        in `power`.
 
     Returns
     -------
@@ -661,7 +739,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     Raises
     ------
     ValueError
-        If `seeds` is neither ``"independent"`` nor ``"shared"``.
+        If `seeds` is neither ``"independent"`` nor ``"shared"``, or `alternative` is not
+        ``"two.sided"``, ``"greater"`` or ``"less"``.
 
     See Also
     --------
@@ -670,6 +749,7 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     workers = _check_workers(workers)
     if seeds not in ("independent", "shared"):
         raise ValueError("seeds must be 'independent' or 'shared'")
+    alternative = _check_alternative(alternative)
     spec = _as_spec(spec)
     subject_ns = list(subject_ns)
     # One seed per grid point, drawn from the specification's seed by the rule its replicates
@@ -689,7 +769,7 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
             s = copy.deepcopy(spec)
             s["units"]["subject"]["n"] = n
             s["seed"] = seed
-            r = _power_impl(s, n_sims, alpha, executor)
+            r = _power_impl(s, n_sims, alpha, executor, alternative)
             # _power_impl() has validated n as a whole number, so int() is exact. A NumPy grid
             # would otherwise leave a NumPy scalar here, and json cannot write a NumPy integer.
             out.append({"n_subject": int(n), **{k: r[k] for k in _CURVE_KEYS}})

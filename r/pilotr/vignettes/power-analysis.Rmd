@@ -55,6 +55,28 @@ estimated effect is exaggerated, even though the average estimate over all repli
 unbiased. This reflects the statistical-significance filter, which is precisely what design
 analysis is meant to expose.
 
+## Directional predictions
+
+A preregistration that predicts the direction of an effect can test it one-sided. In
+`power_design()`, `power_mixed()` and `power_curve_mixed()`, `alternative = "greater"` tests
+whether the effect is positive and `alternative = "less"` whether it is negative. Here the
+treatment group is predicted to score higher than the control group.
+
+```{r}
+pw_greater <- power_design(spec, n_sims = 500, alternative = "greater")
+unlist(pw_greater[c("power", "type_s", "type_m")])
+```
+
+The one-sided p-value comes from the same t as the two-sided one, and it is half the two-sided
+p-value when the estimate lies in the predicted direction. A one-sided test at α = 0.05
+therefore rejects in exactly the replicates in which the two-sided test at 0.10 rejects with the
+estimate in that direction. Its power of `r round(pw_greater$power, 3)` exceeds the two-sided
+`r round(pw$power, 3)` above. Type S and Type M are taken over the replicates significant in
+the predicted direction. Type S is therefore 0 by construction, and Type M,
+`r round(pw_greater$type_m, 2)`, is the exaggeration among the replicates that would support the
+prediction. Results from earlier versions of pilotr were two-sided. In the direction of the true
+effect, a one-sided power at α is the two-sided power at 2α times one minus the Type S at 2α.
+
 ## Crossed mixed-effects designs
 
 A feature that distinguishes pilotr from a marginal simulator is power estimation for crossed

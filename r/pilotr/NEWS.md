@@ -182,6 +182,18 @@
   named `list`, as when the list is fitted beside the condition, stays crossed too, with a
   warning that asks for that term to be renamed.
 
+* `power_design()`, `power_mixed()` and `power_curve_mixed()` gain `alternative`, which plans
+  the one-sided test of a directional prediction with `"greater"` or `"less"`. Every earlier
+  result was two-sided, and the default, `"two.sided"`, leaves every number as it was. The
+  one-sided p-value comes from the statistic behind the two-sided one, a t with its degrees of
+  freedom from `t.test()`, `lm()` or lmerTest, or a Wald z. Type S and Type M are taken over the
+  replicates significant in the tested direction. `power_design()` records the test in
+  a new element, `alternative`, and the `fitter` of `power_mixed()` names the direction. On the
+  same replicates, a one-sided test at alpha rejects exactly where the two-sided test at
+  2 alpha rejects with the estimate in the tested direction. A two-sided result at 2 alpha from
+  an earlier version therefore gives the one-sided power at alpha, in the direction of the true
+  effect, as `power * (1 - type_s)`.
+
 ## Fixes
 
 * Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the

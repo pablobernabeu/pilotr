@@ -4,7 +4,14 @@
 \alias{power_design}
 \title{Simulation-based power and design analysis for a two-group Gaussian design}
 \usage{
-power_design(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NULL)
+power_design(
+  spec,
+  n_sims = 1000,
+  alpha = 0.05,
+  workers = 1,
+  cl = NULL,
+  alternative = c("two.sided", "greater", "less")
+)
 }
 \arguments{
 \item{spec}{A design specification (path or list) for a two-group Gaussian design with one
@@ -15,7 +22,7 @@ standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported as \code{pow
 \code{type_s} and \code{type_m} average over the significant replicates alone, so they settle more
 slowly still. At least 200 replicates are advisable for study planning.}
 
-\item{alpha}{Two-sided significance level.}
+\item{alpha}{Significance level of the test, two-sided unless \code{alternative} says otherwise.}
 
 \item{workers}{Number of local worker processes over which to spread the replicates.
 The default of 1 runs serially. Because every replicate takes its own seed from
@@ -24,14 +31,17 @@ The default of 1 runs serially. Because every replicate takes its own seed from
 \item{cl}{A cluster made by \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to run the replicates on, in place of one
 started for this call, in which case \code{workers} is ignored. The cluster is left running for its
 owner to stop, and through \code{\link[=sweep_spec]{sweep_spec()}} one cluster serves every grid point.}
+
+\item{alternative}{The test's alternative hypothesis: \code{"two.sided"}, the default, or
+\code{"greater"} or \code{"less"} for a one-sided test of a directional prediction (see Details).}
 }
 \value{
-A list with elements \code{n_sims}, \code{alpha}, \code{power}, \code{power_mcse} (its Monte Carlo
-standard error), \code{power_lo} and \code{power_hi} (its 95\% Wilson interval), \code{n_significant},
-\code{true_effect} and \code{mean_estimate}. Then come \code{type_s} (sign-error rate among significant
-replicates), \code{type_s_lo} and \code{type_s_hi} (its 95\% Wilson interval), \code{type_m} (mean
-exaggeration ratio among significant replicates) and \code{type_m_mcse} (its Monte Carlo
-standard error). Both design-analysis quantities are \code{NaN} when no replicate reached
+A list with elements \code{n_sims}, \code{alpha}, \code{alternative}, \code{power}, \code{power_mcse} (its
+Monte Carlo standard error), \code{power_lo} and \code{power_hi} (its 95\% Wilson interval),
+\code{n_significant}, \code{true_effect} and \code{mean_estimate}. Then come \code{type_s} (sign-error rate
+among significant replicates), \code{type_s_lo} and \code{type_s_hi} (its 95\% Wilson interval),
+\code{type_m} (mean exaggeration ratio among significant replicates) and \code{type_m_mcse} (its Monte
+Carlo standard error). Both design-analysis quantities are \code{NaN} when no replicate reached
 significance and when the true effect is zero, as in the null condition
 \code{\link[=design_conditions]{design_conditions()}} produces: neither is defined without a true value to compare
 against, and Type M divides by it. Their interval and standard error are \code{NaN} then too,
@@ -64,6 +74,21 @@ stays between 0 and 1 and does not shrink to a point when power is 0 or 1. Type 
 rest on the significant replicates alone, often a handful. Type S has a Wilson interval,
 because its standard error is zero whenever no sign is wrong. Type M has its standard error,
 the standard deviation of the exaggeration ratios over the square root of their number.
+
+A directional prediction calls for a one-sided test, which \code{alternative} selects. The estimate
+is the mean of the second level minus that of the first, whose true value is \code{true_effect}.
+\code{"greater"} tests whether it is positive and \code{"less"} whether it is negative, by
+\code{stats::t.test()} with the same \code{alternative}. The one-sided p-value is half the two-sided one
+when the estimate lies in the tested direction. A one-sided test at \code{alpha} therefore rejects in
+exactly the replicates in which the two-sided test at \code{2 * alpha} rejects with the estimate in
+that direction. Type S and Type M are taken over the replicates significant in the tested
+direction. When that is the direction of the true effect, Type S is 0 by construction, and
+Type M is the exaggeration among the replicates that would support the prediction.
+
+Results from earlier versions were two-sided. A one-sided power at \code{alpha}, in the direction of
+the true effect, can be read off a two-sided result at \code{2 * alpha}: it is
+\code{power * (1 - type_s)}. Type M is recovered only when that result's Type S is 0, since the
+wrong-signed replicates cannot otherwise be told apart from the others.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",
