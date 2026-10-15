@@ -7,7 +7,8 @@
 model_data(spec, d)
 }
 \arguments{
-\item{spec}{A design specification (path or list).}
+\item{spec}{A design specification (path or list). A path is read with \code{\link[=load_spec]{load_spec()}}, which
+validates it.}
 
 \item{d}{A simulated data set, as returned by \code{\link[=simulate_design]{simulate_design()}}.}
 }

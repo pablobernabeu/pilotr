@@ -10,7 +10,7 @@ build_spec(p)
 \item{p}{A named list of design inputs. Common fields are \code{name}, \code{seed},
 \code{n_subject}, \code{design_kind} (\code{"between"} or \code{"within"}), \code{include_items},
 \code{n_item}, \code{factor_name}, \code{lev1}, \code{lev2}, \code{intercept}, \code{effect},
-\code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift},
+\code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift}, \code{beta},
 \code{thresholds}, or \code{phi}; within-design random effects use \code{subj_int_sd},
 \code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
 \code{item_corr}. \code{counterbalance = TRUE} counterbalances the factor of a
@@ -30,9 +30,9 @@ within-subject and crossed designs, and the response family with its
 parameters.
 }
 \details{
-A response of the Gaussian, lognormal or shifted lognormal family is rounded to four
-decimals, and a \code{beta} response is left unrounded. Rounding moves every proportion near 0 or 1
-onto the nearest value inside the interval at that many decimals. At four decimals, 9.8\% of the
+A response of the Gaussian, lognormal, shifted lognormal or ex-Gaussian family is rounded to
+four decimals, and a \code{beta} response is left unrounded. Rounding moves every proportion near 0
+or 1 onto the nearest value inside the interval at that many decimals. At four decimals, 9.8\% of the
 40,000 rows of a design with \code{phi = 0.8} landed on 0.0001 or 0.9999, and rows at such a bound
 dominate a Beta likelihood (see \code{\link[=brms_bridge]{brms_bridge()}}). Unrounded, the data keep the distribution the
 specification describes. They can then differ between R and 'Python' in their last bits where

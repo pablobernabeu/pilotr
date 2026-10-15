@@ -62,11 +62,15 @@ def test_a_random_slope_on_an_interaction_takes_its_product_column():
                                         "(1 + cond_age || item)")
 
 
-def test_a_specification_without_any_term_is_refused_where_r_fails_to_parse():
+def test_a_specification_without_any_term_is_refused_in_the_r_twins_words():
+    # The R twin wrote ".y ~ " and stopped on it with a parse error until it took this refusal.
     spec = load_spec(pilotr_example("between_2group_gaussian"))
     spec["fixed"]["coefficients"] = {}
-    with pytest.raises(ValueError, match="no fixed coefficients and no random effects"):
-        model_formula(spec)
+    for structure in ("maximal", "zcp", "intercepts"):
+        with pytest.raises(ValueError) as caught:
+            model_formula(spec, structure)
+        assert str(caught.value) == ("this specification has no fixed coefficients and no random "
+                                     "effects, so it implies no model to fit")
     with pytest.raises(ValueError, match="structure must be 'maximal', 'zcp' or 'intercepts'"):
         model_formula(pilotr_example("crossed_mixed_rt"), "uncorrelated")
 

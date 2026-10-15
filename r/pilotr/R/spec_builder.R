@@ -5,16 +5,17 @@
 #' Default response-column name for a family
 #'
 #' @param family A response-family name, one of `"gaussian"`, `"lognormal"`,
-#'   `"shifted_lognormal"`, `"bernoulli"`, `"poisson"`, `"ordinal"`, or
+#'   `"shifted_lognormal"`, `"exgaussian"`, `"bernoulli"`, `"poisson"`, `"ordinal"` or
 #'   `"beta"`.
-#' @return The conventional response-column name for that family (for example `"RT"` for
-#'   `"lognormal"` and `"shifted_lognormal"`), or `"outcome"` for an unrecognised family.
+#' @return The conventional response-column name for that family (for example `"RT"` for the
+#'   reaction-time families `"lognormal"`, `"shifted_lognormal"` and `"exgaussian"`), or
+#'   `"outcome"` for an unrecognised family.
 #' @examples
 #' default_response_name("bernoulli")
 #' @export
 default_response_name <- function(family) {
   switch(family,
-         gaussian = "score", lognormal = "RT", shifted_lognormal = "RT",
+         gaussian = "score", lognormal = "RT", shifted_lognormal = "RT", exgaussian = "RT",
          bernoulli = "accuracy", poisson = "count", ordinal = "rating",
          beta = "proportion", "outcome")
 }
@@ -29,6 +30,11 @@ default_response_name <- function(family) {
   if (abs(x) < 2^31) as.integer(x) else as.numeric(x)
 }
 
+# A number of subjects or items, by the seed's rule. as.integer() truncated 10.5 subjects to 10 in
+# silence, so the specification described a design nobody had asked for. A count that is not a
+# whole number now reaches validate_spec(), which refuses it.
+.as_count <- function(x) if (.is_whole(x) && abs(x) < 2^31) as.integer(x) else x
+
 #' Build a design specification from a flat list of design inputs
 #'
 #' Assemble a portable design specification (a plain list, serialisable with
@@ -41,15 +47,15 @@ default_response_name <- function(family) {
 #' @param p A named list of design inputs. Common fields are `name`, `seed`,
 #'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items`,
 #'   `n_item`, `factor_name`, `lev1`, `lev2`, `intercept`, `effect`,
-#'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`,
+#'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`, `beta`,
 #'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
 #'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
 #'   `item_corr`. `counterbalance = TRUE` counterbalances the factor of a
 #'   within design with items, and is ignored in any other design.
 #' @details
-#' A response of the Gaussian, lognormal or shifted lognormal family is rounded to four
-#' decimals, and a `beta` response is left unrounded. Rounding moves every proportion near 0 or 1
-#' onto the nearest value inside the interval at that many decimals. At four decimals, 9.8% of the
+#' A response of the Gaussian, lognormal, shifted lognormal or ex-Gaussian family is rounded to
+#' four decimals, and a `beta` response is left unrounded. Rounding moves every proportion near 0
+#' or 1 onto the nearest value inside the interval at that many decimals. At four decimals, 9.8% of the
 #' 40,000 rows of a design with `phi = 0.8` landed on 0.0001 or 0.9999, and rows at such a bound
 #' dominate a Beta likelihood (see [brms_bridge()]). Unrounded, the data keep the distribution the
 #' specification describes. They can then differ between R and 'Python' in their last bits where
@@ -85,9 +91,9 @@ build_spec <- function(p) {
     factor$between <- "subject"
   }
 
-  units <- list(subject = list(n = as.integer(p$n_subject)))
+  units <- list(subject = list(n = .as_count(p$n_subject)))
   if (identical(p$design_kind, "within") && isTRUE(p$include_items)) {
-    units$item <- list(n = as.integer(p$n_item))
+    units$item <- list(n = .as_count(p$n_item))
   }
 
   spec <- list(
@@ -115,8 +121,14 @@ build_spec <- function(p) {
   }
 
   resp <- list(family = p$family, name = resp_name)
-  if (p$family %in% c("gaussian", "lognormal", "shifted_lognormal")) { resp$sigma <- p$sigma; resp$round <- 4L }
+  if (p$family %in% c("gaussian", "lognormal", "shifted_lognormal", "exgaussian")) {
+    resp$sigma <- p$sigma
+    resp$round <- 4L
+  }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
+  # The ex-Gaussian's exponential scale. Without it, and without sigma, validate_spec() refused
+  # the specification built here.
+  if (p$family == "exgaussian") resp$beta <- p$beta
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   if (p$family == "beta") resp$phi <- p$phi
   spec$response <- resp

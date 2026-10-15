@@ -76,10 +76,15 @@ test_that("default_response_name covers every family", {
   expect_equal(default_response_name("gaussian"), "score")
   expect_equal(default_response_name("lognormal"), "RT")
   expect_equal(default_response_name("shifted_lognormal"), "RT")
+  expect_equal(default_response_name("exgaussian"), "RT")
   expect_equal(default_response_name("bernoulli"), "accuracy")
   expect_equal(default_response_name("poisson"), "count")
   expect_equal(default_response_name("ordinal"), "rating")
   expect_equal(default_response_name("beta"), "proportion")
+  # No family the validator knows takes the name kept for an unknown one. The ex-Gaussian did, so
+  # build_spec() called its reaction times "outcome".
+  for (f in names(pilotr:::.family_params))
+    expect_false(identical(default_response_name(f), "outcome"), info = f)
 })
 
 test_that("each response family simulates a column on the expected scale", {
@@ -283,6 +288,43 @@ test_that("build_spec carries sigma through for the lognormal family", {
   expect_true(all(d$RT > 0))
 })
 
+test_that("build_spec assembles an exgaussian response that validates", {
+  # build_spec() wrote neither sigma nor beta for the family, so validate_spec() refused the
+  # specification it returned.
+  spec <- build_spec(list(name = "eg", seed = 1, design_kind = "between",
+                          factor_name = "g", lev1 = "a", lev2 = "b", n_subject = 20,
+                          intercept = 500, effect = 20, family = "exgaussian",
+                          resp_name = "", sigma = 50, beta = 100))
+  expect_identical(spec$response$name, "RT")
+  expect_equal(spec$response$sigma, 50)
+  expect_equal(spec$response$beta, 100)
+  # Rounded as the other continuous families but Beta are, so the twins give the same data.
+  expect_identical(spec$response$round, 4L)
+  expect_silent(validate_spec(spec))
+  expect_true(all(simulate_design(spec)$RT > 0))
+  # calibrate_response() tunes sigma and leaves the exponential part, beta, as it was.
+  tuned <- calibrate_response(spec, 20000, tune = "sigma")
+  expect_equal(tuned$response$beta, 100)
+  expect_equal(response_variance(tuned)$total, 20000)
+})
+
+test_that("build_spec leaves a count that is not a whole number for validate_spec to refuse", {
+  # as.integer() truncated 10.5 subjects to 10 in silence, as it once truncated a seed.
+  p <- list(name = "w", seed = 1, design_kind = "within", include_items = TRUE,
+            n_subject = 10.5, n_item = 8, factor_name = "cond", lev1 = "a", lev2 = "b",
+            intercept = 0, effect = 0.5, subj_int_sd = 0.1, subj_slope_sd = 0,
+            item_int_sd = 0.1, item_slope_sd = 0, family = "gaussian", resp_name = "", sigma = 1)
+  expect_error(validate_spec(build_spec(p)), "'units.subject.n' must be a whole number",
+               fixed = TRUE)
+  p$n_subject <- 10
+  p$n_item <- 7.5
+  expect_error(validate_spec(build_spec(p)), "'units.item.n' must be a whole number",
+               fixed = TRUE)
+  # Whole numbers are stored as integers, as before.
+  p$n_item <- 8
+  expect_identical(build_spec(p)$units, list(subject = list(n = 10L), item = list(n = 8L)))
+})
+
 test_that("model_data() analyses both lognormal families on the log scale", {
   # The two families draw the same eta + sigma * z, so the analysis response is one column
   # whichever is declared. Python's power_mixed() follows the same rule, and it fitted a
@@ -300,6 +342,32 @@ test_that("model_data() analyses both lognormal families on the log scale", {
   y <- model_data(spec, d)$.y
   expect_identical(y, log(d$RT))
   expect_equal(model_data(shifted, simulate_design(shifted))$.y, y, tolerance = 1e-9)
+})
+
+test_that("model_data() and model_formula() read a specification from its path", {
+  # Both documented `spec` as a path or a list, as the other entry points do, and stopped with
+  # "subscript out of bounds" on a path. The Python twin's ports read one.
+  path <- pilotr_example("crossed_mixed_rt")
+  spec <- load_spec(path)
+  d <- simulate_design(spec)
+  expect_identical(model_data(path, d), model_data(spec, d))
+  for (s in c("maximal", "zcp", "intercepts"))
+    expect_identical(model_formula(path, s), model_formula(spec, s), info = s)
+})
+
+test_that("model_formula() refuses a specification without terms, in the Python twin's words", {
+  # With no coefficient and no random effect, the formula read ".y ~ " with nothing after it, and
+  # as.formula() stopped on it with a parse error. tools/parity/formula_cross.py compares the two
+  # refusals on the parity case round_near_tie.
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$fixed$coefficients <- list()
+  for (s in c("maximal", "zcp", "intercepts"))
+    expect_error(model_formula(spec, s),
+                 paste("this specification has no fixed coefficients and no random effects, so",
+                       "it implies no model to fit"), fixed = TRUE, info = s)
+  # A random intercept alone is a model.
+  spec$random <- list(subject = list(intercept_sd = 0.5))
+  expect_identical(deparse(model_formula(spec)), ".y ~ (1 | subject)")
 })
 
 test_that("per_subject must lie between 1 and the number of items", {

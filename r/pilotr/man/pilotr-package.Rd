@@ -10,9 +10,9 @@ Generative simulation of experimental and behavioural data sets from a
 portable JSON design specification shared with the Python package of the
 same name. Fixed effect sizes are user-specified, by-subject and by-item
 random intercepts and slopes are crossed, and the response families cover
-Gaussian, lognormal, shifted lognormal, Bernoulli, Poisson, ordinal and
-Beta outcomes. Power and precision-based design analysis run from the same
-specification.
+Gaussian, lognormal, shifted lognormal, ex-Gaussian, Bernoulli, Poisson,
+ordinal and Beta outcomes. Power and precision-based design analysis run
+from the same specification.
 }
 \details{
 A pilotr workflow begins with a design specification, a plain list recording

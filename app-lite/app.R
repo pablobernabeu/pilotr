@@ -216,7 +216,8 @@ guide <- card(
            "families. The ", tags$b("Advanced: paste a full JSON spec"), " box in the sidebar ",
            "overrides those controls and gives access to the rest of the engine. This includes ",
            "continuous predictors and interactions, additional grouping factors (nesting), and ",
-           "partial crossing. The example buttons there illustrate the format."),
+           "partial crossing. Ready-to-run example specifications, and the format itself, are ",
+           "linked under the box."),
     tags$div(
       class = "alert alert-info", role = "alert",
       "This is the lite build, so the heavier analyses stay with the installed packages: ",
@@ -555,9 +556,9 @@ server <- function(input, output, session) {
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
   power_plot <- reactiveVal(NULL)
 
-  # Power needs at least 4 subjects, two to a group. Below that, power_design() stops in t.test()
-  # or runs on a single degree of freedom, and the curve keeps too few grid points of 4 or more
-  # for target_n() to solve. A cleared N subjects box reaches the specification as NA.
+  # Power needs at least 4 subjects, two to a group. Below that, power_design() refuses the design,
+  # and the curve keeps too few grid points of 4 or more for target_n() to solve. A cleared N
+  # subjects box reaches the specification as NA.
   n_subject_problem <- function(spec) {
     n <- spec[["units"]][["subject"]][["n"]]
     if (length(n) != 1L || is.na(n) || n < 4) "Set N subjects to at least 4 before running power."

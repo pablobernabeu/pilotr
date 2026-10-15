@@ -7,7 +7,8 @@
 model_formula(spec, structure = c("maximal", "zcp", "intercepts"))
 }
 \arguments{
-\item{spec}{A design specification (path or list).}
+\item{spec}{A design specification (path or list). A path is read with \code{\link[=load_spec]{load_spec()}}, which
+validates it.}
 
 \item{structure}{The random-effects structure: \code{"maximal"}, the default, \code{"zcp"} or
 \code{"intercepts"} (see Details).}
@@ -33,6 +34,9 @@ contrast columns, \code{||} does remove the correlations, which it does not for 
 factor without slopes keeps \code{(1 | g)}, since lme4 refuses \code{(1 || g)}. \code{"intercepts"} keeps a
 random intercept for each grouping factor and drops every slope. \code{\link[=power_mixed]{power_mixed()}} and
 \code{\link[=precision_design]{precision_design()}} take these names as the rungs of such a rule.
+
+A specification with neither a fixed coefficient nor a random effect implies no model, and is
+refused in the words the 'Python' twin uses.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

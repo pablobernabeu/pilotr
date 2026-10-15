@@ -460,6 +460,28 @@ testServer(app = app_dir, {
         "installed app: a between design leaves out the hidden, ticked Counterbalanced lists")
 })
 
+# The downloads are named after the specification they hold, with "design" for an empty name, as in
+# the browser build. The specification and script downloads took the Design name box, so a pasted
+# specification was saved under the name in that box, and an emptied box named the three files
+# ".json", ".R" and "_seed2024.csv", which are hidden on Unix.
+testServer(app = app_dir, {
+  do.call(session$setInputs, start_inputs)
+  file_name <- function(f) basename(tryCatch(f(), error = function(e) ""))
+  download_names <- function()
+    c(file_name(function() output$dl_spec), file_name(function() output$dl_rscript),
+      file_name(function() output$dl_data))
+  session$setInputs(name = "", simulate = 1)
+  got <- download_names()
+  check(identical(got, c("design.json", "design.R", "design_seed2024.csv")),
+        sprintf("installed app: an emptied Design name gives downloads named design (%s)",
+                paste(got, collapse = ", ")))
+  session$setInputs(name = "my_design", spec_json_in = pasted_designs()$three, simulate = 2)
+  got <- download_names()
+  check(identical(got, c("pasted.json", "pasted.R", "pasted_seed99.csv")),
+        sprintf("installed app: a pasted specification's downloads carry its own name (%s)",
+                paste(got, collapse = ", ")))
+})
+
 # The power curve extends its grid until the grid brackets the 0.80 target. The grid used to stop
 # at twice N subjects, which for the default design is the target itself, 127.5 subjects by
 # power.t.test(), so about half of all runs were refused and those that solved were biased low.

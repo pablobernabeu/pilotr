@@ -455,6 +455,41 @@
   pip, so a pasted line stopped with "Invalid requirement: '#'". The R installation line keeps
   its trailing comment, which R ignores.
 
+* `power_design()` refuses a design with fewer than two subjects at a level of the between
+  factor, so fewer than 4 subjects in all, in the 'Python' twin's words. With one subject at each
+  level, `stats::t.test()` stopped with "not enough observations", while the 'Python' twin
+  returned a power of 0. With one subject in all, the two twins stopped with different errors,
+  and with three, the pooled variance rested on a single degree of freedom. The no-code app
+  already asked for 4 subjects.
+
+* `model_data()` and `model_formula()` read a specification from its path. Both documented
+  `spec` as a path or a list, as the other entry points do, and stopped with "subscript out of
+  bounds" when given a path. The 'Python' twin's ports read one.
+
+* `model_formula()` refuses a specification with neither a fixed coefficient nor a random effect,
+  in the 'Python' twin's words. It wrote `.y ~` with nothing after it, and `as.formula()` stopped
+  on that with a parse error. `tools/parity/formula_cross.py` now compares the two twins'
+  refusals as text.
+
+* `build_spec()` assembles an `exgaussian` response. It wrote neither `sigma` nor `beta` for the
+  family, so `validate_spec()` refused the specification it returned, and
+  `default_response_name()` named the response `outcome`, the name for an unknown family, where
+  it now gives `RT`. The response is rounded to four decimals, as in the other continuous
+  families but Beta.
+
+* `build_spec()` leaves a number of subjects or items that is not a whole number for
+  `validate_spec()` to refuse, as it already did for the seed. It truncated 10.5 subjects to 10
+  in silence. Whole numbers are stored as before.
+
+* The installed no-code app names its specification, script and data downloads after the
+  specification they hold, with `design` for an empty name, as the browser build does. The
+  specification and script downloads took the Design name box, so a pasted specification was
+  saved under the name in that box, and an emptied box named the files `.json`, `.R` and
+  `_seed2024.csv`, which are hidden on Unix.
+
+* The installed no-code app labels its paste box "Design spec (JSON)", as the browser build
+  does. The label was empty, so a screen reader had only the placeholder to read out.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
@@ -599,6 +634,14 @@
   before the toggle was wired up. The contributing guide names the checks in `tools/parity/` that
   CI runs, in place of a comparison of CSV files to a tolerance of 1e-6. The note on advanced
   designs in the repository describes specification 0.3.
+
+* `?load_spec` and `?simulate_design` say that a `validate` other than `TRUE` or `FALSE`
+  validates leniently, with `strict = FALSE`. `?load_spec` said that such a value was passed to
+  `validate_spec()` as its `strict` argument, and `?simulate_design` said nothing of it.
+
+* The `?pilotr` overview lists the ex-Gaussian among the response families, and the guide in the
+  browser build of the no-code app says that the paste box links to example specifications and
+  to the format. The guide sent the reader to example buttons, which the app does not have.
 
 ## References
 

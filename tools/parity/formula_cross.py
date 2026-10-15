@@ -9,7 +9,8 @@ flag in both directions, and a three-way interaction with a random slope on an i
 For each specification, R writes its formula under each of the three structures, the data set
 simulate_design() draws and the data model_data() builds from it. Python reads R's simulated data,
 builds its own modelling data from it and writes its own formulas. The formulas must be identical,
-character for character, and where R stops, Python must refuse. The modelling data must have the
+character for character, and where R refuses, Python must refuse in the same words, as both do for
+a specification with neither a coefficient nor a random effect. The modelling data must have the
 same columns in the same order, and every cell must agree bit for bit, compared through its text at
 17 significant digits, which reads back as the same double. The one exception is the .y column of
 the two lognormal families. It comes from the C library's log(), which can differ by an ulp between
@@ -195,9 +196,8 @@ def _check(spec, r_out):
             got = model_formula(spec, s)
         except ValueError as e:
             got = {"error": str(e)}
-        if isinstance(expected, dict) != isinstance(got, dict):
-            problems.append("%s: R=%r Py=%r" % (s, expected, got))
-        elif not isinstance(expected, dict) and got != expected:
+        # A formula or a refusal, {"error": message}, each compared character for character.
+        if got != expected:
             problems.append("%s: R=%r Py=%r" % (s, expected, got))
 
     # R's simulated data, with the factors' labels as text and every other column as numbers.
@@ -248,7 +248,7 @@ def main() -> int:
                 print("%46s%s" % ("", p))
         else:
             refused = all(isinstance(rr["formulas"][s], dict) for s in STRUCTURES)
-            detail = ("formulas refused by both; " if refused else "formulas identical; ")
+            detail = ("formulas refused alike; " if refused else "formulas identical; ")
             detail += ("columns bit for bit" if not worst
                        else "columns bit for bit, .y within %d ulp" % worst)
             print("%-36s %-8s %s" % (name, "ok", detail))

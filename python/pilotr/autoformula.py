@@ -24,10 +24,10 @@ _STRUCTURES = ("maximal", "zcp", "intercepts")
 # The families whose coefficients are on the log scale of the response, which model_data() logs.
 _LOG_FAMILIES = ("lognormal", "shifted_lognormal")
 
-# Raised when a specification has neither a coefficient nor a random effect. The R twin's
-# model_formula() then writes ".y ~ " with nothing after it, and as.formula() stops on it with a
-# parse error.
-_NO_MODEL = ("this specification has no fixed coefficients and no random effects, so it implies "
+# Raised when a specification has neither a coefficient nor a random effect, word for word as the
+# R twin's model_formula() stops. It used to write ".y ~ " with nothing after it, and as.formula()
+# stopped on that with a parse error.
+_NO_MODEL =("this specification has no fixed coefficients and no random effects, so it implies "
              "no model to fit")
 
 
@@ -127,8 +127,8 @@ def model_formula(spec, structure="maximal"):
     ------
     ValueError
         If `structure` is not one of the three names, or if the specification has neither a
-        coefficient nor a random effect, so that the formula would have no terms. The R twin then
-        stops with a parse error.
+        coefficient nor a random effect, so that the formula would have no terms. The R twin
+        refuses such a specification in the same words.
     """
     if structure not in _STRUCTURES:
         raise ValueError("structure must be 'maximal', 'zcp' or 'intercepts'")

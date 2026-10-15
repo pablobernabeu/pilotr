@@ -13,11 +13,12 @@ simulates it and the two dumps, in the 17-digit format of run_r.R and run_py.py,
 A refusal raised while simulating, such as the cap on a Poisson mean, is compared as text like
 any other.
 
-The power battery checks the two-group backend's refusal, which power_design() in R and power()
+The power battery checks the two-group backend's refusals, which power_design() in R and power()
 in Python raise before drawing any replicate. Each twin validates the specification and applies
-its two-group check, the first two steps of both functions, so the battery needs neither scipy
-nor any simulation. The check refuses a design whose rows are correlated, naming the item unit,
-within factor or grouping factor that makes them so.
+its two-group checks, the first steps of both functions, so the battery needs neither scipy nor
+any simulation. The checks refuse a design whose rows are correlated, naming the item unit,
+within factor or grouping factor that makes them so, and a design with fewer than two subjects at
+a level of the between factor.
 
 The scale battery compares, for every response family, the warning power_mixed() raises when it
 fits a linear model to a response whose coefficients are on a link scale. The R twin raises it for
@@ -28,7 +29,7 @@ each twin gives a family, not whether a given call raises it, and needs no model
 A case passes when both twins accept it, or both refuse it with the same message character for
 character. In the spec battery the warnings the two validators raise, such as the deprecation of
 an incomplete `vary_within`, must also match character for character. A Python exception other
-than the one each battery expects (ValueError, and NotImplementedError from the two-group check),
+than the one each battery expects (ValueError, and NotImplementedError from the two-group checks),
 or an R error raised by base R rather than by pilotr (which always stops with call. = FALSE),
 counts as a crash and fails the case whatever the other twin did.
 
@@ -59,7 +60,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "python"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from pilotr.power import _LINEAR_ON_LINK, _LINK_SCALE, _two_group_refusal  # noqa: E402
+from pilotr.power import (  # noqa: E402
+    _LINEAR_ON_LINK, _LINK_SCALE, _two_group_refusal, _two_group_size_refusal)
 from pilotr.simulate import _as_spec, load_spec, simulate  # noqa: E402
 from pilotr.validate import validate_spec  # noqa: E402
 from run_py import _dump  # noqa: E402  the dump format the parity harness compares
@@ -663,6 +665,11 @@ def power_cases():
          _two_group(lambda s: s.__setitem__("response", {"family": "lognormal", "name": "RT",
                                                          "sigma": 0.3}))),
     ]
+    # Too few subjects for the t-test. R stopped in t.test() at 1 and 2, where Python raised
+    # StatisticsError at 1 and returned a power of 0 at 2. Both refuse up to 3 in one message.
+    for n in (1, 2, 3, 4, 5):
+        out.append(("%d subject%s" % (n, "" if n == 1 else "s"),
+                    _two_group(lambda s, n=n: s["units"]["subject"].__setitem__("n", n))))
     return out
 
 
@@ -713,11 +720,13 @@ run <- function(expr) {
 if (mode %in% c("spec", "power")) {
   specs <- jsonlite::fromJSON(payload, simplifyVector = TRUE, simplifyDataFrame = FALSE,
                               simplifyMatrix = FALSE)
-  # The power mode takes the first two steps of power_design(): validation, then the check that
-  # refuses a design the two-group t-test cannot analyse.
+  # The power mode takes the first steps of power_design(): validation, then the checks that
+  # refuse a design the two-group t-test cannot analyse or has too few subjects for.
   res <- if (mode == "spec") lapply(specs, function(s) run(validate_spec(s, strict = TRUE)))
          else lapply(specs, function(s) run({
-           refusal <- .two_group_refusal(.as_spec(s))
+           s <- .as_spec(s)
+           refusal <- .two_group_refusal(s)
+           if (is.null(refusal)) refusal <- .two_group_size_refusal(s)
            if (!is.null(refusal)) stop(refusal, call. = FALSE)
          }))
 } else if (mode == "scale") {
@@ -768,12 +777,17 @@ def _py(fn, refusals=(ValueError,)):
 
 
 def _py_power(spec):
-    """The first two steps of power(): validation, then the two-group check, which raises
-    NotImplementedError for a design the t-test cannot analyse."""
+    """The first steps of power(): validation, then the two-group checks, which raise
+    NotImplementedError for a design the t-test cannot analyse and ValueError for one with too
+    few subjects."""
     def check():
-        refusal = _two_group_refusal(_as_spec(copy.deepcopy(spec)))
+        s = _as_spec(copy.deepcopy(spec))
+        refusal = _two_group_refusal(s)
         if refusal is not None:
             raise NotImplementedError(refusal)
+        refusal = _two_group_size_refusal(s)
+        if refusal is not None:
+            raise ValueError(refusal)
     return _py(check, refusals=(ValueError, NotImplementedError))
 
 

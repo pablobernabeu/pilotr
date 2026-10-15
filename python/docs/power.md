@@ -59,7 +59,8 @@ grouping factor besides `subject`, and its message names what it found. The R pa
 `power_mixed()` fits the model that such a design implies, as does `power_mixed` here when the
 design declares random effects. Continuous predictors and
 by-subject random effects are allowed, since with one row per subject they vary independently
-from row to row.
+from row to row. Each level of the factor needs at least two subjects, so a design needs at
+least 4, and `power` refuses a smaller one, as the R twin's `power_design()` does.
 
 ## Directional predictions
 

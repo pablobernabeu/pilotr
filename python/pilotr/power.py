@@ -117,6 +117,24 @@ def _two_group_refusal(spec):
     return _CORRELATED_ROWS % what
 
 
+def _two_group_size_refusal(spec):
+    """Why a design `_two_group_refusal` accepts has too few units for the t-test, or None.
+
+    Unit u of N takes the second level when u > N / 2, so that level holds N // 2, never more than
+    the first. With one subject at each level, scipy returned a nan p-value, counted as a
+    non-significant replicate, while the R twin's ``t.test()`` stopped with "not enough
+    observations", so the twins reported a power of 0 and an error for one specification. One
+    subject at a level leaves the pooled variance to the other level, so two are required, the
+    minimum the no-code app already asks for. Mirrors ``.two_group_size_refusal()`` in power.R,
+    message for message.
+    """
+    factor = next(f for f in spec["factors"] if f.get("between"))
+    unit = factor["between"]
+    if spec["units"][unit]["n"] // len(factor["levels"]) >= 2:
+        return None
+    return ("The power backend needs at least 2 %ss at each level of the between factor." % unit)
+
+
 def _power_replicate(seed, spec, fname, lev0, lev1, yname, alternative="two.sided"):
     """One two-group replicate: simulate at `seed`, t-test, return (estimate, p-value).
 
@@ -151,6 +169,11 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
     ``power_mixed()`` fits the model that such a design implies. Take 30 subjects crossed with
     20 items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3.
     With no true effect, a t-test of every row is significant in about half of all replicates.
+
+    Each level of the factor needs at least two subjects, so a design needs at least 4. The
+    subjects are split into two blocks in level order, and the second level holds ``N // 2``.
+    With one subject at a level, the pooled variance rests on the other level alone, and with one
+    at each it has no degree of freedom at all.
 
     A directional prediction calls for a one-sided test, which `alternative` selects. The
     estimate is the mean of the second level minus that of the first, whose true value is
@@ -213,7 +236,8 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
         has rows that are correlated because of an item unit, a within factor or a grouping
         factor besides ``subject``.
     ValueError
-        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``.
+        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, or if a level of
+        the between factor holds fewer than two subjects.
 
     Notes
     -----
@@ -238,6 +262,9 @@ def _power_impl(spec, n_sims, alpha, executor, alternative="two.sided"):
     refusal = _two_group_refusal(spec)
     if refusal is not None:
         raise NotImplementedError(refusal)
+    refusal = _two_group_size_refusal(spec)
+    if refusal is not None:
+        raise ValueError(refusal)
 
     factor = next(f for f in spec["factors"] if f.get("between"))
     fname = factor["name"]
@@ -926,7 +953,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     ------
     ValueError
         If `seeds` is neither ``"independent"`` nor ``"shared"``, or `alternative` is not
-        ``"two.sided"``, ``"greater"`` or ``"less"``.
+        ``"two.sided"``, ``"greater"`` or ``"less"``, or a size in `subject_ns` is below 4, which
+        leaves a level of the between factor with fewer than two subjects (see `power`).
 
     See Also
     --------

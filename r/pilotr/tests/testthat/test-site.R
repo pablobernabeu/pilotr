@@ -92,6 +92,34 @@ test_that("the vignette on the apps names the tabs of both", {
     expect_true(grepl(paste0("'", tab, "'"), vignette, fixed = TRUE), info = tab)
 })
 
+test_that("the browser build's guide points to the help its paste box carries", {
+  # It said that "the example buttons there illustrate the format", and the app has no such
+  # buttons. The paste box links to the example specifications and to the format.
+  text <- app_strings(repo_path("app-lite", "app.R"))
+  expect_false(grepl("example buttons", text, fixed = TRUE))
+  expect_true(grepl("Ready-to-run example specifications, and the format itself, are linked",
+                    text, fixed = TRUE))
+  expect_true(grepl("Ready-to-run example specs are in", text, fixed = TRUE))
+})
+
+test_that("the installed app's paste box has a label, as the browser build's has", {
+  # textAreaInput() with a NULL label renders an empty <label>, which names the control for
+  # nobody, so a screen reader had only the placeholder to read out.
+  skip_if_not_installed("shiny")
+  label_of <- function(path, id) {
+    pd <- utils::getParseData(parse(path, keep.source = TRUE, encoding = "UTF-8"))
+    heads <- pd$parent[pd$token == "SYMBOL_FUNCTION_CALL" & pd$text == "textAreaInput"]
+    calls <- lapply(utils::getParseText(pd, pd$parent[match(heads, pd$id)]), str2lang)
+    calls <- Filter(function(cl) identical(match.call(shiny::textAreaInput, cl)$inputId, id),
+                    calls)
+    expect_length(calls, 1L)
+    match.call(shiny::textAreaInput, calls[[1]])$label
+  }
+  installed <- label_of(installed_app(), "spec_json_in")
+  expect_true(is.character(installed) && nzchar(installed))
+  expect_identical(installed, label_of(repo_path("app-lite", "app.R"), "pasted"))
+})
+
 test_that("the contributing guides name the parity gates CI runs", {
   gates <- c("tools/parity/run_r.R", "tools/parity/run_py.py", "tools/parity/compare.py",
              "tools/parity/validate_cross.py", "tools/parity/solve_cross.py")

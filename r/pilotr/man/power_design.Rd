@@ -64,6 +64,11 @@ Any other design is refused with a message naming what makes its rows correlated
 items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3. With
 no true effect, a t-test of every row is significant in about half of all replicates.
 
+Each level of the factor needs at least two subjects, so a design needs at least 4. The
+subjects are split into two blocks in level order, and the second level holds \code{floor(N / 2)}.
+With one subject at a level, the pooled variance rests on the other level alone, and with one at
+each it has no degree of freedom at all.
+
 A specification with no coefficient for the factor's contrast has a true effect of 0, so
 \code{type_s} and \code{type_m} are \code{NaN}.
 

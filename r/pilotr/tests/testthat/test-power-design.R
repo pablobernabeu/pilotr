@@ -67,6 +67,20 @@ test_that("designs the backend never covered keep their messages", {
                "The power backend expects exactly one 2-level between factor.", fixed = TRUE)
 })
 
+test_that("a level of the between factor with fewer than two subjects is refused", {
+  # Subject u of N takes the second level when u > N / 2, so that level holds floor(N / 2). With one
+  # subject at each level, stats::t.test() stopped with "not enough observations" while the Python
+  # twin returned a power of 0, and with one subject in all the two stopped with different errors.
+  # With three, the pooled variance rests on one degree of freedom. Both twins refuse any N below 4
+  # in these words, the minimum the no-code app already asks for.
+  refusal <- "The power backend needs at least 2 subjects at each level of the between factor."
+  for (n in 1:3)
+    expect_error(power_design(one_row_per_subject(n = n), n_sims = 2), refusal, fixed = TRUE,
+                 info = n)
+  r <- power_design(one_row_per_subject(n = 4), n_sims = 2)
+  expect_true(r$power >= 0 && r$power <= 1)
+})
+
 test_that("a specification with no coefficient for the contrast has a true effect of 0", {
   # `"coefficients": {}` is a valid way to write a null design. power_design() stopped with
   # "missing value where TRUE/FALSE needed".

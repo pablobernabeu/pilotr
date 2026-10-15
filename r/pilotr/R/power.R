@@ -17,6 +17,11 @@
 #' items, with by-subject and residual standard deviations of 1 and a by-item one of 0.3. With
 #' no true effect, a t-test of every row is significant in about half of all replicates.
 #'
+#' Each level of the factor needs at least two subjects, so a design needs at least 4. The
+#' subjects are split into two blocks in level order, and the second level holds `floor(N / 2)`.
+#' With one subject at a level, the pooled variance rests on the other level alone, and with one at
+#' each it has no degree of freedom at all.
+#'
 #' A specification with no coefficient for the factor's contrast has a true effect of 0, so
 #' `type_s` and `type_m` are `NaN`.
 #'
@@ -88,6 +93,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
   alternative <- match.arg(alternative)
   spec <- .as_spec(spec)
   refusal <- .two_group_refusal(spec)
+  if (is.null(refusal)) refusal <- .two_group_size_refusal(spec)
   if (!is.null(refusal)) stop(refusal, call. = FALSE)
   f <- Filter(function(f) !is.null(f[["between"]]), spec[["factors"]])[[1]]
   fname <- f[["name"]]; lev0 <- f[["levels"]][1]; lev1 <- f[["levels"]][2]
@@ -173,6 +179,21 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
           else if (length(extra)) sprintf("the grouping factor '%s'", extra[[1L]])
           else NULL
   if (is.null(what)) NULL else .correlated_rows_message(what)
+}
+
+# Why a design that .two_group_refusal() accepts has too few units for the t-test, or NULL when it
+# has enough. Unit u of N takes the second level when u > N / 2, so that level holds floor(N / 2),
+# never more than the first. With one subject at each level, stats::t.test() stopped with "not
+# enough observations" while scipy returned a NaN p-value that the Python twin counted as a
+# non-significant replicate, so the twins reported an error and a power of 0 for one
+# specification. One subject at a level leaves the pooled variance to the other level, so two are
+# required, the minimum the no-code app already asks for. Mirrors _two_group_size_refusal() in
+# power.py, message for message.
+.two_group_size_refusal <- function(spec) {
+  f <- Filter(function(f) !is.null(f[["between"]]), spec[["factors"]])[[1L]]
+  unit <- f[["between"]]
+  if (spec[["units"]][[unit]][["n"]] %/% length(f[["levels"]]) >= 2) return(NULL)
+  sprintf("The power backend needs at least 2 %ss at each level of the between factor.", unit)
 }
 
 # One Monte Carlo replicate of the two-group analysis. Kept at top level, out of a closure, so

@@ -13,7 +13,8 @@
 #' numeric contrast columns implied by the categorical factors, and any interaction product
 #' columns (an `a:b` coefficient becomes a column `a_b`).
 #'
-#' @param spec A design specification (path or list).
+#' @param spec A design specification (path or list). A path is read with [load_spec()], which
+#'   validates it.
 #' @param d A simulated data set, as returned by [simulate_design()].
 #' @return The data frame `d` augmented with the `.y` response column and the contrast and
 #'   interaction columns required by the auto-derived model.
@@ -24,6 +25,10 @@
 #' head(model_data(spec, simulate_design(spec)))
 #' @export
 model_data <- function(spec, d) {
+  # A path is read with load_spec(), which validates it. A list is used as given, without
+  # .as_spec(), because the replicate loops of the power and precision functions call this once
+  # per replicate with a list they have already validated.
+  if (is.character(spec)) spec <- load_spec(spec)
   resp <- spec[["response"]]; shift <- .orelse(resp[["shift"]], 0)
   yname <- resp[["name"]]
   d$.y <- if (resp[["family"]] %in% c("lognormal", "shifted_lognormal")) log(d[[yname]] - shift)
@@ -74,7 +79,11 @@ model_data <- function(spec, d) {
 #' random intercept for each grouping factor and drops every slope. [power_mixed()] and
 #' [precision_design()] take these names as the rungs of such a rule.
 #'
-#' @param spec A design specification (path or list).
+#' A specification with neither a fixed coefficient nor a random effect implies no model, and is
+#' refused in the words the 'Python' twin uses.
+#'
+#' @param spec A design specification (path or list). A path is read with [load_spec()], which
+#'   validates it.
 #' @param structure The random-effects structure: `"maximal"`, the default, `"zcp"` or
 #'   `"intercepts"` (see Details).
 #' @return A [stats::formula] object suitable for fitting with `lme4` or
@@ -102,6 +111,7 @@ model_data <- function(spec, d) {
 #' @export
 model_formula <- function(spec, structure = c("maximal", "zcp", "intercepts")) {
   structure <- match.arg(structure)
+  if (is.character(spec)) spec <- load_spec(spec)
   fixed <- vapply(names(spec[["fixed"]][["coefficients"]]), .us, character(1))
   rs <- spec[["random"]]
   # `|` only when the process actually correlates the terms, `||` otherwise. Emitting `|`
@@ -118,6 +128,11 @@ model_formula <- function(spec, structure = c("maximal", "zcp", "intercepts")) {
            else if (length(slopes)) "||" else "|"
     sprintf("(%s %s %s)", paste(c("1", slopes), collapse = " + "), bar, g)
   }, character(1))
+  # Without a term, the formula would read ".y ~ " and as.formula() stop on it with a parse error.
+  # The refusal is the Python twin's, word for word.
+  if (!length(c(fixed, re)))
+    stop("this specification has no fixed coefficients and no random effects, so it implies no ",
+         "model to fit", call. = FALSE)
   # Anchor the formula in the global environment, away from this function's evaluation
   # frame. print.formula omits its `<environment: ...>` line only for the global
   # environment, so any other choice trails a raw memory address that changes on every

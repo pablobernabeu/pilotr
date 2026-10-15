@@ -308,7 +308,10 @@ ui <- fluidPage(
       tags$hr(),
       tags$details(
         tags$summary("Advanced: paste a JSON spec (overrides the controls)"),
-        textAreaInput("spec_json_in", NULL, "", rows = 5,
+        # A label, as in the browser build. A NULL one renders an empty <label>, which names the
+        # box for nobody, and the summary above is not its label, so a screen reader had only
+        # the placeholder to read out.
+        textAreaInput("spec_json_in", "Design spec (JSON)", "", rows = 5,
           placeholder = "Paste a pilotr spec with continuous predictors / interactions (e.g. a reading-time design)")),
       actionButton("simulate", "Simulate", class = "btn-primary"),
       downloadButton("dl_spec", "Download spec (.json)"),
@@ -479,8 +482,17 @@ server <- function(input, output, session) {
     writeLines(text, con, sep = "")
   }
 
+  # A download is named after the specification it holds, with "design" standing in for an empty
+  # name, as in the browser build. The specification and script downloads took the Design name
+  # box, so a pasted specification was saved under the name in that box, and an emptied box named
+  # the files ".json", ".R" and "_seed2024.csv", which are hidden on Unix. A pasted specification
+  # that load_spec() refuses has no name to give.
+  file_stem <- function(name)
+    if (is.character(name) && length(name) == 1L && !is.na(name) && nzchar(name)) name else "design"
+  current_stem <- function() file_stem(tryCatch(current_spec()[["name"]], error = function(e) NULL))
+
   output$dl_rscript <- downloadHandler(
-    filename = function() paste0(input$name, ".R"),
+    filename = function() paste0(current_stem(), ".R"),
     content = function(file) write_text_download(generate_r_script(current_spec()), file))
 
   # ---- Verify: run the exported script in a clean R subprocess and compare ----
@@ -595,9 +607,9 @@ server <- function(input, output, session) {
         "    power_mixed(load_spec(\"design.json\"), n_sims=200)"))
   }
 
-  # Power needs at least 4 subjects, two to a group. Below that, power_design() stops in t.test()
-  # or runs on a single degree of freedom, and the curve keeps too few grid points of 4 or more
-  # for target_n() to solve. A cleared N subjects box reaches the specification as NA.
+  # Power needs at least 4 subjects, two to a group. Below that, power_design() refuses the design,
+  # and the curve keeps too few grid points of 4 or more for target_n() to solve. A cleared N
+  # subjects box reaches the specification as NA.
   n_subject_problem <- function(spec) {
     n <- spec[["units"]][["subject"]][["n"]]
     if (length(n) != 1L || is.na(n) || n < 4) "Set N subjects to at least 4 before running power."
@@ -732,13 +744,13 @@ server <- function(input, output, session) {
   })
 
   output$dl_spec <- downloadHandler(
-    filename = function() paste0(input$name, ".json"),
+    filename = function() paste0(current_stem(), ".json"),
     content = function(file) write_text_download(spec_json(current_spec()), file))
   # The data the Data tab shows, named after the specification and seed that made them.
   output$dl_data <- downloadHandler(
     filename = function() {
       s <- sim()$spec
-      paste0(s$name, "_seed", format(s$seed, scientific = FALSE), ".csv")
+      paste0(file_stem(s$name), "_seed", format(s$seed, scientific = FALSE), ".csv")
     },
     content = function(file) write.csv(sim()$data, file, row.names = FALSE))
 }

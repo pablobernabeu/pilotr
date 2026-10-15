@@ -68,6 +68,34 @@ def test_replicate_seeds_gives_the_affine_mechanism():
     assert "Matsumoto" in doc and "10.1145/1276927.1276928" in doc
 
 
+def test_load_spec_and_simulate_say_what_any_other_value_of_validate_does(tmp_path):
+    # Any value of `validate` other than True or False validates leniently, None and 0 among them,
+    # as in the R twin. load_spec's docstring named truthy values only, and simulate's said nothing.
+    import json
+    import warnings
+
+    from pilotr import load_spec, pilotr_example, simulate
+
+    spec = load_spec(pilotr_example("between_2group_gaussian"))
+    spec["extra_field"] = "x"
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec), encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown top-level field 'extra_field'"):
+        load_spec(path)
+    for value in (None, 0, "lenient"):
+        with pytest.warns(UserWarning, match="unknown top-level field 'extra_field'"):
+            load_spec(path, validate=value)
+    with pytest.warns(UserWarning, match="unknown top-level field 'extra_field'"):
+        simulate(spec, validate=None)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        load_spec(path, validate=False)
+    for fn in (load_spec, simulate):
+        doc = re.sub(r"\s+", " ", fn.__doc__)
+        assert "truthy" not in doc, fn.__name__
+        assert "Any other value validates leniently" in doc, fn.__name__
+
+
 def test_power_mixed_says_that_a_simplification_rule_is_simulated_in_r_only():
     # The R twin's power_mixed() and precision_design() simulate a preregistered rule that
     # simplifies the model when a fit is singular. This backend fits one model, so its guide and

@@ -21,8 +21,9 @@
 #' @param path Path to a JSON design-specification file, or the JSON text itself, as the
 #'   scripts from [generate_r_script()] and [generate_design_analysis()] embed it.
 #' @param validate Whether to validate the specification after reading it. `TRUE` (the default)
-#'   applies [validate_spec()] with `strict = TRUE`; `FALSE` skips validation, and
-#'   any other value is passed to `validate_spec()` as its `strict` argument.
+#'   applies [validate_spec()] with `strict = TRUE`, and `FALSE` skips validation. Any other value
+#'   validates leniently, with `strict = FALSE`, so that an unknown field draws a warning, not an
+#'   error.
 #' @return The specification as a nested list, with sub-lists left unsimplified so that the
 #'   structure round-trips exactly. Pass the result to [simulate_design()].
 #' @examples
@@ -175,7 +176,7 @@ load_spec <- function(path, validate = TRUE) {
 #'   mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 #'   Validation costs a few milliseconds, so the replicate loops behind the power and precision
 #'   functions validate once and then pass `FALSE`; there is rarely a reason to set it
-#'   directly.
+#'   directly. Any other value validates leniently, as in [load_spec()].
 #' @return A data frame with one row per observation, containing a `subject` column, an
 #'   optional `item` column, any grouping, factor, and continuous-predictor columns, and the
 #'   response column named by the specification. A design with a counterbalanced factor also has

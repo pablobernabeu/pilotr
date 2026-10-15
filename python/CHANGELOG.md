@@ -238,6 +238,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The guides of both no-code apps say that `power_mixed` fits with statsmodels. They said lme4.
   The theme toggle on the website's landing and not-found pages, which lead to this package's
   documentation, now works when the browser refuses the page any storage.
+- The docstrings of `load_spec` and `simulate` say that a `validate` other than `True` or
+  `False`, `None` and `0` among them, validates leniently, as in the R twin. `load_spec` named
+  truthy values only, and `simulate` said nothing of it.
 
 ### Fixed
 
@@ -347,6 +350,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pattern. A test fails on a `pip install` line in a shell block that carries a `#` comment, and
   on an extra outside double quotes, in the README, the guides, the examples and the sources. In
   a checkout, it also reads the repository's README and both copies of the contributing guide.
+- `power` refuses a design with fewer than two subjects at a level of the between factor, so
+  fewer than 4 in all, in the R twin's words, and `power_curve` refuses such a grid point. With
+  one subject at each level, `power` returned a power of 0, since scipy answers a group without
+  variance with a nan p-value and a warning, while the R twin stopped in `t.test()`. With one
+  subject in all, it raised `StatisticsError`. The error is a `ValueError`.
 
 ### Deprecated
 

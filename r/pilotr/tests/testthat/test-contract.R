@@ -104,6 +104,35 @@ test_that("?replicate_seeds gives the affine mechanism", {
   expect_true(grepl("10.1145/1276927.1276928", text, fixed = TRUE))
 })
 
+test_that("?load_spec and ?simulate_design say what any other value of validate does", {
+  # A value other than TRUE or FALSE validates leniently in both functions. ?load_spec said that
+  # it was passed to validate_spec() as its `strict` argument, and ?simulate_design said nothing.
+  spec <- load_spec(pilotr_example("between_2group_gaussian"))
+  spec$extra_field <- "x"
+  tmp <- tempfile(fileext = ".json")
+  on.exit(unlink(tmp))
+  writeLines(spec_json(spec), tmp)
+  expect_error(load_spec(tmp), "unknown top-level field 'extra_field'")
+  for (v in list(NA, 1, "lenient"))
+    expect_warning(load_spec(tmp, validate = v), "unknown top-level field 'extra_field'")
+  expect_warning(simulate_design(spec, validate = NA), "unknown top-level field 'extra_field'")
+  expect_silent(load_spec(tmp, validate = FALSE))
+  for (topic in c("load_spec.Rd", "simulate_design.Rd")) {
+    text <- flat_text(repo_file("man", topic))
+    expect_false(grepl("as its \\code{strict} argument", text, fixed = TRUE), info = topic)
+    expect_true(grepl("Any other value validates leniently", text, fixed = TRUE), info = topic)
+  }
+})
+
+test_that("?pilotr names every response family", {
+  # The overview left out the ex-Gaussian, new in 0.3.
+  text <- flat_text(repo_file("man", "pilotr-package.Rd"))
+  for (family in c("Gaussian", "lognormal", "shifted lognormal", "ex-Gaussian", "Bernoulli",
+                   "Poisson", "ordinal", "Beta"))
+    expect_true(grepl(family, text, fixed = TRUE), info = family)
+  expect_length(pilotr:::.family_params, 8L)
+})
+
 test_that("R's ^ computes a cube and a fourth power as the specification says", {
   # spec/SPEC.md, under Scope of the guarantee, says that from R 4.6.0 `^` computes a cube or a
   # fourth power by repeated multiplication, where Python's ** calls pow(), so a Beta shape of

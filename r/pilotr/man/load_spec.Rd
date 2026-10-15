@@ -11,8 +11,9 @@ load_spec(path, validate = TRUE)
 scripts from \code{\link[=generate_r_script]{generate_r_script()}} and \code{\link[=generate_design_analysis]{generate_design_analysis()}} embed it.}
 
 \item{validate}{Whether to validate the specification after reading it. \code{TRUE} (the default)
-applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}; \code{FALSE} skips validation, and
-any other value is passed to \code{validate_spec()} as its \code{strict} argument.}
+applies \code{\link[=validate_spec]{validate_spec()}} with \code{strict = TRUE}, and \code{FALSE} skips validation. Any other value
+validates leniently, with \code{strict = FALSE}, so that an unknown field draws a warning, not an
+error.}
 }
 \value{
 The specification as a nested list, with sub-lists left unsimplified so that the

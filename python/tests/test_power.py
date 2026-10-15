@@ -93,6 +93,23 @@ def test_designs_the_backend_never_covered_keep_their_messages():
             == "The power backend expects exactly one 2-level between factor.")
 
 
+def test_a_level_of_the_between_factor_with_fewer_than_two_subjects_is_refused():
+    # Subject u of N takes the second level when u > N / 2, so that level holds N // 2. With one
+    # subject at each level, power() returned a power of 0, since scipy answers a group without
+    # variance with a nan p-value, while the R twin stopped in t.test(). With one subject in all it
+    # raised StatisticsError. With three, the pooled variance rests on one degree of freedom. Both
+    # twins refuse any N below 4 in these words, the minimum the no-code app already asks for.
+    refusal = "The power backend needs at least 2 subjects at each level of the between factor."
+    for n in (1, 2, 3):
+        with pytest.raises(ValueError) as caught:
+            power(_one_row_per_subject(n=n), n_sims=2)
+        assert str(caught.value) == refusal, n
+    # power_curve() runs power() at each grid point, so a grid starting below 4 is refused too.
+    with pytest.raises(ValueError, match="at least 2 subjects at each level"):
+        power_curve(_one_row_per_subject(), subject_ns=[2, 40], n_sims=2)
+    assert 0.0 <= power(_one_row_per_subject(n=4), n_sims=2)["power"] <= 1.0
+
+
 def test_a_specification_with_no_coefficient_for_the_contrast_has_a_true_effect_of_0():
     # `"coefficients": {}` is a valid way to write a null design. power() raised KeyError.
     spec = _one_row_per_subject()

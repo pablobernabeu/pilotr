@@ -16,7 +16,7 @@ The default \code{TRUE} catches the errors that would otherwise pass silently, s
 mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 Validation costs a few milliseconds, so the replicate loops behind the power and precision
 functions validate once and then pass \code{FALSE}; there is rarely a reason to set it
-directly.}
+directly. Any other value validates leniently, as in \code{\link[=load_spec]{load_spec()}}.}
 }
 \value{
 A data frame with one row per observation, containing a \code{subject} column, an
