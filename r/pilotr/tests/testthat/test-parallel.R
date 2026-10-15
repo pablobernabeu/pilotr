@@ -19,6 +19,26 @@ crossed_within_par <- function() {
     family = "shifted_lognormal", resp_name = "", sigma = 0.3, shift = 200))
 }
 
+# Whether PSOCK workers load the copy of pilotr under test. Under devtools::test() that copy is the
+# source tree, while a worker loads whichever pilotr is installed, and an older installation lacks
+# internals that the replicates call. A worker is asked, since it sees the library paths that
+# workers see.
+workers_load_this_pilotr <- function() {
+  under_test <- normalizePath(getNamespaceInfo("pilotr", "path"), winslash = "/")
+  probe <- function() {
+    if (!requireNamespace("pilotr", quietly = TRUE)) return(NA_character_)
+    normalizePath(getNamespaceInfo("pilotr", "path"), winslash = "/")
+  }
+  environment(probe) <- globalenv()
+  cl <- parallel::makeCluster(1L)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
+  identical(parallel::clusterCall(cl, probe)[[1L]], under_test)
+}
+skip_unless_workers_load_this_pilotr <- function() {
+  skip_if_not(workers_load_this_pilotr(),
+              "PSOCK workers load a pilotr other than the copy under test")
+}
+
 test_that("workers is validated as a single positive whole number", {
   spec <- gaussian_between_par()
   expect_error(power_design(spec, n_sims = 2, workers = 0), "workers")
@@ -39,6 +59,7 @@ test_that("power_mixed and power_curve_mixed with two workers are identical to s
   skip_on_cran()
   skip_if_not_installed("lme4")
   skip_if_not_installed("lmerTest")
+  skip_unless_workers_load_this_pilotr()
   spec <- crossed_within_par()
   serial <- power_mixed(spec, n_sims = 4, workers = 1)
   parallel2 <- power_mixed(spec, n_sims = 4, workers = 2)
@@ -52,6 +73,7 @@ test_that("power_mixed and power_curve_mixed with two workers are identical to s
 test_that("precision_design with two workers is identical to a serial run", {
   skip_on_cran()
   skip_if_not_installed("lme4")
+  skip_unless_workers_load_this_pilotr()
   spec <- crossed_within_par()
   serial <- precision_design(spec, focal = c(effect = 0.05), rope = 0.02,
                              n_sims = 4, workers = 1)
@@ -59,26 +81,6 @@ test_that("precision_design with two workers is identical to a serial run", {
                                 n_sims = 4, workers = 2)
   expect_identical(serial, parallel2)
 })
-
-# Whether PSOCK workers load the copy of pilotr under test. Under devtools::test() that copy is the
-# source tree, while a worker loads whichever pilotr is installed, and an older installation lacks
-# internals that the replicates call. A worker is asked, since it sees the library paths that
-# workers see.
-workers_load_this_pilotr <- function() {
-  under_test <- normalizePath(getNamespaceInfo("pilotr", "path"), winslash = "/")
-  probe <- function() {
-    if (!requireNamespace("pilotr", quietly = TRUE)) return(NA_character_)
-    normalizePath(getNamespaceInfo("pilotr", "path"), winslash = "/")
-  }
-  environment(probe) <- globalenv()
-  cl <- parallel::makeCluster(1L)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
-  identical(parallel::clusterCall(cl, probe)[[1L]], under_test)
-}
-skip_unless_workers_load_this_pilotr <- function() {
-  skip_if_not(workers_load_this_pilotr(),
-              "PSOCK workers load a pilotr other than the copy under test")
-}
 
 # The value of `expr` and the number of PSOCK clusters started while it ran. The count lives in an
 # environment written into the tracer, since the tracer runs in parallel's namespace.
