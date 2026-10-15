@@ -179,6 +179,13 @@ is the heterogeneity factor of classical probit analysis. Nothing is extrapolate
 that never reaches the target within the sizes swept is refused, and the refusal reports the
 range the sweep did cover.
 
+`power_report()` turns the solve into the sample-size justification a preregistration needs. It
+takes a `precision_design()` result at the chosen size, the `target_n()` result for this curve,
+which rounds the solve up to whole subjects, and the region of practical equivalence as `rope`.
+It writes each effect's mean interval width and the probabilities of the two decisions, each with
+its Monte Carlo error, beside the solved size and its interval. The
+[power vignette](power-analysis.html) writes one for a power analysis.
+
 `p_equivalent` stays at 0 throughout, and correctly so. The true effect of 0.05 lies outside
 the ROPE by construction, so no interval should ever land entirely inside it. The column earns
 its place in designs where practical equivalence is the hypothesis of interest.

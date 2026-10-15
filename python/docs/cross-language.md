@@ -135,6 +135,12 @@ estimates the random-effect correlations that this one leaves out, and the two t
 different statistics. The [power guide](power.md#mixed-effects-power) sets out where their results
 diverge.
 
+`power_report` writes a sample-size justification from the counts of a result, the significant
+replicates and the replicates behind each rate. It computes each Monte Carlo error with the
+functions that compute them in both packages, which return the same doubles for the same counts,
+and formats them in the same way. The script `tools/parity/report_cross.py` renders a set of
+stored records in both engines and requires the same text, byte for byte.
+
 A simulated crossed design has one row per subject-by-item observation. The first rows of the
 worked crossed reaction-time example look like this (the same rows the R package produces):
 

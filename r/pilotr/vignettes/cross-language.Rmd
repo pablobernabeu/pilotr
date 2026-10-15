@@ -167,6 +167,12 @@ contrast and product columns bit for bit. The fits that follow are another matte
 the Python one leaves out, and the two test with different statistics. The Python power guide sets
 out where their results diverge.
 
+`power_report()` writes a sample-size justification from the counts of a result, the
+significant replicates and the replicates behind each rate. It computes each Monte Carlo error
+with the functions that compute them in both packages, which return the same doubles for the same
+counts, and formats them in the same way. The script `tools/parity/report_cross.py` renders a set
+of stored records in both engines and requires the same text, byte for byte.
+
 ## Why this matters
 
 Because the specification is the source of truth and the generator is shared, a design can be

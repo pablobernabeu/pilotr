@@ -154,6 +154,40 @@ refused, and the refusal reports the range the sweep did cover. Had the sweep ab
 value, so an effect-size sweep or a sweep over items is solved the same way, with
 `transform="identity"` for an effect-size axis.
 
+## A sample-size justification
+
+A preregistration, a registered report or a grant application has to justify the sample size it
+asks for, and the solved size is only part of that justification.
+[Lakens (2022, Table 4)](https://doi.org/10.1525/collabra.33267) also asks for the primary
+analysis with its alpha and sidedness, the desired power, each effect size with the reason it was
+chosen, and the power when the null hypothesis is true. A simulation adds items of its own: the
+number of replicates, the fits that were singular or carried a warning and the Monte Carlo error
+of every rate ([Morris, White and Crowther, 2019](https://doi.org/10.1002/sim.8086)).
+`power_report` writes all of them in Markdown from a power result and the `target_n` result.
+The example pairs the solved size with a run at that size, and adds the same design with no
+effect as `null_result`, whose rejection rate shows whether the test holds its level. The
+justification is illustrative.
+
+```python exec="true" source="material-block" result="markdown" session="pow"
+from pilotr import power_report
+
+# The design at the solved size, and the same design with no effect.
+at_n = dict(spec, units={"subject": {"n": solved["n"]}})
+null_n = dict(at_n, fixed={"intercept": 100, "coefficients": {"effect": 0}})
+report = power_report(power(at_n, n_sims=500), solved=solved,
+                      null_result=power(null_n, n_sims=500),
+                      justification="Half the residual standard deviation, the smallest "
+                                    "difference worth acting on.")
+print(report)
+```
+
+Given `spec_file`, the path of the specification file the analysis read, the report also records
+the specification's seed and an MD5 checksum of the file's bytes. Each rate's Monte Carlo standard
+error and Wilson interval are computed in the report from its counts, and the R package's
+`power_report()` writes the same text, byte for byte, from the same counts. A `power_mixed` result
+is reported effect by effect. The R package's version also reports a `precision_design()` result,
+on the interval and the region of practical equivalence.
+
 ## Mixed-effects power
 
 `power_mixed` fits a mixed model with `statsmodels` (needs `statsmodels` and `pandas`), and the

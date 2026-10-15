@@ -289,3 +289,10 @@ jobs:
 
       - name: Cross-check the formulas and modelling data of the two twins
         run: python tools/parity/formula_cross.py
+
+      # power_report() renders a record of counts and strings as Markdown, computing each rate's
+      # Monte Carlo standard error and Wilson interval from the counts. The twins must write the
+      # same bytes for every record in report_cases.json, with no tolerance, since the rates come
+      # from the same doubles and both languages round them correctly.
+      - name: Cross-check the sample-size justifications of the two twins
+        run: python tools/parity/report_cross.py

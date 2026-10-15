@@ -225,6 +225,23 @@
   no single interval. The Python twin's `power_mixed()` has no joint test, and its documentation
   says so.
 
+* `power_report()` writes a sample-size justification in Markdown from a power result and,
+  optionally, a solved curve. The documentation called the sample size from `target_n()` the
+  number a preregistration quotes, but the justification behind it had to be assembled by hand.
+  The report gives the items Lakens (2022, Table 4) asks for. It states the primary analysis with
+  its fitter, test, alpha and sidedness, and the desired power with the solved sample size, its
+  interval, transform and heterogeneity factor. Each focal effect follows with the justification
+  given for its size, and `null_result` gives the power when every focal effect is zero. The
+  simulation is accounted for as Morris, White and Crowther (2019) recommend, with the
+  replicates, the fit counts, the share analysed at each rung of a simplification rule and the
+  Monte Carlo standard error and Wilson interval of every rate, computed in the report from the
+  counts. The report ends with the versions of pilotr, R, lme4 and lmerTest, the specification's
+  seed and an MD5 checksum of the specification file's bytes. For a `precision_design()` result, each focal effect has its
+  mean interval width and the probabilities of the two decisions about the region of practical
+  equivalence, which `rope` states. The Python twin's `power_report()` writes the same text, byte
+  for byte, from the same counts, which `tools/parity/report_cross.py` checks in CI. The power
+  vignette writes one for its priming design.
+
 ## Fixes
 
 * Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the
@@ -570,6 +587,9 @@ Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than on
 Designs, analytic models, and statistical power. *Annual Review of Psychology, 68*, 601-625.
 <doi:10.1146/annurev-psych-122414-033702>
 
+Lakens, D. (2022). Sample size justification. *Collabra: Psychology, 8*(1), 33267.
+<doi:10.1525/collabra.33267>
+
 Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
 generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
 trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
@@ -581,6 +601,9 @@ of pseudorandom number generators. *ACM Transactions on Modeling and Computer Si
 Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing Type I error
 and power in linear mixed models. *Journal of Memory and Language, 94*, 305-315.
 <doi:10.1016/j.jml.2017.01.001>
+
+Morris, T. P., White, I. R. and Crowther, M. J. (2019). Using simulation studies to evaluate
+statistical methods. *Statistics in Medicine, 38*(11), 2074-2102. <doi:10.1002/sim.8086>
 
 Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 imprecise power estimates. *Perspectives on Psychological Science, 9*(3), 319-332.

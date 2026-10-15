@@ -40,8 +40,9 @@ analysis model the specification implies, the one `power_mixed` fits.
 
 ## Power and design analysis
 
-Estimate power by simulation, at one sample size or across a range of them, and
-solve the resulting curve for the value that meets a target.
+Estimate power by simulation, at one sample size or across a range of them,
+solve the resulting curve for the value that meets a target, and write the
+sample-size justification.
 
 ::: pilotr.power.power
 
@@ -52,6 +53,8 @@ solve the resulting curve for the value that meets a target.
 ::: pilotr.solve.solve_curve
 
 ::: pilotr.solve.target_n
+
+::: pilotr.report.power_report
 
 ## Reproducibility
 

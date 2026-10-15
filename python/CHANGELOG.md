@@ -80,6 +80,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   results sit under a new key, `effects`, one entry per focal effect with the twelve keys from
   `power` to `type_m_mcse` that the result held for its one effect. A focal name that the model
   lacks draws the R twin's warning, word for word.
+- `power_report` writes a sample-size justification in Markdown from a power result and,
+  optionally, a solved curve. The guides called the sample size from `target_n` the number a
+  preregistration quotes, but the justification behind it had to be assembled by hand. The report
+  gives the items Lakens (2022, <https://doi.org/10.1525/collabra.33267>, Table 4) asks for. It
+  states the primary analysis with its test, alpha and sidedness, and the desired power with the
+  solved sample size and its interval. Each focal effect follows with the justification given for
+  its size, and `null_result` gives the power when every focal effect is zero. The simulation is
+  accounted for as Morris, White and Crowther (2019, <https://doi.org/10.1002/sim.8086>)
+  recommend, with the replicates, the fit counts and the Monte Carlo standard error and Wilson
+  interval of every rate, computed in the report from the counts. The report ends with the
+  software versions, the specification's seed and an MD5 checksum of the specification file's
+  bytes. A `power_mixed` result is read from `effects`, so
+  its deprecated keys are not touched. The R twin's `power_report()` writes the same text, byte
+  for byte, from the same counts, which `tools/parity/report_cross.py` checks in CI.
 
 ### Changed
 

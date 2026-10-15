@@ -340,6 +340,49 @@ extra participants largely restores that power. Missingness that depends on the 
 would have been observed, which pilotr does not simulate, can bias the estimates as well
 ([Rubin, 1976](https://doi.org/10.1093/biomet/63.3.581)).
 
+## A sample-size justification
+
+A preregistration, a registered report or a grant application has to justify the sample size it
+asks for, and the solved size is only part of that justification.
+[Lakens (2022, Table 4)](https://doi.org/10.1525/collabra.33267) also asks for the primary
+analysis with its alpha and sidedness, the desired power, each effect size with the reason it was
+chosen, and the power when the null hypothesis is true. A simulation adds items of its own: the
+number of replicates, the fits that were singular or carried a warning and the Monte Carlo error
+of every rate ([Morris, White and Crowther, 2019](https://doi.org/10.1002/sim.8086)).
+`power_report()` writes all of them in Markdown from a power result, the `target_n()` result and
+the specification file, whose seed and checksum it records. The justification below is
+illustrative.
+
+```{r}
+spec_file <- file.path(tempdir(), "priming.json")
+writeLines(spec_json(spec_c), spec_file)
+power_report(pm, solved = solved, spec_file = spec_file,
+             justification = c(effect = paste(
+               "A difference of 0.06 on the log scale, about 6% of the reaction time less",
+               "its shift, the smallest effect of theoretical interest.")))
+```
+
+The rates in the report are those of `pm`, the 20 replicates at 24 subjects above, which keep the
+vignette quick. A justification to submit pairs the solved size with a run at that size and with
+enough replicates for planning. It adds the same analysis with the effect set to zero as
+`null_result`, whose rejection rate shows whether the test holds its level in this design.
+
+```{r, eval = FALSE}
+at_n <- spec_c
+at_n$units$subject$n <- solved$n
+writeLines(spec_json(at_n), "priming.json")
+null_n <- at_n
+null_n$fixed$coefficients$effect <- 0
+report <- power_report(power_mixed(at_n, n_sims = 500), solved = solved,
+                       spec_file = "priming.json",
+                       justification = c(effect = "Why an effect of this size matters."),
+                       null_result = power_mixed(null_n, n_sims = 500))
+cat(report, file = "justification.md")
+```
+
+Each rate's Monte Carlo standard error and Wilson interval are computed in the report from its
+counts, and the Python twin's `power_report()` writes the same text from the same counts.
+
 ## Subjects and items
 
 ```{r, include = FALSE}
