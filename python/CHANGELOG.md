@@ -233,6 +233,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never does. The docstring points to curves over the number of items, one at each of a few
   subject counts large enough to keep their own ceiling well above the target. The R twin's
   `?solve_curve` says the same.
+- The contributing guide names the checks in `tools/parity/` that CI runs on the cross-language
+  contract. It named `examples/parity_check.py`, which compares CSV files to a tolerance of 1e-6.
+  The guides of both no-code apps say that `power_mixed` fits with statsmodels. They said lme4.
+  The theme toggle on the website's landing and not-found pages, which lead to this package's
+  documentation, now works when the browser refuses the page any storage.
 
 ### Fixed
 

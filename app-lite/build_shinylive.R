@@ -22,6 +22,16 @@ file.copy(file.path(pkg_R, engine), stage)
 file.copy(file.path(here, "app.R"), stage, overwrite = TRUE)
 
 cat("Exporting shinylive site (downloads webR assets on first run)...\n")
-shinylive::export(stage, out)
+# Without template_params the page is titled "Shiny App" and has no icon, which is what a browser
+# tab showed. The site workflow (.github/workflows/site.yml) passes the same values, and the
+# icons it links are the R site's, copied beside the page.
+icons <- paste(
+  '<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">',
+  '<link rel="icon" type="image/svg+xml" href="favicon.svg">', sep = "\n")
+shinylive::export(stage, out,
+                  template_params = list(title = "pilotr: no-code app", include_in_head = icons))
+favicons <- file.path(here, "..", "r", "pilotr", "pkgdown", "favicon")
+stopifnot(all(file.copy(file.path(favicons, c("favicon-96x96.png", "favicon.svg")), out,
+                        overwrite = TRUE)))
 cat("Done. Static site in:", normalizePath(out), "\n")
 cat("Preview locally with:  httpuv::runStaticServer('", normalizePath(out), "')\n", sep = "")

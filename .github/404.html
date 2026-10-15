@@ -96,7 +96,10 @@
   <script>
     (function () {
       var root = document.documentElement, btn = document.getElementById('themeToggle');
-      var saved = localStorage.getItem('pilotr-theme');
+      // Storage is read and written inside try blocks, as on landing.html, so that a browser
+      // that blocks it still gets a working toggle.
+      var saved = null;
+      try { saved = localStorage.getItem('pilotr-theme'); } catch (e) {}
       if (saved) root.setAttribute('data-theme', saved);
       function isDark() {
         var t = root.getAttribute('data-theme');
@@ -107,7 +110,7 @@
       btn.addEventListener('click', function () {
         var next = isDark() ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
-        localStorage.setItem('pilotr-theme', next);
+        try { localStorage.setItem('pilotr-theme', next); } catch (e) {}
         sync();
       });
       sync();

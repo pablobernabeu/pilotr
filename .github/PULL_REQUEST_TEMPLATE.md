@@ -18,7 +18,7 @@ Python package (`python/`):
 
 Both:
 
-- [ ] Changes to the generative core land in both implementations, and
-      `python/examples/parity_check.py` confirms the outputs stay bit-identical.
+- [ ] Changes to the generative core land in both implementations, and the
+      `tools/parity/` harness passes, as the contributing guide sets out.
 - [ ] Documentation and `NEWS.md` / `CHANGELOG.md` are updated where relevant.
 - [ ] No secret appears anywhere in the diff.

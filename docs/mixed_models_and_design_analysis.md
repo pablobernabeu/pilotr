@@ -9,11 +9,13 @@ planning.
 
 | Capability | How |
 |---|---|
-| Continuous predictors | `predictors` block (subject- or item-level, drawn `N(mean, sd)`) |
+| Continuous predictors | `predictors` block, with one value per subject, item or row (`varies_by` is `"subject"`, `"item"` or `"observation"`), drawn `N(mean, sd)` or, with `dist` set to `"uniform"`, `Uniform(min, max)` |
+| Predictors measured with error | `reliability` on a predictor: the latent value drives the response, and the data carry an observed value that correlates `sqrt(reliability)` with it |
 | Interactions | fixed-effect coefficient keys like `"x1:x2"` (product of columns) |
 | Random slopes on continuous predictors | random `slopes` keyed by predictor, e.g. `(1 + x1 + x2 | subject)` |
 | Additional grouping factors | any `random` entry beyond subject/item with `over` + `n` (e.g. subjects nested in clusters) |
 | Positive/log outcomes | `lognormal` and `shifted_lognormal` families |
+| Reaction times with a long right tail | the `exgaussian` family (`sigma`, `beta`), whose mean is the linear predictor, as in brms's `exgaussian()` |
 | Bounded proportions | the `beta` family, with a mean and precision parameterisation |
 | Partial crossing | a per-subject item count (`item.per_subject`), so each subject sees a sampled subset of items |
 | Precision-based design analysis | `precision_design()` / `precision_curve()` report P(95% CI outside/inside a ROPE) and expected CI width, swept over *N* |
@@ -30,9 +32,12 @@ planning.
   (β=0.02, inside the ROPE) the probability it lands entirely inside is high. This is the
   frequentist analogue of a Bayesian HDI-vs-ROPE decision.
 - Additional grouping. A design with subjects nested in clusters generates a cluster random
-  intercept and is bit-identical across R and Python (`nested_clusters.json`, parity diff 0.0).
-- Cross-language parity. The continuous-predictor design is bit-identical between R and Python
-  (~5e-15 over 4,000 rows × 7 columns). Factor-only specs keep the original RNG stream.
+  intercept (`nested_clusters.json`).
+- Cross-language parity. The nested design and the continuous-predictor design
+  (`reading_time_continuous.json`) give the same data in R and Python, to the last bit wherever
+  the two share a maths library, as on Linux, where continuous integration checks every shipped
+  example with the harness in `tools/parity/`. The cross-language article of the R package sets
+  out what can differ on other platforms. Factor-only specs keep the original RNG stream.
 
 ## Recommended workflow
 

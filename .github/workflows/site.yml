@@ -102,7 +102,18 @@ jobs:
           stopifnot(all(file.exists(file.path("r/pilotr/R", engine))))
           file.copy(file.path("r/pilotr/R", engine), stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
-          shinylive::export(stage, "site/app")
+          # Without template_params the page is titled "Shiny App" and has no icon, which is
+          # what a browser tab showed. app-lite/build_shinylive.R passes the same values, and
+          # the icons it links are the R site's, copied beside the page.
+          icons <- paste(
+            '<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">',
+            '<link rel="icon" type="image/svg+xml" href="favicon.svg">', sep = "\n")
+          shinylive::export(stage, "site/app",
+                            template_params = list(title = "pilotr: no-code app",
+                                                   include_in_head = icons))
+          stopifnot(all(file.copy(
+            file.path("r/pilotr/pkgdown/favicon", c("favicon-96x96.png", "favicon.svg")),
+            "site/app", overwrite = TRUE)))
 
       - uses: actions/setup-python@v7
         with:

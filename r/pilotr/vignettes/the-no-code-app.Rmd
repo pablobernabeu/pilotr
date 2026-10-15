@@ -50,15 +50,18 @@ fixed intercept and effect, a response family, and for crossed designs the rando
 standard deviations. A within design crossed with items can use counterbalanced lists, which
 show each subject each item in one condition and rotate the conditions over subjects and items,
 and its specification then declares version 0.4.
-Then read the tabs. 'Design spec' holds the exact JSON specification, the
-portable source of truth, and 'Data' the simulated data set. 'Summary & plot' gives group
-summaries and a plot. 'Power' reports simulation-based two-group Gaussian power with the Type S
-and Type M errors, together with a power curve over sample size and the sample size at which
-that curve reaches 0.80, with a confidence interval on it. The curve adds sample sizes until it
-brackets a power of 0.80, and for a design without random effects or continuous predictors the
-tab also gives the sample size `power.t.test()` computes, as a check. The tab runs this analysis
-for a two-group Gaussian design with one row per subject, and for any other design it explains
-how to run it in the installed package. 'R script' emits a self-contained, reproducible R
+Then read the tabs. Both apps open on 'Guide', which describes the controls, the response
+families and the analyses. Three of the other tabs have shorter names in the browser build,
+given here in brackets after the installed app's. 'Design spec (JSON)' ('Design spec') holds the
+exact JSON specification, the portable source of truth, and 'Data' the simulated data set.
+'Summary & plot' gives group summaries and a plot. 'Power & design analysis' ('Power') reports
+simulation-based two-group Gaussian power with the Type S and Type M errors, together with a
+power curve over sample size and the sample size at which that curve reaches 0.80, with a
+confidence interval on it. The curve adds sample sizes until it brackets a power of 0.80, and
+for a design without random effects or continuous predictors the tab also gives the sample size
+`power.t.test()` computes, as a check. The tab runs this analysis for a two-group Gaussian
+design with one row per subject, and for any other design it explains how to run it in the
+installed package. 'Reproducible R script' ('R script') emits a self-contained, reproducible R
 script, which ends by suggesting the analysis that fits the design. In the installed app, Verify
 runs that script in a clean R session and checks that its data are identical, bit for bit, to
 the data the current specification produces. The comparison is with the specification in force
@@ -70,8 +73,8 @@ accepts designs beyond the point-and-click controls, such as continuous predicto
 interactions and nesting.
 
 'Data', 'Summary & plot' and the data download show the last simulation, and the 'Data' tab and
-the name of the downloaded file give the seed it used. 'Design spec', 'Power', 'R script' and the
-specification download follow the controls as they stand. When the controls change the design
+the name of the downloaded file give the seed it used. The specification, power and script tabs
+and the specification download follow the controls as they stand. When the controls change the design
 after a simulation, a note above the tabs says so until you select Simulate again.
 
 ## One specification, three interfaces
@@ -83,5 +86,5 @@ Python share a maths library (see the [cross-language article](cross-language.ht
 rounds Gaussian and reaction-time responses to four decimals and leaves a Beta response
 unrounded, for the reason `?build_spec` gives. The heavier analyses stay with the installed
 packages: crossed mixed-effects power in R, through `lme4` as the reference backend, and in
-Python, and precision/ROPE design analysis in R. Whichever interface you use, the specification
+Python, through `statsmodels`, and precision/ROPE design analysis in R. Whichever interface you use, the specification
 you build in the app drives all three.

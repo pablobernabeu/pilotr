@@ -6,10 +6,12 @@ welcome, whether they fix a bug, improve the documentation or add a feature.
 pilotr ships as twin packages, R and Python, from this one repository. The R
 package lives in `r/pilotr/` and the Python package in `python/`, with the
 no-code app in `app-lite/`. All three consume the same portable JSON design
-specification (documented in `spec/`), and the two packages share a
-random-number contract so that, given the same specification and seed, they
-produce bit-identical data. A change to the generative core therefore usually
-needs to land in both packages, keeping that contract intact.
+specification (documented in `spec/`). The two packages share a random-number
+contract so that, given the same specification and seed, they produce
+bit-identical data wherever they share a maths library, as on Linux.
+`spec/SPEC.md` sets out what can differ elsewhere. A change to the generative
+core therefore usually needs to land in both packages, keeping that contract
+intact.
 
 ## Reporting a problem or suggesting a feature
 
@@ -34,7 +36,12 @@ devtools::build_readme("r/pilotr")  # regenerate README.md after editing README.
 page, so edit the `.Rmd` and knit it rather than editing the Markdown directly.
 The cross-language parity table in `r/pilotr/vignettes/parity-summary.csv` is
 likewise generated, by `python examples/parity_check.py --csv`, which needs both
-demos to have been run first.
+demos to have been run first. That table compares CSV files at the precision
+they are written with, to a tolerance of 1e-6, so it summarises the agreement
+without proving it. The R site's favicons in `r/pilotr/pkgdown/favicon/`
+are built by `Rscript tools/favicons/build_favicons.R`. Run it, not
+`pkgdown::build_favicons()`, when the icon changes, since pkgdown's function
+would draw them from the logo, whose wordmark cannot be read at favicon sizes.
 
 brms is not a dependency of the package, so its test suite cannot ask brms
 whether it accepts the code that `brms_bridge()` and `generate_design_analysis()`
@@ -48,17 +55,40 @@ The Python package:
 pip install -e "./python[dev]"
 cd python
 pytest                        # run the test suite
-python examples/parity_check.py   # confirm cross-language agreement
 ```
+
+The cross-language contract is checked by the harness in `tools/parity/`. From
+the repository root, the first two commands below simulate every shipped and
+adversarial case from the local R and Python sources. The third compares the
+two dumps value for value, against the allowances in
+`tools/parity/tolerance.json` and the recorded hashes in
+`tools/parity/golden.json`. The last two check that both validators accept and
+refuse the same specifications with the same messages, and that both curve
+solvers agree. The validator check also holds `spec/design.schema.json` to the
+validators, for which it needs the jsonschema package.
+
+```bash
+Rscript tools/parity/run_r.R
+python tools/parity/run_py.py
+python tools/parity/compare.py
+python tools/parity/validate_cross.py
+python tools/parity/solve_cross.py
+```
+
+The parity job in `.github/workflows/python-tests.yml` runs these and the
+harness's other cross-checks. Its Linux cell gates the workflow. Its Windows
+cell is informational, because there R and Python take `exp()`, `log()` and
+`pow()` from different maths libraries, and a value that passes through them can
+differ in its last bits.
 
 ## Conventions
 
 British spelling throughout. The generative core stays dependency-free in
 Python (`scipy`, `statsmodels` and `pandas` are optional extras for the power
-tools), and the R package keeps its Imports minimal. Outputs are bit-identical
-across the two languages given the same specification and seed;
-`python/examples/parity_check.py` exercises that contract and must stay green.
-pilotr handles no credentials and makes no network requests.
+tools), and the R package keeps its Imports minimal. Given the same
+specification and seed, the two languages produce bit-identical data wherever
+they share a maths library, and the `tools/parity/` harness above must stay
+green. pilotr handles no credentials and makes no network requests.
 
 ## Submitting a pull request
 

@@ -122,7 +122,12 @@
   <script>
     (function () {
       var root = document.documentElement, btn = document.getElementById('themeToggle');
-      var saved = localStorage.getItem('pilotr-theme');
+      // A browser that blocks site storage throws on every attempt to use it, and an
+      // exception here stopped the script before the toggle was wired up. Storage is now
+      // read and written inside try blocks, and where it is blocked the theme lasts for
+      // the visit and is not remembered.
+      var saved = null;
+      try { saved = localStorage.getItem('pilotr-theme'); } catch (e) {}
       if (saved) root.setAttribute('data-theme', saved);
       function isDark() {
         var t = root.getAttribute('data-theme');
@@ -133,7 +138,7 @@
       btn.addEventListener('click', function () {
         var next = isDark() ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
-        localStorage.setItem('pilotr-theme', next);
+        try { localStorage.setItem('pilotr-theme', next); } catch (e) {}
         sync();
       });
       sync();

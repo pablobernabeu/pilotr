@@ -125,6 +125,15 @@ testServer(app = app_dir, {
     lev1 = "control", lev2 = "treatment", intercept = 100, effect = 5,
     family = "gaussian", resp_name = "", sigma = 10)
   check(jsonlite::validate(output$json), "server renders valid JSON spec")
+  # Before a run, the power tab gives the app's cap and says where more simulations come from.
+  # It said "unlimited once you install the package", inside the installed package's own app,
+  # whose cap PILOTR_MAX_SIMS sets.
+  po_first <- output$power_out
+  cap <- as.integer(Sys.getenv("PILOTR_MAX_SIMS", "5000"))
+  check(grepl(sprintf("The app caps the number at %d.", cap), po_first, fixed = TRUE) &&
+          grepl("call power_design() directly, or set PILOTR_MAX_SIMS", po_first, fixed = TRUE) &&
+          !grepl("unlimited", po_first, fixed = TRUE),
+        "before a run, the power tab names the cap and the two ways past it")
   session$setInputs(simulate = 1)
   d <- sim()$data
   check(nrow(d) == 64 && all(c("subject", "group", "score") %in% names(d)), "Simulate produces the 64-row data set")

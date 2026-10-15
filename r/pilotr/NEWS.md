@@ -575,6 +575,23 @@
   on every shipped example and parity case, the formulas character for character and the contrast
   and product columns bit for bit.
 
+* Both apps' guides say that crossed mixed-effects power runs in R through lme4, the reference
+  backend, and in Python through statsmodels. They named lme4 for both. Before a run, the
+  installed app's power tab said that simulations were unlimited once you install the package,
+  although the app is part of the installed package. It now gives the app's cap, which
+  `PILOTR_MAX_SIMS` sets, and says to call `power_design()` directly for more. The vignette on
+  the no-code app names the tabs of both apps. It named the browser build's alone.
+
+* The website's R pages link favicons that exist. pkgdown 2.1.2 changed the set of favicon files
+  its pages link, and three of them, `favicon-96x96.png`, `favicon.svg` and `site.webmanifest`,
+  returned 404 on every page. `tools/favicons/build_favicons.R` in the source repository builds
+  the set offline. In a browser tab, the browser build of the app is titled "pilotr: no-code
+  app", not "Shiny App", and shows the pilotr icon. The theme toggle on the site's landing and
+  not-found pages works in a browser that blocks site storage, where its script used to stop
+  before the toggle was wired up. The contributing guide names the checks in `tools/parity/` that
+  CI runs, in place of a comparison of CSV files to a tolerance of 1e-6. The note on advanced
+  designs in the repository describes specification 0.3.
+
 ## References
 
 Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate

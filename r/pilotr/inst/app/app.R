@@ -231,10 +231,10 @@ guide_tab <- tabPanel(
            "(2014), each with its Monte Carlo error, and draws a power curve over sample size, ",
            "adding sample sizes until the curve brackets a power of 0.80. It then solves that ",
            "curve for the sample size at which power reaches 0.80 and reports a confidence ",
-           "interval on it. The heavier ",
-           "analyses stay with the packages themselves: crossed mixed-effects power (via lme4) ",
-           "in R and in Python, and precision/ROPE design analysis in R. The specification you ",
-           "build here drives all three interfaces."),
+           "interval on it. The heavier analyses stay with the packages themselves: crossed ",
+           "mixed-effects power in R (lme4, the reference) and in Python (statsmodels), and ",
+           "precision/ROPE design analysis in R. The specification you build here drives all ",
+           "three interfaces."),
     tags$p(
       tags$a(href = "https://pablobernabeu.github.io/pilotr/", target = "_blank", "Documentation"), " · ",
       tags$a(href = "https://github.com/pablobernabeu/pilotr", target = "_blank", "Source (R and Python)")
@@ -698,7 +698,9 @@ server <- function(input, output, session) {
     n <- sum(input$run_power, input$run_curve)
     r <- power_result()
     txt <- if (is.null(r))
-      sprintf("Set the number of simulations (capped at %d in the app, unlimited once you install the package), then select Run power analysis.", MAX_SIMS)
+      sprintf(paste("Set the number of simulations, then select Run power analysis. The app caps",
+                    "the number at %d. For more, call power_design() directly, or set",
+                    "PILOTR_MAX_SIMS before launching the app."), MAX_SIMS)
     else if (!is.null(r$msg)) r$msg
     else paste0(
       sprintf("Simulations  : %d\n", r$n_sims),

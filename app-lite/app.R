@@ -220,9 +220,9 @@ guide <- card(
     tags$div(
       class = "alert alert-info", role = "alert",
       "This is the lite build, so the heavier analyses stay with the installed packages: ",
-      "crossed mixed-effects power (via ", tags$code("lme4"), ") in R and in Python, and ",
-      "precision/ROPE design analysis in R. The specification you build here drives all ",
-      "three interfaces."
+      "crossed mixed-effects power in R (", tags$code("lme4"), ", the reference) and in Python (",
+      tags$code("statsmodels"), "), and precision/ROPE design analysis in R. The specification ",
+      "you build here drives all three interfaces."
     ),
     tags$div(
       class = "guide-links",
