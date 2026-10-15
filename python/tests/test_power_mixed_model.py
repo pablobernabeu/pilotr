@@ -137,8 +137,10 @@ def test_a_design_without_items_is_fitted_from_its_by_subject_terms(monkeypatch)
     spec["factors"][0]["vary_within"] = "subject"
     del spec["random"]["item"]
     r = power_mixed(spec, n_sims=2)
-    assert seen == [["subject", "subject:cond"]] * 2
-    assert r["n_returned"] == 2 and list(r["effects"]) == ["cond"]
+    # Every fit, the default-chain fallback after a Powell failure included, takes the by-subject
+    # terms. On Linux CI one replicate falls back, so the fits can outnumber the replicates.
+    assert len(seen) >= 2 and all(c == ["subject", "subject:cond"] for c in seen)
+    assert r["n_attempted"] == r["n_returned"] == 2 and list(r["effects"]) == ["cond"]
 
 
 def test_a_design_without_random_effects_is_refused():
