@@ -333,6 +333,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `OverflowError` for a lognormal or shifted lognormal response whose `exp(eta + sigma * z)`
   overflowed, and `ZeroDivisionError` for a Beta response whose shape parameter was zero or whose
   two Gamma variates both underflowed. R returned `Inf`, 0, 1 or `NaN` in the same cases.
+- The install commands in the README and the getting-started guide carry no trailing comments,
+  so they paste into any shell. At an interactive prompt, zsh, the default shell on macOS, reads
+  `#` as the start of a comment only when told to, so `pip install pilotr  # core engine` handed
+  the `#` and the words after it to pip, which stopped with "Invalid requirement: '#'". The
+  blocks now hold the bare commands, and the prose before them says what each extra adds. The
+  extras were already in double quotes, which keep zsh from reading the brackets as a filename
+  pattern. A test fails on a `pip install` line in a shell block that carries a `#` comment, and
+  on an extra outside double quotes, in the README, the guides, the examples and the sources. In
+  a checkout, it also reads the repository's README and both copies of the contributing guide.
 
 ### Deprecated
 

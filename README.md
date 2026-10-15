@@ -54,12 +54,16 @@ portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/
 ## Installation
 
 The Python package is on [PyPI](https://pypi.org/project/pilotr/) and the R package is on
-[CRAN](https://CRAN.R-project.org/package=pilotr).
+[CRAN](https://CRAN.R-project.org/package=pilotr). The first command below installs the Python
+core engine, which is pure Python and has no dependencies. The second adds scipy, for
+simulation-based power, and the third adds scipy, statsmodels and pandas, for crossed
+mixed-effects power. The double quotes keep zsh, the default shell on macOS, from reading the
+brackets as a filename pattern.
 
 ```bash
-pip install pilotr             # core engine, pure Python and dependency-free
-pip install "pilotr[power]"    # + scipy, for simulation-based power
-pip install "pilotr[mixed]"    # + scipy, statsmodels and pandas, for crossed mixed-effects power
+pip install pilotr
+pip install "pilotr[power]"
+pip install "pilotr[mixed]"
 ```
 
 ```r

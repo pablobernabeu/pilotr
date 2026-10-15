@@ -449,6 +449,12 @@
   ggplot2 3.4.0 does not load, and the job went on to pass on the current releases. It now runs
   on an older R, reads the floors from DESCRIPTION and fails unless each one is installed.
 
+* The browser build of the no-code app gives the command that installs the Python package as
+  the bare `pip install "pilotr[mixed]"`, with its explanation on the line before. The command
+  ended with a `#` comment, which an interactive `zsh`, the default shell on macOS, passes on to
+  pip, so a pasted line stopped with "Invalid requirement: '#'". The R installation line keeps
+  its trailing comment, which R ignores.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient

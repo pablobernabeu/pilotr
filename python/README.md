@@ -26,10 +26,15 @@ the R package and the specification format).
 
 ## Install
 
+The first command below installs the core engine, which is pure Python. The second adds scipy,
+for the simulation-based power demo, and the third adds scipy, statsmodels and pandas, for
+crossed mixed-effects power. The double quotes keep zsh, the default shell on macOS, from
+reading the brackets as a filename pattern.
+
 ```bash
-pip install pilotr             # core engine (pure Python, dependency-free)
-pip install "pilotr[power]"    # + scipy, for the simulation-based power demo
-pip install "pilotr[mixed]"    # + scipy, statsmodels and pandas, for crossed mixed-effects power
+pip install pilotr
+pip install "pilotr[power]"
+pip install "pilotr[mixed]"
 ```
 
 Requires Python 3.9 or later. The generative core has no dependencies.

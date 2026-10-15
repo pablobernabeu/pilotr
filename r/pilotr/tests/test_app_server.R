@@ -549,6 +549,15 @@ testServer(app = lite, {
   }
   check_routes(out, "runs power only for the two-group Gaussian design", "browser app")
 
+  # The text of a design sent to both packages ends with the command that installs the Python
+  # one, which a reader pastes into a shell. An interactive zsh, the default shell on macOS,
+  # leaves comments off, so a trailing "# ..." on that line reached pip as a requirement.
+  pip_lines <- grep("pip install", strsplit(out$rt, "\n", fixed = TRUE)[[1]], fixed = TRUE,
+                    value = TRUE)
+  check(length(pip_lines) == 1L && !grepl("#", pip_lines, fixed = TRUE) &&
+          trimws(pip_lines) == "pip install \"pilotr[mixed]\"",
+        "browser app: the pip install line is the bare command, with its extra in double quotes")
+
   # A design the browser build can analyse shows every rate with its Monte Carlo error, as the
   # installed app does. Both apps source their engine into the global environment, so the full
   # engine the installed app loaded above is still there. test_app_logic.R is what holds the

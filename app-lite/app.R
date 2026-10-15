@@ -544,9 +544,12 @@ server <- function(input, output, session) {
         "    power_mixed(load_spec(\"design.json\"), n_sims=200)\n\n"),
       "Install:\n",
       "    install.packages(c(\"pilotr\", \"lme4\", \"lmerTest\"))   # R, from CRAN, with the lme4 backend",
+      # The pip line is pasted into a shell, so its explanation goes on the line before it. An
+      # interactive zsh, the default shell on macOS, leaves comments off and would pass a
+      # trailing "# ..." on to pip.
       if (python) paste0(
-        "\n    pip install \"pilotr[mixed]\"                          ",
-        "# Python, from PyPI, with the statsmodels backend"))
+        "\n\nPython, from PyPI, with the statsmodels backend, at a shell prompt:\n",
+        "    pip install \"pilotr[mixed]\""))
   }
 
   power_out  <- reactiveVal("Select “Estimate power” to run a simulation-based power analysis.")
