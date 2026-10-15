@@ -545,6 +545,13 @@
   curve for `solve_curve()`, and limits the claim of exact reproduction to the simulated data,
   since the model fits depend on the lme4 release and the platform.
 
+* The power vignette's table of fitters, the cross-language vignette and `README.md` describe the
+  Python twin's `power_mixed()` as it now stands. It fits the model the specification implies,
+  with each random effect as an independent variance component, from ports of `model_formula()`
+  and `model_data()`. `tools/parity/formula_cross.py` holds the ports to this package's functions
+  on every shipped example and parity case, the formulas character for character and the contrast
+  and product columns bit for bit.
+
 ## References
 
 Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate

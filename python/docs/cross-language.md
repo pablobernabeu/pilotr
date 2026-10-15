@@ -126,6 +126,15 @@ of every refusal. The largest relative difference measured over those cases is 5
 an allowance of 1e-9. On a solved sample size of 220 subjects that allowance comes to two
 ten-millionths of a subject. Every refusal message is identical character for character.
 
+The mixed models of the two `power_mixed` functions come from `model_formula` and `model_data`,
+which this package ports from the R package. The script `tools/parity/formula_cross.py` gives the
+ports the data R simulated for every shipped example and parity case. Both must write the same
+formula character for character and the same contrast and product columns bit for bit. The fits
+that follow are another matter. `lme4` and `statsmodels` are different programs, the R package
+estimates the random-effect correlations that this one leaves out, and the two test with
+different statistics. The [power guide](power.md#mixed-effects-power) sets out where their results
+diverge.
+
 A simulated crossed design has one row per subject-by-item observation. The first rows of the
 worked crossed reaction-time example look like this (the same rows the R package produces):
 

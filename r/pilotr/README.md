@@ -5,7 +5,8 @@
 
 <!-- badges: start -->
 
-[![CRAN status](https://www.r-pkg.org/badges/version/pilotr)](https://CRAN.R-project.org/package=pilotr)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/pilotr)](https://CRAN.R-project.org/package=pilotr)
 [![R-CMD-check](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pablobernabeu/pilotr/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
@@ -36,11 +37,12 @@ either language wherever the two share a maths library, as on Linux.
 Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
 differ in its last bits, as the [cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
-sets out. The Python package carries the generative core. The R package
-additionally offers precision/ROPE design analysis, the `lme4` reference
-backend for mixed-effects power, the `brms` bridge, the analysis-script
-emitters, the helpers that derive the analysis model and build
-specifications, and the app launcher.
+sets out. The Python package carries the generative core,
+simulation-based power and the helpers that derive the analysis model.
+The R package additionally offers precision/ROPE design analysis, the
+`lme4` reference backend for mixed-effects power, the `brms` bridge, the
+analysis-script emitters, the helpers that build specifications, and the
+app launcher.
 
 ## Installation
 

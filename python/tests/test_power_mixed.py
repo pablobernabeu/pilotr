@@ -1,14 +1,15 @@
-"""`power_mixed`: the scale it analyses a response on, what its fixed model leaves out, whether
-its fits reach the optimum and how it counts them.
+"""`power_mixed`: the scale it analyses a response on, what its model leaves out, whether its fits
+reach the optimum and how it counts them.
 
-The statsmodels backend fits one model whatever the specification declares, `yv ~ cc` with
-independent by-subject and by-item intercept and slope components, and tests the first contrast of
-the single within factor. It fitted a `lognormal` response on its raw scale, while the R twin and
-its own `shifted_lognormal` path analyse the log, and it said nothing when a specification declared
-terms that its model leaves out. Its fits stopped short of the REML optimum in most crossed
-replicates, and it counted every fit that returned as converged. For an accuracy, count, ordinal or
-proportion response, it compared an estimate on the response scale with a true value on the link
-scale, and reported the mean estimate and Type M of that comparison without a word.
+The statsmodels backend used to fit one model whatever the specification declared, `yv ~ cc` with
+independent by-subject and by-item intercept and slope components, and it fitted a `lognormal`
+response on its raw scale, while the R twin and its own `shifted_lognormal` path analyse the log.
+It now fits the model the specification implies (see test_power_mixed_model.py), and it leaves out
+only the correlations between random effects, which it names. Its fits stopped short of the REML
+optimum in most crossed replicates, and it counted every fit that returned as converged. For an
+accuracy, count, ordinal or proportion response, it compared an estimate on the response scale
+with a true value on the link scale, and reported the mean estimate and Type M of that comparison
+without a word.
 """
 import math, os, re, sys, warnings
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -24,10 +25,9 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from pilotr import load_spec, pilotr_example, power_mixed, replicate_seeds, simulate
 
-_LEFT_OUT = ("power_mixed() in Python fits 'yv ~ cc' with independent by-subject and by-item "
-             "intercept and slope components, testing the first contrast of the within factor "
-             "only. This specification also declares %s, which the fitted model leaves out. The "
-             "R package's power_mixed() fits the model the specification implies.")
+_UNCORRELATED = ("power_mixed() in Python fits each random effect as an independent variance "
+                 "component, so it leaves out the random-effect correlations this specification "
+                 "declares for %s. The R package's power_mixed() estimates them.")
 
 # lme4's REML fit of (1 + cond || subject) + (1 + cond || item), the uncorrelated model the backend
 # fits, to replicate 0 of the shipped crossed_mixed_rt example, as tools/parity/lme4_reference.R
@@ -67,6 +67,7 @@ def test_a_lognormal_response_is_analysed_on_the_log_scale():
     ln, ln_warned = _left_out_warnings(lambda: power_mixed(_priming("lognormal"), n_sims=2))
     sh, sh_warned = _left_out_warnings(
         lambda: power_mixed(_priming("shifted_lognormal", shift=200), n_sims=2))
+    ln, sh = ln["effects"]["cond"], sh["effects"]["cond"]
     assert ln["mean_estimate"] == pytest.approx(sh["mean_estimate"], abs=1e-6)
     assert ln["n_significant"] == sh["n_significant"]
     assert ln["type_m"] == pytest.approx(sh["type_m"], abs=1e-5)
@@ -95,18 +96,13 @@ def test_a_response_with_no_logarithm_leaves_its_replicate_without_an_estimate(f
     assert r["n_attempted"] == 4 and r["n_returned"] == 2
 
 
-def test_the_warning_names_what_reading_time_continuous_declares_beyond_the_model():
-    # The shipped example declares six further coefficients, three predictors and two by-subject
-    # slopes, none of which `yv ~ cc` contains. Its unit counts are cut to keep the fits quick,
-    # and the declared structure, which is all the warning reads, is untouched. Two replicates
-    # still give one warning.
-    spec = load_spec(pilotr_example("reading_time_continuous"))
+def test_the_warning_names_the_groups_whose_correlations_are_left_out_once_per_call():
+    # The example correlates each unit's intercept and slope. Two replicates still give one
+    # warning, raised before the replicates run.
+    spec = load_spec(pilotr_example("crossed_mixed_rt"))
     spec["units"] = {"subject": {"n": 8}, "item": {"n": 6}}
     _, warned = _left_out_warnings(lambda: power_mixed(spec, n_sims=2))
-    assert warned == [_LEFT_OUT % (
-        "other coefficients ('SyntaxPC', 'CoherencePC', 'age', 'SyntaxPC:age', "
-        "'CoherencePC:age', 'cond:age'), predictors ('SyntaxPC', 'CoherencePC', 'age') and "
-        "by-subject slopes ('SyntaxPC', 'CoherencePC')")]
+    assert warned == [_UNCORRELATED % "'subject' and 'item'"]
 
 
 def _small():
@@ -166,24 +162,42 @@ def _extra_groups(s):
     s["random"]["block"] = {"over": "item", "n": 2, "intercept_sd": 0.1}
 
 
-@pytest.mark.parametrize("change, left_out", [
-    (_second_contrast, "another coefficient ('quad')"),
-    (_zero_coefficient, None),
-    (_between_factors, "between factors ('group', 'set')"),
-    (_predictor_with_effect, "another coefficient ('age') and a predictor ('age')"),
-    (_by_item_slope, "a predictor ('age') and a by-item slope ('age')"),
-    (_correlations, "random-effect correlations ('subject')"),
-    (_correlated_flag, "random-effect correlations ('item')"),
-    (_uncorrelated_flag, None),
-    (_extra_groups, "extra grouping factors ('site', 'block')"),
+_COMPONENTS = ["item", "item:cond", "subject", "subject:cond"]
+
+
+@pytest.mark.parametrize("change, left_out, effects, components", [
+    (_second_contrast, None, ["cond", "quad"], _COMPONENTS),
+    (_zero_coefficient, None, ["cond", "quad"], _COMPONENTS),
+    (_between_factors, None, ["cond"], _COMPONENTS),
+    (_predictor_with_effect, None, ["cond", "age"], _COMPONENTS),
+    (_by_item_slope, None, ["cond"], ["item", "item:age", "item:cond", "subject", "subject:cond"]),
+    (_correlations, "'subject'", ["cond"], _COMPONENTS),
+    (_correlated_flag, "'item'", ["cond"], _COMPONENTS),
+    (_uncorrelated_flag, None, ["cond"], _COMPONENTS),
+    (_extra_groups, None, ["cond"], ["block", "item", "item:cond", "site", "subject",
+                                     "subject:cond"]),
 ])
-def test_each_term_the_fitted_model_leaves_out_is_named(change, left_out):
-    # A zero coefficient changes no data, and `correlated: false` is what the independent
-    # components assume, so neither is reported.
+def test_each_declared_term_is_fitted_and_only_correlations_are_left_out(
+        monkeypatch, change, left_out, effects, components):
+    # Each of these terms used to be left out of `yv ~ cc` with a warning that named it. They are
+    # now fitted, the coefficients as fixed effects and the random terms as variance components,
+    # and only the correlations between a group's random effects are left out. A between factor
+    # with no coefficient has no effect in the data and none in the model, as in the R twin, and a
+    # zero coefficient is still a term of the model. `correlated: false` is what the independent
+    # components assume, so it is not reported.
+    real, seen = MixedLM.fit, []
+
+    def recording(self, *args, **kwargs):
+        seen.append((list(self.exog_names), list(self.exog_vc.names)))
+        return real(self, *args, **kwargs)
+
+    monkeypatch.setattr(MixedLM, "fit", recording)
     spec = _small()
     change(spec)
-    _, warned = _left_out_warnings(lambda: power_mixed(spec, n_sims=1))
-    assert warned == ([] if left_out is None else [_LEFT_OUT % left_out])
+    r, warned = _left_out_warnings(lambda: power_mixed(spec, n_sims=1))
+    assert warned == ([] if left_out is None else [_UNCORRELATED % left_out])
+    assert list(r["effects"]) == effects
+    assert seen == [(["(Intercept)"] + effects, components)]
 
 
 @pytest.fixture(scope="module")
@@ -210,7 +224,7 @@ def test_the_fit_reaches_the_reml_optimum_that_lme4_reaches(crossed_rt):
     # documentation had put the gap down to statsmodels overstating random-slope variance.
     _, fits = crossed_rt
     assert fits[-1].llf == pytest.approx(_LME4_REML_LL, abs=0.01)
-    assert fits[-1].bse_fe["cc"] == pytest.approx(_LME4_SE, rel=0.01)
+    assert fits[-1].bse_fe["cond"] == pytest.approx(_LME4_SE, rel=0.01)
 
 
 def test_the_result_names_the_test_behind_its_p_values(crossed_rt):
@@ -219,11 +233,19 @@ def test_the_result_names_the_test_behind_its_p_values(crossed_rt):
         "statsmodels MixedLM (crossed variance components, REML; Wald z tests)")
 
 
+def _small_slopes():
+    """The documentation's 12 x 8 design with by-subject and by-item slopes too small for it."""
+    spec = _priming("lognormal")
+    for g in ("subject", "item"):
+        spec["random"][g]["slopes"] = {"cond": 0.1}
+    return spec
+
+
 def test_a_fit_with_a_variance_component_at_zero_is_singular_and_not_converged():
-    # The specification has random intercepts alone, so the slope components the backend always
-    # fits are zero in truth, and most fits put one of them on the boundary. Every fit that returned
-    # used to count as converged, where the R twin counts singular fits apart from clean ones.
-    r = power_mixed(_priming("lognormal"), n_sims=6)
+    # The slopes are small for 12 subjects and 8 items, so some fits put one of their components on
+    # the boundary. Every fit that returned used to count as converged, where the R twin counts
+    # singular fits apart from clean ones.
+    r = power_mixed(_small_slopes(), n_sims=6)
     assert (r["n_attempted"], r["n_returned"]) == (6, 6)
     assert r["n_singular"] > 0
     # statsmodels flags all six fits as possibly on the boundary, as it does any fit with a
@@ -289,7 +311,7 @@ def test_the_hessian_notice_counts_only_against_a_fit_that_is_not_singular(monke
     # Added to every fit of a design whose fits are partly singular, the notice counts against
     # each fit that is not singular and against no other.
     _notice_after_each_fit(monkeypatch, _HESSIAN)
-    r = power_mixed(_priming("lognormal"), n_sims=6)
+    r = power_mixed(_small_slopes(), n_sims=6)
     assert 0 < r["n_singular"] < r["n_returned"]
     assert r["n_warning"] == r["n_returned"] - r["n_singular"]
     assert r["n_converged"] == 0
@@ -317,7 +339,7 @@ def test_a_replicate_whose_powell_fit_raises_is_refitted_and_counts_as_a_warning
     monkeypatch.setattr(MixedLM, "fit", always_raises)
     r = power_mixed(_clean(), n_sims=2)
     assert (r["n_attempted"], r["n_returned"]) == (2, 0)
-    assert math.isnan(r["power"])
+    assert math.isnan(r["effects"]["cond"]["power"])
 
 
 # The warning for a family whose coefficients are on a link scale, word for word as the R twin's
@@ -358,8 +380,9 @@ def test_a_bernoulli_response_warns_and_withholds_the_mean_estimate_and_type_m()
     # where a logistic one gives 1.12, so a design that exaggerates read as one that underestimates.
     with pytest.warns(UserWarning, match=re.escape(_LINEAR % ("bernoulli", "logit"))):
         r = power_mixed(_one_within("bernoulli"), n_sims=2)
-    assert math.isnan(r["mean_estimate"]) and math.isnan(r["type_m"])
-    assert r["n_returned"] == 2 and not math.isnan(r["power"])
+    e = r["effects"]["cond"]
+    assert math.isnan(e["mean_estimate"]) and math.isnan(e["type_m"])
+    assert r["n_returned"] == 2 and not math.isnan(e["power"])
 
 
 @pytest.mark.parametrize("family, scale, response", [
@@ -371,9 +394,10 @@ def test_a_bernoulli_response_warns_and_withholds_the_mean_estimate_and_type_m()
 ])
 def test_each_family_on_a_link_scale_warns_once_with_its_scale(family, scale, response):
     r, warned = _scale_warnings(lambda: power_mixed(_one_within(family, **response), n_sims=1))
+    e = r["effects"]["cond"]
     if scale is None:
         # The response's own scale is the coefficients' scale, so nothing is withheld.
-        assert warned == [] and not math.isnan(r["mean_estimate"])
+        assert warned == [] and not math.isnan(e["mean_estimate"])
     else:
         assert warned == [_LINEAR % (family, scale)]
-        assert math.isnan(r["mean_estimate"]) and math.isnan(r["type_m"])
+        assert math.isnan(e["mean_estimate"]) and math.isnan(e["type_m"])

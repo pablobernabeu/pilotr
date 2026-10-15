@@ -158,6 +158,15 @@ relative difference measured over those cases is 5.0e-15, against an allowance o
 solved sample size of 220 subjects that allowance comes to two ten-millionths of a subject.
 Every refusal message is identical character for character.
 
+The mixed models of the two `power_mixed()` functions come from `model_formula()` and
+`model_data()`, which the Python package ports from this one. The script
+`tools/parity/formula_cross.py` gives the Python ports the data R simulated for every shipped
+example and parity case. Both must write the same formula character for character and the same
+contrast and product columns bit for bit. The fits that follow are another matter. `lme4` and
+`statsmodels` are different programs, this package estimates the random-effect correlations that
+the Python one leaves out, and the two test with different statistics. The Python power guide sets
+out where their results diverge.
+
 ## Why this matters
 
 Because the specification is the source of truth and the generator is shared, a design can be

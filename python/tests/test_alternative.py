@@ -118,9 +118,12 @@ def test_one_sided_power_mixed_at_alpha_is_the_two_sided_test_at_twice_alpha():
     power_mixed = _mixed()
     # An effect small enough that over 12 replicates each direction reaches significance once.
     spec = _crossed(effect=0.005)
-    two = power_mixed(spec, n_sims=12, alpha=0.2)
-    greater = power_mixed(spec, n_sims=12, alpha=0.1, alternative="greater")
-    less = power_mixed(spec, n_sims=12, alpha=0.1, alternative="less")
+    runs = [power_mixed(spec, n_sims=12, alpha=0.2),
+            power_mixed(spec, n_sims=12, alpha=0.1, alternative="greater"),
+            power_mixed(spec, n_sims=12, alpha=0.1, alternative="less")]
+    # The fit counts are per run, and the rates per effect.
+    two, greater, less = ({**r["effects"]["cond"], **{k: r[k] for k in (
+        "n_returned", "n_converged", "n_singular", "n_warning")}} for r in runs)
     assert greater["n_significant"] > 0 and less["n_significant"] > 0
     assert greater["n_significant"] + less["n_significant"] == two["n_significant"]
     n_wrong = round(two["type_s"] * two["n_significant"])
@@ -132,12 +135,14 @@ def test_one_sided_power_mixed_at_alpha_is_the_two_sided_test_at_twice_alpha():
 
 def test_each_mixed_replicate_takes_its_one_sided_p_from_the_wald_z():
     _mixed()
+    from pilotr.autoformula import _model_terms
     from pilotr.power import _power_mixed_replicate
     spec = _as_spec(_crossed(effect=0.3, seed=1))
+    fixed, groups = _model_terms(spec)
 
     def at(seed, alternative):
-        return _power_mixed_replicate(seed, spec, "cond", {"a": -0.5, "b": 0.5}, "y",
-                                      "gaussian", 0.0, alternative)
+        r = _power_mixed_replicate(seed, spec, fixed, groups, alternative)
+        return {"est": r["est"]["cond"], "p": r["p"]["cond"]}
 
     for seed in replicate_seeds(spec["seed"], 2):
         two = at(seed, "two.sided")

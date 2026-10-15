@@ -279,3 +279,13 @@ jobs:
       # last place away.
       - name: Read back in Python the numbers R writes with spec_json()
         run: python tools/parity/json_roundtrip.py
+
+      # The Python power_mixed() fits the model that its ports of model_formula() and model_data()
+      # build. Given the data R simulated for every example and parity case, they must write R's
+      # formulas, character for character, and R's contrast and product columns, bit for bit.
+      # model_data() returns a pandas DataFrame, which the editable install above leaves out.
+      - name: Install pandas for the modelling-data check
+        run: pip install pandas
+
+      - name: Cross-check the formulas and modelling data of the two twins
+        run: python tools/parity/formula_cross.py

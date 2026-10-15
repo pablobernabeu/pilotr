@@ -1,0 +1,20 @@
+The Type I error rate of a Wald z test and of Satterthwaite's test on a small null design
+
+Produced by tools/calibration/wald_null_rate.py with 300 replicates, under
+Python 3.13.7 with pilotr 0.3.0 and statsmodels 0.14.6, and
+R version 4.6.1 (2026-06-24 ucrt) with lme4 2.0.1 and lmerTest 3.2.1.
+Rerun it to regenerate this file. Nothing here is timed or dated, so a rerun that changes a
+line has changed a result.
+
+The Python power guide's priming design cut to 8 subjects and 6 items, with random
+intercepts alone (standard deviations 0.12 by subject and 0.08 by item), a residual
+standard deviation of 0.3 on the log scale and no true effect. Both twins fit
+.y ~ cond + (1 | subject) + (1 | item) by REML to the same replicates and test cond
+two-sided at alpha 0.05.
+
+  Python   statsmodels MixedLM (crossed variance components, REML; Wald z tests)
+  R        lmerTest::lmer, Satterthwaite t
+
+  twin     rate    MCSE    Wilson 95%       significant
+  Python    0.070   0.015  [0.046, 0.105]    21 of 300
+  R         0.057   0.013  [0.036, 0.089]    17 of 300

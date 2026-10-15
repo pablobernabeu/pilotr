@@ -289,14 +289,15 @@ Rscript r/pilotr/examples/validate_recovery.R
 Rscript r/pilotr/examples/precision_design_analysis.R
 ```
 
-Python runs crossed mixed-effects power through statsmodels for a narrower class of designs. Its
-`power_mixed` fits the same model whatever the specification declares. That model, `yv ~ cc`,
-regresses the response (logged for the two lognormal families) on the first contrast of the
-single within factor, with independent by-subject and by-item intercepts and slopes. Only that
-contrast is tested, and a warning names anything else the specification declares that the model
-leaves out, such as another non-zero coefficient, a predictor or a correlation between random
-effects. The R package's `power_mixed()` fits the model the specification implies and tests every
-coefficient. The note closing the Quick start explains where the two estimators diverge.
+Python runs mixed-effects power through statsmodels. Its `power_mixed` fits the model the
+specification implies, which ports of the R package's `model_formula()` and `model_data()` build.
+Every coefficient is a fixed effect, and every declared random intercept and slope, an extra
+grouping factor's included, is an independent variance component, with the response logged for
+the two lognormal families. It tests every coefficient, or the effects that `focal` names. It
+leaves out the correlations between random effects, which the R package's `power_mixed()`
+estimates, and warns when a specification declares them. A design without random effects is
+refused, where R fits it with `lm()` or `glm()`. The note closing the Quick start explains where
+the two estimators diverge.
 
 ```bash
 python python/examples/power_mixed_demo.py
@@ -329,16 +330,17 @@ python -m pytest python/tests -q
 > ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
 > however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
 > correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`
-> MixedLM, REML) fits independent variance components, reaching the optimum that `lme4` reaches
-> for the same components, and tests with a Wald z. With few subjects or items, a Wald z rejects
+> MixedLM, REML) fits the same model with independent variance components, reaching the optimum
+> that `lme4` reaches for the same components, and tests with a Wald z. With few subjects or items, a Wald z rejects
 > more readily than Satterthwaite's test
 > ([Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), so in small designs Python's power
 > tends to exceed R's on the same data. On the 12 × 8 design of the Python power guide, 6 of 12
 > replicates are significant in Python and 4 in R. With 8 subjects, 6 items, random intercepts
-> alone and no true effect, Python rejected in 0.043 of 300 replicates (Monte Carlo standard
-> error 0.012). On the same data, `lme4`'s Satterthwaite test of the same model rejected in
-> 0.030. The two-group Gaussian power backend is identical in both languages. For correlated
-> random slopes, R is the recommended choice.
+> alone and no true effect, Python rejected in 0.070 of 300 replicates (Monte Carlo standard
+> error 0.015). On the same data, R's Satterthwaite test of the same model rejected in 0.057
+> ([`tools/calibration/wald_null_rate.py`](tools/calibration/wald_null_rate.py)). The two-group
+> Gaussian power backend is identical in both languages. For correlated random slopes, R is the
+> recommended choice.
 
 ## Citation
 

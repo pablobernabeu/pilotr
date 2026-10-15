@@ -17,12 +17,12 @@ generator, so the same specification and seed produce identical data in either l
 the two share a maths library, as on Linux. Elsewhere, a value that passes through `exp()`, `log()`
 or `pow()` can differ in its last bits, as the
 [cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/) sets out.
-Simulation, validation,
-simulation-based power and the curve solvers are here. Precision/ROPE design analysis, the `lme4`
-reference backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the
-helpers that derive the analysis model and build specifications, and the app launcher are in the
-R package alone. See the [project README](https://github.com/pablobernabeu/pilotr) for the full
-toolkit (the no-code app, the R package and the specification format).
+Simulation, validation, the analysis model a specification implies, simulation-based power and the
+curve solvers are here. Precision/ROPE design analysis, the `lme4` reference backend for
+mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers that build
+specifications, and the app launcher are in the R package alone. See the
+[project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code app,
+the R package and the specification format).
 
 ## Install
 

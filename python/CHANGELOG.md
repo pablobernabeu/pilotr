@@ -27,8 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The field belongs to specification version 0.4, needs an item unit and is refused with
   `per_subject`. A warning, in the R twin's words, says when the lists are unequal, because the
   subjects or the items are not a multiple of C. The condition stays a within factor, so
-  `power_mixed` analyses a counterbalanced design. It refuses the two-list encoding, which has no
-  within factor and stays documented for releases that read no version above 0.3.
+  `power_mixed` analyses a counterbalanced design, as it does the two-list encoding, which stays
+  documented for releases that read no version above 0.3.
 - The simulated data of a counterbalanced specification name each subject's list in a column
   `list`, placed after `subject` and `item`. Subject s follows list ((s − 1) mod C) + 1, and
   nothing is drawn for it, so a specification without a counterbalanced factor simulates as
@@ -57,6 +57,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   estimate in the tested direction. A two-sided result at 2 alpha from an earlier version
   therefore gives the one-sided power at alpha, in the direction of the true effect, as
   `power * (1 - type_s)`.
+- `power_mixed` fits the model the specification implies, as the R twin does. `model_formula`
+  and `model_data`, ports of the R functions, write that model in lme4's notation and build the
+  columns it reads. Every coefficient is a fixed effect, an interaction `"a:b"` entering as its
+  product column `a_b`, and every random intercept and slope the specification declares is a
+  variance component, those of an extra grouping factor such as a site included. Up to 0.3.0 the
+  model was `yv ~ cc` whatever the specification declared, with by-subject and by-item intercept
+  and slope components and a test of the first contrast of a single within factor, and any other
+  design was refused. A 2 × 2 within design raised `NotImplementedError`, and on
+  `reading_time_continuous` six of the seven coefficients, the three predictors and the two
+  by-subject slopes were left out. Both now run, and so does any design that declares a random
+  effect, with or without an item unit. `tools/parity/formula_cross.py` gives the ports the data
+  R simulated for every shipped example and parity case and requires R's formulas character for
+  character and R's contrast and product columns bit for bit. The parity job in CI runs it.
+  A replicate of `reading_time_continuous` takes about 7 s with NumPy held to one thread. The
+  random-effects design is held in sparse matrices from 100,000 entries, rows times random
+  coefficients, which made a replicate of the three largest crossed examples 1.4 to 4.5 times
+  quicker, and in dense ones below, where sparse ones were about five times slower.
+- `power_mixed` gains `focal`, which chooses the effects to test, as in the R twin. By default
+  it takes every coefficient, with the true value the specification gives it. A list of names
+  leaves the true values unknown, and a dict from names to numbers gives them. Each effect's
+  results sit under a new key, `effects`, one entry per focal effect with the twelve keys from
+  `power` to `type_m_mcse` that the result held for its one effect. A focal name that the model
+  lacks draws the R twin's warning, word for word.
 
 ### Changed
 
@@ -101,20 +124,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The crossed mixed-effects example on the power page states that every subject sees every item
   in both conditions. It points a counterbalanced study, which has half the observations and
   lower power, to the `counterbalance` field of specification version 0.4, which `power_mixed`
-  analyses. For earlier releases it points to the two-list encoding of the specification, and
-  says that its power comes from the R package, since `power_mixed` refuses a design without a
-  within factor.
+  analyses. For earlier releases it points to the two-list encoding of the specification, which
+  `power_mixed` analyses as well.
 - The specification page states how units are allocated to levels and clusters, and gives
   worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
   randomisation within clusters. It also says that simulated data are complete, so expected
   attrition is allowed for by recruiting N / (1 − p).
-- `power_mixed` warns once per call when the specification declares anything its fixed model
-  `yv ~ cc` leaves out, and names each such term. These are non-zero coefficients other than the
-  tested contrast, between factors, predictors, slopes on other terms, correlations between
-  random effects and grouping factors besides `subject` and `item`. Its documentation states
-  what the model fits, independent by-subject and by-item intercept and slope components with a
-  test of the first contrast of the single within factor. The project README had put the two
-  languages at capability parity here.
+- `power_mixed` fits only the random terms the specification declares, each as an independent
+  variance component, and warns once per call when the specification correlates a group's random
+  effects, naming the groups whose correlations the model leaves out. A design with random
+  intercepts alone is no longer fitted with slope components as well, so its results change. On
+  the 12 × 8 design of the power guide, which declares by-subject and by-item intercepts and
+  slopes, every number is as before. Its documentation states what the model fits and what it
+  leaves out, where the project README had put the two languages at capability parity.
+- `power_mixed` refuses a design without random effects with `NotImplementedError`, which
+  names `power` for the two-group design and the R twin's `lm()` and `glm()` fits for any
+  other. It used to refuse every design without an item unit. A contrast without a coefficient is
+  not in the model, as in the R twin, so a null effect is planned with a coefficient of 0, and a
+  specification without coefficients is refused in the R twin's words. Up to 0.3.0, `{}` tested
+  the contrast against a true effect of 0.
+- `n_returned` from `power_mixed` counts every replicate that returned a fit, and each effect's
+  power is taken over the fits that give that effect a finite estimate and p-value, as in the R
+  twin. A fit that left the tested contrast without a p-value used to count as no fit.
+- For a `bernoulli`, `poisson`, `ordinal` or `beta` response, `power_mixed` withholds the
+  Type S of an interaction, as the R twin does. A bounded response can reverse the sign of a
+  difference of differences between the response scale, where the linear model estimates it, and
+  the link scale of its true value.
 - `n_converged` from `power_mixed` counts the fits that converged without a warning and without
   a singular variance component, as in the R twin. It counted every fit that returned, which is
   now `n_returned`. `n_attempted`, `n_singular` and `n_warning` are new, and power is still taken
@@ -128,8 +163,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejects more readily than the R twin's Satterthwaite tests, so in small designs Python's power
   tends to exceed R's on the same data: 6 of 12 replicates against 4 of 12 on the 12 × 8 design
   of the power guide. With 8 subjects, 6 items, random intercepts alone and no true effect, it
-  rejected in 0.043 of 300 replicates (Monte Carlo standard error 0.012). lme4's Satterthwaite
-  test of the same model rejected in 0.030 on the same data.
+  rejected in 0.070 of 300 replicates (Monte Carlo standard error 0.015), where the R twin's
+  Satterthwaite test of the same model rejected in 0.057 on the same data.
+  `tools/calibration/wald_null_rate.py` measures both.
 - `power_mixed` fits `bernoulli`, `poisson`, `ordinal` and `beta` responses with a linear model
   on the response scale. It now warns for them and withholds the mean estimate and Type M,
   returning both as `nan`, since they compared that scale with a true value on the link scale. A
@@ -219,8 +255,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `validate_spec` refuses a factor, predictor or extra grouping-factor name that is empty or made
   only of spaces, and a response name made only of spaces (an empty one was already refused).
   Such a name validated and then became a column with no visible name.
-- `power` and `power_mixed` read a missing coefficient for the tested contrast as a true effect
-  of 0, with Type S and Type M undefined. They raised `KeyError`.
+- `power` reads a missing coefficient for the tested contrast as a true effect of 0, with Type S
+  and Type M undefined. It raised `KeyError`, as `power_mixed` did, which now tests the
+  coefficients the specification lists (see Added).
 - `power_mixed` analyses a `lognormal` response on the log scale, as it already did for
   `shifted_lognormal` and as the R twin does. It fitted the raw values, so the mean estimate came
   out in the response's units. Take 12 subjects crossed with 8 items and a true effect of 0.1 on
@@ -288,6 +325,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
   validation alike. pilotr has always crossed a within factor with every unit, so the list
   changed nothing. From spec version 0.4, such a list is refused.
+- The top-level keys of the result of `power_mixed` that held its one effect's quantities,
+  `power` to `type_m_mcse`, are kept for this release beside `effects` and will be removed in
+  the next. They hold the entry of the first contrast of a single within factor, as before, and
+  reading one raises a `FutureWarning` that names its place in `effects`.
 
 ## [0.3.0] - 2026-08-27
 

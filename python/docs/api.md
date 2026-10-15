@@ -27,11 +27,16 @@ version of that format this release understands.
 ## Simulation
 
 Draw a data set from a specification, returned together with the design
-information an analysis needs.
+information an analysis needs. `model_data` and `model_formula` give the
+analysis model the specification implies, the one `power_mixed` fits.
 
 ::: pilotr.simulate.simulate
 
 ::: pilotr.simulate.Dataset
+
+::: pilotr.autoformula.model_data
+
+::: pilotr.autoformula.model_formula
 
 ## Power and design analysis
 

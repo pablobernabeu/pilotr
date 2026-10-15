@@ -56,7 +56,8 @@ items, with by-subject and residual standard deviations of 1 and a by-item one o
 true effect, a row-by-row test is significant in about half of all replicates, against the
 nominal 5%. `power` therefore refuses a design with an item unit, a within factor or a
 grouping factor besides `subject`, and its message names what it found. The R package's
-`power_mixed()` fits the model that such a design implies. Continuous predictors and
+`power_mixed()` fits the model that such a design implies, as does `power_mixed` here when the
+design declares random effects. Continuous predictors and
 by-subject random effects are allowed, since with one row per subject they vary independently
 from row to row.
 
@@ -153,35 +154,40 @@ refused, and the refusal reports the range the sweep did cover. Had the sweep ab
 value, so an effect-size sweep or a sweep over items is solved the same way, with
 `transform="identity"` for an effect-size axis.
 
-## Crossed mixed-effects power
+## Mixed-effects power
 
-`power_mixed` fits a crossed mixed model with `statsmodels` (needs `statsmodels` and
-`pandas`), and the model is the same whatever the specification declares. In statsmodels'
-notation it is `yv ~ cc`, which regresses the response on the first contrast of the design's
-single within factor, with independent by-subject and by-item random intercepts and slopes on
-that contrast. The response is analysed as `log(y)` for the `lognormal` family and as
-`log(y - shift)` for `shifted_lognormal`, whose coefficients are on the log scale, as in the R
-package. Every other family is analysed on its own scale. For `bernoulli`, `poisson`, `ordinal`
-and `beta` responses, that is not the scale the coefficients are written on, which is the logit
-scale, or the log scale for `poisson`. A linear model of a 0/1 response estimates a difference in
-probability, for instance, and setting it against the true coefficient says nothing about
-exaggeration. For these families, `power_mixed` warns and returns `mean_estimate` and `type_m`
-as `nan`. `type_s` compares signs alone, which the link preserves, and power is the rate at
-which the linear model's test rejects.
+`power_mixed` fits a mixed model with `statsmodels` (needs `statsmodels` and `pandas`), and the
+model comes from the specification, as in the R package. `model_formula` writes it in lme4's
+notation, character for character as the R package's `model_formula()` does, and `model_data`
+builds the columns it reads. Every coefficient is a fixed effect, an interaction `"a:b"` entering
+as its product column `a_b`. Every random intercept and slope the specification declares is a
+variance component, those of an extra grouping factor such as a site included. The response is
+analysed as `log(y)` for the `lognormal` family and as `log(y - shift)` for `shifted_lognormal`,
+whose coefficients are on the log scale, as in the R package. Every other family is analysed on
+its own scale. For `bernoulli`, `poisson`, `ordinal` and `beta` responses, that is not the scale
+the coefficients are written on, which is the logit scale, or the log scale for `poisson`. A
+linear model of a 0/1 response estimates a difference in probability, for instance, and setting
+it against the true coefficient says nothing about exaggeration. For these families,
+`power_mixed` warns and returns `mean_estimate` and `type_m` as `nan`. `type_s` compares signs
+alone, which the link preserves for a main effect, and power is the rate at which the linear
+model's test rejects. A bounded response can reverse the sign of an interaction between the two
+scales, so the `type_s` of an interaction is `nan` as well.
 
-Only that contrast is tested, and a specification that declares anything the model leaves out
-draws a warning that names each such term. In the fixed part, that is a non-zero coefficient
-other than the tested contrast, a between factor or a predictor. In the random part, it is a
-slope on another term, a correlation between random effects or a grouping factor besides
-`subject` and `item`. The R package's `power_mixed()` fits the model the specification implies
-and tests every coefficient.
+Each random effect is fitted as an independent variance component. Where the specification
+correlates a grouping factor's intercept and slopes, the fitted model leaves the correlations out,
+and a warning names the grouping factors concerned. The R package's `power_mixed()` estimates
+them. A design without random effects is refused, since it leaves no variance component to fit.
+`power` analyses the two-group Gaussian design, and the R package's `power_mixed()` fits any other
+such design with `lm()` or `glm()`. Up to pilotr 0.3.0, the model here was the same whatever the
+specification declared, `yv ~ cc` with by-subject and by-item intercepts and slopes. It tested the
+first contrast of a single within factor crossed with items.
 
 The design below has one within-subject factor and crossed by-subject and by-item random
 intercepts and slopes. It also declares a correlation between each unit's intercept and slope,
 which the independent components leave out, so the call below warns about the correlations.
 
 ```python exec="true" source="material-block" session="pow"
-from pilotr import power_mixed
+from pilotr import model_formula, power_mixed
 
 spec_mixed = {
     "name": "priming", "seed": 1,
@@ -200,15 +206,27 @@ spec_mixed = {
                  "sigma": 0.3, "shift": 200},
 }
 
+# The model the specification implies, in lme4's notation.
+print("`%s`" % model_formula(spec_mixed))
 # A tiny replicate count keeps the docs build fast. Use 200 or more for real planning.
 res = power_mixed(spec_mixed, n_sims=12)
 print(table([{k: res[k] for k in (
     "n_attempted", "n_returned", "n_converged", "n_singular", "n_warning"
 )}]))
-print(table([{k: res[k] for k in (
+print(table([{"effect": name, **{k: e[k] for k in (
     "power", "true_effect", "mean_estimate", "type_s", "type_m"
-)}]))
+)}} for name, e in res["effects"].items()]))
 ```
+
+`res["effects"]` holds one entry per focal effect, with the keys `power` returns. By default the
+focal effects are every coefficient of the specification, with the true values it gives them.
+`focal` chooses others: a list of names leaves their true values unknown, which leaves Type S and
+Type M undefined, and a dict from names to values gives the true values to compare with. A name is
+a column of the model, so `"a_b"` for the interaction `"a:b"`. A coefficient that the
+specification does not list is not in the model, so a null effect is planned with a coefficient
+of 0. Results from earlier versions held one effect's numbers at the top level, as `res["power"]`
+and so on, for the first contrast of a single within factor. Those keys are kept for this release
+beside `effects`, and reading one raises a FutureWarning that names its place in `effects`.
 
 The priming design above is fully crossed, so each of the 12 subjects sees all 8 items in both
 conditions, 192 trials in all. A counterbalanced study, in which each subject sees each item in
@@ -219,22 +237,22 @@ conditions over subjects and items (see
 factor, so `power_mixed` here analyses the design as it does the crossed one. Releases that read
 no version above 0.3 take the two-list encoding among the
 [worked encodings](specification.md#worked-encodings), which `simulate` produces exactly as the R
-package does. That encoding has no within factor, so `power_mixed` here refuses it, and its
-power comes from the R package's `power_mixed()`.
+package does. `power_mixed` analyses that encoding too, where the condition is the product column
+`l_g` of the encoding's interaction.
 
 The first table counts the fits as the R package does. `n_returned` counts the replicates that
-returned an estimate and a p-value, and `power` is the significant proportion among them.
-`n_singular` counts fits with a variance component on the boundary, judged by lme4's test of a
-standard deviation below 1e-4 of the residual one. `n_warning` counts fits whose optimisers did
-not converge or whose Hessian was not positive definite. A component at zero can fail
-statsmodels' check of the Hessian by itself, so in a singular fit that notice is left to
-`n_singular`. `n_converged` counts the fits that are neither singular nor warned. Given the
-model fitted here as its `formula`, the R package's `power_mixed()` reports the same five counts
-on this design. Here nearly every fit is singular, since 12 subjects and 8 items cannot support
-all four variance components when two of them are as small as these slopes. Such fits stay in
-`power`, as in the R package, because their fixed-effect estimates remain usable. statsmodels
-also notes that a fit may be on the boundary whenever a variance component is below 0.01. On
-the log scale every fit draws that notice, so it counts towards none of these.
+returned a fit, and each effect's `power` is the significant proportion among those that give it
+an estimate and a p-value. `n_singular` counts fits with a variance component on the boundary,
+judged by lme4's test of a standard deviation below 1e-4 of the residual one. `n_warning` counts
+fits whose optimisers did not converge or whose Hessian was not positive definite. A component at
+zero can fail statsmodels' check of the Hessian by itself, so in a singular fit that notice is
+left to `n_singular`. `n_converged` counts the fits that are neither singular nor warned. Given
+the model fitted here as its `formula`, the R package's `power_mixed()` reports the same five
+counts on this design. Here nearly every fit is singular, since 12 subjects and 8 items cannot
+support all four variance components when two of them are as small as these slopes. Such fits
+stay in `power`, as in the R package, because their fixed-effect estimates remain usable.
+statsmodels also notes that a fit may be on the boundary whenever a variance component is below
+0.01. On the log scale every fit draws that notice, so it counts towards none of these.
 
 Every replicate here is analysed with the one model, singular or not. An analysis plan may
 instead preregister a simplification rule, such as dropping the slopes whenever a fit is
@@ -252,6 +270,14 @@ same independent components to four decimal places in 11. The same 6 replicates 
 in both. A replicate whose Powell fit raises is fitted again with the default chain and counts
 in `n_warning`.
 
+The fits take time, and more of it as the model grows. On a Windows laptop, with NumPy held to
+one thread, a replicate of the design above took about 0.3 s and one of the crossed reaction-time
+example (30 subjects, 24 items) about 2 s. One of the reading-time example, with 50 subjects,
+40 items, seven coefficients and four variance components, took about 7 s. The random-effects design
+is held in sparse matrices from 100,000 entries, rows times random coefficients, which is
+quicker there and reaches the same optimum. `workers` spreads the replicates over processes (see
+[Parallel execution](#parallel-execution)).
+
 The p-values are Wald z tests. A Wald z treats the estimate over its standard error as normal
 and so ignores the uncertainty in the variance components. With few subjects or items, it
 rejects more readily than a test with Satterthwaite's degrees of freedom
@@ -259,10 +285,11 @@ rejects more readily than a test with Satterthwaite's degrees of freedom
 R package's `power_mixed()` applies. In small designs, the power here therefore tends to be
 higher than R's on the same data. In the example above, 6 of the 12 replicates are significant,
 against 4 in R. With 8 subjects, 6 items, random intercepts alone and no true effect, the test
-here rejected the null hypothesis in 0.043 of 300 replicates (Monte Carlo standard error 0.012).
-On the same data, `lme4`'s Satterthwaite test of the same model rejected in 0.030. Data
-generation is identical across the two languages, so these differences lie in the model and the
-test alone.
+here rejected the null hypothesis in 0.070 of 300 replicates (Monte Carlo standard error 0.015).
+On the same data, the R package's Satterthwaite test of the same model rejected in 0.057 (Monte
+Carlo standard error 0.013), as the repository's `tools/calibration/wald_null_rate.py` measures.
+Data generation is identical across the two languages, so these differences lie in the model and
+the test alone.
 
 `power_mixed` carries its own simulation loop over the portable specification, with no other
 power package underneath it. It covers territory pioneered by
@@ -277,13 +304,13 @@ The table sets each response family against the model fitted by this package's `
 and by the R package's `power_mixed()` and `precision_design()`. The R package chooses the
 fitter by the family, so that its estimates are on the scale the coefficients are written on. It
 fits a design without random effects, such as a between-subjects design with one row per
-subject, with `lm()` or `glm()`.
+subject, with `lm()` or `glm()`, and this package's `power_mixed` refuses one.
 
 | Family | R `power_mixed()` | R `precision_design()` | Python `power_mixed` |
 |---|---|---|---|
 | `gaussian`, `exgaussian` | `lmerTest::lmer()`, Satterthwaite *t* | `lme4::lmer()`, Wald interval | MixedLM, Wald *z* |
 | `lognormal`, `shifted_lognormal` | as above, on the log scale | as above, on the log scale | MixedLM on the log scale, Wald *z* |
-| `bernoulli` | `lme4::glmer()`, binomial, Wald *z* | `lme4::glmer()`, Wald interval on the logit scale | linear model on the response scale, a warning, no mean estimate or Type M |
+| `bernoulli` | `lme4::glmer()`, binomial, Wald *z* | `lme4::glmer()`, Wald interval on the logit scale | linear model on the response scale, a warning, no mean estimate or Type M, and no Type S for an interaction |
 | `poisson` | `lme4::glmer()`, Poisson, Wald *z* | `lme4::glmer()`, Wald interval on the log scale | as for `bernoulli` |
 | `ordinal`, `beta` | linear model on the response scale, a warning, no mean estimate or Type M, and no Type S for an interaction | linear model on the response scale, a warning, no ROPE decisions (the interval width stays) | as for `bernoulli` |
 

@@ -7,11 +7,10 @@ carrying its generative core. The two share the design specification and the ran
 generator, so the same specification and seed produce identical data in either language wherever
 the two share a maths library, as on Linux. Elsewhere, a value that passes through `exp()`, `log()`
 or `pow()` can differ in its last bits, as [Cross-language reproducibility](cross-language.md) sets
-out. Simulation, validation,
-simulation-based power and the curve solvers are here. Precision/ROPE design analysis, the `lme4`
-reference backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the
-helpers that derive the analysis model and build specifications, and the app launcher are in the
-R package alone.
+out. Simulation, validation, the analysis model a specification implies, simulation-based power
+and the curve solvers are here. Precision/ROPE design analysis, the `lme4` reference backend for
+mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers that build
+specifications, and the app launcher are in the R package alone.
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Try the no-code app](https://pablobernabeu.github.io/pilotr/app/){ .md-button }

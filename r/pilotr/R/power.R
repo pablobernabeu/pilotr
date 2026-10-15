@@ -137,8 +137,8 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
 }
 
 # The refusal for a design whose rows are correlated, byte-identical in the Python twin. It sends
-# the user of either twin to R's power_mixed(), since the Python power_mixed() fits a single
-# within factor crossed with items and refuses every between-subjects design.
+# the user of either twin to R's power_mixed(), which fits every such design. The Python
+# power_mixed() fits one only when it declares random effects.
 .correlated_rows_message <- function(what) {
   sprintf(paste0(
     "power_design() in R and power() in Python t-test every row as an independent observation, ",

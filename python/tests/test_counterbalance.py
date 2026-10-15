@@ -275,18 +275,21 @@ def test_two_counterbalanced_conditions_have_the_cell_counts_of_the_two_list_enc
     assert counts(zip(encoded.column("list"), cond)) == [108] * 4
 
 
-def test_power_mixed_analyses_a_counterbalanced_design_and_refuses_the_two_list_encoding():
+def test_power_mixed_analyses_a_counterbalanced_design_and_its_two_list_encoding():
     # The condition stays a within factor, so the statsmodels backend fits a counterbalanced
-    # design as it fits the crossed one. The two-list encoding has no within factor, so the
-    # backend refuses it, and its power comes from the R package.
+    # design as it fits the crossed one. The two-list encoding has no within factor, which the
+    # backend used to refuse. It now fits the model the specification implies, in which the
+    # condition is the product column l_g of the encoding's interaction.
     pytest.importorskip("statsmodels")
     pytest.importorskip("pandas")
     from pilotr import power_mixed
 
     res = power_mixed(cb_spec(12, 8), n_sims=2)
-    assert (res["n_attempted"], res["true_effect"]) == (2, 0.06)
-    with pytest.raises(NotImplementedError, match="exactly one within factor"):
-        power_mixed(parity_case("two_list_counterbalanced"), n_sims=1)
+    assert (res["n_attempted"], res["effects"]["cond"]["true_effect"]) == (2, 0.06)
+    with pytest.warns(UserWarning, match="random-effect correlations"):
+        res = power_mixed(parity_case("two_list_counterbalanced"), n_sims=1)
+    assert list(res["effects"]) == ["l_g"] and res["effects"]["l_g"]["true_effect"] == 0.06
+    assert res["n_returned"] == 1
 
 
 def test_the_parity_cases_hold_the_designs_they_describe():

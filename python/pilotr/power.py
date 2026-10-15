@@ -13,11 +13,11 @@ Each of the three comes with its Monte Carlo error, from `pilotr.mcse`: power wi
 error and Wilson interval, Type S with a Wilson interval and Type M with its standard error.
 
 The two-group Gaussian design with one row per subject uses a two-sample t-test (`power`).
-Crossed mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which fits
-independent variance components by REML and tests the effect with a Wald z. The R package's
-lme4 backend fits the model the specification implies and tests with Satterthwaite's
-approximation. For accuracy and count responses, it fits a logistic or Poisson model and tests
-with a Wald z.
+Mixed-effects designs use a statsmodels MixedLM backend (`power_mixed`), which fits the model the
+specification implies, with each random effect as an independent variance component, by REML and
+tests each effect with a Wald z. The R package's lme4 backend fits the same model with its
+correlations and tests with Satterthwaite's approximation. For accuracy and count responses, it
+fits a logistic or Poisson model and tests with a Wald z.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
 processes. The replicate seeds are derived once from the specification's seed, so the
@@ -27,10 +27,12 @@ functions are module-level so that they pickle under the Windows spawn start met
 
 from __future__ import annotations
 import copy, functools, math, statistics, warnings
+from collections.abc import Mapping
 from .simulate import _simulate, _as_spec
 from .core import replicate_seeds
+from .autoformula import _interaction_keys, _model_data, _model_terms, _us
 from .mcse import _rate_with_error, _type_m_mcse, _type_s_interval
-from .validate import _is_whole, _name_list
+from .validate import _is_num, _is_whole, _name_list
 
 
 # The alternatives a test may take, spelt as in the R twin, whose default is the first.
@@ -72,8 +74,8 @@ def _map_replicates(rep, seeds, executor):
 
 
 # The refusal for a design whose rows are correlated, byte-identical in the R twin. It sends the
-# user of either twin to R's power_mixed(), since power_mixed() here fits a single within factor
-# crossed with items and refuses every between-subjects design.
+# user of either twin to R's power_mixed(), which fits every such design. power_mixed() here fits
+# one only when it declares random effects.
 _CORRELATED_ROWS = (
     "power_design() in R and power() in Python t-test every row as an independent observation, "
     "which is valid only when each subject contributes one row and no rows share a cluster. "
@@ -282,15 +284,84 @@ def _power_impl(spec, n_sims, alpha, executor, alternative="two.sided"):
     }
 
 
-# What power_mixed() fits, stated whenever a specification declares more. The model is written
-# into _power_mixed_replicate() and ignores the rest of the specification, so whatever else the
-# specification declared used to drop out of the analysis without a word. The R twin builds its
-# model from the specification, through model_formula().
-_LEFT_OUT = (
-    "power_mixed() in Python fits 'yv ~ cc' with independent by-subject and by-item intercept "
-    "and slope components, testing the first contrast of the within factor only. This "
-    "specification also declares %s, which the fitted model leaves out. The R package's "
-    "power_mixed() fits the model the specification implies.")
+# What power_mixed() leaves out of the model the specification implies. It fits each random effect
+# as an independent variance component, so it estimates no correlation between a grouping factor's
+# intercept and slopes, where the R twin's model_formula() writes `|` and lme4 estimates them. Up
+# to 0.3, the model was written into the source as `yv ~ cc`, and every other term the
+# specification declared was left out with it.
+_UNCORRELATED = (
+    "power_mixed() in Python fits each random effect as an independent variance component, so it "
+    "leaves out the random-effect correlations this specification declares for %s. The R "
+    "package's power_mixed() estimates them.")
+
+# Raised for a design with no random effect, which leaves MixedLM no variance component to fit.
+# The R twin fits such a design with lm() or glm().
+_NO_RANDOM = (
+    "power_mixed() in Python fits a mixed model, and this specification declares no random "
+    "effects. For a two-group Gaussian design with one row per subject, use power(). The R "
+    "package's power_mixed() fits a design without random effects with lm() or glm().")
+
+# Word for word as the R twin's power_mixed() stops when there is no effect to test.
+_NOTHING_TO_TEST = ("this specification has no fixed coefficients to test; name the focal effects "
+                    "explicitly")
+
+# Raised for a `focal` that is none of the three forms, such as the named sets of coefficients
+# that the R twin tests jointly.
+_FOCAL_FORMS = (
+    "focal must be None, a list of effect names or a dict from effect names to true values. A "
+    "joint test of a set of coefficients is planned only in the R package's power_mixed().")
+
+# Word for word as the R twin's .warn_absent_focal() warns.
+_ABSENT_FOCAL = ("focal effect%s %s never appeared in the fitted model, so %s results are empty by "
+                 "construction; the fitted coefficients are %s")
+
+# What each entry of `effects` holds, in this order, as the R twin's per-effect elements do.
+_EFFECT_KEYS = ("power", "power_mcse", "power_lo", "power_hi", "n_significant", "true_effect",
+                "mean_estimate", "type_s", "type_s_lo", "type_s_hi", "type_m", "type_m_mcse")
+
+# Up to 0.3, the result held one effect's quantities under these keys, those of the first contrast
+# of the single within factor. They are kept for one release beside `effects`, and reading one
+# warns.
+_SCALAR_DEPRECATED = (
+    "result['%s'] from power_mixed() is deprecated and will be removed in the next release. Read "
+    "result['effects']['%s']['%s'], which holds the same value for '%s', the first contrast of "
+    "the within factor.")
+
+# The size of the random-effects design, rows times random coefficients, from which its matrices
+# are held sparse. Dense matrices suit a small design, and sparse ones a large one. With one BLAS
+# thread on a Windows laptop, a replicate of the 12 x 8 design of the Python guide (7,680 entries)
+# took 0.2 s dense and 1.0 s sparse, and one of the 24 x 20 design (84,480) 1.1 s and 1.4 s. One of
+# crossed_mixed_rt (155,520) took 1.8 s and 1.3 s, of nested_clusters (364,800) 7 to 12 s and 2 to
+# 3 s, and of reading_time_continuous (760,000) 18 to 20 s and 7 s. The two reached the same
+# optimum, with standard errors that agreed to five significant digits or more.
+_SPARSE_FROM = 100_000
+
+
+class _MixedResult(dict):
+    """The dict `power_mixed` returns, which warns when a deprecated scalar key is read.
+
+    `within` names the contrast whose quantities the scalar keys repeat, or is None when the
+    result has none. Iterating, comparing and serialising the dict read no key, so they draw no
+    warning.
+    """
+
+    def __init__(self, *args, within=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._within = within
+
+    def _warn(self, key):
+        within = getattr(self, "_within", None)
+        if within is not None and key in _EFFECT_KEYS and dict.__contains__(self, key):
+            warnings.warn(_SCALAR_DEPRECATED % (key, within, key, within), FutureWarning,
+                          stacklevel=3)
+
+    def __getitem__(self, key):
+        self._warn(key)
+        return dict.__getitem__(self, key)
+
+    def get(self, key, default=None):
+        self._warn(key)
+        return dict.get(self, key, default)
 
 
 # The families whose coefficients are on a link scale, with the scale's name. power_mixed() here
@@ -308,38 +379,69 @@ _LINEAR_ON_LINK = (
     "generate_design_analysis() or brms_bridge() in the R package.")
 
 
-def _left_out_of_model(spec, col):
-    """What a validated specification declares beyond the model ``yv ~ cc``, as phrases.
+def _resolve_focal(focal, spec):
+    """The effects to test, as a dict from name to true value, as the R twin's .resolve_focal().
 
-    `col` is the tested contrast. Each phrase names one kind of term and lists its members in
-    the specification's order, and an empty list means that the model leaves nothing out. A
-    coefficient counts only when it is not zero, since a zero effect left out of the fixed part
-    is still the effect simulated. Correlations count as the R twin's model_formula() reads
-    them, when ``correlated`` is true or is absent alongside ``correlations``, and only for a
-    group with a slope to correlate with its intercept.
+    None takes every coefficient, named by its analysis column (``a_b`` for ``"a:b"``), with its
+    true value from the specification. A name or a list of names leaves the true values unknown
+    (nan). A mapping gives them. A name may be any fixed effect of the model, ``"(Intercept)"``
+    included.
     """
-    rs = spec["random"]
+    if focal is None:
+        return {_us(k): float(v) for k, v in spec["fixed"]["coefficients"].items()}
+    if isinstance(focal, str):
+        focal = [focal]
+    if isinstance(focal, Mapping):
+        if not all(isinstance(k, str) and _is_num(v) for k, v in focal.items()):
+            raise ValueError(_FOCAL_FORMS)
+        return {k: float(v) for k, v in focal.items()}
+    try:
+        names = list(focal)
+    except TypeError:
+        raise ValueError(_FOCAL_FORMS) from None
+    if not all(isinstance(n, str) for n in names):
+        raise ValueError(_FOCAL_FORMS)
+    for n in names:
+        if names.count(n) > 1:
+            raise ValueError("focal names the effect '%s' twice" % n)
+    return {n: math.nan for n in names}
 
-    def correlated(u):
-        return bool(u.get("slopes")) and u.get("correlated", bool(u.get("correlations")))
 
-    found = [
-        ("another coefficient", "other coefficients",
-         [k for k, v in spec["fixed"]["coefficients"].items() if k != col and v != 0]),
-        ("a between factor", "between factors",
-         [f["name"] for f in spec["factors"] if f.get("between")]),
-        ("a predictor", "predictors", [p["name"] for p in spec["predictors"]]),
-        ("a by-subject slope", "by-subject slopes",
-         [k for k in rs.get("subject", {}).get("slopes", {}) if k != col]),
-        ("a by-item slope", "by-item slopes",
-         [k for k in rs.get("item", {}).get("slopes", {}) if k != col]),
-        ("random-effect correlations", "random-effect correlations",
-         [g for g in ("subject", "item") if g in rs and correlated(rs[g])]),
-        ("an extra grouping factor", "extra grouping factors",
-         [g for g in rs if g not in ("subject", "item")]),
-    ]
-    return ["%s (%s)" % (one if len(names) == 1 else many, ", ".join("'%s'" % n for n in names))
-            for one, many, names in found if names]
+def _variance_components(d, groups):
+    """The variance components of the declared random terms, as a statsmodels VCSpec.
+
+    Each grouping factor contributes a component for its intercept, ``0 + C(g)`` in statsmodels'
+    formula notation, and one for each declared slope, ``0 + C(g):term``. All rows form one group,
+    so that components of crossed factors can be fitted together. The components are named
+    ``g`` and ``g:term`` and ordered by name, as MixedLM.from_formula() orders those of its
+    `vc_formula`. Their matrices are dense or sparse by the size of the design (see
+    _SPARSE_FROM).
+    """
+    import numpy as np
+    import pandas as pd
+    from scipy import sparse
+    from statsmodels.regression.mixed_linear_model import VCSpec
+
+    n = len(d)
+    terms = []
+    for g, slopes, _bar in groups:
+        codes, levels = pd.factorize(d[g], sort=True)
+        terms.append((g, codes, len(levels), np.ones(n)))
+        for s in slopes:
+            terms.append(("%s:%s" % (g, s), codes, len(levels), d[s].to_numpy(dtype=float)))
+    held_sparse = n * sum(t[2] for t in terms) >= _SPARSE_FROM
+    rows = np.arange(n)
+    mats = {}
+    for name, codes, k, values in terms:
+        if held_sparse:
+            mats[name] = sparse.csr_matrix((values, (rows, codes)), shape=(n, k))
+        else:
+            z = np.zeros((n, k))
+            z[rows, codes] = values
+            mats[name] = z
+    names = sorted(mats)
+    return VCSpec(names, [[[str(j) for j in range(mats[k].shape[1])]] for k in names],
+                  [[mats[k]] for k in names])
 
 
 # The ConvergenceWarnings that statsmodels raises about a MixedLM fit which may still be at the
@@ -405,97 +507,143 @@ def _fit_mixed(model):
             return None
 
 
-def _power_mixed_replicate(seed, spec, fname, l2c, yname, fam, shift, alternative="two.sided"):
-    """One mixed-model replicate: simulate at `seed` and fit MixedLM.
+def _power_mixed_replicate(seed, spec, fixed, groups, alternative="two.sided"):
+    """One mixed-model replicate: simulate at `seed`, build the modelling data and fit MixedLM.
 
-    Returns a dict with the estimate and Wald z p-value of ``cc`` and the fit's flags,
-    ``singular``, ``warned`` and ``converged``, or None when no fit returned a finite estimate and
-    p-value. The p-value is two-sided, or one-sided for ``"greater"`` or ``"less"``.
+    `fixed` and `groups` are the model's terms, from _model_terms(). Returns a dict with the
+    fitted coefficients' names, a dict of their estimates, a dict of their Wald z p-values and
+    the fit's flags, ``singular``, ``warned`` and ``converged``, or None when the response has no
+    logarithm or no fit returned. The p-values are two-sided, or one-sided for ``"greater"`` or
+    ``"less"``. A coefficient that the fit leaves without a finite estimate or p-value is skipped
+    by the caller.
     """
-    import math, warnings
+    import numpy as np
     import pandas as pd
-    import statsmodels.formula.api as smf
+    from statsmodels.regression.mixed_linear_model import MixedLM
 
-    vcf = {"subj_i": "0 + C(subject)", "subj_s": "0 + C(subject):cc",
-           "item_i": "0 + C(item)", "item_s": "0 + C(item):cc"}
-    df = pd.DataFrame(_simulate(dict(spec, seed=seed)).rows)
-    df["cc"] = df[fname].map(l2c)
-    # Both lognormal families are analysed on the log scale, where their coefficients are, as
-    # model_data() does in the R twin. The plain lognormal has no shift, so `shift` is 0 for it.
-    # Only the shifted family used to be logged, so the estimate for a lognormal response came
-    # out in the response's own units.
-    if fam in ("lognormal", "shifted_lognormal"):
-        # A response rounded down to the shift has no logarithm. R's log() gives -Inf for it and
-        # lmer() refuses the fit, so the replicate returns no estimate here too. math.log()
-        # raised ValueError on it, which ended the whole call.
-        if any(v - shift <= 0 for v in df[yname]):
-            return None
-        df["yv"] = [math.log(v - shift) for v in df[yname]]
-    else:
-        df["yv"] = list(df[yname])
-    df["grp"] = 1
+    # model_data() takes both lognormal families to the log scale, where their coefficients are.
+    d = _model_data(spec, _simulate(dict(spec, seed=seed)))
+    y = d[".y"].to_numpy(dtype=float)
+    # A response rounded down to 0, or to the shift, has no logarithm. R's log() gives -Inf for it
+    # and lmer() refuses the fit, so the replicate returns no estimate here too.
+    if not np.isfinite(y).all():
+        return None
+    n = len(d)
+    exog = pd.DataFrame({"(Intercept)": np.ones(n), **{c: d[c].to_numpy(dtype=float)
+                                                        for c in fixed}})
     # Building the model is kept out of the fits' error handling, so that a fault there stops the
     # call where it used to leave every replicate without a fit and power undefined.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model = smf.mixedlm("yv ~ cc", df, groups="grp", vc_formula=vcf)
+        model = MixedLM(y, exog, np.ones(n), exog_vc=_variance_components(d, groups))
     fit = _fit_mixed(model)
     if fit is None:
         return None
     m, notices = fit
-    est, p = float(m.fe_params["cc"]), float(m.pvalues["cc"])
-    if alternative != "two.sided":
+    names = list(exog.columns)
+    est = {k: float(m.fe_params[k]) for k in names}
+    if alternative == "two.sided":
+        p = {k: float(m.pvalues[k]) for k in names}
+    else:
         from scipy.stats import norm
         # statsmodels gives the two-sided p-value as twice the normal tail beyond |z|. The
         # one-sided p-value is the tail on the tested side of the same z, the upper for "greater"
         # and the lower for "less", which is the upper tail beyond -z. Taking both from norm.sf
         # makes it exactly half the two-sided one when z lies in the tested direction.
-        z = float(m.tvalues["cc"])
-        p = float(norm.sf(z if alternative == "greater" else -z))
-    # A Hessian that is not positive definite can leave the effect without a standard error, and
-    # such a replicate has no test to count towards power.
-    if not (math.isfinite(est) and math.isfinite(p)):
-        return None
+        z = {k: float(m.tvalues[k]) for k in names}
+        p = {k: float(norm.sf(z[k] if alternative == "greater" else -z[k])) for k in names}
     # lme4's isSingular(): a variance component whose standard deviation is below 1e-4 of the
     # residual one. For independent components that ratio is lme4's theta, and on Powell fits the
     # test agreed with lme4 in each of 24 replicates. It is squared here, so that no variance needs
     # a square root.
     singular = any(v < 1e-8 * m.scale for v in m.vcomp)
     # See _HESSIAN_NOTICE: in a singular fit, the component at zero explains that notice.
-    warned = any(not (singular and n.startswith(_HESSIAN_NOTICE)) for n in notices)
-    return {"est": est, "p": p, "singular": singular, "warned": warned,
+    warned = any(not (singular and note.startswith(_HESSIAN_NOTICE)) for note in notices)
+    return {"names": names, "est": est, "p": p, "singular": singular, "warned": warned,
             "converged": bool(m.converged) and not singular and not warned}
 
 
-def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided"):
-    """Crossed mixed-effects simulation-based power in Python, via statsmodels MixedLM with
-    by-subject and by-item random intercepts and slopes as (independent) variance components.
+def _effect_summary(fits, name, beta, alpha, withheld, no_sign):
+    """One focal effect's entry in `effects`, over the replicates that returned a fit.
 
-    The model is the same whatever the specification declares, and it tests one effect. It is
-    ``yv ~ cc``, which regresses the response on ``cc``, the first contrast of the design's
-    single within factor, with four independent variance components: by-subject and by-item
-    intercepts and slopes on ``cc``. The response is analysed as ``log(y)`` for the
-    ``lognormal`` family and as ``log(y - shift)`` for ``shifted_lognormal``, whose
-    coefficients are on the log scale, as in the R twin's ``model_data()``. Every other family
-    is analysed on its own scale. A replicate whose response rounds to 0, or to the shift, has
-    no logarithm and returns no estimate, as in the R twin.
+    Power is taken over the fits that give the effect a finite estimate and p-value, as the R twin
+    takes it over the fits whose p-value is not NA. `withheld` withholds the mean estimate and
+    Type M, which compare the response scale with a link scale, and `no_sign` withholds Type S as
+    well, for an interaction on such a scale.
+    """
+    pairs = [(r["est"][name], r["p"][name]) for r in fits if name in r["est"]
+             and math.isfinite(r["est"][name]) and math.isfinite(r["p"][name])]
+    est = [e for e, _ in pairs]
+    pv = [p for _, p in pairs]
+    # Under a one-sided test, the replicates significant in the tested direction.
+    sig = [i for i, p in enumerate(pv) if p < alpha]
+    # See _power_impl: a zero or unknown true effect leaves both design-analysis quantities
+    # undefined, and their Monte Carlo errors with them. Type M's is withheld with Type M.
+    usable = bool(sig) and not math.isnan(beta) and beta != 0
+    signs = usable and not no_sign
+    n_wrong = sum(1 for i in sig if (est[i] > 0) != (beta > 0)) if signs else 0
+    ratios = [abs(est[i]) / abs(beta) for i in sig] if usable and not withheld else []
+    type_s_lo, type_s_hi = (_type_s_interval(n_wrong, len(sig), beta) if signs
+                            else (math.nan, math.nan))
+    return {
+        **_rate_with_error(len(sig), len(pv), "power"),
+        "n_significant": len(sig), "true_effect": beta,
+        "mean_estimate": statistics.mean(est) if est and not withheld else math.nan,
+        "type_s": n_wrong / len(sig) if signs else math.nan,
+        "type_s_lo": type_s_lo, "type_s_hi": type_s_hi,
+        "type_m": statistics.mean(ratios) if ratios else math.nan,
+        "type_m_mcse": _type_m_mcse(ratios),
+    }
 
-    For ``bernoulli``, ``poisson``, ``ordinal`` and ``beta``, that scale is not the one the
-    coefficients are written on, which is the logit scale, or the log scale for ``poisson``. The
-    estimate of a linear model is then a difference on the response scale, such as a difference in
-    the probability of a correct response, and comparing it with the true coefficient says nothing
-    about exaggeration. For these families, `power_mixed` warns and returns `mean_estimate` and
-    `type_m` as `nan`. `type_s` compares signs alone, which the link preserves, and power is the
-    rate at which the linear model's test rejects. The R package's ``power_mixed()`` fits
-    ``bernoulli`` and ``poisson`` responses with ``lme4::glmer()`` on their link scale, and its
-    ``generate_design_analysis()`` writes a Bayesian design analysis for any family.
 
-    A specification that declares anything this model leaves out draws one warning per call
-    naming each such term. In the fixed part, that is a non-zero coefficient other than
-    the tested contrast, a between factor or a predictor. In the random part, it is a
-    by-subject or by-item slope on another term, a correlation between random effects or a
-    grouping factor besides ``subject`` and ``item``. The R package's ``power_mixed()`` fits
-    the model the specification implies and tests every coefficient.
+def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided", focal=None):
+    """Mixed-effects simulation-based power in Python, for the model the specification implies,
+    via statsmodels MixedLM.
+
+    The model comes from the specification, as in the R twin: `model_formula` writes it and
+    `model_data` builds its columns. Every coefficient is a fixed effect, an interaction ``"a:b"``
+    entering as its product column ``a_b``. Every grouping factor that the specification gives
+    random effects contributes the random intercept and the random slopes it declares, an extra
+    grouping factor such as a site included, and nothing else. Each random effect is an
+    independent variance component, ``0 + C(g)`` for an intercept and ``0 + C(g):term`` for a
+    slope in statsmodels' notation, fitted over a single group so that crossed factors are fitted
+    together. The response is analysed as ``log(y)`` for the ``lognormal`` family and as
+    ``log(y - shift)`` for ``shifted_lognormal``, whose coefficients are on the log scale. Every
+    other family is analysed on its own scale. A replicate whose response rounds to 0, or to the
+    shift, has no logarithm and returns no estimate, as in the R twin.
+
+    Up to 0.3, the model was the same whatever the specification declared, ``yv ~ cc`` with
+    by-subject and by-item intercept and slope components, and it tested the first contrast of a
+    single within factor crossed with items, refusing every other design. Any design that declares
+    a random effect is now fitted, and one without random effects is refused, since MixedLM then
+    has no variance component to fit. The R package's ``power_mixed()`` fits such a design with
+    ``lm()`` or ``glm()``, and `power` analyses the two-group Gaussian design.
+
+    Where the specification correlates a grouping factor's intercept and slopes, the independent
+    components leave the correlations out, and one warning per call names the grouping factors
+    concerned. The R package's ``power_mixed()`` estimates them, with ``|`` in its formula.
+
+    `focal` chooses the effects to test, as in the R twin. By default it is every coefficient,
+    with the true value the specification gives it. A list of names leaves the true values
+    unknown, which leaves Type S and Type M undefined, and a dict from names to values gives the
+    true values to compare with, which may differ from those simulated. A name is a column of the
+    model, so ``"a_b"`` for the interaction ``"a:b"``, or ``"(Intercept)"``. A name that the model
+    lacks draws a warning in the R twin's words, and its results are empty. A coefficient the
+    specification does not list is not in the model, so a null effect is planned with a
+    coefficient of 0.
+
+    For ``bernoulli``, ``poisson``, ``ordinal`` and ``beta``, the response's own scale is not the
+    one the coefficients are written on, which is the logit scale, or the log scale for
+    ``poisson``. The estimate of a linear model is then a difference on the response scale, such
+    as a difference in the probability of a correct response, and comparing it with the true
+    coefficient says nothing about exaggeration. For these families, `power_mixed` warns and
+    returns `mean_estimate` and `type_m` as `nan` for every effect. `type_s` compares signs alone,
+    which the link preserves for a main effect. It does not preserve the sign of an interaction,
+    since a bounded response compresses differences near the ends of its range, so the `type_s`
+    of an interaction is `nan` too, as in the R twin. Power is the rate at which the linear
+    model's test rejects. The R package's ``power_mixed()`` fits ``bernoulli`` and ``poisson``
+    responses with ``lme4::glmer()`` on their link scale, and its ``generate_design_analysis()``
+    writes a Bayesian design analysis for any family.
 
     Every replicate is analysed with this one model, singular or not. A preregistered
     simplification rule, which moves to a simpler model whenever a fit is singular, has power and
@@ -520,36 +668,45 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
     not converge. statsmodels' default chain of optimisers stopped short of the REML optimum in
     most crossed fits, which earlier versions described as statsmodels overstating random-slope
     variance. Over the first 12 replicates of the crossed_mixed_rt example, the standard error of
-    the effect now matches the one from lme4's uncorrelated model, ``(1 + cc || subject) +
-    (1 + cc || item)``, to four decimal places in 11. The same 6 replicates are significant in
+    the effect now matches the one from lme4's uncorrelated model, ``(1 + cond || subject) +
+    (1 + cond || item)``, to four decimal places in 11. The same 6 replicates are significant in
     both. A replicate whose Powell fit raises is fitted again with the default chain and counts
-    as a fit with a warning.
+    as a fit with a warning. The random-effects design is held in dense matrices when it is small
+    and in sparse ones from 100,000 entries, rows times random coefficients, which is quicker for
+    a large design and reaches the same optimum.
+
+    The fits take time, and more of it as the model grows. On a Windows laptop, with NumPy held to
+    one thread, a replicate of the 12 x 8 design of the Python guide took about 0.3 s and one of
+    crossed_mixed_rt (30 subjects, 24 items) about 2 s. One of reading_time_continuous, with 50
+    subjects, 40 items, seven coefficients and four variance components, took about 7 s.
+    `workers` spreads the replicates over processes.
 
     The p-values are Wald z tests. A Wald z treats the estimate over its standard error as normal
     and so ignores the uncertainty in the variance components. With few subjects or items, it
     rejects more readily than a test with Satterthwaite's degrees of freedom (Luke, 2017,
     doi:10.3758/s13428-016-0809-y), which is the test of the R package's ``power_mixed()``. In
     small designs, the power here therefore tends to exceed R's on the same data. On the 12 x 8
-    design of the documentation, 6 of 12 replicates are significant here and 4 of 12 in R. With
-    8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected the
-    null hypothesis in 0.043 of 300 replicates (Monte Carlo standard error 0.012). On the same
-    data, lme4's Satterthwaite test of the same model rejected in 0.030.
+    design of the documentation, 6 of 12 replicates are significant here and 4 of 12 in R.
+    With 8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected
+    the null hypothesis in 0.070 of 300 replicates (Monte Carlo standard error 0.015). On the same
+    data, the R package's Satterthwaite test of the same model rejected in 0.057 (0.013).
+    tools/calibration/wald_null_rate.py measures both.
 
-    A directional prediction calls for a one-sided test, which `alternative` selects.
-    ``"greater"`` tests whether the coefficient of ``cc`` is positive and ``"less"`` whether it is
-    negative. The one-sided p-value is the normal tail on the tested side of the same Wald z, so
-    it is half the two-sided p-value when the estimate lies in the tested direction. A one-sided
-    test at `alpha` therefore rejects in exactly the replicates in which the two-sided test at
-    ``2 * alpha`` rejects with the estimate in that direction. Type S and Type M are taken over
-    the replicates significant in the tested direction, and `backend` names the direction. A
+    A directional prediction calls for a one-sided test, which `alternative` selects for every
+    focal effect. ``"greater"`` tests whether the coefficient is positive and ``"less"`` whether
+    it is negative. The one-sided p-value is the normal tail on the tested side of the same Wald
+    z, so it is half the two-sided p-value when the estimate lies in the tested direction. A
+    one-sided test at `alpha` therefore rejects in exactly the replicates in which the two-sided
+    test at ``2 * alpha`` rejects with the estimate in that direction. Type S and Type M are taken
+    over the replicates significant in the tested direction, and `backend` names the direction. A
     two-sided result at ``2 * alpha`` from an earlier version gives the one-sided power at
     `alpha`, in the direction of the true effect, as ``power * (1 - type_s)``.
 
     Parameters
     ----------
     spec : dict, str or os.PathLike
-        A design specification (dict or path to a JSON file) with exactly one within-unit
-        factor and a crossed design with an item unit.
+        A design specification (dict or path to a JSON file) that declares at least one random
+        effect.
     n_sims : int, optional
         Number of Monte Carlo replicates (default 50, smaller than `power`'s 1000 because
         each replicate fits a mixed model).
@@ -561,95 +718,111 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
         serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
     alternative : {"two.sided", "greater", "less"}, optional
-        The test's alternative hypothesis (default ``"two.sided"``), as in `power`.
+        The alternative hypothesis of every focal effect's test (default ``"two.sided"``), as in
+        `power`.
+    focal : None, str, list of str or dict, optional
+        The effects to test (default None, every coefficient, with the specification's true
+        values). Names alone leave the true values unknown, and a dict from names to numbers gives
+        them.
 
     Returns
     -------
     dict
         Keys: `backend` (the estimator and its test), `n_sims`, `alpha`, the fit counts
-        `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`, then `power`,
-        `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`,
-        `type_s`, `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`, as in `power`.
+        `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`, and `effects`, a
+        dict with one entry per focal effect, in the order of `focal`. Each entry is a dict with
+        keys `power`, `power_mcse`, `power_lo`, `power_hi`, `n_significant`, `true_effect`,
+        `mean_estimate`, `type_s`, `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`, as in
+        `power`. ``pandas.DataFrame.from_dict(result["effects"], orient="index")`` makes a table
+        of them.
+
+        A design with a single within factor whose first contrast is a focal effect also has that
+        effect's twelve quantities at the top level, where earlier versions returned them. Those
+        keys are deprecated and will be removed in the next release, and reading one raises a
+        FutureWarning that names its place in `effects`.
 
         The fit counts mean what they mean in the R twin. `n_attempted` is `n_sims`, and
-        `n_returned` counts the replicates that returned an estimate and a p-value. `power` is
-        the proportion of significant results among those, not among `n_sims`. `n_singular`
-        counts fits with a variance component whose standard deviation is below 1e-4 of the
-        residual one, the test of lme4's ``isSingular()``. `n_warning` counts fits whose
-        optimisers did not converge, whose Powell fit raised or whose Hessian was not positive
-        definite. A component at zero can fail statsmodels' check of the Hessian by itself, so
-        that notice counts only against a fit that is not singular. `n_converged` counts the fits
-        that are neither singular nor warned. statsmodels' notice that a fit may be on the
-        boundary counts towards none of them, since it comes with every fit that has a variance
-        component below 0.01. Singular fits and fits with a warning stay in `power`, as in the R
-        twin. `power_mcse`, `power_lo` and `power_hi` are taken over the same returned fits.
-        `type_s` and `type_m` are `nan` when no replicate reached significance and when the
-        true effect is zero. `mean_estimate` and `type_m` are also `nan` for a ``bernoulli``,
-        ``poisson``, ``ordinal`` or ``beta`` response, whose true effect is on a link scale. The
-        interval of `type_s` and the standard error of `type_m` are `nan` wherever their rate is,
-        and `type_m_mcse` also when a single replicate reached significance.
+        `n_returned` counts the replicates that returned a fit. Each effect's `power` is the
+        proportion of significant results among the fits that give it a finite estimate and
+        p-value, not among `n_sims`. `n_singular` counts fits with a variance component whose
+        standard deviation is below 1e-4 of the residual one, the test of lme4's
+        ``isSingular()``. `n_warning` counts fits whose optimisers did not converge, whose Powell
+        fit raised or whose Hessian was not positive definite. A component at zero can fail
+        statsmodels' check of the Hessian by itself, so that notice counts only against a fit that
+        is not singular. `n_converged` counts the fits that are neither singular nor warned.
+        statsmodels' notice that a fit may be on the boundary counts towards none of them, since
+        it comes with every fit that has a variance component below 0.01. Singular fits and fits
+        with a warning stay in `power`, as in the R twin. `power_mcse`, `power_lo` and `power_hi`
+        are taken over the same fits. `type_s` and `type_m` are `nan` when no replicate reached
+        significance and when the true effect is zero or unknown. `mean_estimate` and `type_m` are
+        also `nan` for a ``bernoulli``, ``poisson``, ``ordinal`` or ``beta`` response, whose true
+        effect is on a link scale, and so is the `type_s` of an interaction. The interval of
+        `type_s` and the standard error of `type_m` are `nan` wherever their rate is, and
+        `type_m_mcse` also when a single replicate reached significance.
 
     Raises
     ------
     ValueError
-        If the spec has no item unit (`power_mixed` requires a crossed design), or if
-        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``.
+        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, if `focal` is none
+        of its forms or names an effect twice, or if there is no effect to test, as for a
+        specification without coefficients and no `focal`.
     NotImplementedError
-        If the design does not have exactly one within-unit factor.
+        If the specification declares no random effect.
 
     Warns
     -----
     UserWarning
-        Once per call, when the specification declares a term that the fitted model leaves
-        out. The message names every such term.
+        Once per call, when the specification correlates the random effects of a grouping factor,
+        which the independent components leave out.
     UserWarning
         Once per call, for a ``bernoulli``, ``poisson``, ``ordinal`` or ``beta`` response,
         saying that the linear model is fitted on the response's own scale and that the mean
         estimate and Type M are withheld. The R twin raises the same words for the families it
         fits in that way.
+    UserWarning
+        When a focal effect never appeared in a fitted model, in the R twin's words.
+    FutureWarning
+        When a deprecated top-level key of the result is read.
 
     Notes
     -----
-    Requires the `mixed` extra (`statsmodels` and `pandas`, imported lazily in each worker
-    process when parallel).
+    Requires the `mixed` extra (`statsmodels`, `pandas` and `scipy`, imported lazily in each
+    worker process when parallel).
     """
     workers = _check_workers(workers)
     alternative = _check_alternative(alternative)
     import pandas as _pd  # noqa: F401  fail fast before simulating
-    import statsmodels.formula.api as _smf  # noqa: F401
+    import scipy.sparse as _sparse  # noqa: F401
+    import statsmodels.regression.mixed_linear_model as _mlm  # noqa: F401
 
     spec = _as_spec(spec)
-    if "item" not in spec["units"]:
-        raise ValueError("power_mixed() requires a crossed design with an item unit.")
-    within = [f for f in spec["factors"] if f.get("vary_within")]
-    if len(within) != 1:
-        raise NotImplementedError(
-            "The Python power_mixed backend expects exactly one within factor.")
-    f = within[0]
-    fname = f["name"]
-    col, vals = next(iter(f["contrasts"].items()))
-    l2c = {f["levels"][i]: vals[i] for i in range(len(f["levels"]))}
-    # No coefficient for the contrast means no effect, as in _power_impl.
-    beta = spec["fixed"]["coefficients"].get(col, 0.0)
-    yname, fam = spec["response"]["name"], spec["response"]["family"]
-    shift = spec["response"].get("shift", 0.0)
-    base = spec["seed"]
+    fixed, groups = _model_terms(spec)
+    if not groups:
+        raise NotImplementedError(_NO_RANDOM)
+    true = _resolve_focal(focal, spec)
+    if not true:
+        raise ValueError(_NOTHING_TO_TEST)
+    fam = spec["response"]["family"]
     # The warnings are raised here, once per call, since the replicates may run in other
-    # processes.
-    left_out = _left_out_of_model(spec, col)
-    if left_out:
-        warnings.warn(_LEFT_OUT % _name_list(left_out), UserWarning, stacklevel=2)
+    # processes. A group's random effects are correlated when the maximal structure writes `|`
+    # between its intercept and slopes.
+    correlated = ["'%s'" % g for g, slopes, bar in groups if slopes and bar == "|"]
+    if correlated:
+        warnings.warn(_UNCORRELATED % _name_list(correlated), UserWarning, stacklevel=2)
     # A linear model of a 0/1, count, rating or proportion response estimates a difference on the
     # response scale, which used to be set against the true value on the link scale. On the R
     # twin's crossed accuracy design, such a model gave Type M 0.21 where a logistic one gives
-    # 1.12. Type S survives, since a monotone link keeps the sign of an effect but not its size.
+    # 1.12. Type S survives for a main effect, since a monotone link keeps its sign but not its
+    # size. It does not survive for an interaction, a difference of differences, whose sign a
+    # bounded response can reverse.
     withheld = fam in _LINK_SCALE
     if withheld:
         warnings.warn(_LINEAR_ON_LINK % (fam, _LINK_SCALE[fam]), UserWarning, stacklevel=2)
+    interactions = {_us(k) for k in _interaction_keys(spec)} if withheld else set()
 
-    rep = functools.partial(_power_mixed_replicate, spec=spec, fname=fname, l2c=l2c,
-                            yname=yname, fam=fam, shift=shift, alternative=alternative)
-    seeds = replicate_seeds(base, n_sims)
+    rep = functools.partial(_power_mixed_replicate, spec=spec, fixed=fixed, groups=groups,
+                            alternative=alternative)
+    seeds = replicate_seeds(spec["seed"], n_sims)
     if workers == 1:
         results = _map_replicates(rep, seeds, None)
     else:
@@ -657,22 +830,22 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
         with ProcessPoolExecutor(max_workers=workers) as executor:
             results = _map_replicates(rep, seeds, executor)
     fits = [r for r in results if r is not None]
-    est = [r["est"] for r in fits]
-    pv = [r["p"] for r in fits]
+    effects = {name: _effect_summary(fits, name, beta, alpha, withheld, name in interactions)
+               for name, beta in true.items()}
 
-    # Under a one-sided test, the replicates significant in the tested direction.
-    sig = [i for i, p in enumerate(pv) if p < alpha]
-    # See _power_impl: a zero true effect leaves both design-analysis quantities undefined, and
-    # their Monte Carlo errors with them. Type M's is withheld with Type M.
-    usable = bool(sig) and not math.isnan(beta) and beta != 0
-    n_wrong = sum(1 for i in sig if (est[i] > 0) != (beta > 0)) if usable else 0
-    ratios = [abs(est[i]) / abs(beta) for i in sig] if usable and not withheld else []
-    type_s_lo, type_s_hi = (_type_s_interval(n_wrong, len(sig), beta) if usable
-                            else (float("nan"), float("nan")))
+    # A focal name that no fit contains, most often one misspelt, would otherwise read as a design
+    # that can decide nothing. The R twin warns in these words.
+    absent = ["'%s'" % k for k in effects if fits and k not in fits[0]["est"]]
+    if absent:
+        warnings.warn(_ABSENT_FOCAL % (
+            "s" if len(absent) > 1 else "", ", ".join(absent),
+            "their" if len(absent) > 1 else "its",
+            ", ".join("'%s'" % k for k in fits[0]["names"])), UserWarning, stacklevel=2)
+
     # The backend names the direction of a one-sided test, as the R twin's `fitter` does.
     tests = ("Wald z tests" if alternative == "two.sided"
              else "one-sided Wald z tests, %s" % alternative)
-    return {
+    result = {
         "backend": "statsmodels MixedLM (crossed variance components, REML; %s)" % tests,
         "n_sims": n_sims, "alpha": alpha,
         # The R twin's fit counts, with its meanings. n_converged used to count every fit that
@@ -681,14 +854,16 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided")
         "n_converged": sum(r["converged"] for r in fits),
         "n_singular": sum(r["singular"] for r in fits),
         "n_warning": sum(r["warned"] for r in fits),
-        **_rate_with_error(len(sig), len(pv), "power"),
-        "n_significant": len(sig), "true_effect": beta,
-        "mean_estimate": statistics.mean(est) if est and not withheld else float("nan"),
-        "type_s": n_wrong / len(sig) if usable else float("nan"),
-        "type_s_lo": type_s_lo, "type_s_hi": type_s_hi,
-        "type_m": statistics.mean(ratios) if ratios else float("nan"),
-        "type_m_mcse": _type_m_mcse(ratios),
+        "effects": effects,
     }
+    # The quantities of the effect that earlier versions tested, the first contrast of the single
+    # within factor, at the top level where they were, for one release.
+    within = [f for f in spec["factors"] if f.get("vary_within")]
+    col = next(iter(within[0]["contrasts"])) if len(within) == 1 else None
+    if col in effects:
+        result.update(effects[col])
+        return _MixedResult(result, within=col)
+    return _MixedResult(result)
 
 
 # What each power_curve() record keeps of a power() result. A record used to hold power and Type M

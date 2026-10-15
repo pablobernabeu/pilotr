@@ -1,4 +1,4 @@
-"""The two-group backend, `power`, and the coefficient lookup it shares with `power_mixed`.
+"""The two-group backend, `power`, its coefficient lookup and how `power_mixed` reads a null effect.
 
 `power` t-tests every row, and that test holds its level only with one row per subject and no
 shared cluster. It used to accept any Gaussian design with a two-level between factor, and report
@@ -104,7 +104,12 @@ def test_a_specification_with_no_coefficient_for_the_contrast_has_a_true_effect_
     assert 0.0 <= r["power"] <= 1.0
 
 
-def test_power_mixed_reads_a_missing_coefficient_as_a_true_effect_of_0():
+def test_power_mixed_tests_a_null_effect_written_as_a_coefficient_of_0():
+    # power_mixed() fits the model the specification implies, whose fixed part holds the
+    # coefficients the specification lists, as in the R twin. A contrast without a coefficient is
+    # not in the model, so a null effect to test is written as a coefficient of 0, and a
+    # specification without coefficients has no effect to test. Up to 0.3 the model was `yv ~ cc`
+    # whatever the specification listed, and `{}` tested the contrast with a true effect of 0.
     pytest.importorskip("statsmodels")
     pytest.importorskip("pandas")
     spec = {
@@ -112,14 +117,17 @@ def test_power_mixed_reads_a_missing_coefficient_as_a_true_effect_of_0():
         "units": {"subject": {"n": 10}, "item": {"n": 6}},
         "factors": [{"name": "cond", "levels": ["a", "b"],
                      "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": ["subject", "item"]}],
-        "fixed": {"intercept": 6, "coefficients": {}},
+        "fixed": {"intercept": 6, "coefficients": {"cond": 0}},
         "random": {"subject": {"intercept_sd": 0.12}, "item": {"intercept_sd": 0.08}},
         "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
     }
-    r = power_mixed(spec, n_sims=2)
+    r = power_mixed(spec, n_sims=2)["effects"]["cond"]
     assert r["true_effect"] == 0
     assert math.isnan(r["type_s"])
     assert math.isnan(r["type_m"])
+    spec["fixed"]["coefficients"] = {}
+    with pytest.raises(ValueError, match="no fixed coefficients to test"):
+        power_mixed(spec, n_sims=2)
 
 
 def test_power_validates_the_specification_once(monkeypatch):

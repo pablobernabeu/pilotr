@@ -151,17 +151,18 @@ def _crossed(family="gaussian", effect=0.3, **response):
 def test_power_mixed_reports_the_monte_carlo_error_of_power_type_s_and_type_m():
     pytest.importorskip("statsmodels")
     pytest.importorskip("pandas")
-    r = power_mixed(_crossed(sigma=0.3), n_sims=6)
+    run = power_mixed(_crossed(sigma=0.3), n_sims=6)
+    r = run["effects"]["cond"]
     assert r["n_significant"] >= 2
     # power is taken over the replicates that returned a fit, and so is its error.
     assert ({k: r[k] for k in _POWER_KEYS}
-            == _rate_with_error(r["n_significant"], r["n_returned"], "power"))
+            == _rate_with_error(r["n_significant"], run["n_returned"], "power"))
     wrong = round(r["type_s"] * r["n_significant"])
     assert ((r["type_s_lo"], r["type_s_hi"])
             == _type_s_interval(wrong, r["n_significant"], r["true_effect"]))
     assert r["type_m_mcse"] > 0
 
-    null = power_mixed(_crossed(effect=0.0, sigma=0.3), n_sims=3)
+    null = power_mixed(_crossed(effect=0.0, sigma=0.3), n_sims=3)["effects"]["cond"]
     assert all(math.isnan(null[k])
                for k in ("type_s", "type_s_lo", "type_s_hi", "type_m", "type_m_mcse"))
 
@@ -176,7 +177,7 @@ def test_power_mixed_withholds_the_error_of_a_type_m_it_withholds():
     spec["fixed"]["intercept"] = 0.5
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        r = power_mixed(spec, n_sims=2, alpha=1)
+        r = power_mixed(spec, n_sims=2, alpha=1)["effects"]["cond"]
     assert r["n_significant"] == 2
     assert math.isnan(r["type_m"]) and math.isnan(r["type_m_mcse"])
     assert not (math.isnan(r["type_s_lo"]) or math.isnan(r["type_s_hi"]))

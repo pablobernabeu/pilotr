@@ -10,10 +10,14 @@ import pytest
 
 def assert_identical(a, b):
     """Assert two result dicts are identical, treating NaN as equal to NaN (the Type S and
-    Type M entries are NaN when no replicate reaches significance)."""
+    Type M entries are NaN when no replicate reaches significance). A nested dict, such as
+    power_mixed()'s `effects`, is compared in the same way. The values are read through items(),
+    which reads no deprecated key and so draws no FutureWarning."""
     assert a.keys() == b.keys()
-    for k in a:
-        va, vb = a[k], b[k]
+    for (k, va), vb in zip(a.items(), b.values()):
+        if isinstance(va, dict):
+            assert_identical(va, vb)
+            continue
         if isinstance(va, float) and isinstance(vb, float) and math.isnan(va) and math.isnan(vb):
             continue
         assert va == vb, f"{k}: {va!r} != {vb!r}"
@@ -52,7 +56,9 @@ def test_power_curve_parallel_matches_serial():
     assert serial == parallel2
 
 
-def test_power_mixed_rejects_spec_without_items():
+def test_power_mixed_parallel_matches_serial_without_items():
+    # A design without an item unit used to be refused. Its model now comes from its by-subject
+    # terms, and it runs alike in any number of processes.
     pytest.importorskip("statsmodels")
     pytest.importorskip("pandas")
     from pilotr import power_mixed
@@ -63,12 +69,12 @@ def test_power_mixed_rejects_spec_without_items():
         "factors": [{"name": "cond", "levels": ["a", "b"],
                      "contrasts": {"cond": [-0.5, 0.5]}, "vary_within": "subject"}],
         "fixed": {"intercept": 6, "coefficients": {"cond": 0.05}},
-        "random": {"subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04},
-                               "correlations": {"intercept~cond": 0.2}}},
+        "random": {"subject": {"intercept_sd": 0.12, "slopes": {"cond": 0.04}}},
         "response": {"family": "gaussian", "name": "y", "sigma": 0.3},
     }
-    with pytest.raises(ValueError, match="requires a crossed design with an item unit"):
-        power_mixed(spec, n_sims=2)
+    serial = power_mixed(spec, n_sims=3, workers=1)
+    assert serial["n_returned"] == 3
+    assert_identical(serial, power_mixed(spec, n_sims=3, workers=2))
 
 
 def test_power_mixed_parallel_matches_serial():

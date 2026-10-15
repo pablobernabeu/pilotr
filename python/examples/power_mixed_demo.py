@@ -12,8 +12,14 @@ print(f"Fitting {n_sims} crossed MixedLM models in Python (statsmodels)...")
 t = time.time()
 res = power_mixed(load_spec(SPEC), n_sims=n_sims)
 print(f"elapsed {time.time() - t:.0f}s\n")
-for k, v in res.items():
-    print(f"  {k:14s}: {v}")
+for k in ("backend", "n_sims", "alpha", "n_attempted", "n_returned", "n_converged", "n_singular",
+          "n_warning"):
+    print(f"  {k:14s}: {res[k]}")
+# One entry per coefficient of the specification, each with its power and design analysis.
+for name, effect in res["effects"].items():
+    print(f"\n  effect {name}")
+    for k, v in effect.items():
+        print(f"    {k:14s}: {v}")
 print("\nNOTE: the p-values are Wald z tests. With few subjects or items, these reject more")
 print("readily than the Satterthwaite tests of the R package's power_mixed(), so in small designs")
 print("this power can exceed R's on the same data. R's power_mixed() also fits the random-effect")
