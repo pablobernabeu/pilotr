@@ -487,6 +487,14 @@
   changes that CRAN's 0.3.0 carried, namely that `brms_bridge()` returns a visible
   `pilotr_bridge` object and that this object has a print method.
 
+* DESCRIPTION declares British English (`Language: en-GB`), as the author's other R packages
+  do. A new spelling test checks the help pages, the vignettes, `README.md` and `NEWS.md`
+  against that dictionary and `inst/WORDLIST`. It fails a check run with `NOT_CRAN` set, as in
+  `devtools::check()` and on GitHub Actions, at any word found in neither, and CRAN and a plain
+  `R CMD check` skip it. The word list holds the names, terms and abbreviations that the
+  dictionary lacks, none of them a misspelling, and seven passages of the help and vignettes
+  are reworded so that the checker can read them.
+
 * `sweep_spec()` and `solve_curve()` say that a sweep over lists, `design_conditions()`
   included, records a grid index in its leading column, and that `solve_curve()` solves for that
   index unless `x` names another column. Both pages show the sweep to use for a single effect,
@@ -580,7 +588,7 @@
   installed app's power tab said that simulations were unlimited once you install the package,
   although the app is part of the installed package. It now gives the app's cap, which
   `PILOTR_MAX_SIMS` sets, and says to call `power_design()` directly for more. The vignette on
-  the no-code app names the tabs of both apps. It named the browser build's alone.
+  the no-code app names the tabs of both apps. It named only the tabs of the browser build.
 
 * The website's R pages link favicons that exist. pkgdown 2.1.2 changed the set of favicon files
   its pages link, and three of them, `favicon-96x96.png`, `favicon.svg` and `site.webmanifest`,

@@ -131,8 +131,8 @@
 #' effects, and an LKJ prior on their correlations only when some grouping factor's effects are
 #' correlated. brms refuses a prior on a parameter the model does not contain. The intercept and
 #' the family's own parameters, such as the residual standard deviation, take brms's default
-#' priors. For the continuous families, brms centres the intercept's default prior on the median
-#' of the response, or of its logarithm for the two lognormal families.
+#' priors. For the continuous families, brms centres its default prior for the intercept on the
+#' median of the response, or of its logarithm for the two lognormal families.
 #'
 #' A Bayes factor computed against these priors depends on their widths (Kass and Raftery,
 #' 1995), so a different `prior_scale` gives a different Bayes factor from the same data. For a

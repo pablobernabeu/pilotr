@@ -23,10 +23,10 @@ same data.
 \details{
 Until 0.3 the rule was \code{base + (i - 1)}, and consecutive seeds are not independent streams in
 this generator. Seeding is affine in the seed, setting \code{s1} to \verb{1 + (seed mod 2147483562)} and
-\code{s2} from \code{s1}, and each component recurrence is linear, so the \code{k}-th draws of consecutive
-seeds differ by very nearly the same amount mod 1. For the first draw that step is -0.0091:
-seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755, 0.6665 and 0.6574. Draws in
-arithmetic progression mod 1 with step \code{d} correlate \verb{1 - 6|d|(1 - |d|)}, so over 2,000
+\code{s2} from \code{s1}, and each component recurrence is linear, so at every position \code{k} the draws of
+consecutive seeds differ by very nearly the same amount mod 1. For the first draw that step
+is -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755, 0.6665 and 0.6574.
+Draws in arithmetic progression mod 1 with step \code{d} correlate \verb{1 - 6|d|(1 - |d|)}, so over 2,000
 replicates the first draw of replicate \code{i} correlated 0.95 with the first draw of replicate
 \code{i + 1}. A longer warm-up changes \code{d} and leaves the progression in place: with 50 warm-up
 draws in place of 10, the step is -0.32 and the correlation -0.30.

@@ -131,7 +131,7 @@ knitr::kable(read.csv("parity-summary.csv",
 The difference is exactly zero for every design whose responses are rounded, and about
 5e-15 for the unrounded continuous design, where R's CSV writer prints 15 significant
 digits. At that precision the residual cannot be told apart from the writer's own rounding,
-and it is what the check's 1e-6 tolerance is there to absorb. The stricter harness dumps 17
+and it is what the 1e-6 tolerance of the check is there to absorb. The stricter harness dumps 17
 digits and resolves what is really there. On Windows, it finds a handful of cells one unit in
 the last place apart, from `exp()`, and no categorical mismatches. On Linux, where it runs in
 continuous integration, every cell agrees. The uniform stream is exact by construction, since

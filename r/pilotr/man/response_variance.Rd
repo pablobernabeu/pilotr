@@ -69,7 +69,7 @@ that is \code{total - fixed}. Covariates belong to the fixed part, so a d define
 conditional on them.
 
 A published d therefore converts to a coefficient as \code{b = d * sqrt(total - fixed) / (c2 - c1)},
-where \code{c2 - c1} is the difference between the contrast's two codes. For codes of -0.5 and 0.5,
+where \code{c2 - c1} is the difference between the two contrast codes. For codes of -0.5 and 0.5,
 that difference is 1. The d is on the scale of the linear predictor, so for the families with a
 link it is a latent-scale d. \code{\link[=calibrate_response]{calibrate_response()}} with \code{denominator = "random"} rescales a
 design so that \code{total - fixed} is 1, after which the coefficient of a contrast coded -0.5 and

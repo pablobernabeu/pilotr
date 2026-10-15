@@ -191,7 +191,7 @@ ex-Gaussian, continuous predictors, interactions, nesting and partial crossing, 
 writing the specification directly, as the last section of this vignette shows.
 
 The `exgaussian` family, new in 0.3, takes `sigma` and `beta` and draws a normal plus an
-exponential, mean-centred by subtracting the exponential's own mean so that $\eta$ remains the
+exponential, mean-centred by subtracting the mean of the exponential so that $\eta$ remains the
 mean of the response. That is brms's `exgaussian(mu, sigma, beta)` parameterisation, so a
 specification and the model fitted to it agree on what the intercept means. A shifted lognormal
 will not stand in for it, because `model_data()` logs the response back and leaves a symmetric

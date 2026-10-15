@@ -32,6 +32,12 @@ devtools::check("r/pilotr")      # a full R CMD check
 devtools::build_readme("r/pilotr")  # regenerate README.md after editing README.Rmd
 ```
 
+`devtools::check()` also runs a spelling test, as CI does, and stops at any word
+found neither in the British English dictionary nor in `r/pilotr/inst/WORDLIST`.
+`spelling::spell_check_package("r/pilotr")` lists those words. Correct a
+misspelling where it occurs, and add a name or a term of art to the word list.
+CRAN and a plain `R CMD check` skip the test.
+
 `r/pilotr/README.md` is generated from `README.Rmd` and is also the website's home
 page, so edit the `.Rmd` and knit it rather than editing the Markdown directly.
 The cross-language parity table in `r/pilotr/vignettes/parity-summary.csv` is

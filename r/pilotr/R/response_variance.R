@@ -185,7 +185,7 @@
 #' conditional on them.
 #'
 #' A published d therefore converts to a coefficient as `b = d * sqrt(total - fixed) / (c2 - c1)`,
-#' where `c2 - c1` is the difference between the contrast's two codes. For codes of -0.5 and 0.5,
+#' where `c2 - c1` is the difference between the two contrast codes. For codes of -0.5 and 0.5,
 #' that difference is 1. The d is on the scale of the linear predictor, so for the families with a
 #' link it is a latent-scale d. [calibrate_response()] with `denominator = "random"` rescales a
 #' design so that `total - fixed` is 1, after which the coefficient of a contrast coded -0.5 and
