@@ -172,20 +172,51 @@ a cluster. Within one machine, every power and precision analysis takes a `worke
 that parallelises the replicates in-process, with results identical to a serial run, while the
 SLURM array below covers multi-node sweeps. The [`hpc/`](hpc/) directory holds a SLURM array job
 ([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
-[`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size, with
-replicates parallelised across cores via `mclapply` and results written to project storage.
+[`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size. Each task calls
+`precision_design()` at its size, with the replicates spread across the task's cores, so its
+output has the columns and fit counts of `precision_curve()`.
 
-A reference deployment on the Oxford ARC cluster keeps the code and scripts under
-`~/pilotr_toolkit/` in home, and the heavy material (the R library, results and logs) under
-`/data/<project>/pilotr_toolkit/`, since the home quota is small. A one-time bootstrap installs
-`lme4` and `lmerTest` into the data-area library (`R_LIBS`). The R module already provides
-`jsonlite`. Submitting [`sbatch hpc/precision_array.slurm`](hpc/precision_array.slurm) runs the sweep, and a quick smoke test
-is `sbatch --export=ALL,N_SIMS=4 --array=0 --partition=devel precision_array.slurm`. Each task
-writes one `precision_N<n>.csv`, and these combine into a full precision-vs-*N* curve at a
-resolution far beyond a laptop. The cluster reproduces local simulated data exactly when both
-machines round `exp()`, `log()` and `pow()` alike, as two Linux machines with the same C library
-do. Between Windows and Linux, values that pass through those functions can differ in their last
-bits, as [Cross-language reproducibility](#cross-language-reproducibility) below sets out.
+The job runs on any SLURM cluster once the two values marked in the wrapper are filled in. They
+are the account the scheduler charges and `PROJECT_DIR`, a writable directory for the R library
+and the results. Clusters often give home directories a small quota, so a project or scratch area
+usually suits it better. Install the packages into that library once, on a login node, from the
+root of the clone:
+
+```bash
+module load R                          # or the versioned R module your cluster names
+export PROJECT_DIR=$HOME/pilotr_runs   # the value set in the wrapper
+export R_LIBS="$PROJECT_DIR/Rlib"
+mkdir -p "$R_LIBS"
+Rscript -e 'install.packages(c("jsonlite", "lme4", "lmerTest"), repos = "https://cloud.r-project.org")'
+R CMD INSTALL --library="$R_LIBS" r/pilotr
+```
+
+pilotr is installed from the clone so that the package and the job's runner come from the same
+commit. Then, from `hpc/`, `sbatch precision_array.slurm` runs the sweep, and
+`sbatch --export=ALL,N_SIMS=4 --array=0 precision_array.slurm` is a quick smoke test. SLURM
+writes each task's log to `hpc/`. Each task writes one `precision_N<n>.csv` to
+`$PROJECT_DIR/results`, and bound together the files form the curve that `precision_curve()`
+returns over the same grid, at a resolution far beyond a laptop. `solve_curve()` then gives the
+sample size at which a focal effect reaches a determinate decision with the target probability:
+
+```r
+library(pilotr)
+results <- file.path(Sys.getenv("PROJECT_DIR"), "results")
+files <- list.files(results, pattern = "^precision_N[0-9]+[.]csv$", full.names = TRUE)
+curve <- do.call(rbind, lapply(files, read.csv))
+solve_curve(curve, target = 0.9, effect = "SyntaxPC")
+```
+
+Each task takes the seed that `sweep_spec()` gives its point of the grid. The points of the curve
+are therefore independent, as `solve_curve()` assumes, and a local `precision_curve()` over the
+same grid simulates the same data. That exactness covers the simulated data alone. The cluster
+reproduces them exactly when both machines round `exp()`, `log()` and `pow()` alike, as two Linux
+machines with the same C library do. Between Windows and Linux, values that pass through those
+functions can differ in their last bits, as
+[Cross-language reproducibility](#cross-language-reproducibility) below sets out. The model fits
+also depend on the lme4 release, whose optimiser defaults have changed over time, and on the
+platform's numerical libraries. Each row of a task's output therefore records the versions of
+pilotr and lme4 that produced it.
 
 ## Cross-language reproducibility
 

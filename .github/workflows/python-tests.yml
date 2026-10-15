@@ -18,6 +18,8 @@ on:
       - 'README.md'
       - 'r/pilotr/DESCRIPTION'
       - 'r/pilotr/README.md'
+      # tests/test_hpc.py guards the SLURM job, which R CMD check cannot see.
+      - 'hpc/**'
       - '.github/workflows/python-tests.yml'
   pull_request:
     branches: [main, master]
@@ -31,6 +33,7 @@ on:
       - 'README.md'
       - 'r/pilotr/DESCRIPTION'
       - 'r/pilotr/README.md'
+      - 'hpc/**'
       - '.github/workflows/python-tests.yml'
   # Dependencies and interpreters move when this repository does not, and the
   # paths filters above mean a quiet month sees no run at all. A weekly run

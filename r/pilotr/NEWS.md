@@ -534,6 +534,17 @@
   crossed when it never does. The vignette shows how to compare designs that trade subjects for
   items, by sweeping the number of items at a few subject counts and solving each curve.
 
+* The HPC job runs on any SLURM cluster and calls `precision_design()`, so its output has the
+  same columns and fit accounting as `precision_curve()`. The job charged the author's account,
+  wrote under the author's project paths and ran a copy of its runner kept outside the
+  repository, with a bootstrap script the repository did not hold. Its runner repeated the
+  replicate loop and counted every fit that returned an estimate as converged, the definition
+  0.3.0 replaced. The wrapper now marks the account and the project directory as the two values
+  to fill in, and runs the runner saved beside it. The README gives the commands that install
+  pilotr, lme4 and lmerTest into the project's library, shows how the task files combine into a
+  curve for `solve_curve()`, and limits the claim of exact reproduction to the simulated data,
+  since the model fits depend on the lme4 release and the platform.
+
 ## References
 
 Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate

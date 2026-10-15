@@ -1,83 +1,61 @@
 #!/usr/bin/env Rscript
-# One ARC array task: a high-precision ROPE design analysis at a single sample size.
-# Embarrassingly parallel: the task's n_sims replicates run across cpus-per-task cores via
-# mclapply. Each replicate simulates from the spec, fits the auto-derived lmer model, and
-# records the focal 95% CIs; the task aggregates ROPE decision probabilities and writes one
-# CSV per sample size to the project results dir. Combine the CSVs into a full precision curve.
+# One SLURM array task: a precision and ROPE design analysis at a single sample size.
+# Each task is one point of the sweep that precision_curve() runs over `grid`, and it calls
+# precision_design() for that point, so its CSV has precision_curve()'s columns and fit counts.
+# The task's replicates run on a fork cluster across its cores. Bind the per-task CSVs together
+# with rbind() and pass the curve to solve_curve() for the sample size that reaches a target.
 #
-# Env: TOOLKIT (toolkit dir), TASK_ID (grid index), N_SIMS, ROPE (a half-width such as 0.05, or an
-# interval such as -0.02,0.05), OUTDIR, SLURM_CPUS_PER_TASK.
+# Env: TASK_ID (the index into `grid`, from 0), N_SIMS, ROPE (a half-width such as 0.05, or an
+# interval such as -0.02,0.05), OUTDIR and SLURM_CPUS_PER_TASK. pilotr and lme4 come from the
+# library R_LIBS names, which precision_array.slurm sets to $PROJECT_DIR/Rlib.
+#
+# The specification, `grid` and `focal` below are the example's. Edit them for another design,
+# and keep the wrapper's --array range at one task per value of `grid`.
 
-suppressWarnings(suppressMessages({
-  TK <- path.expand(Sys.getenv("TOOLKIT", "~/pilotr_toolkit/toolkit"))
-  # Source the whole package rather than a hand-listed subset, as tools/parity/run_r.R does, so
-  # that a new engine file cannot leave this job silently running against a stale definition.
-  # The list this replaced had already lost validate.R, which load_spec() needs.
-  src <- file.path(TK, "r", "pilotr", "R")
-  for (f in sort(list.files(src, pattern = "\\.R$", full.names = TRUE))) source(f)
-  library(lme4); library(parallel)
-}))
+suppressPackageStartupMessages(library(pilotr))
 
 task   <- as.integer(Sys.getenv("TASK_ID", "0"))
 n_sims <- as.integer(Sys.getenv("N_SIMS", "200"))
-ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "4"))
+ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 outdir <- Sys.getenv("OUTDIR", ".")
-# ROPE is read as comma-separated numbers and checked by the rule precision_design() applies, so a
-# malformed value stops the task before any replicate runs. scan() reads a trailing comma as a
-# missing bound, which is refused, where strsplit() would drop it. Read as one number, an interval
-# became NA and a negative half-width was used as given, and the task wrote its decision
-# probabilities regardless.
-rope_text <- Sys.getenv("ROPE", "0.05")
-rope <- tryCatch(.as_rope(scan(text = rope_text, sep = ",", quiet = TRUE)),
-                 error = function(e) stop(sprintf("ROPE=%s: %s", rope_text, conditionMessage(e)),
-                                          call. = FALSE))
+# ROPE is read as comma-separated numbers, and precision_design() refuses anything but a
+# non-negative half-width or an increasing pair before any replicate runs. scan() reads a trailing
+# comma as a missing bound, which is refused, where strsplit() would drop it.
+rope <- scan(text = Sys.getenv("ROPE", "0.05"), sep = ",", quiet = TRUE)
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
-spec <- load_spec(file.path(TK, "spec/examples/reading_time_continuous.json"))
-grid <- c(20, 30, 40, 50, 60, 70, 80, 100)        # subjects; one per array task
-N <- grid[task + 1L]
-spec$units$subject$n <- N
-form  <- model_formula(spec)
+spec  <- load_spec(pilotr_example("reading_time_continuous"))
+grid  <- c(20, 30, 40, 50, 60, 70, 80, 100)        # subjects, one size per array task
 focal <- c(SyntaxPC = 0.10, cond_age = 0.02)       # meaningful (outside ROPE) + negligible (inside)
-# The package's own seed rule, not an arithmetic one. Consecutive seeds are not independent
-# streams in this generator, so `base + (i - 1)` left neighbouring replicates correlated at 0.95
-# and understated the job's Monte Carlo error; see ?replicate_seeds. Each task is one point of a
-# sweep over `grid` and takes the seed sweep_spec() gives that point. The points of the combined
-# curve are then independent, as solve_curve() assumes, and a local precision_curve() over the
-# same grid reproduces every task. Every task used to draw its replicates from the specification's
-# own seed, so neighbouring points of the curve shared their random numbers.
-seeds <- replicate_seeds(replicate_seeds(spec$seed, length(grid))[task + 1L], n_sims)
+if (is.na(task) || task < 0L || task >= length(grid))
+  stop(sprintf("TASK_ID must index the %d sizes in `grid` from 0; got %s",
+               length(grid), Sys.getenv("TASK_ID")), call. = FALSE)
+N <- grid[task + 1L]
+# The seed sweep_spec() gives this point of a sweep over `grid`, so the points of the combined
+# curve are independent, as solve_curve() assumes, and a local precision_curve() over the same
+# grid reproduces every task's simulated data. precision_design() derives the replicate seeds
+# from it with replicate_seeds().
+spec$seed <- replicate_seeds(spec$seed, length(grid))[task + 1L]
+spec$units$subject$n <- N
 
-# mclapply forks, so the workers inherit the definitions sourced above. A PSOCK cluster (what
-# precision_design(workers = ) builds) would not, because pilotr is not installed on the cluster.
-one_sim <- function(i) {
-  s <- spec; s$seed <- seeds[i]
-  d <- model_data(spec, simulate_design(s))
-  fit <- tryCatch(lme4::lmer(form, d, control = lme4::lmerControl(calc.derivs = FALSE)),
-                  error = function(e) NULL)
-  if (is.null(fit)) return(NULL)
-  est <- lme4::fixef(fit); se <- sqrt(diag(as.matrix(stats::vcov(fit))))
-  vapply(names(focal), function(f) c(est = est[[f]], se = se[[f]]), numeric(2))
-}
-
+# Forked workers inherit the loaded pilotr and lme4, where a socket cluster would start fresh R
+# processes and load both again. Forking needs Linux or macOS, and with one core the task runs
+# serially on any platform. The arguments go by name: given second, `rope` would bind to
+# `formula`.
 t0 <- Sys.time()
-res <- Filter(Negate(is.null), mclapply(seq_len(n_sims), one_sim, mc.cores = ncores))
-nc <- length(res)
-agg <- do.call(rbind, lapply(names(focal), function(f) {
-  est <- vapply(res, function(r) r["est", f], numeric(1))
-  se  <- vapply(res, function(r) r["se",  f], numeric(1))
-  lo <- est - .Z95 * se; hi <- est + .Z95 * se     # the package's qnorm(0.975), not a rounded 1.96
-  # The decisions are precision_design()'s own. Both decision probabilities are proportions over
-  # nc replicates, so each is reported with its Monte Carlo standard error and Wilson interval, as
-  # precision_design() has done since 0.3.
-  d  <- .rope_decisions(lo, hi, rope)
-  ro <- .rate_with_error(sum(d$meaningful), nc, "p_meaningful")
-  ri <- .rate_with_error(sum(d$equivalent), nc, "p_equivalent")
-  data.frame(n_subject = N, param = f, true = focal[[f]],
-             mean_ci_width = mean(hi - lo), ro, ri,
-             n_converged = nc, n_sims = n_sims)
-}))
-out <- file.path(outdir, sprintf("precision_N%03d.csv", N))
-write.csv(agg, out, row.names = FALSE)
-cat(sprintf("wrote %s | N=%d | converged %d/%d | %.0fs\n", out, N, nc, n_sims,
+cl <- if (ncores > 1L) parallel::makeForkCluster(ncores)
+result <- tryCatch(
+  precision_design(spec, focal = focal, rope = rope, n_sims = n_sims, cl = cl),
+  finally = if (!is.null(cl)) parallel::stopCluster(cl))
+
+# The swept size leads, as in precision_curve(), and solve_curve() reads the leading column as
+# the swept value. Fitted summaries depend on the lme4 release and the platform, so each row
+# records the versions that produced it.
+out <- cbind(n_subject = N, result,
+             pilotr_version = as.character(utils::packageVersion("pilotr")),
+             lme4_version = as.character(utils::packageVersion("lme4")))
+file <- file.path(outdir, sprintf("precision_N%03d.csv", N))
+utils::write.csv(out, file, row.names = FALSE)
+cat(sprintf("wrote %s | N=%d | returned %d, converged %d of %d | %.0fs\n", file, N,
+            result$n_returned[1], result$n_converged[1], n_sims,
             as.numeric(difftime(Sys.time(), t0, units = "secs"))))

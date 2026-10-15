@@ -254,7 +254,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 # Anything else is refused. The decisions used to compare each interval with `rope` and `-rope`.
 # A pair was therefore recycled across the replicates, each bound standing in turn for the
 # half-width, and a negative half-width was used as given, all without a word.
-# hpc/precision_array.R reads its ROPE variable through this function too.
+# hpc/precision_array.R hands its ROPE variable to precision_design(), which checks it here.
 .as_rope <- function(rope) {
   ok <- is.numeric(rope) && all(is.finite(rope)) &&
     ((length(rope) == 1L && rope >= 0) || (length(rope) == 2L && rope[1] < rope[2]))
@@ -274,7 +274,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 # the interval lies wholly above or below the region, equivalent when it lies wholly inside. Both
 # inequalities are strict, so an interval that touches a bound counts as neither. For a half-width
 # these are the comparisons made before, so its results are unchanged. hpc/precision_array.R
-# applies this function, where it used to repeat the comparisons and their defect.
+# calls precision_design(), where it used to repeat the comparisons and their defect.
 .rope_decisions <- function(lo, hi, rope) {
   list(meaningful = lo > rope[2] | hi < rope[1],
        equivalent = lo > rope[1] & hi < rope[2])

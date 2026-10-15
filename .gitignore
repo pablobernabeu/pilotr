@@ -36,3 +36,6 @@ r/pilotr/docs/
 
 # Generated cross-language parity dumps; the harness is source, its output is not
 tools/parity/out/
+
+# The HPC job's task logs, which SLURM writes to hpc/, where the job is submitted from
+hpc/slurm-*.out
