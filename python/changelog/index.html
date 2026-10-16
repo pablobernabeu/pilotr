@@ -1,0 +1,1926 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Simulate experimental and behavioural data from a portable design specification.">
+      
+      
+      
+        <link rel="canonical" href="https://pablobernabeu.github.io/pilotr/python/changelog/">
+      
+      
+        <link rel="prev" href="../api/">
+      
+      
+        <link rel="next" href="../about/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Changelog - pilotr (Python)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_markdown_exec_pyodide.css">
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="pilotr (Python)" class="md-header__button md-logo" aria-label="pilotr (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pilotr (Python)
+          </span>
+          <small class="mrd-version" title="Released version">0.3.0</small>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- App link (added: not part of upstream header.html) -->
+    <a href="https://pablobernabeu.github.io/pilotr/app/" title="Open the no-code app" class="md-header__button" data-md-component="app-link">
+      App
+    </a>
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pablobernabeu/pilotr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+    
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Get started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../families/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="pilotr (Python)" class="md-nav__button md-logo" aria-label="pilotr (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    pilotr (Python)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pablobernabeu/pilotr" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Get started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Response families
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../power/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power and design analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cross-language/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-language reproducibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specification format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-2026-08-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 - 2026-08-27
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.0 - 2026-08-27">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-2026-07-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.1 - 2026-07-23
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.1 - 2026-07-23">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-2026-08-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 - 2026-08-27
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.0 - 2026-08-27">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#021-2026-07-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.1 - 2026-07-23
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.1 - 2026-07-23">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<p>All notable changes to this project are documented here.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<h2 id="unreleased"><a href="https://github.com/pablobernabeu/pilotr/compare/v0.3.0...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Specification version 0.4 allocates several between factors on one unit jointly, so a 2 × 2
+  between-subjects design over 40 subjects has four cells of 10. The units fall into one block
+  per combination of levels, with the first-listed factor varying slowest, and nothing is drawn.
+  A specification using this must declare <code>"spec_version": "0.4"</code>, a version pilotr 0.3.0
+  refuses to read. One that does not still gets the refusal described under Changed, which names
+  both remedies. A 0.4 specification whose <code>vary_within</code> omits a unit of the design is refused.
+  <code>SPEC_VERSION</code> is now "0.4", the newest version this release reads. The R package's
+  <code>build_spec()</code> and <code>spec_from_model()</code> declare the lowest version a specification needs, so
+  the specifications the no-code app exports stay readable by pilotr 0.3.0 unless they use a 0.4
+  feature.</li>
+<li><code>counterbalance</code> on a within factor gives each subject one condition per item, rotating the
+  lists across subjects and items, as in a Latin-square design. Planning such a study with a
+  fully crossed specification doubled the observations per participant and overstated power.
+  Subject s meets item t in condition ((s − 1) + (t − 1)) mod C, where C counts the conditions,
+  or the combinations of levels when several factors are counterbalanced, and nothing is drawn.
+  The field belongs to specification version 0.4, needs an item unit and is refused with
+  <code>per_subject</code>. A warning, in the R twin's words, says when the lists are unequal, because the
+  subjects or the items are not a multiple of C. The condition stays a within factor, so
+  <code>power_mixed</code> analyses a counterbalanced design, as it does the two-list encoding, which stays
+  documented for releases that read no version above 0.3.</li>
+<li>The simulated data of a counterbalanced specification name each subject's list in a column
+  <code>list</code>, placed after <code>subject</code> and <code>item</code>. Subject s follows list ((s − 1) mod C) + 1, and
+  nothing is drawn for it, so a specification without a counterbalanced factor simulates as
+  before. Such a design keeps the name <code>list</code> for that column, and <code>validate_spec</code> refuses a
+  factor, predictor, grouping factor, contrast column or response of that name in it, in the R
+  twin's words.</li>
+<li>Every rate carries its Monte Carlo error. <code>power</code> and <code>power_mixed</code> gain <code>power_mcse</code>,
+  <code>power_lo</code> and <code>power_hi</code>, the standard error and 95% Wilson interval of power. Both also gain
+  <code>type_m_mcse</code>, the standard error of Type M, and a Wilson interval for Type S, <code>type_s_lo</code> and
+  <code>type_s_hi</code>, since the standard error of Type S is zero whenever no sign is wrong. Each
+  <code>power_curve</code> record gains the same keys and <code>type_s</code>, which it lacked. Type S and Type M rest
+  on the significant replicates alone, which are often a handful, yet they were reported without
+  any uncertainty. The values are computed as in the R twin, operation for operation, so the same
+  counts give the same doubles in both languages, and both test suites pin them. The power guide
+  draws the band around its curve from <code>power_lo</code> and <code>power_hi</code>, where it had computed a Wald
+  band by hand, which narrows to nothing where power reaches 0 or 1.</li>
+<li><code>power</code>, <code>power_curve</code> and <code>power_mixed</code> gain <code>alternative</code>, which plans the one-sided test of
+  a directional prediction with <code>"greater"</code> or <code>"less"</code>. Every earlier result was two-sided, and
+  the default, <code>"two.sided"</code>, leaves every number as it was. The values are spelt as in the R
+  twin, and scipy's <code>"two-sided"</code> is refused, so that a call means the same in both languages.
+  The one-sided p-value comes from the statistic behind the two-sided one, the t of
+  <code>scipy.stats.ttest_ind</code> or the Wald z of MixedLM. Type S and Type M are taken over the
+  replicates significant in the tested direction. <code>power</code> records the test in a new key,
+  <code>alternative</code>, and the <code>backend</code> of <code>power_mixed</code> names the direction. On the same replicates,
+  a one-sided test at alpha rejects exactly where the two-sided test at 2 alpha rejects with the
+  estimate in the tested direction. A two-sided result at 2 alpha from an earlier version
+  therefore gives the one-sided power at alpha, in the direction of the true effect, as
+  <code>power * (1 - type_s)</code>.</li>
+<li><code>power_mixed</code> fits the model the specification implies, as the R twin does. <code>model_formula</code>
+  and <code>model_data</code>, ports of the R functions, write that model in lme4's notation and build the
+  columns it reads. Every coefficient is a fixed effect, an interaction <code>"a:b"</code> entering as its
+  product column <code>a_b</code>, and every random intercept and slope the specification declares is a
+  variance component, those of an extra grouping factor such as a site included. Up to 0.3.0 the
+  model was <code>yv ~ cc</code> whatever the specification declared, with by-subject and by-item intercept
+  and slope components and a test of the first contrast of a single within factor, and any other
+  design was refused. A 2 × 2 within design raised <code>NotImplementedError</code>, and on
+  <code>reading_time_continuous</code> six of the seven coefficients, the three predictors and the two
+  by-subject slopes were left out. Both now run, and so does any design that declares a random
+  effect, with or without an item unit. <code>tools/parity/formula_cross.py</code> gives the ports the data
+  R simulated for every shipped example and parity case and requires R's formulas character for
+  character and R's contrast and product columns bit for bit. The parity job in CI runs it.
+  A replicate of <code>reading_time_continuous</code> takes about 7 s with NumPy held to one thread. The
+  random-effects design is held in sparse matrices from 100,000 entries, rows times random
+  coefficients, which made a replicate of the three largest crossed examples 1.4 to 4.5 times
+  quicker, and in dense ones below, where sparse ones were about five times slower.</li>
+<li><code>power_mixed</code> gains <code>focal</code>, which chooses the effects to test, as in the R twin. By default
+  it takes every coefficient, with the true value the specification gives it. A list of names
+  leaves the true values unknown, and a dict from names to numbers gives them. Each effect's
+  results sit under a new key, <code>effects</code>, one entry per focal effect with the twelve keys from
+  <code>power</code> to <code>type_m_mcse</code> that the result held for its one effect. A focal name that the model
+  lacks draws the R twin's warning, word for word.</li>
+<li><code>power_report</code> writes a sample-size justification in Markdown from a power result and,
+  optionally, a solved curve. The guides called the sample size from <code>target_n</code> the number a
+  preregistration quotes, but the justification behind it had to be assembled by hand. The report
+  gives the items Lakens (2022, <a href="https://doi.org/10.1525/collabra.33267">https://doi.org/10.1525/collabra.33267</a>, Table 4) asks for. It
+  states the primary analysis with its test, alpha and sidedness, and the desired power with the
+  solved sample size and its interval. Each focal effect follows with the justification given for
+  its size, and <code>null_result</code> gives the power when every focal effect is zero. The simulation is
+  accounted for as Morris, White and Crowther (2019, <a href="https://doi.org/10.1002/sim.8086">https://doi.org/10.1002/sim.8086</a>)
+  recommend, with the replicates, the fit counts and the Monte Carlo standard error and Wilson
+  interval of every rate, computed in the report from the counts. The report ends with the
+  software versions, the specification's seed and an MD5 checksum of the specification file's
+  bytes. A <code>power_mixed</code> result is read from <code>effects</code>, so
+  its deprecated keys are not touched. The R twin's <code>power_report()</code> writes the same text, byte
+  for byte, from the same counts, which <code>tools/parity/report_cross.py</code> checks in CI.</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>power_mixed</code> docstring and the power guide say that a preregistered simplification rule,
+  which moves to a simpler model whenever a fit is singular, is simulated only in the R package.
+  There, <code>power_mixed()</code> and <code>precision_design()</code> take a ladder of models and report the share of
+  the replicates analysed with each. <code>power_mixed</code> here analyses every replicate with its one
+  model.</li>
+<li><code>power_curve</code> gives each grid point its own replicates. Every point reused the specification's
+  seed, so neighbouring points shared their random numbers, while <code>solve_curve</code> treats them as
+  independent. Over 1,000 emulated curves a setting, its nominal 95% intervals covered the true
+  sample size in 88% of solves on a tight grid. Point j of a sweep over J sizes now takes
+  <code>replicate_seeds(seed, J)[j]</code>, the rule of the R twin's <code>sweep_spec()</code>, which brings that
+  figure to 96.5%, so every number <code>power_curve</code> produces changes. <code>seeds="shared"</code> keeps the
+  old behaviour. The coverage figures quoted for <code>solve_curve</code> come from a new calibration over
+  1,000 curves a setting, where the earlier 35 in 36 rested on 12 curves whose points shared
+  their seeds. Rerun with independent points, those 12 curves no longer favour the probit link
+  over the logit, and the documentation now says so.</li>
+<li>The home page gives the Zenodo concept DOI as a full link,
+  <a href="https://doi.org/10.5281/zenodo.21266313">https://doi.org/10.5281/zenodo.21266313</a>, in place of the Zenodo badge, and the About
+  page links every DOI the same way, so its reference line can be clicked. The BibTeX
+  entry's <code>url</code>, on the page and in <code>docs/pilotr.bib</code>, gives the PyPI page, so a style that
+  prints both fields no longer shows the DOI twice.</li>
+<li><code>power</code> refuses designs whose rows are correlated, with the R twin's message. It t-tested
+  every row as an independent observation and accepted any Gaussian design with a two-level
+  between factor, including designs crossed with items, designs with a within factor and
+  subjects nested in sites. Take 30 subjects crossed with 20 items, with by-subject and
+  residual standard deviations of 1 and a by-item one of 0.3. With no true effect, the row-wise
+  t-test was significant in 105 of 200 replicates, against 16 for a t-test of the subject means
+  on the same data. It now takes one row per subject and no clustering, and otherwise raises
+  <code>NotImplementedError</code> naming the item unit, within factor or grouping factor it found.
+  <code>power_curve</code> refuses the same designs.</li>
+<li>The replicates of <code>power</code>, <code>power_curve</code> and <code>power_mixed</code> skip validation, since the
+  specification is validated once before them. Each replicate used to validate it again.</li>
+<li><code>validate_spec</code> refuses a specification with two or more factors between the same unit unless
+  it declares specification version 0.4, which allocates such factors jointly. pilotr assigned
+  the levels of each between factor to blocks of units on its own, so two such factors fell into
+  the same or overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells
+  of 20, 0, 0 and 20, and the second effect and the interaction could not be estimated. The
+  refusal names the encoding that works in every version, one between factor whose levels are
+  the cells, and reads the same in the R twin.</li>
+<li>The crossed mixed-effects example on the power page states that every subject sees every item
+  in both conditions. It points a counterbalanced study, which has half the observations and
+  lower power, to the <code>counterbalance</code> field of specification version 0.4, which <code>power_mixed</code>
+  analyses. For earlier releases it points to the two-list encoding of the specification, which
+  <code>power_mixed</code> analyses as well.</li>
+<li>The specification page states how units are allocated to levels and clusters, and gives
+  worked encodings for a 2 × 2 between design, a two-list counterbalanced design and
+  randomisation within clusters. It also says that simulated data are complete, so expected
+  attrition is allowed for by recruiting N / (1 − p).</li>
+<li><code>power_mixed</code> fits only the random terms the specification declares, each as an independent
+  variance component, and warns once per call when the specification correlates a group's random
+  effects, naming the groups whose correlations the model leaves out. A design with random
+  intercepts alone is no longer fitted with slope components as well, so its results change. On
+  the 12 × 8 design of the power guide, which declares by-subject and by-item intercepts and
+  slopes, every number is as before. Its documentation states what the model fits and what it
+  leaves out, where the project README had put the two languages at capability parity.</li>
+<li><code>power_mixed</code> refuses a design without random effects with <code>NotImplementedError</code>, which
+  names <code>power</code> for the two-group design and the R twin's <code>lm()</code> and <code>glm()</code> fits for any
+  other. It used to refuse every design without an item unit. A contrast without a coefficient is
+  not in the model, as in the R twin, so a null effect is planned with a coefficient of 0, and a
+  specification without coefficients is refused in the R twin's words. Up to 0.3.0, <code>{}</code> tested
+  the contrast against a true effect of 0.</li>
+<li><code>n_returned</code> from <code>power_mixed</code> counts every replicate that returned a fit, and each effect's
+  power is taken over the fits that give that effect a finite estimate and p-value, as in the R
+  twin. A fit that left the tested contrast without a p-value used to count as no fit.</li>
+<li>For a <code>bernoulli</code>, <code>poisson</code>, <code>ordinal</code> or <code>beta</code> response, <code>power_mixed</code> withholds the
+  Type S of an interaction, as the R twin does. A bounded response can reverse the sign of a
+  difference of differences between the response scale, where the linear model estimates it, and
+  the link scale of its true value.</li>
+<li><code>n_converged</code> from <code>power_mixed</code> counts the fits that converged without a warning and without
+  a singular variance component, as in the R twin. It counted every fit that returned, which is
+  now <code>n_returned</code>. <code>n_attempted</code>, <code>n_singular</code> and <code>n_warning</code> are new, and power is still taken
+  over the returned fits. A fit is singular when a variance component's standard deviation is
+  below 1e-4 of the residual one, lme4's test. statsmodels' notice that a fit may be on the
+  boundary counts against no fit, since every fit on the log scale draws it. Its notice of a
+  Hessian that is not positive definite counts only against a fit that is not singular, since a
+  component at zero can draw it by itself. On the 12 × 8 design of the power guide, the five
+  counts equal those of the R twin's <code>power_mixed()</code> given the same model.</li>
+<li>The <code>power_mixed</code> backend names its test, a Wald z. With few subjects or items, a Wald z
+  rejects more readily than the R twin's Satterthwaite tests, so in small designs Python's power
+  tends to exceed R's on the same data: 6 of 12 replicates against 4 of 12 on the 12 × 8 design
+  of the power guide. With 8 subjects, 6 items, random intercepts alone and no true effect, it
+  rejected in 0.070 of 300 replicates (Monte Carlo standard error 0.015), where the R twin's
+  Satterthwaite test of the same model rejected in 0.057 on the same data.
+  <code>tools/calibration/wald_null_rate.py</code> measures both.</li>
+<li><code>power_mixed</code> fits <code>bernoulli</code>, <code>poisson</code>, <code>ordinal</code> and <code>beta</code> responses with a linear model
+  on the response scale. It now warns for them and withholds the mean estimate and Type M,
+  returning both as <code>nan</code>, since they compared that scale with a true value on the link scale. A
+  linear model of a 0/1 response estimates a difference in probability, which says nothing about
+  how far a logit-scale effect is exaggerated. Type S, which compares signs alone, and power are
+  kept. The warning reads as the R twin's, whose <code>power_mixed()</code> now fits <code>bernoulli</code> and
+  <code>poisson</code> responses with <code>lme4::glmer()</code> on their link scale.</li>
+<li>The power guide sets each response family against the model each <code>power_mixed</code> fits, and
+  against the R package's <code>precision_design()</code>.</li>
+<li>NumPy integers and floats, <code>pathlib</code> paths and pandas data frames are accepted wherever a
+  number, a path or a curve is, and <code>validate_spec</code> accepts a path, as in R. A NumPy integer was
+  refused as not a whole number, so <code>power_curve</code> refused a grid made with <code>np.arange</code>, and a
+  path object was refused as not a JSON object. <code>workers</code> takes any whole number, as in R, and
+  <code>solve_curve</code> reads a NumPy value of <code>n</code> as a replicate count, where it looked for a column of
+  that name. <code>power_curve</code> records <code>n_subject</code> as a Python int, so a curve swept over a NumPy
+  grid can be written as JSON.</li>
+<li>The cross-language guarantee is stated as it holds, in the README, the documentation site and
+  the specification. Python and R produce bit-identical data wherever they share a maths library,
+  as on Linux. On Windows they do not, and a value that passes through <code>exp()</code>, <code>log()</code> or
+  <code>pow()</code> can differ in its last bits. Measured there, about 1.4e-5 of normal draws differed,
+  since the tail branch of AS 241 calls <code>log()</code>, so Gaussian data are not exempt. Lognormal and
+  ex-Gaussian responses differed by one unit in the last place and unrounded Beta responses by up
+  to 35, and a discrete outcome can in principle move by a whole category. The guarantee used to
+  cover the Gaussian family everywhere and every family with <code>round</code> set, although <code>round</code> is
+  refused for the discrete families. Rounding has removed every continuous difference observed,
+  but it guarantees nothing. One Beta case can differ on Linux too. From R 4.6.0, R's <code>^</code>
+  computes a cube or a fourth power by repeated multiplication, where Python calls <code>pow()</code>. A
+  Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits on
+  any platform. Within one language, the data are identical on one platform, and across operating
+  systems on the same terms: on Windows, CPython's <code>exp()</code> departed from the correctly rounded
+  value for 0.48% of 700,000 arguments.</li>
+<li>The specification documents every sampling rule a third implementation needs, in a section of
+  pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
+  reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
+  the Poisson walk, the ordinal rule, the Marsaglia-Tsang Gamma sampler and the Beta ratio. It
+  corrects the Gamma sampler's draw consumption. A proposal draws a uniform only when its normal
+  gives a positive <code>v</code>, and a boosted variate draws its uniform after the Gamma(shape + 1)
+  variate. The schema refuses an unknown top-level field and a response parameter its family
+  does not use, requires each family's parameters, and accepts the single-value forms of
+  <code>vary_within</code> and <code>thresholds</code>, as <code>validate_spec</code> does in strict mode. The parity harness
+  checks that the schema accepts every specification of its battery that both twins accept.</li>
+<li>The <code>replicate_seeds</code> docstring gives the right reason why consecutive seeds correlate. Seeding
+  is affine in the seed, so the first draws of consecutive seeds step by a constant mod 1 and
+  correlate 0.95, and a longer warm-up changes only the step (Matsumoto et al., 2007,
+  <a href="https://doi.org/10.1145/1276927.1276928">https://doi.org/10.1145/1276927.1276928</a>). It said that consecutive replicates began a few
+  steps apart in one sequence.</li>
+<li>The <code>solve_curve</code> docstring says that when an effect varies from item to item, power at a
+  fixed number of items levels off below 1, however many subjects are added, as Westfall, Kenny
+  and Judd (2014) and Judd, Westfall and Kenny (2017) show. A curve over subjects that levels off
+  near the target can then be solved far from the true crossing, or as though it crossed when it
+  never does. The docstring points to curves over the number of items, one at each of a few
+  subject counts large enough to keep their own ceiling well above the target. The R twin's
+  <code>?solve_curve</code> says the same.</li>
+<li>The contributing guide names the checks in <code>tools/parity/</code> that CI runs on the cross-language
+  contract. It named <code>examples/parity_check.py</code>, which compares CSV files to a tolerance of 1e-6.
+  The guides of both no-code apps say that <code>power_mixed</code> fits with statsmodels. They said lme4.
+  The theme toggle on the website's landing and not-found pages, which lead to this package's
+  documentation, now works when the browser refuses the page any storage.</li>
+<li>The docstrings of <code>load_spec</code> and <code>simulate</code> say that a <code>validate</code> other than <code>True</code> or
+  <code>False</code>, <code>None</code> and <code>0</code> among them, validates leniently, as in the R twin. <code>load_spec</code> named
+  truthy values only, and <code>simulate</code> said nothing of it.</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The citation on the About page names the Python package version alone. It read "R and
+  Python package version", although the two packages are released separately and their
+  version numbers can differ. The BibTeX file the page offers for download says the same.</li>
+<li>The 0.3.0 entry carries the date the release reached PyPI, 2026-08-27.</li>
+<li><code>load_spec</code> reads a specification as R's jsonlite does. A one-element array where a single
+  value belongs, <code>[]</code> for an empty <code>coefficients</code>, <code>slopes</code> or <code>correlations</code> object (both as
+  <code>jsonlite::write_json()</code> writes them by default) and a JSON <code>null</code> in an optional field are
+  read as the value, the empty object and an absent field. Each previously raised or was
+  refused.</li>
+<li>A whole number written as a float, such as <code>"n": 64.0</code>, no longer raises <code>TypeError</code> in
+  <code>simulate</code>. The schema counts it as an integer and R simulates it.</li>
+<li><code>validate_spec</code> raises <code>ValueError</code> for every malformed shape, as documented. A list-valued
+  family raised <code>TypeError</code> and a string-valued <code>response</code> raised <code>AttributeError</code>.</li>
+<li><code>validate_spec</code> refuses <code>"item": null</code> among the units and a <code>random</code> of <code>0</code> or <code>false</code>, in
+  R's words. The first passed validation and then raised <code>TypeError</code> in <code>simulate</code>, and the
+  second was read as no random effects.</li>
+<li><code>load_spec</code> reads files as UTF-8 and accepts a byte-order mark, as R does. It used the locale
+  encoding, so on Windows the level "fácil" loaded as "fÃ¡cil" and "Łatwy" raised
+  <code>UnicodeDecodeError</code>.</li>
+<li><code>load_spec</code> refuses a repeated key within one object, and <code>validate_spec</code> a seed beyond
+  ±(2^53 − 1). Both used to give data that differed from R's.</li>
+<li><code>validate_spec</code> refuses specifications whose names collide. Each of these validated and then
+  moved an effect, rescaled a variance or overwrote a column without a word: two columns with one
+  name (a factor called <code>subject</code>, a response named like a factor), a contrast column defined by
+  two factors or named like a predictor, a unit, a grouping factor, another factor or the
+  response, an interaction whose analysis column <code>a_b</code> already exists, a level listed twice, a
+  correlation pairing a term with itself or giving one pair twice, a factor both between and
+  within a unit, and a <code>random.item</code> entry in a design without items, which was dropped. Where a
+  column was overwritten, <code>simulate</code> wrote a second column under the same name while R replaced
+  the first, so the twins exported different tables. Each refusal reads the same in the R twin.</li>
+<li><code>validate_spec</code> refuses a factor, predictor or extra grouping-factor name that is empty or made
+  only of spaces, and a response name made only of spaces (an empty one was already refused).
+  Such a name validated and then became a column with no visible name.</li>
+<li><code>power</code> reads a missing coefficient for the tested contrast as a true effect of 0, with Type S
+  and Type M undefined. It raised <code>KeyError</code>, as <code>power_mixed</code> did, which now tests the
+  coefficients the specification lists (see Added).</li>
+<li><code>power_mixed</code> analyses a <code>lognormal</code> response on the log scale, as it already did for
+  <code>shifted_lognormal</code> and as the R twin does. It fitted the raw values, so the mean estimate came
+  out in the response's units. Take 12 subjects crossed with 8 items and a true effect of 0.1 on
+  the log scale. Six replicates gave a mean estimate of 53.1 and a Type M of 553, where the log
+  scale gives 0.136 and 1.36, as R does.</li>
+<li><code>power_mixed</code> returns no estimate for a replicate whose response has no logarithm, as the R
+  twin does, and <code>n_returned</code> leaves that replicate out. Such a response is a
+  <code>shifted_lognormal</code> value rounded down to the shift, or now a <code>lognormal</code> value rounded to 0.
+  The shifted family raised <code>ValueError: math domain error</code>, which ended the whole call.</li>
+<li><code>power_mixed</code> fits with Powell's method followed by L-BFGS. statsmodels' default chain of
+  optimisers stopped short of the REML optimum in most crossed fits, which the documentation had
+  described as statsmodels overstating random-slope variance. Over the first 12 replicates of the
+  crossed reaction-time example, the standard error of the effect averaged 0.0278 against lme4's
+  0.0190, and 2 replicates were significant against lme4's 6. The standard errors now match those
+  of lme4's uncorrelated model to four decimal places in 11 of the 12, and the same 6 replicates
+  are significant. A replicate whose Powell fit raises is fitted again with the default chain
+  and counts as a fit with a warning.</li>
+<li>A rounded response is rounded by R's algorithm, so the twins agree at decimal ties. CPython's
+  <code>round()</code> rounds the exact binary value, while R takes whichever of the two decimal candidates
+  is nearer in double precision, so <code>round(1.05, 1)</code> gave 1.1 in Python and 1 in R. The two
+  disagreed on 166 of 5,000 values probed within a few units in the last place of a tie and on
+  none of 1,000 random values. The shipped examples simulate the same data as before. With
+  <code>validate=False</code>, a <code>round</code> that is not a whole number, which validation refuses, counts as
+  <code>floor(round + 0.5)</code> decimal places, as in R. It raised <code>TypeError</code>.</li>
+<li>A Poisson mean above about 708 is refused. The sampler's starting value <code>exp(-mean)</code> is
+  subnormal there, and from a mean of about 738 the counts were biased or intermittently refused,
+  while the specification promised service up to 746. Over 40,000 draws, a mean of 744 drew
+  counts with a mean of 733.5 and a variance of 407, and a mean of 742 was refused for 4% of
+  them. The refusal reads as the R twin's and asks for a mean of at most 708.</li>
+<li>The Poisson sampler evaluates each term of its recurrence as <code>(p * lam) / k</code>, as R does. The
+  other bracketing, <code>p * (lam / k)</code>, lands on a different double for most cumulative sums, and a
+  uniform falling between the two gave a different count. At a mean of 3.7, a uniform of
+  0.4941532441504185 drew 4 here and 3 in R. In 300,000 draws from the generator, at means from
+  0.5 to 100, no count differed.</li>
+<li><code>Dataset.to_csv</code> writes UTF-8 and quotes a field that holds a comma, a double quote or a
+  newline. It wrote the locale encoding, so on Windows a Polish label raised
+  <code>UnicodeEncodeError</code> and a Spanish one came out in bytes that no UTF-8 reader accepts. A comma
+  in a label or a column name shifted every later field of its row. Lines still end in LF on
+  every platform, and a data set without such characters is written byte for byte as before.</li>
+<li>A NumPy float64 in a specification no longer reaches the simulated data as a NumPy scalar,
+  which <code>to_csv</code> wrote as <code>np.float64(...)</code> under NumPy 2. Every number in the specification
+  becomes a Python int or float before anything is drawn, on a copy of the caller's.</li>
+<li>A specification written by the R twin's <code>spec_json()</code> carries exactly the numbers R held, so
+  <code>load_spec</code> reads the same doubles. The R writer checked its shorter forms with a reader that
+  rounds twice on R builds with long doubles, and about one number in 5,000 to 7,000 was written
+  one unit in the last place away, which <code>json</code> then read as written. The Python package is
+  unchanged. A fixture written by R and a parity check over 20,000 numbers now hold the two
+  packages to the same reading.</li>
+<li>Beta responses stay inside (0, 1). Near a ceiling, <code>x / (x + y)</code> rounds to exactly 1 in double
+  precision (161 of 4,000 rows at an intercept of 3 and <code>phi</code> 2), and rounding sent low
+  proportions to exactly 0 (17% of the rows at three decimals in one realistic design). brms's
+  <code>Beta()</code> refuses either value. An exact 1 or 0 now becomes the nearest double inside the
+  interval, a rounded value at 0 or 1 becomes the nearest value inside it at that many decimals,
+  and <code>validate_spec</code> refuses <code>round</code> 0 for Beta, as the R twin does. No other value changes, so
+  the shipped examples simulate the same data as before. The sampler is
+  <code>pilotr.core.beta_response(rng, eta, phi)</code>, which replaces <code>beta_draw(rng, a, b)</code>, a function
+  the documented API never included.</li>
+<li>Extreme linear predictors are refused with the R twin's message. <code>simulate</code> raised a bare
+  <code>OverflowError</code> for a lognormal or shifted lognormal response whose <code>exp(eta + sigma * z)</code>
+  overflowed, and <code>ZeroDivisionError</code> for a Beta response whose shape parameter was zero or whose
+  two Gamma variates both underflowed. R returned <code>Inf</code>, 0, 1 or <code>NaN</code> in the same cases.</li>
+<li>The install commands in the README and the getting-started guide carry no trailing comments,
+  so they paste into any shell. At an interactive prompt, zsh, the default shell on macOS, reads
+  <code>#</code> as the start of a comment only when told to, so <code>pip install pilotr  # core engine</code> handed
+  the <code>#</code> and the words after it to pip, which stopped with "Invalid requirement: '#'". The
+  blocks now hold the bare commands, and the prose before them says what each extra adds. The
+  extras were already in double quotes, which keep zsh from reading the brackets as a filename
+  pattern. A test fails on a <code>pip install</code> line in a shell block that carries a <code>#</code> comment, and
+  on an extra outside double quotes, in the README, the guides, the examples and the sources. In
+  a checkout, it also reads the repository's README and both copies of the contributing guide.</li>
+<li><code>power</code> refuses a design with fewer than two subjects at a level of the between factor, so
+  fewer than 4 in all, in the R twin's words, and <code>power_curve</code> refuses such a grid point. With
+  one subject at each level, <code>power</code> returned a power of 0, since scipy answers a group without
+  variance with a nan p-value and a warning, while the R twin stopped in <code>t.test()</code>. With one
+  subject in all, it raised <code>StatisticsError</code>. The error is a <code>ValueError</code>.</li>
+</ul>
+<h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A within factor whose <code>vary_within</code> omits a unit of the design now warns, in strict and lenient
+  validation alike. pilotr has always crossed a within factor with every unit, so the list
+  changed nothing. From spec version 0.4, such a list is refused.</li>
+<li>The top-level keys of the result of <code>power_mixed</code> that held its one effect's quantities,
+  <code>power</code> to <code>type_m_mcse</code>, are kept for this release beside <code>effects</code> and will be removed in
+  the next. They hold the entry of the first contrast of a single within factor, as before, and
+  reading one raises a <code>FutureWarning</code> that names its place in <code>effects</code>.</li>
+</ul>
+<h2 id="030-2026-08-27"><a href="https://github.com/pablobernabeu/pilotr/releases/tag/v0.3.0">0.3.0</a> - 2026-08-27<a class="headerlink" href="#030-2026-08-27" title="Permanent link">&para;</a></h2>
+<p>Two of the changes below alter numbers that earlier versions produced. Both are
+deliberate corrections, and neither can be made without moving the output, so
+install 0.2.1 to reproduce output from 0.2.1.</p>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>validate_spec()</code> checks a design specification against the portable schema and
+  against the cross-field rules the schema cannot express, and <code>load_spec()</code> and
+  <code>simulate()</code> now call it by default. A strict draft-07 schema had shipped since
+  0.1 with no code path consulting it, and several ways of getting a
+  specification wrong produced plausible data and no error at all. A mistyped
+  coefficient key resolved to no column and so silently set that effect to zero,
+  which generates exactly the data of a null design and reports success. A
+  response parameter left over from another family was ignored. Both are now
+  refused. Both functions take a <code>validate</code> argument, so a replicate loop can
+  validate once and then skip the check.</li>
+<li><code>SPEC_VERSION</code>, and the <code>spec_version</code> field it negotiates. A specification
+  with no such field is a 0.2 specification. One that uses a 0.3 feature has to
+  declare 0.3, because a 0.2 implementation reads it differently and generates
+  different data without complaint, and one declaring a version newer than this
+  implementation understands is refused outright.</li>
+<li><code>replicate_seeds()</code> is exported, so a hand-written loop or a cluster array task
+  can seed its replicates by the same rule the power functions use.</li>
+<li>The <code>exgaussian</code> response family, the registered model family for
+  reaction-time work, taking <code>sigma</code> and <code>beta</code>. It is written in brms's
+  parameterisation, in which <code>mu</code> is the mean, so a specification and the model
+  fitted to it agree on what the intercept means.</li>
+<li>A predictor can now vary by <code>"observation"</code>, drawing a fresh value for every
+  row, for a quantity that varies trial by trial.</li>
+<li>A predictor can be drawn from a uniform distribution through <code>dist</code> with <code>min</code>
+  and <code>max</code>. A uniform costs the same single draw as a normal, so switching
+  between them does not move the random stream.</li>
+<li>
+<p>A predictor can carry a <code>reliability</code>, which simulates imperfect measurement.
+  The latent value drives the linear predictor and any random slope keyed on the
+  predictor, while the contaminated observed value is what appears in the
+  returned data, which is what an analyst would actually have measured.</p>
+</li>
+<li>
+<p><code>solve_curve</code> and <code>target_n</code> solve a simulated design curve for the value that meets a
+  target. The package computed the whole curve and then handed back the last and most
+  consequential step, the number that goes into a preregistration, at replicate counts
+  where neighbouring points are not significantly different. The documentation drew a dashed
+  line at 0.80 and left the reader to judge the crossing by eye. <code>target_n</code> now takes the
+  records <code>power_curve</code> already returns and reports the sample size at which power reaches
+  the target, with a confidence interval on it, rounded up to whole subjects. <code>solve_curve</code>
+  is the general form and reads a curve on any axis through the same column names.</p>
+</li>
+</ul>
+<p>The fit is a binomial probit regression of the decision rate against the swept value,
+  weighted by the replicates behind each point and inverted by the delta method that R's
+  <code>MASS::dose.p</code> applies to a fitted <code>glm</code>. The probit follows from the design itself:
+  under the normal approximation to a two-group comparison the probit of power is linear
+  in the square root of the sample size. Checked against R's <code>stats::power.t.test</code> over 36
+  combinations of effect size, target power and grid shape, at 400 replicates a point, the
+  solved sample size sat within 2.9% of the analytic answer on average and 6.9% at worst,
+  against 3.4% and 8.9% for a logit fitted the same way.
+  <code>tools/calibration/solve_curve_calibration.R</code> runs that comparison and writes every
+  figure quoted for it to a file beside itself. Where the two-parameter model does not
+  describe the curve, the interval is widened by the heterogeneity factor of probit
+  analysis, reported as <code>dispersion</code>.</p>
+<p>Nothing extrapolates. A curve that does not reach the target within the sizes it swept is
+  refused, with the range it did cover, and so is a fit that solves past the end of the
+  sweep, a curve with no trend to invert, and a slope that cannot be told from zero. Every
+  refusal message is character-for-character identical with the R twin's, checked by
+  <code>tools/parity/solve_cross.py</code>.</p>
+<ul>
+<li>
+<p><code>power_curve</code> reports the replicate counts behind each point. Its records gain
+  <code>n_sims</code> and <code>n_significant</code> alongside <code>n_subject</code>, <code>power</code> and <code>type_m</code>. A power estimate
+  over 1000 replicates should weigh more in a solve than one over 50, and the count is what
+  says which it is. Without it a curve could not be handed to <code>solve_curve</code> at all.</p>
+</li>
+<li>
+<p>The packaged example specifications are now tested against the repository's own copies.
+  <code>spec/examples/*.json</code> is canonical and both packages carry a mirror so an
+  installed copy can reach it, but nothing enforced the mirror. The existing test
+  could not: a stale packaged copy still loads and simulates perfectly well, it
+  simply describes a different design from the one the repository documents. The
+  new test compares the bytes, and is twinned with <code>test-examples.R</code>.</p>
+</li>
+<li>CI now tests the built distribution as well as the checkout. The matrix gains
+  Python 3.14. A new job installs the built wheel into a bare environment outside the
+  repository and calls <code>pilotr_example()</code> there, then resolves and parses one
+  specification: that is the only check that can catch the example mirror going
+  missing from the distribution, since an editable install finds the repository
+  copy regardless. A second new job installs the declared minimum dependency
+  versions of the extras. A weekly schedule runs the suite when nobody has
+  pushed, since the workflow's paths filters mean a quiet month otherwise sees no
+  run at all.</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The power functions no longer seed replicate <code>i</code> with <code>seed + (i - 1)</code>.
+  Consecutive seeds are not independent streams in this generator, and the
+  measured consequence was severe: the first draw of replicate <code>i</code> correlated
+  0.95 with the first draw of replicate <code>i + 1</code>. Seeds now come from the shared
+  generator through <code>replicate_seeds()</code>, which brings that correlation to -0.02.
+  Every number <code>power()</code>, <code>power_curve()</code> and <code>power_mixed()</code> produce is
+  therefore different from 0.2.1, and the first replicate no longer uses the
+  specification's own seed.</li>
+<li>A random slope keyed on an interaction, such as <code>"z_cosine:z_ISI"</code>, now reaches
+  the data. It was accepted, sized into the covariance and drawn from the random
+  stream, and then looked up as though it were a plain column, which returned
+  nothing, so it was silently discarded. Any design that used one was
+  anti-conservative and its data have changed.</li>
+<li>The linear predictor is accumulated as an explicit left fold in the order set
+  out in <code>spec/SPEC.md</code>. Floating-point addition is not associative, and R folded
+  the terms one at a time while Python summed them and added the total, so the
+  two disagreed on 63.8% of rows in a matched reproduction over 200,000 rows.</li>
+<li>No built-in summation is used anywhere in the generative core. CPython's <code>sum()</code>
+  has applied Neumaier compensation to floats since 3.12 and base R's <code>sum()</code>
+  accumulates in 80-bit long double. Both are more accurate than a plain double
+  fold, in different ways, so an inner product of three terms or more could land
+  on different doubles in the two languages. Every inner product is now an
+  explicit fold.</li>
+<li>The cube in the Gamma sampler is written as two multiplications rather than
+  <code>** 3</code>. Python calls the library <code>pow()</code> while R special-cases small integer
+  exponents, and over 200,000 draws in the sampler's range the two disagreed on a
+  third of inputs by up to 6 ulp. That value decides a rejection step, so it also
+  changed how many draws were consumed, which accounted for every difference in
+  the <code>beta_proportion</code> example.</li>
+<li>
+<p>The random-effect covariance is bracketed as <code>(sd_i · sd_j) · r_ij</code>, matching
+  R. Multiplication is commutative but not associative in floating point, and the
+  difference propagated through the Cholesky factor into every random effect
+  drawn.</p>
+</li>
+<li>
+<p>The Bayesian design-analysis record carries the rule that produced it, namely the
+  decision thresholds, the convergence gate, a fingerprint of the specification and the
+  pilotr version, and the aggregator refuses to pool replicates that disagree on any of
+  them. Two array runs with different ROPEs previously aggregated into one table with
+  nothing to tell them apart.</p>
+</li>
+<li>The parity harness anchors only the IEEE-754-exact cases. The golden anchor's
+  criterion was "zero ulp allowance", which admitted cases whose bytes pass through
+  <code>exp()</code>, <code>log()</code> or <code>pow()</code> whenever the platforms measured so far happened to agree
+  on them. <code>tolerance.json</code> now classifies those cases as transcendental explicitly:
+  they stay gated by the cross-language comparison, at zero ulp unless an allowance is
+  recorded, and <code>golden.json</code> pins only the Gaussian cases. The validator cross-check
+  (<code>tools/parity/validate_cross.py</code>) also runs in CI now, and its default <code>Rscript</code> is
+  whichever one is on <code>PATH</code>, where it used to be a path on the author's machine.</li>
+<li>The parity contract now has a third gate, at a relative tolerance where the other two
+  work in ulps. <code>solve_curve</code> is an iterative fit, and it calls <code>exp</code> and the normal
+  distribution function at every step, so a golden hash would pin one platform's maths
+  library exactly as <code>tolerance.json</code> says such cases must not be. It is kept out of
+  <code>golden.json</code> and out of the dump harness, and gated by <code>tools/parity/solve_cross.py</code>,
+  which puts fixed curves through both engines and compares the solved value, its
+  interval and the text of every refusal. The allowance is 1e-9 relative, against a largest
+  measured disagreement of 5.0e-15.</li>
+</ul>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A random-effect covariance that is not positive definite is now an error naming
+  the grouping factor and the column at which the factorisation failed. The
+  failing pivot was previously clamped at zero and the result returned in
+  silence, which produced random effects whose standard deviations were several
+  times those requested.</li>
+<li>A correlation naming a random-effect term that does not exist is reported
+  against the entry the user wrote, where it used to fail as a lookup error deep
+  inside the covariance code.</li>
+<li>
+<p><code>varies_by</code> is validated against the three unit names that exist. Anything
+  other than <code>"subject"</code> was previously read as item-level, so a predictor
+  declared to vary by <code>"trial"</code> was silently given one value per item.</p>
+</li>
+<li>
+<p>A Poisson mean beyond the sampler's reach was returned as the iteration cap. The
+  inverse-CDF walk starts from <code>exp(-mean)</code>, which underflows to exactly zero once the
+  mean passes about 746 (a poisson intercept of 7 already implies a mean of exp(7),
+  about 1097), after which every simulated count came back as 1000000 while reporting
+  success. Both engines now refuse such a mean, naming <code>exp(eta)</code> and the offending
+  value, with message text character-for-character identical across the twins. A linear
+  predictor large enough to overflow <code>math.exp</code> itself folds into the same refusal, so it
+  never reaches the caller as an <code>OverflowError</code>. Feasible means are untouched and the
+  parity dumps are unchanged.</p>
+</li>
+<li>A true effect of exactly zero broke both engines, and the package recommends that
+  input. <code>design_conditions()</code> deliberately produces a null condition so a run can show
+  how often it declares something when there is nothing to find. Feeding it through
+  <code>power()</code> raised <code>ZeroDivisionError</code> in Python and returned <code>Inf</code> in R, with Type S
+  quietly degenerating to "the estimate is positive". Type S and Type M are now
+  undefined when the true effect is zero or unknown, in both engines, which is the guard
+  the mixed-effects path already carried, applied to the other three sites.</li>
+<li>Four small twin divergences are closed. A non-whole seed now truncates identically in
+  both engines, a whole <code>spec_version</code> is read the same however it was written, a
+  non-object unit is now reported as such, where R used to crash with a base error, and
+  <code>replicate_seeds()</code> is annotated as returning integers. Message text is
+  character-for-character identical across the two engines in each case.</li>
+</ul>
+<h2 id="021-2026-07-23"><a href="https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.1">0.2.1</a> - 2026-07-23<a class="headerlink" href="#021-2026-07-23" title="Permanent link">&para;</a></h2>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The guides load a bundled design specification through <code>pilotr_example()</code>. The
+  path relative to the repository that they used before resolved only inside a
+  checkout, so a reader who had installed pilotr and copied the line met a
+  missing-file error.</li>
+</ul>
+<h2 id="020-2026-07-15"><a href="https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.0">0.2.0</a> - 2026-07-15<a class="headerlink" href="#020-2026-07-15" title="Permanent link">&para;</a></h2>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>pilotr_example()</code> lists the design specifications shipped with the package,
+  one per design family, and returns the path to each for <code>load_spec()</code>. The
+  eight JSON files now travel inside the wheel, so the <em>Worked examples</em> page and
+  any installed copy can reach them. This matches the R twin's <code>pilotr_example()</code>.</li>
+</ul>
+<h2 id="010-2026-07-10"><a href="https://github.com/pablobernabeu/pilotr/releases/tag/v0.1.0">0.1.0</a> - 2026-07-10<a class="headerlink" href="#010-2026-07-10" title="Permanent link">&para;</a></h2>
+<p>The first public version of the Python package. It simulates experimental and
+behavioural data from a portable JSON design specification, producing output that
+is bit-identical to the R package of the same name given the same specification
+and seed.</p>
+<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>simulate</code> generates a dataset from a design specification supplied as a plain
+  dictionary or a JSON file, with <code>load_spec</code> reading a specification authored
+  elsewhere, such as one downloaded from the no-code app. A <code>per_subject</code> value
+  below 1 or above the number of items is rejected with a clear <code>ValueError</code>, and
+  the R package raises on the same inputs.</li>
+<li>Response families for Gaussian outcomes, reaction times, accuracy, counts,
+  ordinal responses and Beta-distributed proportions.</li>
+<li>Power and design analysis through <code>power</code>, <code>power_curve</code> and <code>power_mixed</code>,
+  with <code>scipy</code> and <code>statsmodels</code> supplied as optional extras so the generative
+  core stays dependency-free. A specification without an item unit is rejected
+  by <code>power_mixed</code> with a clear <code>ValueError</code> rather than yielding <code>nan</code> power.</li>
+<li>A cross-language random-number contract that reproduces the R package's data to
+  full floating-point precision. Every Monte Carlo replicate seeds the shared RNG
+  as <code>seed + (replicate - 1)</code>, the same indexed-seed rule as the R package across
+  all analyses.</li>
+<li><code>power</code>, <code>power_mixed</code> and <code>power_curve</code> take a <code>workers</code> argument that spreads
+  the Monte Carlo replicates across local processes with
+  <code>concurrent.futures.ProcessPoolExecutor</code>. Because every replicate seeds the
+  shared RNG from its own index, any worker count returns results identical to a
+  serial run, and <code>power_curve</code> starts one process pool and reuses it across the
+  whole sweep.</li>
+<li>A documentation site whose guides execute their examples at build time, so the
+  tables and figures shown are real <code>pilotr</code> output.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../api/" class="md-footer__link md-footer__link--prev" aria-label="Previous: API reference">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                API reference
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../about/" class="md-footer__link md-footer__link--next" aria-label="Next: About">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                About
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <span class="mrd-footer-badges"> <a href="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml"><img src="https://github.com/pablobernabeu/pilotr/actions/workflows/python-tests.yml/badge.svg" alt="python-tests"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a> </span> Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a> · Released under the <a href="https://pablobernabeu.github.io/pilotr/python/licence/">MIT licence</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.3.0"}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../assets/_markdown_exec_pyodide.js"></script>
+      
+    
+  </body>
+</html>
