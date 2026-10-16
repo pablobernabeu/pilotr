@@ -1026,8 +1026,6 @@ expanded. *Journal of the Royal Society Interface, 14*(134), 20170213.
 
 # pilotr 0.2.1
 
-Released 2026-07-23.
-
 ## Documentation
 
 * A package-level help topic, `?pilotr`, introduces the workflow and groups
@@ -1046,8 +1044,6 @@ Released 2026-07-23.
   reference pages.
 
 # pilotr 0.2.0
-
-Released 2026-07-15.
 
 ## Design specifications
 
