@@ -353,7 +353,8 @@ The R package's reference gives the DOI that CRAN assigned to it on publication,
 R package across its versions:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
-> specification* [R package]. <https://doi.org/10.32614/CRAN.package.pilotr>
+> specification* [R package]. Comprehensive R Archive Network (CRAN).
+> <https://doi.org/10.32614/CRAN.package.pilotr>
 
 The Python package's reference gives the concept DOI of the Zenodo archive, which holds every
 GitHub release of both packages, since PyPI assigns no DOI:

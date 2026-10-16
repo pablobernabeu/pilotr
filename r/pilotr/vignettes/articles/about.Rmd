@@ -9,7 +9,7 @@ If you use pilotr in published work, please cite it.
 ```{r citation, echo = FALSE, results = "asis"}
 ver <- as.character(utils::packageVersion("pilotr"))
 cat(sprintf(
-"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R package version %s). <https://doi.org/10.32614/CRAN.package.pilotr>\n",
+"> Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design specification* (R package version %s). Comprehensive R Archive Network (CRAN). <https://doi.org/10.32614/CRAN.package.pilotr>\n",
   ver))
 ```
 
@@ -27,6 +27,7 @@ bib <- paste(
   "  title  = {{pilotr}: Simulate experimental and behavioural data from a portable design specification},",
   "  author = {Pablo Bernabeu},",
   "  year   = {2026},",
+  "  publisher = {Comprehensive R Archive Network (CRAN)},",
   sprintf("  note   = {R package version %s},", ver),
   "  doi    = {10.32614/CRAN.package.pilotr},",
   "  url    = {https://CRAN.R-project.org/package=pilotr},",
