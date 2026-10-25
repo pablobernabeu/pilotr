@@ -1,10 +1,8 @@
 # A single sweep over any field of a design specification.
 #
-# power_curve_mixed() and precision_curve() were the same six lines: copy the specification, set
-# units$subject$n, call the analysis, bind the rows. Sample size was therefore the only axis a user
-# could vary without writing the loop themselves, and effect size, which is the axis a design
-# analysis usually needs next, was not reachable. One sweep over an addressed field covers both, and
-# the two curve functions become thin wrappers that keep working.
+# One sweep over an addressed field varies any value of a specification: the sample size, or the
+# effect size, which is the axis a design analysis usually needs next. power_curve_mixed() and
+# precision_curve() are thin wrappers that sweep units$subject$n.
 
 # Set a nested field, addressed either as "units$subject$n" or as c("units", "subject", "n").
 .set_path <- function(spec, path, value) {
@@ -64,9 +62,9 @@
 #' `values`, so reordering the values, or inserting one, changes the results at every point that
 #' moves. A sweep over `seed` itself sets each point's seed to the value swept.
 #'
-#' `.seeds = "shared"` gives every point the specification's own seed, as every sweep did up to
-#' 0.3.1. The points then share their noise, so the curve looks smoother than its Monte Carlo
-#' error allows and an interval fitted to it is too narrow. Over 1,000 emulated curves for each
+#' `.seeds = "shared"` gives every point the specification's own seed. The points then share
+#' their noise, so the curve looks smoother than its Monte Carlo error allows and an interval
+#' fitted to it is too narrow. Over 1,000 emulated curves for each
 #' of twelve settings on a tight grid of sample sizes, the nominal 95% interval of [solve_curve()]
 #' covered the true size in 87.8% of solves with shared seeds and in 96.5% with independent ones.
 #' On an effect-size axis, where the design and so every draw stay the same from point to point,
@@ -97,7 +95,7 @@
 #'   `path`.
 #' @param .seeds How the grid points are seeded. `"independent"`, the default, gives point `i` of
 #'   `J` the seed `replicate_seeds(spec$seed, J)[i]`, and `"shared"` gives every point the
-#'   specification's own seed, as sweeps did up to 0.3.1 (see Details).
+#'   specification's own seed (see Details).
 #' @return A data frame binding the results, with the swept value as the leading column, or the
 #'   grid index when the values are lists. [solve_curve()] reads that leading column by default,
 #'   so a sweep over single values goes straight into a solve.
@@ -115,7 +113,7 @@
 #'   # Sample size, the same sweep power_curve_mixed() performs.
 #'   sweep_spec(spec, "units$subject$n", c(12, 18), power_mixed, n_sims = 8)
 #'
-#'   # Effect size, which the old curve functions could not reach.
+#'   # Effect size, which power_curve_mixed() and precision_curve() do not sweep.
 #'   sweep_spec(spec, "fixed$coefficients",
 #'              design_conditions(effect = c(0.03, 0.06)), power_mixed, n_sims = 8)
 #' }
@@ -143,11 +141,12 @@ sweep_spec <- function(spec, path, values, fn, ..., .name = NULL,
 
   scalar_values <- !is.list(values)
   # One seed per grid point, drawn from the specification's seed by the rule its replicates follow.
-  # Every point used to keep the specification's seed, so replicate i drew the same numbers at
-  # every point. The points of a curve then shared their noise, while solve_curve() fits them as
-  # independent binomial counts, and its 95% intervals covered the true sample size in 88% of
-  # solves on a tight grid. replicate_seeds() draws its seeds in turn, so the first J of a longer
-  # sweep are the J seeds of a shorter one, and appending points leaves the earlier ones alone.
+  # With `.seeds = "shared"`, every point keeps the specification's seed, so replicate i draws the
+  # same numbers at every point and the points of a curve share their noise, while solve_curve()
+  # fits them as independent binomial counts: its 95% intervals then covered the true sample size
+  # in 88% of solves on a tight grid. replicate_seeds() draws its seeds in turn, so the first J of
+  # a longer sweep are the J seeds of a shorter one, and appending points leaves the earlier ones
+  # alone.
   grid_seeds <- if (.seeds == "independent") replicate_seeds(spec[["seed"]], length(values))
   parts <- lapply(seq_along(values), function(i) {
     value <- if (is.list(values)) values[[i]] else values[i]

@@ -120,6 +120,8 @@
 #' column included. The coefficient's prior is then `normal(0, s * sd_y / sd_x)`, where `s` is
 #' `prior_scale` for a main effect and `interaction_scale` for an interaction, and the
 #' random-effect standard deviations take a half-normal prior with standard deviation `sd_y`.
+#' A coefficient whose column does not vary in the design cannot be told apart from the
+#' intercept. For these families, it draws a warning, and its prior is scaled as if `sd_x` were 1.
 #' For `bernoulli`, `poisson`, `ordinal` and `beta`, the coefficients are on the logit or log
 #' scale, which does not depend on the response's units. A coefficient's prior is then
 #' `normal(0, s)` per unit of its column, and the random-effect standard deviations take
@@ -156,10 +158,12 @@
 #' @param interaction_scale The same for interaction terms. Defaults to half of `prior_scale`.
 #' @references Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
 #'   American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}
-#' @return An object of class `pilotr_bridge`: a list with elements `formula`, `family`,
-#'   `priors`, and `code`, the last being a ready-to-fit `brms` model. The object is returned
-#'   visibly, and [print.pilotr_bridge()] writes `code` to the console, so a bare call shows
-#'   the model while an assignment stays silent.
+#' @return An object of class `pilotr_bridge`, a list whose four elements are text. `formula` is
+#'   the model formula, and `family` the brms family call, such as `"shifted_lognormal()"`.
+#'   `priors` holds the `prior()` calls, one string each, and `code` the lines that load brms and
+#'   fit the model with `brm()`, ready to copy into a script once `your_data` names the data. The
+#'   object is returned visibly, and [print.pilotr_bridge()] writes `code` to the console, so a
+#'   bare call shows the model while an assignment stays silent.
 #' @seealso [print.pilotr_bridge()] for the display, and [model_formula()] for the frequentist
 #'   counterpart of the formula.
 #' @examples

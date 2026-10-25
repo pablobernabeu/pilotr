@@ -1,8 +1,9 @@
 # Specification validation and version negotiation.
 #
-# load_spec() was a bare jsonlite::fromJSON call: no validation and no version check. A strict
-# draft-07 schema has shipped at spec/design.schema.json since 0.1, and no code path consulted
-# it, so a specification with a misspelled field loaded silently and kept the misspelling.
+# By default, load_spec() and simulate_design() pass a specification through validate_spec(),
+# which enforces the rules spec/design.schema.json states and the rules that relate one value to
+# another. Without it, a specification with a misspelled field would load silently and keep the
+# misspelling.
 #
 # That matters more than a typo usually would, because several of the ways a specification can
 # be wrong produce plausible data and no error at all:
@@ -10,15 +11,13 @@
 #   * A mistyped coefficient key resolves to no column, so that effect is silently set to zero.
 #     A spec whose focal effect is spelled "cnod" for "cond" generates exactly the data of
 #     a null design, and reports success.
-#   * varies_by took anything other than "subject" as item-level, so a per-trial predictor was
-#     silently given one value per item.
 #   * A response parameter belonging to another family is silently ignored.
 #
-# It also matters for version negotiation. Once 0.3 features exist, a 0.3 specification opened
-# by a 0.2 implementation, an un-upgraded Python twin, or a cached browser build produces
-# different and wrong data while reporting success. A 0.2 implementation has no version check
-# and cannot be fixed retrospectively, but a specification that uses a 0.3 feature can be made
-# to say so, and every implementation from 0.3 onwards refuses what it does not understand.
+# It also matters for version negotiation. A 0.3 specification opened by a 0.2 implementation,
+# an un-upgraded Python twin, or a cached browser build produces different and wrong data while
+# reporting success. A 0.2 implementation has no version check and cannot be fixed
+# retrospectively, but a specification that uses a 0.3 feature can be made to say so, and every
+# implementation from 0.3 onwards refuses what it does not understand.
 
 # The newest specification version this implementation understands. What it writes declares the
 # lowest version that reads it (.required_spec_version()), so that a specification needing nothing
@@ -29,8 +28,8 @@
 # implementation, so it has to declare 0.3 or later.
 #
 # Only well-formed parts are inspected. This scan runs before the per-field checks, so a
-# malformed `response`, `predictors` or `random` value reached it first and stopped with a base
-# error such as "$ operator is invalid for atomic vectors"; skipping it here leaves the field's
+# malformed `response`, `predictors` or `random` value reaches it first, and inspecting it would
+# stop with a base error such as "subscript out of bounds". Skipping it here leaves the field's
 # own check to report it in the validator's words.
 .spec_0_3_features <- function(spec) {
   found <- character(0)
@@ -103,8 +102,8 @@
 
 # The lowest specification version that reads `spec` as written, never below 0.3. build_spec() and
 # spec_from_model() declare it, so that what they write stays readable by the releases that read
-# 0.3 (R 0.3.1, Python 0.3.0) unless it uses a 0.4 feature. 0.3 is what build_spec() has declared
-# since 0.3.0, and a lower version would gain no reader, since releases before 0.3 ignore the field.
+# 0.3 (R 0.3.0 and 0.3.1, Python 0.3.0) unless it uses a 0.4 feature. A lower version would gain
+# no reader, since releases before 0.3 ignore the field.
 .required_spec_version <- function(spec) {
   if (length(.spec_0_4_features(spec))) "0.4" else "0.3"
 }
@@ -142,8 +141,13 @@
 # it here would shadow the base version on new R and be the only definition on old R.
 .orelse <- function(a, b) if (is.null(a)) b else a
 
-# Resolve a specification argument to a validated list. Every public entry point calls this
-# exactly once, so that a path is read once and validation runs once for a whole replicate loop.
+# Resolve a specification argument to a validated list. The analysis functions, power_design(),
+# power_mixed(), power_curve_mixed(), precision_design(), precision_curve(), sweep_spec(),
+# response_variance(), calibrate_response(), brms_bridge() and generate_design_analysis(), call
+# this once at their start, so that a path is read once and validation runs once for a whole
+# replicate loop. The functions they hand the validated list to, simulate_design() (called with
+# validate = FALSE), model_data() and model_formula(), read a path with load_spec() themselves
+# and do not call this, so that the list is not validated again.
 .as_spec <- function(spec, strict = TRUE) {
   if (is.character(spec)) return(load_spec(spec, validate = strict))
   validate_spec(spec, strict = strict)
@@ -213,10 +217,10 @@
 #' column defined by two factors or named like another column, an interaction whose analysis
 #' column already exists, a level listed twice, a correlation that pairs a term with itself or
 #' gives one pair twice, a factor both between and within a unit, and a `random.item` entry in a
-#' design without items each validated and then changed the data in silence. The rules are set
-#' out under Names in the specification. A within factor whose `vary_within` leaves out a unit of
-#' the design draws a warning in either mode, since pilotr crosses it with every unit anyway, and
-#' a specification declaring version 0.4 is refused for it.
+#' design without items are each refused, since each would otherwise validate and change the data
+#' in silence. The rules are set out under Names in the specification. A within factor whose
+#' `vary_within` leaves out a unit of the design draws a warning in either mode, since pilotr
+#' crosses it with every unit anyway, and a specification declaring version 0.4 is refused for it.
 #'
 #' Several factors may be between one unit only in a specification declaring version 0.4 or
 #' later, which allocates them jointly, one block of units per combination of their levels. Up to
@@ -259,7 +263,7 @@
 #'   intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
 #' validate_spec(spec)
 #'
-#' # A mistyped coefficient key is refused, where it used to pass as a zero effect.
+#' # A mistyped coefficient key is refused rather than passed as a zero effect.
 #' bad <- spec
 #' bad$fixed$coefficients <- list(effct = 0.5)
 #' try(validate_spec(bad))
@@ -289,9 +293,9 @@ validate_spec <- function(spec, strict = TRUE) {
   # The declared version as a (major, minor) pair, kept for the rules that changed with 0.4. It
   # stays NULL when the version cannot be read, and those rules then apply as they did before 0.4.
   dv <- NULL
-  # A version is one string or one number. Anything else used to reach .parse_version(), where an
-  # empty array or object stopped with "subscript out of bounds" and a two-element array was read
-  # by its first element, while the Python twin called both malformed.
+  # A version is one string or one number. Anything else is malformed, as the Python twin also
+  # says, and is kept from .parse_version(), where an empty array or object would stop with
+  # "subscript out of bounds" and a two-element array would be read by its first element.
   if (!.is_scalar_string(declared) && !.is_scalar_number(declared)) {
     bad("'spec_version' must be a single string of the form 'major.minor'")
   } else if (is.null(dv <- .parse_version(declared))) {
@@ -649,10 +653,10 @@ validate_spec <- function(spec, strict = TRUE) {
 }
 
 # The rules that look at a specification's names together, run after the per-field checks and
-# mirrored line for line by the twin's _check_names(). Each case they refuse used to validate
-# and then move an effect, rescale a variance or overwrite a column without a word. Where a
-# column was overwritten the twins also disagreed, R replacing the earlier column and Python
-# appending a second one under the same name, so one specification gave two different tables.
+# mirrored line for line by the twin's _check_names(). Each case they refuse would otherwise
+# validate and then move an effect, rescale a variance or overwrite a column without a word. Where
+# a column is overwritten, the twins also disagree, R replacing the earlier column and Python
+# appending a second one under the same name, so one specification would give two tables.
 # Only well-formed parts are inspected, since a malformed one is reported by its own check.
 # `version` is the declared version as validate_spec() parsed it, or NULL when it could not be
 # read. Returns the refusals and the warnings, in the order both twins report them.

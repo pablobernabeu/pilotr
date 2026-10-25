@@ -34,9 +34,9 @@ simplification rule: a character vector of \code{\link[=model_formula]{model_for
 fitted as written, as in \code{\link[=power_mixed]{power_mixed()}}.}
 
 \item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL}
-it is derived via \code{\link[=model_data]{model_data()}}, which log-transforms the outcome and
-builds the contrast and interaction columns, so focal names follow the
-auto-formula (interactions written as \code{a_b}).}
+it is derived via \code{\link[=model_data]{model_data()}}, which adds the analysis response \code{.y}, on the log scale
+for the lognormal families, and builds the contrast and interaction columns, so focal names
+follow the auto-formula (interactions written as \code{a_b}).}
 
 \item{rope}{The region of practical equivalence, as a half-width or as an interval. A single
 non-negative number \code{r} is the region from \code{-r} to \code{r}, so that an effect with

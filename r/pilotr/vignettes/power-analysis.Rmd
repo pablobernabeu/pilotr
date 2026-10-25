@@ -74,8 +74,8 @@ estimate in that direction. Its power of `r round(pw_greater$power, 3)` exceeds 
 `r round(pw$power, 3)` above. Type S and Type M are taken over the replicates significant in
 the predicted direction. Type S is therefore 0 by construction, and Type M,
 `r round(pw_greater$type_m, 2)`, is the exaggeration among the replicates that would support the
-prediction. Results from earlier versions of pilotr were two-sided. In the direction of the true
-effect, a one-sided power at α is the two-sided power at 2α times one minus the Type S at 2α.
+prediction. In the direction of the true effect, a one-sided power at α is the two-sided power at
+2α times one minus the Type S at 2α.
 
 ## Crossed mixed-effects designs
 
@@ -266,8 +266,8 @@ the 95% Wilson interval of each power estimate, and the fit counts read as they 
 
 Each sample size draws its own replicates. Point *j* of a sweep over *J* sizes takes
 `replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers, as
-`target_n()` assumes below when it fits them. Up to pilotr 0.3.1 every point took the
-specification's own seed, which `seeds = "shared"` still does.
+`target_n()` assumes below when it fits them. `seeds = "shared"` gives every point the
+specification's own seed instead.
 
 ## The sample size the curve implies
 

@@ -17,7 +17,8 @@ The data frame \code{d} augmented with the \code{.y} response column and the con
 interaction columns required by the auto-derived model.
 }
 \description{
-Add the analysis response column \code{.y} (log-transformed for the lognormal families), the
+Add the analysis response column \code{.y} (\code{log(y)} for \code{lognormal}, \code{log(y - shift)} for
+\code{shifted_lognormal} and the response itself otherwise), the
 numeric contrast columns implied by the categorical factors, and any interaction product
 columns (an \code{a:b} coefficient becomes a column \code{a_b}).
 }

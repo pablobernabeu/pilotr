@@ -33,12 +33,17 @@ design specification plus the seed is ideal, along with the output of
 Working from a clone of the repository, the R package:
 
 ```r
-pak::pak(c("devtools", "roxygen2", "testthat", "spelling"))
+pak::pak(c("devtools", "cran::roxygen2@8.0.0", "testthat", "spelling"))
 devtools::document("r/pilotr")   # regenerate man/ and NAMESPACE after editing roxygen
 devtools::test("r/pilotr")       # run the test suite
 devtools::check("r/pilotr")      # a full R CMD check
 devtools::build_readme("r/pilotr")  # regenerate README.md after editing README.Rmd
 ```
+
+Install the roxygen2 release that `Config/roxygen2/version` in
+`r/pilotr/DESCRIPTION` records, which is the one CI pins. A newer release
+rewrites that field when `devtools::document()` runs, and the CI job that checks
+`NAMESPACE` then fails.
 
 `devtools::check()` also runs a spelling test, as CI does, and stops at any word
 found neither in the British English dictionary nor in `r/pilotr/inst/WORDLIST`.
@@ -49,8 +54,11 @@ CRAN and a plain `R CMD check` skip the test.
 `r/pilotr/README.md` is generated from `README.Rmd` and is also the website's home
 page, so edit the `.Rmd` and knit it rather than editing the Markdown directly.
 The cross-language parity table in `r/pilotr/vignettes/parity-summary.csv` is
-likewise generated, by `python examples/parity_check.py --csv`, which needs both
-demos to have been run first. That table compares CSV files at the precision
+likewise generated, from the repository root, by
+`python python/examples/parity_check.py --csv r/pilotr/vignettes/parity-summary.csv`,
+which needs both demos, `python python/examples/run_demo.py` and
+`Rscript r/pilotr/examples/run_demo.R`, to have been run first. That table
+compares CSV files at the precision
 they are written with, to a tolerance of 1e-6, so it summarises the agreement
 without proving it. The R site's favicons in `r/pilotr/pkgdown/favicon/`
 are built by `Rscript tools/favicons/build_favicons.R`. Run it, not

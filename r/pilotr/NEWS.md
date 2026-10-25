@@ -313,9 +313,9 @@
   Larger seeds were read as different numbers by the two readers, which then drew different data.
 
 * `build_spec()` and `spec_from_model()` keep a seed of 2^31 or more, which they used to turn
-  into `NA`, and leave a non-whole seed for `validate_spec()` to refuse, where they used to
-  truncate it. Seeds in the integer range are stored as before. The app accepts a larger seed
-  for the same reason and prints it in full.
+  into `NA`. `build_spec()` also leaves a non-whole seed for `validate_spec()` to refuse, where
+  it used to truncate it. Seeds in the integer range are stored as before. The app accepts a
+  larger seed for the same reason and prints it in full.
 
 * A factor level, a `vary_within` entry or a `correlated` flag written as `null` is refused, as
   the Python twin refuses it. R labelled those rows `NA` and read the flag as `false`.
@@ -520,8 +520,10 @@
   CRAN, which the home page leaves out of its sidebar, where the DOI is already given under
   Citation.
 
-* The 0.3.0 and 0.3.1 entries below no longer give release dates. Both gave dates on which
-  neither version reached CRAN, and the site already prints the CRAN date beside each entry.
+* The 0.2.0, 0.2.1, 0.3.0 and 0.3.1 entries below no longer give release dates. The 0.3.0 and
+  0.3.1 entries gave dates on which neither version reached CRAN, and the site prints the CRAN
+  date beside each of them. Versions 0.2.0 and 0.2.1 were released on GitHub before pilotr
+  reached CRAN.
 
 * The tree CRAN published as pilotr 0.3.0 is tagged `cran-0.3.0` on GitHub, and 0.3.1 is
   tagged `v0.3.1` and archived on Zenodo. The `v0.3.0` tag and its Zenodo record predate two
@@ -648,6 +650,70 @@
 * The `?pilotr` overview lists the ex-Gaussian among the response families, and the guide in the
   browser build of the no-code app says that the paste box links to example specifications and
   to the format. The guide sent the reader to example buttons, which the app does not have.
+
+* `?build_spec` says that `thresholds` is one comma-separated string, such as
+  `"-2, -0.6, 0.6, 2"`, as the no-code app supplies it, and which family reads each of the other
+  parameters. Given a numeric vector such as `c(-1, 0, 1)`, `build_spec()` keeps its first value
+  alone, and the specification then describes an outcome of two categories. The page also says
+  that a blank `resp_name` takes the family's default name.
+
+* `?model_data` and `?precision_design`, for its `prep` argument, say that `model_data()` logs
+  the response only for the two lognormal families, and `?model_data` adds that the shift is
+  subtracted first for `shifted_lognormal`. `?precision_design` said that it log-transformed the
+  outcome, whatever the family.
+
+* `?brms_bridge` says that every element of its result is text, and that `code` loads brms and
+  fits the model with `brm()` once `your_data` names the data. It also says that, for the
+  continuous families, a coefficient whose column does not vary draws a warning and has its
+  prior scaled as if that column's standard deviation were 1.
+
+* `?run_app` names the packages the app needs: shiny and ggplot2, which pilotr only suggests,
+  and callr for the Verify button. `?generate_r_script` says that the `design_analysis.R` it
+  suggests for an ordinal or Beta outcome needs brms and a working Stan backend, which the
+  script's installation line does not name.
+
+* The `?pilotr` overview says that `model_data()` adds the contrast and interaction columns as
+  well as the response, and that `target_n()` solves a power curve for the sample size, with an
+  interval on it.
+
+* The comments in the scripts that `generate_design_analysis()` writes match what the scripts
+  do. The SLURM wrapper names `$PROJECT_DIR/results/design_analysis` as the directory its tasks
+  write to, where it named `$PROJECT_DIR/results`, and says how to run the aggregator on it. The
+  aggregator names the two tables it writes and the columns of its summary, which it described
+  as those of the per-replicate table. The analysis script says that `PILOTR_REP` counts from 1
+  and that an unset value, one below 1 or one that is not a number runs replicate 1, whose seed
+  is not the specification's own. The wrapper no longer says that nothing compiles Stan on the
+  fly, since each task compiles the model when it calls `brm()`, and the analysis script no
+  longer ties the R-hat limit to 1.01 whatever `gate` sets.
+
+* The response-families vignette says that `build_spec()` builds all eight families, the
+  ex-Gaussian from `sigma` and `beta`, and that the no-code app offers all but the plain
+  lognormal and the ex-Gaussian. It said that an ex-Gaussian design had to be written out by
+  hand. It also says that the example specifications ship with the package, where
+  `pilotr_example()` lists them, and no longer sends the reader to the repository for them. Get
+  started lists the worked examples among the other guides, and the worked examples describe
+  `reading_time_continuous` as having three continuous predictors, a two-level factor and their
+  interactions with age, where they named one continuous predictor.
+
+* The cross-language vignette says that the parity table compares the CSV files that the R and
+  Python demo scripts write for six of the eight example designs, all but the ordinal and Poisson
+  ones, and that the difference of about 5e-15 in its `continuous` row lies in that design's
+  unrounded predictors, since its rounded response agrees exactly. It said that the check
+  simulated every worked example and that the continuous design was unrounded. It also says that
+  `build_spec()` rounds the shifted lognormal and ex-Gaussian responses to four decimals, as it
+  rounds the Gaussian and lognormal ones.
+
+* `README.md` says that `power_mixed()` needs lmerTest as well as lme4, and that the Python
+  package also has `power_report()` and the curve solvers `solve_curve()` and `target_n()`. It
+  counts the helpers that calibrate and sweep specifications among what the R package alone
+  offers.
+
+* The vignette on the no-code app says to install shiny and ggplot2, which pilotr suggests
+  without installing, before calling `run_app()`, and that Verify needs callr. It gives the
+  installed app's cap of 5,000 simulations, which `PILOTR_MAX_SIMS` changes. The
+  installed app's guide says that the effect is the difference between the two levels on the
+  scale of the model's linear predictor. It said the response scale, and then named the log and
+  logit scales.
 
 ## References
 

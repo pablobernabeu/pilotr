@@ -1,7 +1,9 @@
-# Portable numerical core for pilotr, a bit-identical mirror of pilotr/core.py.
+# Portable numerical core for pilotr, mirrored operation for operation by python/pilotr/core.py.
 # Shared L'Ecuyer (1988) combined LCG, Wichura AS 241 inverse-normal, hand-rolled
 # Cholesky, and inverse-CDF response transforms. All LCG products stay below 2^53, so
-# the arithmetic is exact in IEEE-754 doubles and matches the Python integer port.
+# the arithmetic is exact in IEEE-754 doubles and matches the Python integer port. Values that
+# pass through exp(), log() or pow() are bit-identical only within the limits spec/SPEC.md sets
+# out under Scope of the guarantee.
 
 .M1 <- 2147483563; .M2 <- 2147483399; .A1 <- 40014; .A2 <- 40692
 
@@ -119,17 +121,17 @@ as241 <- function(p) {
 #
 # A negative pivot means the covariance implied by the specified standard deviations and
 # correlations is not positive definite, so no random-effect distribution has those moments.
-# The previous code clamped the pivot at zero and carried on silently, which did not fail but
-# did not honour the specification either: the factor it returned generated random effects
-# whose standard deviations were several times the requested ones. A correlation set that base
-# R's chol() rejects has to be an error, because the alternative is plausible-looking data from
-# a process the user never described.
+# Clamping the pivot at zero and carrying on would not fail, but it would not honour the
+# specification either: the factor would generate random effects whose standard deviations are
+# several times the requested ones. A correlation set that base R's chol() rejects is therefore
+# an error, because the alternative is plausible-looking data from a process the user never
+# described.
 #
 # A pivot of exactly zero is left alone. It is a useful case, and no kind of failure: it is
 # what a slope with a standard deviation of zero produces, which is how a term is held fixed
 # while the rest of the structure is kept intact. The tolerance below absorbs the rounding of
 # an exactly-singular matrix, so a term that is negative only numerically, with no true
-# negativity behind it, is still clamped as before.
+# negativity behind it, is clamped at zero.
 .cholesky <- function(cov, label = NULL, cols = NULL) {
   n <- nrow(cov); L <- matrix(0, n, n)
   tol <- .Machine$double.eps * n * max(c(diag(cov), 1))
@@ -198,7 +200,8 @@ as241 <- function(p) {
   length(thresholds) + 1
 }
 
-# Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG; bit-identical with core.py.
+# Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG, mirroring core.py's gamma_mt()
+# operation for operation, with the one exception set out below for the boost.
 #
 # The cube is written as two multiplications rather than `^3`. R's `^` special-cases small
 # integer exponents into repeated multiplication, whereas Python's `**` calls the library

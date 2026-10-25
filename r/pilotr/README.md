@@ -38,11 +38,12 @@ Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
 differ in its last bits, as the [cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
 sets out. The Python package carries the generative core,
-simulation-based power and the helpers that derive the analysis model.
+simulation-based power, the helpers that derive the analysis model,
+`power_report()` and the curve solvers `solve_curve()` and `target_n()`.
 The R package additionally offers precision/ROPE design analysis, the
 `lme4` reference backend for mixed-effects power, the `brms` bridge, the
-analysis-script emitters, the helpers that build specifications, and the
-app launcher.
+analysis-script emitters, the helpers that build, calibrate and sweep
+specifications, and the app launcher.
 
 ## Installation
 
@@ -87,11 +88,11 @@ library is the same. Point `load_spec()` at your own `design.json` to
 simulate a design of your own.
 
 Power and design analysis run from the same object. The call below is
-not evaluated here because it needs a few hundred model fits and `lme4`,
-which the package suggests without requiring.
+not evaluated here because it needs a few hundred model fits and the
+`lme4` and `lmerTest` packages, which pilotr suggests without requiring.
 
 ``` r
-power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4)
+power_mixed(spec, n_sims = 200)   # crossed-LMM power + Type S/M (lme4, lmerTest)
 cat(generate_r_script(spec))      # a self-contained, reproducible script
 ```
 

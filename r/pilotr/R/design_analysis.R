@@ -109,9 +109,12 @@
     "# against a region of practical equivalence. No verdict is reported unless the",
     "# sampler has converged.",
     "#",
-    "# Set PILOTR_REP to a replicate index to reseed the design, and PILOTR_OUTDIR to a",
-    "# directory to have the replicate's summary written there as an RDS. Leave both",
-    "# unset for a single interactive run.",
+    "# Set PILOTR_REP to a replicate index, counted from 1, to run that replicate of",
+    "# the design, and PILOTR_OUTDIR to a directory to have the replicate's summary",
+    "# written there as design_analysis_rep0001.rds and so on. Unset, or set to a",
+    "# value below 1 or to text that is not a number, PILOTR_REP runs replicate 1,",
+    "# which, like every replicate, is seeded by replicate_seeds() rather than with",
+    "# the specification's own seed. Leave both unset for a single interactive run.",
     "# ---------------------------------------------------------------------------",
     "",
     "library(brms)",
@@ -146,8 +149,8 @@
     "# Every verdict below is a function of the rule, the gate and the specification, and a results",
     "# directory pools whatever was written into it. The identity therefore travels with every row,",
     "# so that two array runs with different ROPEs cannot be combined into one table with nothing to",
-    "# tell them apart. The package version is recorded too, because the generative core changed",
-    "# numerically at 0.3, so the same specification and seed do not give the same data across it.",
+    "# tell them apart. The package version is recorded too, because the same specification and",
+    "# seed need not give the same data under another version of pilotr.",
     "spec_fingerprint <- local({",
     "  f <- tempfile()",
     "  on.exit(unlink(f), add = TRUE)",
@@ -162,7 +165,7 @@
     "",
     "# The replicate seeds come from pilotr's own rule. Index arithmetic on the specification's",
     "# seed will not do, because consecutive seeds are not independent streams in this generator,",
-    "# so from 0.3 the package derives the whole set of replicate seeds from that seed and takes",
+    "# so the package derives the whole set of replicate seeds from that seed and takes",
     "# the index-th one. Using the same rule here means replicate 7 on the cluster is the",
     "# same data set as replicate 7 in power_mixed(), and one task can be reproduced on a laptop.",
     'rep_id <- suppressWarnings(as.integer(Sys.getenv("PILOTR_REP", "1")))',
@@ -203,7 +206,7 @@
     "# Checked before any verdict is formed. A conclusion drawn from a fit that has not",
     "# converged is worse than no conclusion, because it carries the authority of a number",
     "# without the sampling behind it. R-hat here is the rank-normalised version of Vehtari",
-    "# et al. (2021), which is why the limit is near 1.01 where the older one was 1.1, and",
+    "# et al. (2021), for which a limit near 1.01 is appropriate where the older one was 1.1, and",
     "# divergent transitions are counted as a share of post-warmup draws, since a handful in",
     "# a long run means something different from a handful in a short one.",
     "draws <- brms::as_draws_df(fit)",
@@ -310,12 +313,13 @@
     sprintf("# '%s'.", spec[["name"]]),
     "#",
     "# One array task per replicate. Each task simulates its own data set, fits the brms",
-    "# model across its cores, and writes one RDS to $PROJECT_DIR/results, which",
-    "# aggregate_design_analysis.R then combines.",
+    "# model across its cores, and writes one RDS to $PROJECT_DIR/results/design_analysis.",
+    "# Once every task has finished, aggregate_design_analysis.R, run with PILOTR_OUTDIR",
+    "# set to that directory, combines them.",
     "#",
     "# The R library at $PROJECT_DIR/Rlib has to carry pilotr, brms and a working Stan",
-    "# backend, installed once. Nothing here compiles Stan on the fly, and a task that",
-    "# has to build the model from scratch will spend most of its wall time on it.",
+    "# backend, installed once on a login node, since nothing here installs them. Each task",
+    "# still compiles the brms model when it calls brm(), which takes part of its wall time.",
     "#",
     "# Submit from the directory the three parts were saved into, so that this wrapper",
     "# finds design_analysis.R beside itself:",
@@ -330,7 +334,7 @@
     "#    holding the R library at Rlib/.",
     "# -----------------------------------------------------------------------------",
     "#SBATCH --job-name=pilotr_bda",
-    "#SBATCH --array=1-100               # one replicate per task",
+    "#SBATCH --array=1-100               # one replicate per task, numbered from 1",
     "#SBATCH --partition=short           # short <=12h",
     "#SBATCH --nodes=1",
     "#SBATCH --ntasks=1",
@@ -364,14 +368,17 @@
   )
 }
 
-# The aggregator, which reads the per-task RDS files and rebuilds the same summary table across
-# replicates.
+# The aggregator, which reads the per-task RDS files, writes them out as one table of replicates
+# and summarises that table per focal effect.
 .da_aggregate_lines <- function() {
   c(
     "#!/usr/bin/env Rscript",
     "# ---------------------------------------------------------------------------",
     "# Combine the per-task RDS files written by design_analysis.R into one table.",
-    "# Env: PILOTR_OUTDIR, the directory the array tasks wrote to.",
+    "# Env: PILOTR_OUTDIR, the directory the array tasks wrote to, which the SLURM wrapper",
+    "# sets to $PROJECT_DIR/results/design_analysis. When it is unset, the working directory",
+    "# is read. Writes design_analysis_replicates.csv (one row per replicate and focal",
+    "# effect) and design_analysis_summary.csv (one row per focal effect) into that directory.",
     "# ---------------------------------------------------------------------------",
     "",
     'outdir <- Sys.getenv("PILOTR_OUTDIR", ".")',
@@ -403,8 +410,11 @@
     "",
     'write.csv(reps, file.path(outdir, "design_analysis_replicates.csv"), row.names = FALSE)',
     "",
-    "# One row per focal effect, carrying the columns of a single replicate's table plus the",
-    "# share of replicates that reached each verdict. The averaged bounds describe the",
+    "# One row per focal effect: its true value, the number of replicates and of gate",
+    "# failures, the mean estimate and interval bounds, the median Bayes factor for the",
+    "# effect, the share of replicates that reached each verdict and the run identity.",
+    "# The observed R-hat, the divergences and the Bayes factor for the null stay per",
+    "# replicate, in design_analysis_replicates.csv. The averaged bounds describe the",
     "# interval this design buys, and the shares are the design analysis itself, since a rule",
     "# that decides in a small share of replicates is a rule the design cannot afford.",
     "# Replicates that failed the convergence gate are counted on their own rather than",
@@ -541,7 +551,7 @@
 #' # browser build of the no-code app.
 #' spec   <- load_spec(pilotr_example("crossed_mixed_rt"))
 #' script <- generate_design_analysis(spec, focal = c(cond = 0.05))
-#' cat(head(strsplit(script, "\n")[[1]], 15), sep = "\n")
+#' cat(head(strsplit(script, "\n")[[1]], 18), sep = "\n")
 #'
 #' # A stricter rule, with a wrapper for a SLURM array and its aggregator.
 #' cluster <- generate_design_analysis(spec, focal = c(cond = 0.05),

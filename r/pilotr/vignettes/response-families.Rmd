@@ -186,17 +186,18 @@ simulated here corresponds to the model that will later be fit. pilotr's own `po
 `glmer()`, so their estimates are on the scale in the table's last column. Ordinal and Beta
 outcomes have no frequentist model there yet, and their design analysis runs in brms through
 `generate_design_analysis()`. The point-and-click application
-exposes six of the eight families. The full engine, including the plain lognormal, the
-ex-Gaussian, continuous predictors, interactions, nesting and partial crossing, is reached by
-writing the specification directly, as the last section of this vignette shows.
+exposes six of the eight families, all but the plain lognormal and the ex-Gaussian, and
+`build_spec()` builds all eight. The rest of the engine, including continuous predictors,
+interactions, nesting and partial crossing, is reached by writing the specification directly,
+as the last section of this vignette shows.
 
-The `exgaussian` family, new in 0.3, takes `sigma` and `beta` and draws a normal plus an
-exponential, mean-centred by subtracting the mean of the exponential so that $\eta$ remains the
-mean of the response. That is brms's `exgaussian(mu, sigma, beta)` parameterisation, so a
-specification and the model fitted to it agree on what the intercept means. A shifted lognormal
-will not stand in for it, because `model_data()` logs the response back and leaves a symmetric
-residual on the analysis scale. `build_spec()` does not cover the family either, so an
-ex-Gaussian design has to be written out by hand.
+The `exgaussian` family, which a specification must declare version 0.3 or later to use, takes
+`sigma` and `beta` and draws a normal plus an exponential, mean-centred by subtracting the mean
+of the exponential so that $\eta$ remains the mean of the response. That is brms's
+`exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted to it
+agree on what the intercept means. A shifted lognormal will not stand in for it, because
+`model_data()` logs the response back and leaves a symmetric residual on the analysis scale.
+`build_spec()` builds an ex-Gaussian design from `family = "exgaussian"` with `sigma` and `beta`.
 
 ## Writing the specification directly
 
@@ -237,6 +238,6 @@ model_formula(spec)
 ```
 
 Ready-to-run specifications of this kind, including a continuous-predictor reading-time design,
-a nested-clusters design and a partial-crossing design, ship in the repository's
-[`spec/examples/`](https://github.com/pablobernabeu/pilotr/tree/main/spec/examples) directory,
-and `load_spec()` reads any of them back.
+a nested-clusters design and a partial-crossing design, ship with the package. `pilotr_example()`
+lists them and returns the path of each for `load_spec()`, and the
+[worked examples](worked-examples.html) simulate every one.

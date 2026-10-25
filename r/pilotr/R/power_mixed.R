@@ -3,12 +3,8 @@
 # doi:10.5281/zenodo.10615953). It covers the territory of simr (Green & MacLeod, 2016)
 # and mixedpower (Kumle et al., 2021), driven here by the portable design spec.
 #
-# Until 0.3 this backend accepted only a design with exactly one within-unit factor and an item
-# unit, and fitted a formula written into the source rather than derived from the specification, so
-# a design with two factors, with continuous predictors, or with a smaller random-effects structure
-# than the maximal one was either refused outright or analysed under a model it had not described.
-# It now runs the same replicate loop as precision_design(), over the model the specification
-# implies.
+# This backend runs the same replicate loop as precision_design(), over the model the
+# specification implies (model_formula()) or the formula or ladder the user gives.
 
 #' Simulation-based power and design analysis for a mixed-effects design
 #'
@@ -27,13 +23,11 @@
 #' specification, in reporting the Type S and Type M design-analysis errors alongside
 #' power, and in parallelising its replicates through the `workers` argument.
 #'
-#' The analysis model comes from the specification rather than from this function. Before 0.3 the
-#' formula was written into the source as a maximal crossed structure, so a design declaring
-#' uncorrelated slopes, or no slopes at all, was nonetheless analysed as though it had them, and a
-#' design with more than one factor was refused. The formula now comes from [model_formula()] and
-#' the data from [model_data()], so the analysis matches the process that generated the data. Both
-#' can still be given directly, which is what to do when a deliberately different analysis model is
-#' the point, as when checking how a misspecified model behaves.
+#' The analysis model comes from the specification rather than from this function: the formula
+#' comes from [model_formula()] and the data from [model_data()], so the analysis matches the
+#' process that generated the data. Both can be given directly, which is what to do when a
+#' deliberately different analysis model is the point, as when checking how a misspecified model
+#' behaves.
 #'
 #' The fitter follows the response family, so that the estimates are on the scale of the
 #' specification's coefficients. A `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian`
@@ -80,8 +74,7 @@
 #' intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
 #' items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
 #' al., 2013). Run the null condition of [design_conditions()] through the same ladder to see how
-#' often, as the power vignette does. A single formula is unaffected by `fallback`, and its result
-#' is the one it always was.
+#' often, as the power vignette does. A single formula is unaffected by `fallback`.
 #'
 #' Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 #' proportion over a finite number of replicates is an estimate rather than a fact. At the default
@@ -104,8 +97,8 @@
 #' prediction. `fitter` names the direction, as in
 #' `"lmerTest::lmer, Satterthwaite t, one-sided (greater)"`.
 #'
-#' Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction of
-#' the true effect, can be read off a two-sided result at `2 * alpha`: it is
+#' A one-sided power at `alpha`, in the direction of the true effect, can be read off a two-sided
+#' result at `2 * alpha`: it is
 #' `power * (1 - type_s)`. Type M is recovered only when that result's Type S is 0, since the
 #' wrong-signed replicates cannot otherwise be told apart from the others.
 #'
@@ -169,7 +162,7 @@
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
 #'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s`,
 #'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect each of
-#'   those has length one, so `result$power` reads as it always has. `fitter` names the fitter and
+#'   those has length one, so `result$power` is a single number. `fitter` names the fitter and
 #'   its test, such as `"lme4::glmer (binomial), Wald z"`, with the direction of a one-sided test
 #'   added, as in `"lme4::glmer (binomial), Wald z, one-sided (greater)"`. Under a one-sided
 #'   test, `n_significant` and the design-analysis quantities count the replicates significant in
@@ -476,7 +469,8 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'
 #' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
 #' so the points of the curve are independent, as [target_n()] assumes when it fits them.
-#' `seeds = "shared"` runs every point from the specification's own seed instead, as up to 0.3.1.
+#' `seeds = "shared"` runs every point from the specification's own seed instead, and the points
+#' then share their noise (see [sweep_spec()]).
 #'
 #' For any axis other than sample size, call [sweep_spec()] directly. Effect size is the axis a
 #' design analysis most often needs after sample size, and [design_conditions()] builds the
@@ -570,9 +564,8 @@ power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha
   alternative <- match.arg(alternative)
   .check_focal_sets(focal, alternative)
   workers <- .check_workers(workers)
-  # One pool for the whole sweep, handed to every grid point. Since 0.3.0, when the sweep moved
-  # into sweep_spec(), `workers` had travelled to power_mixed(), which started and stopped a pool
-  # at every point.
+  # One pool for the whole sweep, handed to every grid point, so that power_mixed() does not
+  # start and stop a pool at every point.
   cl <- NULL
   if (workers > 1L) {
     cl <- parallel::makeCluster(workers)

@@ -29,7 +29,7 @@ template:
 
 navbar:
   # House order: Get started, Reference, Articles, Changelog, About on the left;
-  # search, light/dark switch, live demo and GitHub on the right.
+  # live demo, search, GitHub and the light/dark switch on the right.
   structure:
     left:  [intro, reference, articles, news, about]
     right: [app, search, github, lightswitch]

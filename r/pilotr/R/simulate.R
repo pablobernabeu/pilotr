@@ -1,7 +1,8 @@
-# Specification parsing and the generative engine. This is a bit-identical mirror of
-# pilotr/simulate.py. It supports categorical contrasts and continuous predictors (with
-# interactions) as fixed effects, together with crossed by-subject and by-item random
-# intercepts and slopes (on either unit).
+# Specification parsing and the generative engine, mirroring python/pilotr/simulate.py and
+# bit-identical with it within the limits spec/SPEC.md sets out under Scope of the guarantee.
+# It supports categorical contrasts and continuous predictors (with interactions) as fixed
+# effects, together with crossed by-subject and by-item random intercepts and slopes (on either
+# unit).
 
 #' Load a design specification from a JSON file
 #'
@@ -71,9 +72,8 @@ load_spec <- function(path, validate = TRUE) {
 }
 
 # Returns the columns and the lower-Cholesky factor L for one unit's random-effect covariance.
-# `label` names the grouping factor, so that a covariance which is not positive definite can be
-# reported against the entry the user wrote, where it used to appear as an anonymous matrix
-# failure.
+# `label` names the grouping factor, so that a covariance which is not positive definite is
+# reported against the entry the user wrote rather than as an anonymous matrix failure.
 .ranef <- function(u, label = NULL) {
   slopes <- u[["slopes"]]
   cors <- u[["correlations"]]
@@ -135,7 +135,7 @@ load_spec <- function(path, validate = TRUE) {
 #
 # The moments used are the population ones. R's mean() and sd() accumulate in long double and
 # Python's do not, so standardising against the sample mean and standard deviation of the values
-# drawn would reintroduce exactly the cross-language divergence this release removes.
+# drawn would make the two twins' data differ.
 .attenuate <- function(latent, pmean, psd, rho, z) {
   pmean + (latent - pmean + psd * sqrt((1 - rho) / rho) * z) * sqrt(rho)
 }
@@ -191,7 +191,7 @@ simulate_design <- function(spec, validate = TRUE) {
   if (is.character(spec)) spec <- load_spec(spec, validate = validate)
   else if (!isFALSE(validate)) validate_spec(spec, strict = isTRUE(validate))
 
-  # Every field is read with `[[ ]]`. `$` matches a name partially, so `random$subject` used to
+  # Every field is read with `[[ ]]`. `$` matches a name partially, so `random$subject` would
   # find an entry named `subject_site` and add by-subject effects nobody had declared.
   units <- spec[["units"]]
   S <- units[["subject"]][["n"]]
@@ -280,9 +280,8 @@ simulate_design <- function(spec, validate = TRUE) {
   # ---- continuous predictors ----
   # One draw per unit for a subject- or item-level predictor, and one per row for an
   # observation-level one. The rows are already enumerated by this point, so the third case is
-  # one more branch of the same dispatch, and no restructuring. Before 0.3 `varies_by` was
-  # read as "subject or else item", so a predictor declared to vary by "trial" was silently
-  # given one value per item. It is now validated against the three names that exist.
+  # one more branch of the same dispatch, and no restructuring. Any other `varies_by`, such as
+  # "trial", is refused below, as validate_spec() refuses it.
   #
   # `dist` chooses the draw. A normal consumes one uniform through the inverse CDF and a uniform
   # consumes one directly, so the two cost the same number of draws and switching between them

@@ -25,10 +25,9 @@ if (!exists("simulate_design", mode = "function")) {
     for (.name in getNamespaceExports("pilotr"))
       assign(.name, getExportedValue("pilotr", .name), envir = environment())
   } else {
-    # Load the whole engine directory rather than naming its files. The list this
-    # replaced had to track R/ by hand, and when validate.R arrived with 0.3.0 it
-    # did not: .SPEC_VERSION went undefined and every Simulate click failed. Each
-    # file in R/ only defines functions and constants, so order does not matter.
+    # Load the whole engine directory rather than naming its files, so that no list
+    # has to track R/ by hand. Each file in R/ only defines functions and constants,
+    # so order does not matter.
     # "." last, for a layout that stages the engine beside the app; app.R and the
     # roxygen sentinel are dropped so that case cannot source this file into itself.
     # A directory counts only if it holds simulate.R. An installed package has an R/
@@ -62,7 +61,7 @@ N_SIMS_MIN     <- 100L    # the smallest count the box accepts
 
 # Type S and Type M are shown with the Monte Carlo error power_design() reports for each. Type S
 # has a Wilson interval and Type M a standard error. A rate whose error is undefined is shown
-# bare, as before. That happens to both at a zero true effect, and to Type M when a single
+# bare. That happens to both at a zero true effect, and to Type M when a single
 # replicate is significant. app-lite/app.R formats them in the same way.
 type_s_text <- function(r)
   if (is.na(r$type_s_lo)) sprintf("%.4f", r$type_s) else
@@ -74,8 +73,8 @@ type_m_text <- function(r)
 # Where the data Verify's script produced first differ from the reference data, as the phrase
 # its verdict ends with, or NULL when the two are identical. Doubles are compared bit by bit
 # (num.eq = FALSE), so that a zero of the other sign counts as a difference, as the verdict's
-# "bit for bit" says. Verify used to compare the sums of the response column with a tolerance,
-# which let through reversed rows and any change to the other columns.
+# "bit for bit" says. A comparison of the sums of the response column with a tolerance would let
+# through reversed rows and any change to the other columns.
 .data_difference <- function(ref, script_data) {
   if (!identical(names(script_data), names(ref)))
     return(sprintf("the column names: the script gives %s, and the specification %s",
@@ -101,9 +100,8 @@ type_m_text <- function(r)
 
 # Power runs in a background R process only when run_app() asks for it, through this option, and
 # only from the installed package, which a worker can load. From source, and under
-# shiny::runApp() on this directory, power runs in this process. The app used to run power in
-# the background whenever future and promises were installed, so run_app(async = FALSE) changed
-# nothing. A background run leaves this process free for other sessions. The session that started
+# shiny::runApp() on this directory, power runs in this process. A background run leaves this
+# process free for other sessions. The session that started
 # it still waits for the result, since Shiny holds a session's inputs and outputs until the
 # promise its observer returned has settled.
 .async_ok <- isTRUE(getOption("pilotr.app_async")) && isNamespaceLoaded("pilotr") &&
@@ -220,11 +218,11 @@ guide_tab <- tabPanel(
     tags$h5("Response families"),
     tags$p("Gaussian, shifted lognormal (reaction times), Bernoulli (accuracy), Poisson ",
            "(counts), ordinal (Likert) and Beta (proportions). The effect is the difference ",
-           "between the two levels on the response scale: the identity scale for Gaussian, ",
-           "the log scale for reaction times and Poisson, and the logit scale for accuracy, ",
-           "ordinal and Beta. The ", tags$b("Advanced: paste a JSON spec"), " box accepts ",
-           "designs beyond the point-and-click controls, such as continuous predictors, ",
-           "interactions and nesting."),
+           "between the two levels on the scale of the model's linear predictor: the identity ",
+           "scale for Gaussian, the log scale for reaction times and Poisson, and the logit ",
+           "scale for accuracy, ordinal and Beta. The ", tags$b("Advanced: paste a JSON spec"),
+           " box accepts designs beyond the point-and-click controls, such as continuous ",
+           "predictors, interactions and nesting."),
     tags$h5("Power and design analysis"),
     tags$p("The in-app backend estimates power for the two-group Gaussian design with one row ",
            "per subject. It reports power and the Type S and Type M errors of Gelman and Carlin ",
@@ -377,7 +375,7 @@ server <- function(input, output, session) {
       # than a bare fromJSON, so a pasted spec faces the same validation as a loaded one.
       # Several of the ways a spec can be wrong produce plausible data rather than an error
       # (a mistyped coefficient key resolves to no column and silently generates null-effect
-      # data), which is exactly what 0.3.0's validation refuses. validate() surfaces the
+      # data), which is exactly what load_spec()'s validation refuses. validate() surfaces the
       # message in every output that reads the spec.
       spec <- tryCatch({
         tf <- tempfile(fileext = ".json"); writeLines(txt, tf); load_spec(tf)
@@ -399,11 +397,9 @@ server <- function(input, output, session) {
   })
 
   # Simulate keeps the specification it ran beside the data it made, and the Data tab, the summary,
-  # the plot and the data download read the two together. The summary and the plot used to take
-  # the response and factor names from the controls, so a new family or response name after a
-  # simulation stopped both. The Data tab printed the Seed box, and the download simulated afresh
-  # from the controls. The JSON tab and the specification download follow the controls, and
-  # sim_note says when the two have parted.
+  # the plot and the data download read the two together, so that a new family or response name
+  # in the controls after a simulation cannot stop the summary or the plot. The JSON tab and the
+  # specification download follow the controls, and sim_note says when the two have parted.
   sim <- eventReactive(input$simulate, {
     s <- current_spec()
     list(spec = s, data = simulate_design(s))
@@ -497,9 +493,8 @@ server <- function(input, output, session) {
 
   # ---- Verify: run the exported script in a clean R subprocess and compare ----
   # The clean session runs the text that this tab shows and the download carries, so the verdict
-  # covers what the user takes away. It used to simulate from the JSON there and compare the sums
-  # of the response column, so it certified a script it never ran. The reference is simulated here
-  # from the current specification, which may have changed since the Data tab was last simulated.
+  # covers what the user takes away. The reference is simulated here from the current
+  # specification, which may have changed since the Data tab was last simulated.
   verify_result <- reactiveVal(NULL)
   observeEvent(input$verify_code, {
     spec <- current_spec()
@@ -566,10 +561,9 @@ server <- function(input, output, session) {
   # random effects. Python's power_mixed() takes one within factor crossed with items and fits a
   # linear model on the response's own scale. It is offered only for such a design, in a family
   # whose coefficients are on that scale or on the log scale it analyses. Ordinal and Beta
-  # outcomes have no frequentist model here and go to the Bayesian design analysis. A single text
-  # used to send every design to both power_mixed() functions, including designs neither fits on
-  # the scale of their coefficients. The installed app reaches only pilotr's exports, so the rule
-  # is written out here, as it is in the browser build.
+  # outcomes have no frequentist model here and go to the Bayesian design analysis. The installed
+  # app reaches only pilotr's exports, so the rule is written out here, as it is in the browser
+  # build.
   not_supported <- function(spec) {
     family <- spec[["response"]][["family"]]
     opening <- paste0(
@@ -617,7 +611,7 @@ server <- function(input, output, session) {
   # An error in an observer closes the session, and the design goes with it, so the power buttons
   # report any error in the Power tab. A pasted specification that load_spec() refuses is one. It
   # reaches the observer as a validation error, which Shiny drops without a word when nothing
-  # catches it, and the click used to do nothing.
+  # catches it, and the click would appear to do nothing.
   power_failed <- function(e) power_result(list(msg = paste("error:", conditionMessage(e))))
 
   observeEvent(input$run_power, {
@@ -670,11 +664,10 @@ server <- function(input, output, session) {
       base_n <- spec$units$subject$n
       cap <- 8 * base_n
       # Each point takes its own seed, so that target_n() fits independent points, as it assumes.
-      # Every point used to keep the design's seed.
       seeds <- replicate_seeds(spec$seed, 10L)
       # The whole curve runs in one background process when run_app() asks for it, since each
       # point the grid adds depends on the power at the last. It is the costlier of the two
-      # buttons, and it used to run in this process even under run_app(async = TRUE).
+      # buttons.
       if (.async_ok) {
         power_result(list(msg = sprintf(
           "Running %d simulations at each of up to 10 sample sizes in a background worker...", n)))

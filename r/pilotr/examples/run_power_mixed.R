@@ -8,7 +8,7 @@ load_pilotr_engine(pilotr_engine_dir(here))
 spec <- file.path(here, "..", "..", "..", "spec", "examples", "crossed_mixed_rt.json")
 n_sims <- 100
 
-cat(sprintf("Fitting %d maximal mixed models (RT ~ cond + (1+cond|subject) + (1+cond|item))...\n", n_sims))
+cat(sprintf("Fitting %d maximal mixed models (log(RT - 200) ~ cond + (1+cond|subject) + (1+cond|item))...\n", n_sims))
 t0 <- Sys.time()
 res <- power_mixed(spec, n_sims = n_sims)
 cat(sprintf("done in %.0f s\n\n", as.numeric(difftime(Sys.time(), t0, units = "secs"))))

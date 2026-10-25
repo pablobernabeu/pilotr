@@ -2,7 +2,7 @@
 # ?pilotr landing topic, taking the title, description, author and useful links from
 # DESCRIPTION, so only the orientation below is written by hand. The topic is
 # deliberately not marked @keywords internal: pkgdown's default reference index drops
-# internal topics, and this overview is meant to head that index.
+# internal topics, and this overview is meant to appear in the index, as its last entry.
 
 #' @description
 #' Generative simulation of experimental and behavioural data sets from a
@@ -35,9 +35,9 @@
 #' differ in its last bits, as `vignette("cross-language", package = "pilotr")`
 #' sets out.
 #'
-#' For analysis, [model_data()] adds the response column that the
-#' model expects, and [model_formula()] derives the maximal
-#' mixed-model formula the design implies. [brms_bridge()] returns
+#' For analysis, [model_data()] adds the response, contrast and interaction columns that the
+#' model expects, and [model_formula()] derives the mixed-model formula
+#' the design implies, maximal by default. [brms_bridge()] returns
 #' the formula, family and priors for a Bayesian fit.
 #'
 #' Design analysis runs from that same specification.
@@ -45,7 +45,8 @@
 #' design with one row per subject, together with the Type S and Type M errors
 #' of Gelman and Carlin (2014). [power_mixed()] does the same for a crossed
 #' mixed-effects design, and [power_curve_mixed()] sweeps
-#' sample size to locate where a design becomes adequately powered.
+#' sample size. [target_n()] solves that curve for the sample size at which
+#' a design becomes adequately powered, with an interval on it.
 #' [precision_design()] and its curve counterpart
 #' [precision_curve()] report the width of the interval a design
 #' buys and the decision probabilities against a region of practical

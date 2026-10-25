@@ -36,9 +36,9 @@ Elsewhere, a value that passes through \code{exp()}, \code{log()} or \code{pow()
 differ in its last bits, as \code{vignette("cross-language", package = "pilotr")}
 sets out.
 
-For analysis, \code{\link[=model_data]{model_data()}} adds the response column that the
-model expects, and \code{\link[=model_formula]{model_formula()}} derives the maximal
-mixed-model formula the design implies. \code{\link[=brms_bridge]{brms_bridge()}} returns
+For analysis, \code{\link[=model_data]{model_data()}} adds the response, contrast and interaction columns that the
+model expects, and \code{\link[=model_formula]{model_formula()}} derives the mixed-model formula
+the design implies, maximal by default. \code{\link[=brms_bridge]{brms_bridge()}} returns
 the formula, family and priors for a Bayesian fit.
 
 Design analysis runs from that same specification.
@@ -46,7 +46,8 @@ Design analysis runs from that same specification.
 design with one row per subject, together with the Type S and Type M errors
 of Gelman and Carlin (2014). \code{\link[=power_mixed]{power_mixed()}} does the same for a crossed
 mixed-effects design, and \code{\link[=power_curve_mixed]{power_curve_mixed()}} sweeps
-sample size to locate where a design becomes adequately powered.
+sample size. \code{\link[=target_n]{target_n()}} solves that curve for the sample size at which
+a design becomes adequately powered, with an interval on it.
 \code{\link[=precision_design]{precision_design()}} and its curve counterpart
 \code{\link[=precision_curve]{precision_curve()}} report the width of the interval a design
 buys and the decision probabilities against a region of practical

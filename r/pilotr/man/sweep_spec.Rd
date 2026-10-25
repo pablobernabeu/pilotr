@@ -34,7 +34,7 @@ workers runs the whole sweep.}
 
 \item{.seeds}{How the grid points are seeded. \code{"independent"}, the default, gives point \code{i} of
 \code{J} the seed \code{replicate_seeds(spec$seed, J)[i]}, and \code{"shared"} gives every point the
-specification's own seed, as sweeps did up to 0.3.1 (see Details).}
+specification's own seed (see Details).}
 }
 \value{
 A data frame binding the results, with the swept value as the leading column, or the
@@ -70,9 +70,9 @@ as they were. It depends on order, though, since a point's seed follows its posi
 \code{values}, so reordering the values, or inserting one, changes the results at every point that
 moves. A sweep over \code{seed} itself sets each point's seed to the value swept.
 
-\code{.seeds = "shared"} gives every point the specification's own seed, as every sweep did up to
-0.3.1. The points then share their noise, so the curve looks smoother than its Monte Carlo
-error allows and an interval fitted to it is too narrow. Over 1,000 emulated curves for each
+\code{.seeds = "shared"} gives every point the specification's own seed. The points then share
+their noise, so the curve looks smoother than its Monte Carlo error allows and an interval
+fitted to it is too narrow. Over 1,000 emulated curves for each
 of twelve settings on a tight grid of sample sizes, the nominal 95\% interval of \code{\link[=solve_curve]{solve_curve()}}
 covered the true size in 87.8\% of solves with shared seeds and in 96.5\% with independent ones.
 On an effect-size axis, where the design and so every draw stay the same from point to point,
@@ -104,7 +104,7 @@ if (requireNamespace("lme4", quietly = TRUE) &&
   # Sample size, the same sweep power_curve_mixed() performs.
   sweep_spec(spec, "units$subject$n", c(12, 18), power_mixed, n_sims = 8)
 
-  # Effect size, which the old curve functions could not reach.
+  # Effect size, which power_curve_mixed() and precision_curve() do not sweep.
   sweep_spec(spec, "fixed$coefficients",
              design_conditions(effect = c(0.03, 0.06)), power_mixed, n_sims = 8)
 }

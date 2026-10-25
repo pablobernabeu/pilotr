@@ -44,7 +44,7 @@ desc <- c(
     "Five-point Likert responses via a cumulative-logit model.",
   poisson_counts_between  = "Count outcomes through a log link.",
   reading_time_continuous =
-    "A continuous predictor with a lognormal reading-time outcome.",
+    "Three continuous predictors, a two-level factor and their interactions with age.",
   nested_clusters         =
     "Subjects nested in higher-level clusters, an extra grouping factor.",
   partial_crossing        = "Each subject sees a sampled subset of items."

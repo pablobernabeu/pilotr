@@ -32,10 +32,10 @@ Names are checked together as well as one by one. Two columns with one name, a c
 column defined by two factors or named like another column, an interaction whose analysis
 column already exists, a level listed twice, a correlation that pairs a term with itself or
 gives one pair twice, a factor both between and within a unit, and a \code{random.item} entry in a
-design without items each validated and then changed the data in silence. The rules are set
-out under Names in the specification. A within factor whose \code{vary_within} leaves out a unit of
-the design draws a warning in either mode, since pilotr crosses it with every unit anyway, and
-a specification declaring version 0.4 is refused for it.
+design without items are each refused, since each would otherwise validate and change the data
+in silence. The rules are set out under Names in the specification. A within factor whose
+\code{vary_within} leaves out a unit of the design draws a warning in either mode, since pilotr
+crosses it with every unit anyway, and a specification declaring version 0.4 is refused for it.
 
 Several factors may be between one unit only in a specification declaring version 0.4 or
 later, which allocates them jointly, one block of units per combination of their levels. Up to
@@ -73,7 +73,7 @@ spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
   intercept = 0, effect = 0.5, family = "gaussian", resp_name = "", sigma = 1))
 validate_spec(spec)
 
-# A mistyped coefficient key is refused, where it used to pass as a zero effect.
+# A mistyped coefficient key is refused rather than passed as a zero effect.
 bad <- spec
 bad$fixed$coefficients <- list(effct = 0.5)
 try(validate_spec(bad))

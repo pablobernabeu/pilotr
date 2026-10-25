@@ -90,8 +90,8 @@ that direction. Type S and Type M are taken over the replicates significant in t
 direction. When that is the direction of the true effect, Type S is 0 by construction, and
 Type M is the exaggeration among the replicates that would support the prediction.
 
-Results from earlier versions were two-sided. A one-sided power at \code{alpha}, in the direction of
-the true effect, can be read off a two-sided result at \code{2 * alpha}: it is
+A one-sided power at \code{alpha}, in the direction of the true effect, can be read off a two-sided
+result at \code{2 * alpha}: it is
 \code{power * (1 - type_s)}. Type M is recovered only when that result's Type S is 0, since the
 wrong-signed replicates cannot otherwise be told apart from the others.
 }

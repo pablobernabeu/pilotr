@@ -21,7 +21,8 @@ calibrate_response(
 alone, or \code{"all"}, which scales every variance-contributing term by a common factor.}
 
 \item{scale_intercept}{With \code{tune = "all"}, whether the intercept is scaled with the rest.
-\code{FALSE} (the default) holds it, and \code{TRUE} reproduces pilotr 0.3.0 and 0.3.1.}
+\code{FALSE} (the default) holds it, and \code{TRUE} multiplies it by the same factor as the rest (see
+Details).}
 
 \item{denominator}{Either \code{"total"} (the default), the total variance with the fixed component
 included, or \code{"random"}, the random-effect components plus the residual, as in Cohen's d.}
@@ -71,11 +72,11 @@ time of 600 ms stays near 600 ms. The intercept is the location when the contras
 predictors are centred, as codes of -0.5 and 0.5 are. Scaling the coefficient of a contrast
 coded 0 and 1, or of a predictor whose mean is not zero, moves the location as well.
 
-\code{scale_intercept = TRUE} multiplies the intercept by the same factor, as pilotr 0.3.0 and 0.3.1
-did. For \code{gaussian} and \code{exgaussian}, that is a change of units, and no power or precision
-result for a coefficient changes. Through a log or logit link, it changes the outcome itself.
+\code{scale_intercept = TRUE} multiplies the intercept by the same factor. For \code{gaussian} and
+\code{exgaussian}, that is a change of units, and no power or precision result for a coefficient
+changes. Through a log or logit link, it changes the outcome itself.
 For the lognormal families, it raises the response, less any shift, to the power of the factor,
-which turned that median of 600 ms into 16.6 hours. For \code{poisson}, it refuses targets that a
+which turns that median of 600 ms into 16.6 hours. For \code{poisson}, it refuses targets that a
 held intercept reaches, and it can return an intercept too large to simulate.
 
 \code{denominator} says what \code{target_var} is a target for. \code{"total"}, the default, is the total that

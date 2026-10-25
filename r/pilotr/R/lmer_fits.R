@@ -1,28 +1,28 @@
 # Shared mixed-model fitting for the replicate loops, with honest convergence accounting.
 #
-# The replicate loops previously wrapped each fit in suppressWarnings(), so only a hard error
-# was ever visible: a boundary-singular fit and a fit whose optimiser reported non-convergence
-# both counted as converged. That made `n_converged` close to meaningless for the design class
-# pilotr is aimed at, because a maximal crossed random-effects structure is singular in a large
-# share of replicates at realistic sample sizes (Bates et al., 2015; Matuschek et al., 2017).
+# Each fit's warnings are recorded rather than suppressed. Under suppressWarnings(), only a hard
+# error would be visible, and a boundary-singular fit and a fit whose optimiser reported
+# non-convergence would both count as converged. That would make `n_converged` close to
+# meaningless for the design class pilotr is aimed at, because a maximal crossed random-effects
+# structure is singular in a large share of replicates at realistic sample sizes (Bates et al.,
+# 2015; Matuschek et al., 2017).
 #
-# Singular and warning fits still count towards the result. Their fixed-effect estimates
+# Singular and warning fits count towards the result. Their fixed-effect estimates
 # stay interpretable, and dropping them would bias the result, since singularity is not
 # independent of the variance estimates that produce it: excluding those replicates would
 # preferentially remove the ones with small estimated random-effect variance, and so overstate
 # precision. They are counted and reported instead, which tells the user something actionable,
 # namely that the model being fitted is richer than the data can support.
 
-# The fitter follows the response family. Earlier versions fitted every replicate by lmer(),
-# whatever the family. A bernoulli or poisson specification writes its coefficients on the logit
-# or log scale, and a linear model of the 0/1 or count response estimates a difference on the
-# response scale instead. Compared with the true value, that difference made Type M read 0.21 on a
-# crossed accuracy design that a logistic model shows exaggerating, at 1.12, and set ROPE intervals
-# on one scale against a region on another. Power hardly moved, since the two tests agree on the
-# sign and nearly always on significance. glmer() fits those two families on their own link scale,
-# with a Wald z test. A model with no random terms, such as that of every shipped
-# between-subjects example, made lmer() stop with "No random effects terms specified in formula"
-# in every replicate. Such a model is fitted by lm() or glm().
+# The fitter follows the response family. A bernoulli or poisson specification writes its
+# coefficients on the logit or log scale, while a linear model of the 0/1 or count response
+# estimates a difference on the response scale. Compared with the true value, that difference puts
+# Type M at 0.21 on a crossed accuracy design that a logistic model shows exaggerating, at 1.12,
+# and sets ROPE intervals on one scale against a region on another, although power hardly differs,
+# since the two tests agree on the sign and nearly always on significance. glmer() therefore fits
+# those two families on their own link scale, with a Wald z test. A model with no random terms,
+# such as that of every shipped between-subjects example, is fitted by lm() or glm(), since lmer()
+# stops with "No random effects terms specified in formula".
 #
 # Ordinal and beta responses have no frequentist model here yet, since a proportional-odds or
 # Beta mixed model would need a package beyond lme4. They are fitted by the linear fallback on
@@ -49,11 +49,11 @@
   "generate_design_analysis() in the R package.")
 
 # Whether a model formula has a random-effects term, a `|` or `||` call anywhere on its right-hand
-# side, which is where lme4 looks for one. lme4::findbars() answers the same question, but lme4
-# 2.0 moved it to the reformulas package and warns when it is called through lme4. The fitter
-# needs to know only whether there is such a term. lmer() also takes a formula written as text,
-# which is read as a formula first. Taken as it came, the text showed no such term, and lm() then
-# fitted the model without its random effects.
+# side, which is where lme4 looks for one. lme4::findbars() answers the same question, but from
+# lme4 1.1-38 it is a shim for reformulas::findbars() that warns when it is called through lme4.
+# The fitter needs to know only whether there is such a term. lmer() also takes a formula written
+# as text, which is read as a formula first. Taken as it came, the text showed no such term, and
+# lm() then fitted the model without its random effects.
 .has_bars <- function(formula) {
   formula <- stats::as.formula(formula)
   walk <- function(x) is.call(x) &&
@@ -64,8 +64,8 @@
 
 # Which model a fit takes: the GLM family name (NULL for a linear model) and whether the formula
 # has random terms. The family chooses only for the model pilotr derives (`auto`). A formula the
-# user writes is fitted as a linear model, as it always was, since only its author knows the
-# scale its response is on.
+# user writes is fitted as a linear model, since only its author knows the scale its response is
+# on.
 .model_kind <- function(formula, family, auto) {
   glm_family <- if (isTRUE(auto) && family %in% names(.GLM_FAMILY)) .GLM_FAMILY[[family]]
   list(glm_family = glm_family, has_re = .has_bars(formula))
@@ -81,9 +81,9 @@
 # "lme4::glmer (binomial), Wald z". With `test = FALSE`, the only inference made is the interval
 # precision_design() builds, the estimate plus or minus 1.96 standard errors, a Wald z interval.
 # A one-sided test is named with its direction, "stats::lm, t, one-sided (greater)", so that a
-# result read later says which test its power belongs to. The two-sided label is unchanged. A joint
-# test of a set of coefficients (see .joint_test()) is named by its own statistic, the F or the
-# chi-square of which each single-coefficient test is the one-degree-of-freedom case.
+# result read later says which test its power belongs to. A joint test of a set of coefficients
+# (see .joint_test()) is named by its own statistic, the F or the chi-square of which each
+# single-coefficient test is the one-degree-of-freedom case.
 .fitter_label <- function(formula, family, test, auto, alternative = "two.sided", joint = FALSE) {
   k <- .model_kind(formula, family, auto)
   fitter <- if (!is.null(k$glm_family))

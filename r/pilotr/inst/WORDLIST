@@ -78,11 +78,13 @@ Zenodo
 analyzing
 brms
 brms's
+callr
 cli
 doi
 ed
 favicons
 ggplot
+ggplot2
 iD
 jsonlite
 knitr
@@ -97,6 +99,7 @@ pkgdown
 poisson
 pow
 rd
+replicate's
 serialisable
 serverless
 simr

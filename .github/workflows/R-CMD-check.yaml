@@ -155,7 +155,8 @@ jobs:
 
       # The package's dependencies are needed because roxygen loads it to read the tags. roxygen2
       # itself is pinned so that one of its releases cannot turn this job red with no source change;
-      # raise this pin and the version DESCRIPTION records in the same commit.
+      # raise this pin, the version DESCRIPTION records and the version both copies of
+      # CONTRIBUTING.md install in the same commit.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
           working-directory: r/pilotr

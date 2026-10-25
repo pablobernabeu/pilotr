@@ -28,6 +28,9 @@ package's functions directly. Running locally gives each user a private R proces
 else's work waits on theirs.
 }
 \details{
+The app needs the 'shiny' and 'ggplot2' packages, which pilotr only suggests, and its Verify
+button needs the 'callr' package.
+
 Each power analysis and power curve in the app runs in one R process, and the session that
 asked for it waits for the result. Its controls and outputs do not update until the run ends.
 For a heavy run, download the specification and call \code{\link[=power_design]{power_design()}} or \code{\link[=power_mixed]{power_mixed()}} from

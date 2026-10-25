@@ -116,13 +116,15 @@ off in the same way, at a ceiling set by the by-subject slope and the number of 
 subject counts must be large enough to put that ceiling well above the target.
 
 What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between the
-fitted shape and the true curve, and it treats the points of the curve as independent. Every
-sweep in pilotr now draws each point's replicates from a seed of its own (see \code{\link[=sweep_spec]{sweep_spec()}}).
+fitted shape and the true curve, and it treats the points of the curve as independent. By
+default, every sweep in pilotr draws each point's replicates from a seed of its own (see
+\code{\link[=sweep_spec]{sweep_spec()}}).
 Over 1,000 simulated curves for each combination of four effect sizes and three target powers,
 at 400 replicates a point, the nominal 95\% interval covered the analytic sample size in 96.5\%,
 95.9\% and 96.2\% of solves on the three grid shapes. For an effect size swept at a fixed sample
-size, it covered the analytic effect in 95.7\% of solves. When every point reused the
-specification's seed, as up to 0.3.1, the figures were 87.8\%, 94.0\%, 93.5\% and 70.3\%. A curve
+size, it covered the analytic effect in 95.7\% of solves. With \code{seeds = "shared"} (\code{.seeds} in
+\code{\link[=sweep_spec]{sweep_spec()}}), every point reused the specification's seed, and the figures were
+87.8\%, 94.0\%, 93.5\% and 70.3\%. A curve
 assembled by hand, from separate runs that each started from the same seed, shares its noise in
 the same way. In the calibration's 36 checks, the solved size sat within 2.6\% of the analytic
 answer on average and within 7.7\% at worst. Nearly all of that error is the Monte Carlo noise

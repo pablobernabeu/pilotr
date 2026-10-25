@@ -328,9 +328,9 @@ response_variance <- function(spec) {
   # When the deviations do not average zero, the total can fall before it rises, and a target in
   # that dip is refused although some k reaches it. With the intercept held, that happens when a
   # contrast is coded 0 and 1 or a predictor's mean is not zero. Coded that way,
-  # poisson_counts_between falls from 0.2213 at k = 0 to 0.2096 at k = 0.485. With b0 = 0, the
-  # deviations average the intercept itself, and scale_intercept = TRUE keeps that refusal, as it
-  # keeps the rest of the old behaviour. Both refusals say where the search starts.
+  # poisson_counts_between falls from 0.2213 at k = 0 to 0.2096 at k = 0.485. With b0 = 0, which
+  # scale_intercept = TRUE sets, the deviations average the intercept itself, so a non-zero
+  # intercept can produce such a dip. Both refusals say where the search starts.
   eta1 <- .eta_draw(spec)
   b0 <- if (scale_intercept) 0 else spec[["fixed"]][["intercept"]]
   total_at <- function(k)
@@ -401,11 +401,11 @@ response_variance <- function(spec) {
 #' predictors are centred, as codes of -0.5 and 0.5 are. Scaling the coefficient of a contrast
 #' coded 0 and 1, or of a predictor whose mean is not zero, moves the location as well.
 #'
-#' `scale_intercept = TRUE` multiplies the intercept by the same factor, as pilotr 0.3.0 and 0.3.1
-#' did. For `gaussian` and `exgaussian`, that is a change of units, and no power or precision
-#' result for a coefficient changes. Through a log or logit link, it changes the outcome itself.
+#' `scale_intercept = TRUE` multiplies the intercept by the same factor. For `gaussian` and
+#' `exgaussian`, that is a change of units, and no power or precision result for a coefficient
+#' changes. Through a log or logit link, it changes the outcome itself.
 #' For the lognormal families, it raises the response, less any shift, to the power of the factor,
-#' which turned that median of 600 ms into 16.6 hours. For `poisson`, it refuses targets that a
+#' which turns that median of 600 ms into 16.6 hours. For `poisson`, it refuses targets that a
 #' held intercept reaches, and it can return an intercept too large to simulate.
 #'
 #' `denominator` says what `target_var` is a target for. `"total"`, the default, is the total that
@@ -424,7 +424,8 @@ response_variance <- function(spec) {
 #' @param tune Either `"sigma"` (the default), which solves for the residual standard deviation
 #'   alone, or `"all"`, which scales every variance-contributing term by a common factor.
 #' @param scale_intercept With `tune = "all"`, whether the intercept is scaled with the rest.
-#'   `FALSE` (the default) holds it, and `TRUE` reproduces pilotr 0.3.0 and 0.3.1.
+#'   `FALSE` (the default) holds it, and `TRUE` multiplies it by the same factor as the rest (see
+#'   Details).
 #' @param denominator Either `"total"` (the default), the total variance with the fixed component
 #'   included, or `"random"`, the random-effect components plus the residual, as in Cohen's d.
 #' @return The specification, with the tuned parameters replaced.
@@ -495,7 +496,7 @@ calibrate_response <- function(spec, target_var = 1, tune = c("sigma", "all"),
     stop("this design has no variance to rescale", call. = FALSE)
   k <- .calibration_factor(spec, v, target_var, kind, scale_intercept)
   # The intercept is a location, which adds nothing to the fixed or random components, so it is
-  # held unless the caller asks for the behaviour of pilotr 0.3.0 and 0.3.1.
+  # held unless scale_intercept = TRUE asks for it to be scaled with the rest.
   if (scale_intercept) spec[["fixed"]][["intercept"]] <- spec[["fixed"]][["intercept"]] * k
   for (nm in names(spec[["fixed"]][["coefficients"]]))
     spec[["fixed"]][["coefficients"]][[nm]] <- spec[["fixed"]][["coefficients"]][[nm]] * k

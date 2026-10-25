@@ -24,9 +24,11 @@ data.
 
 ## Two ways to run it
 
-One way is to run it on your own machine. With the package installed, launch the app locally:
+One way is to run it on your own machine. The app needs the shiny and ggplot2 packages, which
+pilotr suggests but does not install, so install them first and then launch the app locally:
 
 ```{r}
+install.packages(c("shiny", "ggplot2"))
 pilotr::run_app()
 ```
 
@@ -36,6 +38,11 @@ the future and promises packages installed, `run_app()` runs it in a background 
 the app free for other sessions, such as a second browser tab. For a heavy run, download
 the specification and call `power_design()` or `power_mixed()` from the console, whose `workers`
 argument spreads the replicates over your local cores.
+
+The installed app caps the simulations of a power analysis, and of each point of a power curve,
+at 5,000. To change the cap, set the `PILOTR_MAX_SIMS` environment variable before calling
+`run_app()`, for example with `Sys.setenv(PILOTR_MAX_SIMS = 20000)`. Verify, on the
+'Reproducible R script' tab, needs the callr package.
 
 The other way needs nothing installed. A serverless build runs entirely in the browser
 through WebAssembly, with no server and nothing uploaded. Try it at the

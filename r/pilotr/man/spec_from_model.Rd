@@ -45,7 +45,7 @@ family which a Gaussian fit cannot provide.}
 \code{NULL}, the default, leaves the response unrounded.}
 
 \item{effects}{Where the coefficients of the returned specification come from. \code{"estimate"},
-the default, takes the fit's point estimates, as earlier versions did. \code{"safeguard"} takes
+the default, takes the fit's point estimates. \code{"safeguard"} takes
 the bound of each coefficient's two-sided \code{safeguard_level} interval nearer zero, and stops
 with an error when that interval includes zero (see Details). Either way, a coefficient named
 in \code{sesoi} takes the value given there, and the intercept is the fit's.}
@@ -200,8 +200,8 @@ over subjects and items as described under Counterbalanced lists in the specific
 rotated together, as two two-level factors over four lists, are all counterbalanced, and a
 message names them. Releases that read no version above 0.3 refuse such a specification.
 
-\code{counterbalance = FALSE} returns the crossed specification of earlier versions, which those
-releases read, with a warning. It has twice the pilot's observations per subject for a
+\code{counterbalance = FALSE} returns the crossed specification instead, with a warning, and releases
+that read no version above 0.3 accept it. It has twice the pilot's observations per subject for a
 two-level factor, three times for a three-level one and four times for two two-level factors
 rotated together. The power computed from it is therefore too high. Take the variance
 components of the \code{crossed_mixed_rt} example, with 30 subjects, 24 items and an effect of 0.05

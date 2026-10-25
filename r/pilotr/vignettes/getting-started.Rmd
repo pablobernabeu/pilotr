@@ -118,6 +118,8 @@ that read it.
 
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,
   count, ordinal and proportion outcomes.
+- [Worked examples](worked-examples.html), which simulates each specification that ships with
+  the package.
 - [Power and design analysis](power-analysis.html), covering simulation-based power with Type
   S and Type M errors, for two-group and crossed mixed-effects designs.
 - [Precision / ROPE design analysis](precision-rope.html), which plans by precision against a

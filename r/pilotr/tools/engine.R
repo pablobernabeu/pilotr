@@ -1,12 +1,9 @@
-# Load the pilotr engine from source, for the scripts under examples/ and tests/
-# that exercise it without installing the package.
+# Load the pilotr engine from source, for the scripts under examples/ that
+# exercise it without installing the package.
 #
-# Those scripts each used to name the engine files they needed. The lists had to
-# be kept in step with R/ by hand, once per script, and they were not: the 0.3.0
-# work added validate.R, which load_spec() and build_spec() both reach into, and
-# every list that omitted it kept working until the moment it called one of them,
-# then failed with "could not find function \"validate_spec\"". Loading the
-# directory removes the lists, and with them the thing that drifts.
+# It loads every file in R/, so that no script has to name the engine files it
+# needs and keep that list in step with R/ by hand. A list that leaves a file out
+# goes unnoticed until a function defined there is called.
 #
 # Every file in R/ defines functions and constants and nothing else -- no
 # library() call, no other top-level side effect -- so loading them all is cheap
@@ -29,6 +26,5 @@ load_pilotr_engine <- function(r_dir) {
 }
 
 # Resolve the engine directory from the directory holding the calling script.
-# examples/ and tests/ are both one level below the package root, so the path is
-# the same from either.
+# examples/ is one level below the package root.
 pilotr_engine_dir <- function(script_dir) file.path(script_dir, "..", "R")

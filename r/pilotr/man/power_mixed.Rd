@@ -71,7 +71,7 @@ An object of class \code{pilotr_power}, a list whose per-run elements are \code{
 and whose per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse},
 \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s},
 \code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect each of
-those has length one, so \code{result$power} reads as it always has. \code{fitter} names the fitter and
+those has length one, so \code{result$power} is a single number. \code{fitter} names the fitter and
 its test, such as \code{"lme4::glmer (binomial), Wald z"}, with the direction of a one-sided test
 added, as in \code{"lme4::glmer (binomial), Wald z, one-sided (greater)"}. Under a one-sided
 test, \code{n_significant} and the design-analysis quantities count the replicates significant in
@@ -119,13 +119,11 @@ which it is indebted. pilotr differs in being driven by the portable cross-langu
 specification, in reporting the Type S and Type M design-analysis errors alongside
 power, and in parallelising its replicates through the \code{workers} argument.
 
-The analysis model comes from the specification rather than from this function. Before 0.3 the
-formula was written into the source as a maximal crossed structure, so a design declaring
-uncorrelated slopes, or no slopes at all, was nonetheless analysed as though it had them, and a
-design with more than one factor was refused. The formula now comes from \code{\link[=model_formula]{model_formula()}} and
-the data from \code{\link[=model_data]{model_data()}}, so the analysis matches the process that generated the data. Both
-can still be given directly, which is what to do when a deliberately different analysis model is
-the point, as when checking how a misspecified model behaves.
+The analysis model comes from the specification rather than from this function: the formula
+comes from \code{\link[=model_formula]{model_formula()}} and the data from \code{\link[=model_data]{model_data()}}, so the analysis matches the
+process that generated the data. Both can be given directly, which is what to do when a
+deliberately different analysis model is the point, as when checking how a misspecified model
+behaves.
 
 The fitter follows the response family, so that the estimates are on the scale of the
 specification's coefficients. A \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} or \code{exgaussian}
@@ -172,8 +170,7 @@ and the fit counts describe the fit each replicate kept. A rule that can end on 
 intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
 items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
 al., 2013). Run the null condition of \code{\link[=design_conditions]{design_conditions()}} through the same ladder to see how
-often, as the power vignette does. A single formula is unaffected by \code{fallback}, and its result
-is the one it always was.
+often, as the power vignette does. A single formula is unaffected by \code{fallback}.
 
 Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 proportion over a finite number of replicates is an estimate rather than a fact. At the default
@@ -196,8 +193,8 @@ significant in the tested direction. When that is the direction of the true effe
 prediction. \code{fitter} names the direction, as in
 \code{"lmerTest::lmer, Satterthwaite t, one-sided (greater)"}.
 
-Results from earlier versions were two-sided. A one-sided power at \code{alpha}, in the direction of
-the true effect, can be read off a two-sided result at \code{2 * alpha}: it is
+A one-sided power at \code{alpha}, in the direction of the true effect, can be read off a two-sided
+result at \code{2 * alpha}: it is
 \code{power * (1 - type_s)}. Type M is recovered only when that result's Type S is 0, since the
 wrong-signed replicates cannot otherwise be told apart from the others.
 

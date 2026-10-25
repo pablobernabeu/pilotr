@@ -3,9 +3,8 @@
 # A factor with three levels enters the model as two contrast columns, and its interaction with a
 # two-level factor as two product columns. The effect a study preregisters is then often the test
 # of both coefficients at once, and its power differs from that of either coefficient tested by
-# itself. `focal` took names one by one, so that test could not be planned. A named list of
-# coefficient sets now asks for it, and each set is tested against the hypothesis that all its
-# coefficients are zero.
+# itself. A named list of coefficient sets in `focal` asks for that test, and each set is tested
+# against the hypothesis that all its coefficients are zero.
 #
 # The test follows the fitter. A linear mixed model fitted by lmerTest has Satterthwaite's F from
 # lmerTest::contest(), the multi-degree-of-freedom form of the t test lmerTest reports for one

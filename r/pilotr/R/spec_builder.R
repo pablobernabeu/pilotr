@@ -20,19 +20,19 @@ default_response_name <- function(family) {
          beta = "proportion", "outcome")
 }
 
-# A seed as a specification stores it. A whole seed inside R's integer range stays an integer, as
-# it always has been, so existing JSON and generated scripts are unchanged. A larger whole seed
-# stays a double, which as.integer() turned into NA with a coercion warning, although every seed
-# up to 2^53 - 1 is valid and spec_json() writes it exactly. Anything else is returned untouched,
-# for validate_spec() to refuse in its own words, where as.integer() truncated 1.5 to 1 in silence.
+# A seed as a specification stores it. A whole seed inside R's integer range is an integer. A
+# larger whole seed stays a double, which as.integer() would turn into NA with a coercion warning,
+# although every seed up to 2^53 - 1 is valid and spec_json() writes it exactly. Anything else is
+# returned untouched, for validate_spec() to refuse in its own words, where as.integer() would
+# truncate 1.5 to 1 in silence.
 .as_seed <- function(x) {
   if (!.is_whole(x)) return(x)
   if (abs(x) < 2^31) as.integer(x) else as.numeric(x)
 }
 
-# A number of subjects or items, by the seed's rule. as.integer() truncated 10.5 subjects to 10 in
-# silence, so the specification described a design nobody had asked for. A count that is not a
-# whole number now reaches validate_spec(), which refuses it.
+# A number of subjects or items, by the seed's rule. A count that is not a whole number reaches
+# validate_spec(), which refuses it, where as.integer() would truncate 10.5 subjects to 10 in
+# silence and describe a design nobody had asked for.
 .as_count <- function(x) if (.is_whole(x) && abs(x) < 2^31) as.integer(x) else x
 
 #' Build a design specification from a flat list of design inputs
@@ -45,10 +45,13 @@ default_response_name <- function(family) {
 #' parameters.
 #'
 #' @param p A named list of design inputs. Common fields are `name`, `seed`,
-#'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items`,
-#'   `n_item`, `factor_name`, `lev1`, `lev2`, `intercept`, `effect`,
-#'   `family`, `resp_name`, and family parameters such as `sigma`, `shift`, `beta`,
-#'   `thresholds`, or `phi`; within-design random effects use `subj_int_sd`,
+#'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items` and `n_item`
+#'   (read for a within design only), `factor_name`, `lev1`, `lev2`, `intercept`, `effect`,
+#'   `family`, `resp_name` (blank or `NULL` for the name [default_response_name()] gives) and
+#'   the family's parameters: `sigma` for the four continuous families, `shift` for
+#'   `"shifted_lognormal"`, `beta` for `"exgaussian"`, `phi` for `"beta"` and, for `"ordinal"`,
+#'   `thresholds` as a single comma-separated string such as `"-2, -0.6, 0.6, 2"`, as the
+#'   no-code app supplies it. Within-design random effects use `subj_int_sd`,
 #'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
 #'   `item_corr`. `counterbalance = TRUE` counterbalances the factor of a
 #'   within design with items, and is ignored in any other design.
@@ -126,8 +129,7 @@ build_spec <- function(p) {
     resp$round <- 4L
   }
   if (p$family == "shifted_lognormal") resp$shift <- p$shift
-  # The ex-Gaussian's exponential scale. Without it, and without sigma, validate_spec() refused
-  # the specification built here.
+  # The ex-Gaussian's exponential scale, which validate_spec() requires along with sigma.
   if (p$family == "exgaussian") resp$beta <- p$beta
   if (p$family == "ordinal") resp$thresholds <- as.numeric(strsplit(gsub("\\s", "", p$thresholds), ",")[[1]])
   if (p$family == "beta") resp$phi <- p$phi
@@ -300,10 +302,10 @@ build_spec <- function(p) {
 # exactly but read badly: an effect the user typed as 0.3 would be written 0.29999999999999999,
 # which in an exported specification looks like a defect. Formatting each double here, rather
 # than shortening jsonlite's output afterwards, keeps the readability without ever reading a
-# number back from the text it was just written to. That read-back was wrong on a build of R
+# number back from the text it was just written to. A read-back would be wrong on a build of R
 # without long-double arithmetic, where `as.numeric("0.33333333333333331")` is one unit in the
-# last place below 1/3: the shortened form then recorded that wrong value, and the
-# specification no longer held the coefficient the user set.
+# last place below 1/3: the shortened form would record that wrong value, and the
+# specification would no longer hold the coefficient the user set.
 #
 # Integers are left to jsonlite, which writes them exactly. So is any vector holding NA, NaN or
 # an infinity, which has no decimal form to shorten and which jsonlite already renders.
@@ -338,10 +340,10 @@ build_spec <- function(p) {
 #' A width is accepted only when 'jsonlite' reads it back as exactly the double it was written
 #' from. [load_spec()] reads the file with 'jsonlite', which parses numbers with the C library's
 #' `strtod()`, and the 'Python' package reads it with `json`. Both round correctly, so the two
-#' packages recover the same double. Version 0.3.1 checked each width with R's `as.numeric()`,
-#' which on a build with long-double arithmetic, such as R on x86 Windows and Linux, rounds a
-#' decimal twice, first to long double and then to double. It accepted some 15- and 16-digit
-#' forms that the readers of the file put one unit in the last place away.
+#' packages recover the same double. R's `as.numeric()` would not do as that check: on a build
+#' with long-double arithmetic, such as R on x86 Windows and Linux, it rounds a decimal twice,
+#' first to long double and then to double, and accepts some 15- and 16-digit forms that the
+#' readers of the file put one unit in the last place away.
 #'
 #' @param spec A design specification (list), as produced by [build_spec()].
 #' @return A length-one character string containing the specification as pretty-printed JSON,
@@ -421,8 +423,10 @@ spec_json <- function(spec) {
 #' Gaussian design with one row per subject is sent to [power_design()], whose t-test takes no
 #' other. An `ordinal` or `beta` outcome is sent to [generate_design_analysis()], which writes a
 #' Bayesian design analysis on the link scale to `design_analysis.R`, since [power_mixed()] fits
-#' such an outcome only on the response scale. Any other design is sent to [power_mixed()], and
-#' only then does the installation line name `lme4` and `lmerTest`, which it needs.
+#' such an outcome only on the response scale. Running that file needs `brms` and a working Stan
+#' backend, which the installation line does not name. Any other design is sent to
+#' [power_mixed()], and only then does the installation line name `lme4` and `lmerTest`, which it
+#' needs.
 #'
 #' Since the point of the script is bit-for-bit reproduction, the embedded specification has to
 #' preserve every coefficient exactly. The JSON text sits in a raw string that [load_spec()]
@@ -446,9 +450,8 @@ spec_json <- function(spec) {
 #' cat(generate_r_script(spec))
 #' @export
 generate_r_script <- function(spec) {
-  # A path used to reach spec_json() as a plain string, so the script embedded the path itself
-  # and ran only where that file was. The file is now read, and the closing suggestion is chosen
-  # from the design it holds.
+  # A path is read first, so that the script embeds the specification rather than the path and
+  # runs anywhere, and the closing suggestion is chosen from the design the file holds.
   if (is.character(spec) && length(spec) == 1L) spec <- load_spec(spec)
   if (!is.list(spec))
     stop("`spec` must be a specification list or the path of a specification file",
@@ -468,14 +471,13 @@ generate_r_script <- function(spec) {
 }
 
 # The installation line and the closing suggestion of an exported script, both chosen by the
-# design. The script used to suggest power_mixed() for every design, beside an installation line
-# that named none of the packages power_mixed() needs. power_design() takes the two-group Gaussian
-# design with one row per subject, by its own rule. power_mixed() fits an ordinal or Beta outcome
-# only on the response scale, while the specification's coefficients are on the logit scale.
-# Those outcomes therefore get the Bayesian design analysis, written to a file with the first
-# coefficient as the focal effect, as both apps' power tabs suggest. Called without a file, it
-# returns the analysis as a string, and a script run with Rscript or source() discards that.
-# Every other design gets power_mixed(), and the installation line then names lme4 and lmerTest.
+# design. power_design() takes the two-group Gaussian design with one row per subject, by its own
+# rule. power_mixed() fits an ordinal or Beta outcome only on the response scale, while the
+# specification's coefficients are on the logit scale. Those outcomes therefore get the Bayesian
+# design analysis, written to a file with the first coefficient as the focal effect, as both apps'
+# power tabs suggest. Called without a file, it returns the analysis as a string, and a script run
+# with Rscript or source() discards that. Every other design gets power_mixed(), and the
+# installation line then names lme4 and lmerTest.
 .script_hint <- function(spec) {
   cran <- "# install.packages(\"pilotr\")   # from CRAN\n"
   if (is.null(.two_group_refusal(spec)))

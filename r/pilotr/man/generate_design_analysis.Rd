@@ -115,7 +115,7 @@ The aggregator stops when they disagree, and pools nothing.
 # browser build of the no-code app.
 spec   <- load_spec(pilotr_example("crossed_mixed_rt"))
 script <- generate_design_analysis(spec, focal = c(cond = 0.05))
-cat(head(strsplit(script, "\n")[[1]], 15), sep = "\n")
+cat(head(strsplit(script, "\n")[[1]], 18), sep = "\n")
 
 # A stricter rule, with a wrapper for a SLURM array and its aggregator.
 cluster <- generate_design_analysis(spec, focal = c(cond = 0.05),

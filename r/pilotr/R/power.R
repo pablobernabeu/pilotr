@@ -43,8 +43,8 @@
 #' direction. When that is the direction of the true effect, Type S is 0 by construction, and
 #' Type M is the exaggeration among the replicates that would support the prediction.
 #'
-#' Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction of
-#' the true effect, can be read off a two-sided result at `2 * alpha`: it is
+#' A one-sided power at `alpha`, in the direction of the true effect, can be read off a two-sided
+#' result at `2 * alpha`: it is
 #' `power * (1 - type_s)`. Type M is recovered only when that result's Type S is 0, since the
 #' wrong-signed replicates cannot otherwise be told apart from the others.
 #'
@@ -99,7 +99,7 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
   fname <- f[["name"]]; lev0 <- f[["levels"]][1]; lev1 <- f[["levels"]][2]
   col <- names(f[["contrasts"]])[1]; vals <- f[["contrasts"]][[col]]
   # A specification may leave the contrast out of `coefficients`, `{}` included, and the
-  # simulator then generates no effect, so the true effect is 0. A NULL here used to reach the
+  # simulator then generates no effect, so the true effect is 0, not a NULL that would reach the
   # Type S and Type M guard as a zero-length value and stop the run.
   beta <- spec[["fixed"]][["coefficients"]][[col]]
   if (is.null(beta)) beta <- 0
@@ -123,14 +123,14 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
   sig <- which(pv < alpha)
   n_sig <- length(sig)
   # Type S and Type M are defined relative to a true value, and Type M divides by it, so both
-  # stay NaN when the true effect is zero. The alternative was an infinity, alongside a
-  # sign-error rate that had quietly become "the estimate is positive". Same rule as
+  # stay NaN when the true effect is zero, rather than an infinity for Type M and, for Type S,
+  # the share of significant estimates that are positive. Same rule as
   # power_mixed(), and the null condition design_conditions() recommends is exactly this case.
   usable <- n_sig > 0L && !is.na(true_effect) && true_effect != 0
   wrong <- (est[sig] > 0) != (true_effect > 0)
   ratios <- abs(est[sig]) / abs(true_effect)
   # Each carries its Monte Carlo error, NaN wherever the rate is, and Type M's needs two
-  # significant replicates. The result stays a plain list, as code written for earlier versions
+  # significant replicates. The result is a plain list, as code written for earlier versions
   # expects.
   type_s_ci <- if (usable) .type_s_interval(sum(wrong), n_sig, true_effect) else c(NaN, NaN)
   c(list(n_sims = n_sims, alpha = alpha, alternative = alternative),
@@ -155,13 +155,12 @@ power_design <- function(spec, n_sims = 1000, alpha = 0.05, workers = 1, cl = NU
 }
 
 # Why the two-group backend cannot analyse a validated specification, or NULL when it can.
-# A t-test of every row needs independent rows. It used to be applied to any Gaussian design with
-# a two-level between factor, and under the null the test of 30 subjects crossed with 20 items was
-# then significant in 105 of 200 replicates. An item unit, a within factor or an extra grouping
-# factor is therefore refused, the first found being named. Predictors and a `subject` entry stay
-# allowed, since with one row per subject they vary independently from row to row. A between
-# factor on items needs an item unit, so the item test covers it. Mirrors _two_group_refusal()
-# in power.py, message for message.
+# A t-test of every row needs independent rows. Applied under the null to 30 subjects crossed
+# with 20 items, it is significant in 105 of 200 replicates. An item unit, a within factor or an
+# extra grouping factor is therefore refused, the first found being named. Predictors and a
+# `subject` entry stay allowed, since with one row per subject they vary independently from row
+# to row. A between factor on items needs an item unit, so the item test covers it. Mirrors
+# _two_group_refusal() in power.py, message for message.
 .two_group_refusal <- function(spec) {
   if (!identical(spec[["response"]][["family"]], "gaussian"))
     return("The power backend currently handles only the gaussian two-group design.")
