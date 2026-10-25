@@ -744,11 +744,11 @@ by very nearly the same amount mod 1 (to within 1e−7). For the first draw, the
 −0.0091. Draws in arithmetic progression mod 1 correlate `1 − 6|d|(1 − |d|)`, so the first draw of
 replicate `i` would correlate 0.95 with that of replicate `i + 1`. A longer warm-up changes `d`
 and leaves the progression in place: with 50 warm-up draws in place of 10, the step is −0.32 and
-the correlation −0.30. An affine rule for the seeds keeps
-the draws in progression too, so no arithmetic scramble helps: a Weyl increment followed by a
-Lehmer step left the first draws correlated at −0.27. Matsumoto et al. (2007) describe the same
-defect in the initialisation of other linear generators. The first draws of the seeds the loops
-use correlate by 0.02 or less, either way.
+the correlation −0.30. An affine rule for the seeds keeps the draws in progression too, so no
+arithmetic scramble helps: a Weyl increment followed by a Lehmer step left the first draws
+correlated at −0.27. Matsumoto et al. (2007) describe the same defect in the initialisation of
+other linear generators. The first draws of the seeds the loops use correlate by 0.02 or less,
+either way.
 
 A sweep runs the same loops at each point of a grid, such as a list of sample sizes, and gives
 each point a seed of its own by the same rule. Point `j` of a sweep over `J` values, counting from
@@ -761,7 +761,7 @@ to the value swept. Giving every point the specification's own seed would make r
 the same numbers at every point, so the points of a curve would share their noise. The curve
 solvers fit the points as independent, and with shared seeds their nominal 95% intervals covered
 the true sample size in 87.8% of solves on a tight grid. Both packages offer shared seeds as an
-option, which reproduces sweeps up to R 0.3.1 and Python 0.3.0: `.seeds = "shared"` in R's
+option, the rule sweeps followed up to R 0.3.1 and Python 0.3.0: `.seeds = "shared"` in R's
 `sweep_spec()` and `seeds = "shared"` in its curve functions and in Python's `power_curve`.
 
 ## Sampling algorithms (identical across all implementations)

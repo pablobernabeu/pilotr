@@ -56,8 +56,8 @@
 # The regression is written out here, with no call to glm(), because the Python twin has no glm
 # to hand it to and the two engines have to agree. With an intercept and one slope the weighted
 # normal equations are a two-by-two solve in closed form, small enough to mirror line for line,
-# and the reductions are spelled out as loops for the reason core.R gives: neither base R's
-# sum() nor CPython's sum() is a plain double fold, and the two depart from it in different ways.
+# and the reductions are spelled out as loops for the reason core.R gives: neither base R's sum()
+# nor CPython's sum() is a plain double fold, and the two depart from it in different ways.
 #
 # Extrapolation is the one thing these functions must not do. A curve that does not reach the
 # target within the range it swept is refused, and so is a fit that solves outside that range.

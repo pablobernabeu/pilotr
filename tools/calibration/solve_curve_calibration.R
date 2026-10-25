@@ -211,7 +211,7 @@ for (gname in names(GRIDS)) {
       intercept = 0, effect = d, family = "gaussian", resp_name = "score", sigma = 1))
     # sweep_spec() gives each grid point its own seed by default, so the points of one curve draw
     # independent replicates, as they do in a user's sweep. `.seeds = "shared"`, which reproduces
-    # the sweeps of 0.3.1 and earlier, gives every point the specification's seed instead, and
+    # the seeding of 0.3.1 and earlier, gives every point the specification's seed instead, and
     # solve_curve_coverage.R beside this script measures what that sharing does to coverage.
     curve <- sweep_spec(spec, "units$subject$n", sizes, power_design,
                         n_sims = n_sims, alpha = ALPHA)

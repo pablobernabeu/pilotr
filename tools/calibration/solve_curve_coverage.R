@@ -3,7 +3,7 @@
 #
 # solve_curve() fits the points of a curve as independent binomial counts, and the interval it
 # reports is nominal only when they are. sweep_spec() gives every grid point its own seed by
-# default. With `.seeds = "shared"`, which reproduces the sweeps of 0.3.1 and earlier, every point
+# default. With `.seeds = "shared"`, which reproduces the seeding of 0.3.1 and earlier, every point
 # reuses the specification's seed, so replicate i is drawn from the same stream at every point and
 # neighbouring points share most of their noise. This script measures what that sharing does to
 # the interval's coverage and what drawing each point independently restores, over enough curves
