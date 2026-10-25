@@ -68,7 +68,7 @@ jobs:
         # and drop the markdown copy pkgdown leaves beside the stub.
         #
         # The sitemap entry has to go with the page. pkgdown writes sitemap.xml
-        # before this step runs, so deleting the page alone left a <loc>
+        # before this step runs, so deleting the page alone would leave a <loc>
         # advertising a URL that 404s -- and a sitemap is read by search engines,
         # which is the one audience that would then follow it. pkgdown emits one
         # <url> per line, so a line filter removes exactly that entry.
@@ -94,17 +94,18 @@ jobs:
           stage <- "app-stage"
           dir.create(stage, showWarnings = FALSE)
           # app-lite/engine-files.txt is the single place the browser build's engine
-          # subset is named; app.R loads whatever ends up staged beside it. Naming it
-          # here as well is what let the deployed app ship without validate.R.
+          # subset is named; app.R loads whatever ends up staged beside it. A second list
+          # here could drift from it and ship the app without validate.R, which every
+          # Simulate click needs.
           engine <- readLines("app-lite/engine-files.txt")
           engine <- trimws(sub("#.*$", "", engine))
           engine <- engine[nzchar(engine)]
           stopifnot(all(file.exists(file.path("r/pilotr/R", engine))))
           file.copy(file.path("r/pilotr/R", engine), stage, overwrite = TRUE)
           file.copy("app-lite/app.R", stage, overwrite = TRUE)
-          # Without template_params the page is titled "Shiny App" and has no icon, which is
-          # what a browser tab showed. app-lite/build_shinylive.R passes the same values, and
-          # the icons it links are the R site's, copied beside the page.
+          # Without template_params the page is titled "Shiny App" and has no icon.
+          # app-lite/build_shinylive.R passes the same values, and the icons it links are
+          # the R site's, copied beside the page.
           icons <- paste(
             '<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">',
             '<link rel="icon" type="image/svg+xml" href="favicon.svg">', sep = "\n")
@@ -172,9 +173,10 @@ jobs:
           find site/r -name '*.html' | while read -r page; do
             rel="${page#site/r/}"
             case "$rel" in
-              # The root of the site now belongs to the landing page, and the three
-              # staged trees own their own prefixes, so a stub written at any of
-              # these paths would overwrite a page that is live in the new layout.
+              # The root of the site belongs to the landing page and the three staged
+              # trees own their own prefixes, so a stub written at any of those paths
+              # would overwrite a page that is live in the new layout. py/ is left to
+              # the mkdocs stubs written below.
               index.html|r/*|python/*|app/*|py/*) continue ;;
               # A stub here would take every mistyped URL anywhere on the site,
               # including under /python/ and /app/, to the R site's not-found page.

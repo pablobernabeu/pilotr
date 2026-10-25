@@ -207,7 +207,7 @@
 #'
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 #'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-#'   Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
 #'   Kuznetsova, A., Brockhoff, P. B. and Christensen, R. H. B. (2017). lmerTest package: Tests
 #'   in linear mixed effects models. \emph{Journal of Statistical Software}, 82(13), 1-26.
@@ -530,7 +530,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 #'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-#'   Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
 #'   Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
 #'   experiments in which samples of participants respond to samples of stimuli. \emph{Journal of

@@ -1,6 +1,7 @@
-# Keep CI actions and Python dependencies current. Dependabot opens PRs, which the
-# dependency-health workflow then tests. (CRAN/R is not supported by Dependabot; the
-# scheduled R job in dependency-health.yml is the safety net for R dependencies.)
+# Keep CI actions and Python dependencies current. Dependabot opens PRs. A pip update runs
+# python-tests.yml, and an action bump runs the pull-request checks of the workflows it
+# edits, where they have any. (CRAN/R is not supported by Dependabot; the scheduled R job
+# in dependency-health.yml is the safety net for R dependencies.)
 version: 2
 updates:
   - package-ecosystem: "github-actions"

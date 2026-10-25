@@ -12,13 +12,14 @@ tolerance.json's per-case dump list, and is gated here instead.
 What is required is that the two engines agree far more closely than any statistically
 meaningful difference. The allowance below is a relative difference, not an ulp count,
 because the quantity compared is the end of an iterative fit rather than a single arithmetic
-result: a hundred IRLS steps, each rounding a few libm calls, accumulate more than one ulp
-even though nothing has gone wrong. TOLERANCE is set at 1e-9, which on a solved sample size
-of 220 subjects is two ten-millionths of a subject. The largest disagreement measured across
-the cases below is 5.0e-15, so the allowance sits some five orders of magnitude above it,
-which leaves headroom for a third platform's libm without admitting anything a reader could
-act on. A logic error would show as a differing refusal message, a differing column, or a
-discrepancy many orders of magnitude larger, all of which still fail.
+result: up to a hundred IRLS steps (five or six for the curves below), each rounding a few
+libm calls, accumulate more than one ulp even though nothing has gone wrong. TOLERANCE is set
+at 1e-9, which on a solved sample size of 220 subjects is two ten-millionths of a subject.
+The largest disagreement measured across the cases below is about 5e-15, so the allowance
+sits some five orders of magnitude above it, which leaves headroom for a third platform's
+libm without admitting anything a reader could act on. A logic error would show as a
+differing refusal message, a differing column, or a discrepancy many orders of magnitude
+larger, all of which still fail.
 
 The curves are fixed tables written into this file rather than simulated, so that the check
 tests the solver alone and cannot be disturbed by a change to the generative core.
@@ -46,9 +47,11 @@ RSCRIPT = os.environ.get("PILOTR_RSCRIPT", "Rscript")
 
 TOLERANCE = 1e-9
 
-# One shallow curve, one steep one, one over a wide range, and one whose rate column is the
-# precision analysis's rather than the power analysis's, so both auto-detected names are
-# exercised. The counts vary across points, which is what makes the weighting visible.
+# Two curves over the number of subjects, one shallow and one steep, and a third whose rate column
+# is the precision analysis's rather than the power analysis's, so both auto-detected names are
+# exercised. The fourth is over an effect size on the identity scale and the fifth over items on
+# the log scale. The replicate counts vary across the points of the first and third, which is
+# what makes the weighting visible.
 CASES = [
     ("power_shallow", {
         "curve": [{"n_subject": 20, "power": 0.21, "n_returned": 200},
@@ -91,8 +94,9 @@ CASES = [
         "target": 0.75, "transform": "log", "level": 0.9}),
 ]
 
-# Inputs every refusal path should reject, so that the two engines are checked to refuse the
-# same things with the same words rather than only to agree when they succeed.
+# Inputs that solve_curve() refuses, so that the two engines are checked to refuse the same
+# things with the same words rather than only to agree when they succeed. They cover a selection
+# of its refusals.
 REFUSALS = [
     ("target_out_of_range", {
         "curve": CASES[0][1]["curve"], "target": 1.2, "transform": "sqrt", "level": 0.95}),

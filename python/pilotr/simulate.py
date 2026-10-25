@@ -6,9 +6,10 @@ by-subject and by-item random intercepts and slopes (on contrasts or continuous 
 passes the result through a link and a response family. The RNG draw order follows spec/SPEC.md,
 namely per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
 effects -> item random effects -> extra grouping-factor random effects -> per-row response
-draws (one deviate per row, except the beta family's rejection sampler, which consumes a
-variable number). Specs without partial crossing or a `predictors` block keep the original
-stream.
+draws (one deviate per row for most families, two for the ex-Gaussian, a normal then a uniform,
+and a variable number for the beta family's rejection sampler). A predictor whose reliability is
+below 1 draws one further normal per value. Specs without partial crossing or a `predictors` block
+keep the original stream.
 """
 
 from __future__ import annotations
@@ -59,10 +60,10 @@ class Dataset:
         path : str or os.PathLike
             The file to write, which is replaced if it exists.
         """
-        # The locale encoding raised UnicodeEncodeError for "Łatwy" on Windows and wrote "fácil"
-        # as cp1252 bytes, and fields joined with bare commas came apart at a comma inside a
-        # label. lineterminator keeps the LF endings this method has always written, where the
-        # csv module's default is CRLF.
+        # Written as UTF-8 through the csv module: the locale encoding cannot write "Łatwy" on
+        # Windows and writes "fácil" as cp1252 bytes, and fields joined with bare commas come
+        # apart at a comma inside a label. lineterminator keeps LF endings on every platform,
+        # where the csv module's default is CRLF.
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f, lineterminator="\n")
             writer.writerow(self.columns)
@@ -209,7 +210,7 @@ def _as_spec(spec, validate=True):
 
     Every public entry point calls this once, so that a path is read once and validation runs
     once for a whole replicate loop, mirroring `.as_spec()` in the R twin. A path may be a string
-    or any os.PathLike, such as a `pathlib.Path`, which used to be refused as no JSON object.
+    or any os.PathLike, such as a `pathlib.Path`.
     """
     if isinstance(spec, (str, os.PathLike)):
         spec = load_spec(spec, validate=validate)
@@ -221,9 +222,8 @@ def _as_spec(spec, validate=True):
 def _ranef(unit_spec, label=None):
     """Return (columns, lower-Cholesky L) for a unit's random-effect covariance.
 
-    `label` names the grouping factor, so that a covariance which is not positive definite can
-    be reported against the entry the user wrote, where it used to appear as an anonymous
-    matrix failure.
+    `label` names the grouping factor, so that a covariance which is not positive definite, or a
+    correlation naming a term that does not exist, is reported against the entry the user wrote.
     """
     cols = ["intercept"] + list(unit_spec.get("slopes", {}).keys())
     sds = [unit_spec["intercept_sd"]] + [unit_spec.get("slopes", {})[c] for c in cols[1:]]
@@ -263,7 +263,7 @@ def _attenuate(latent, pmean, psd, rho, z):
 
     The moments used are the population ones. R's mean() and sd() accumulate in long double and
     Python's do not, so standardising against the sample mean and standard deviation of the
-    values drawn would reintroduce exactly the cross-language divergence this release removes.
+    values drawn could make the two twins' data differ.
     """
     return pmean + (latent - pmean + psd * math.sqrt((1.0 - rho) / rho) * z) * math.sqrt(rho)
 
@@ -295,6 +295,11 @@ def simulate(spec, validate=True) -> Dataset:
     predictors and their interactions) plus the crossed by-subject and by-item random
     intercepts and slopes, then map it through the chosen response family.
 
+    The draws come from the shared generator seeded with ``spec["seed"]``, so a specification
+    always gives the same data on one platform, and the data the R twin gives within the limits
+    spec/SPEC.md sets out under Scope of the guarantee. The generator takes the seed's absolute
+    value, so a seed and its negation give the same data.
+
     Parameters
     ----------
     spec : dict, str or os.PathLike
@@ -315,6 +320,17 @@ def simulate(spec, validate=True) -> Dataset:
         any grouping, factor, and continuous-predictor columns, and the response column named
         by ``spec["response"]["name"]``. A design with a counterbalanced factor also has a
         `list` column after `item`, holding the list each subject follows, counted from 1.
+
+    Raises
+    ------
+    ValueError
+        If the specification is invalid, when it is validated, or, given a path, if the file
+        repeats a key within one object, as `load_spec` refuses it. Also if a random-effect
+        covariance is not positive definite, which validation does not check, or if a row leaves
+        no response to draw: a lognormal or shifted lognormal response whose
+        ``exp(eta + sigma * z)`` overflows, a beta response whose shape parameter is zero or whose
+        two Gamma variates both underflow to zero, or a poisson mean ``exp(eta)`` above about
+        708.4.
     """
     return _simulate(_as_spec(spec, validate))
 
@@ -336,7 +352,7 @@ def _simulate(spec) -> Dataset:
     # From version 0.4, a within factor may be counterbalanced. Each subject then meets each item
     # at one combination of the counterbalanced factors' levels, rotated over subjects and items,
     # so only the other within factors expand rows. Without the field, every within factor expands
-    # rows, as it always has.
+    # rows.
     rotated = [f for f in within if f.get("counterbalance") is True]
     within = [f for f in within if f.get("counterbalance") is not True]
     rotated_sizes = [len(f["levels"]) for f in rotated]
@@ -370,8 +386,8 @@ def _simulate(spec) -> Dataset:
         for t in items_s:
             # Subject s meets item t at combination ((s - 1) + (t - 1)) mod C of the
             # counterbalanced factors' levels, read like a cell of the between factors below, the
-            # first-listed factor varying slowest. Subject s therefore follows list (s - 1) mod C,
-            # and nothing is drawn.
+            # first-listed factor varying slowest. Subject s therefore follows list
+            # ((s - 1) mod C) + 1, counted from 1, and nothing is drawn.
             rotated_idx = {}
             if rotated:
                 combination = ((s - 1) + (t - 1)) % n_lists
@@ -403,9 +419,8 @@ def _simulate(spec) -> Dataset:
     # ---- continuous predictors ----
     # One draw per unit for a subject- or item-level predictor, and one per row for an
     # observation-level one. The rows are already enumerated by this point, so the third case is
-    # one more branch of the same dispatch, and no restructuring. Before 0.3 `varies_by` was
-    # read as "subject or else item", so a predictor declared to vary by "trial" was silently
-    # given one value per item; it is now validated against the three names that exist.
+    # one more branch of the same dispatch, and no restructuring. An unknown `varies_by` is
+    # refused by validation, and by the last branch below when validation is skipped.
     #
     # `dist` chooses the draw. A normal consumes one uniform through the inverse CDF and a
     # uniform consumes one directly, so the two cost the same number of draws and switching

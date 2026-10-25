@@ -73,8 +73,8 @@ jobs:
   #
   # The job runs on oldrel-3, as depictr's does, because neither floor can be built on the current
   # R. R 4.6.0 hid SET_BODY, SET_CLOENV and SET_FORMALS, so no testthat before 3.3.0 compiles there,
-  # and ggplot2 3.4.0 fails to lazy-load there. On release, both floors failed to install,
-  # install_version() only warned, and the check went on to pass on the current releases.
+  # and ggplot2 3.4.0 fails to lazy-load there. On release, both floors would fail to install, and
+  # an installer that only warned would let the check pass on the current releases.
   minimum-versions:
     name: Declared minimum dependencies
     runs-on: ubuntu-latest
@@ -101,8 +101,9 @@ jobs:
             any::lmerTest
 
       # The floors are read from DESCRIPTION, so this job tests whatever the file declares. pak stops
-      # on a failed build, where install_version() warned and carried on, and each installed version
-      # is then compared with its floor, so that a floor quietly left uninstalled fails the job.
+      # on a failed build, where install_version() only warns and carries on, and each installed
+      # version is then compared with its floor, so that a floor quietly left uninstalled fails the
+      # job.
       - name: Install the declared Suggests floors over whatever resolved above
         run: |
           suggests <- read.dcf("r/pilotr/DESCRIPTION", fields = "Suggests")[1, 1]
@@ -189,8 +190,8 @@ jobs:
           }
 
       # Handed a NAMESPACE without that header, roxygenise() leaves the file alone and still exits
-      # 0, which would leave this job green over an arbitrarily stale file. That is how the exports
-      # went missing here in the first place, so the header is checked rather than assumed.
+      # 0, which would leave this job green over an arbitrarily stale file. A NAMESPACE left stale
+      # that way can lack exports the tags declare, so the header is checked rather than assumed.
       - name: Confirm NAMESPACE carries the roxygen2 header
         shell: Rscript {0}
         run: |

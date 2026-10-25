@@ -1,24 +1,21 @@
 """Specification validation and version negotiation, mirroring pilotr/R/validate.R.
 
-``load_spec`` was a bare ``json.load``: no validation and no version check. A strict draft-07
-schema has shipped at spec/design.schema.json since 0.1, and no code path consulted it, so a
-specification with a misspelled field loaded silently and kept the misspelling.
+`validate_spec` applies the rules of spec/design.schema.json, written out here rather than read
+from the file, and the cross-field rules the schema cannot express. `load_spec` and `simulate`
+call it unless told not to, and `model_formula`, `model_data` and the power functions always do,
+because several of the ways a specification can be wrong would otherwise produce plausible data
+and no error at all:
 
-That matters more than a typo usually would, because several of the ways a specification can be
-wrong produce plausible data and no error at all:
+* A mistyped coefficient key resolves to no column, so that effect would silently be zero. A
+  spec whose focal effect is spelled "cnod" for "cond" would generate exactly the data of a null
+  design.
+* A response parameter belonging to another family would be silently ignored.
 
-* A mistyped coefficient key resolves to no column, so that effect is silently set to zero. A
-  spec whose focal effect is spelled "cnod" for "cond" generates exactly the data of a null
-  design, and reports success.
-* ``varies_by`` took anything other than "subject" as item-level, so a per-trial predictor was
-  silently given one value per item.
-* A response parameter belonging to another family is silently ignored.
-
-It also matters for version negotiation. Once 0.3 features exist, a 0.3 specification opened by a
-0.2 implementation, an un-upgraded twin, or a cached browser build produces different and wrong
-data while reporting success. A 0.2 implementation has no version check and cannot be fixed
-retrospectively, but a specification that uses a 0.3 feature can be made to say so, and every
-implementation from 0.3 onwards refuses what it does not understand.
+Version negotiation covers a specification opened by an implementation older than it. A
+specification that uses a feature introduced in 0.3 or 0.4 has to declare that version or a later
+one, and every implementation from 0.3 onwards refuses a specification declaring a version newer
+than it reads, so such a file is refused rather than read into different data while reporting
+success. Implementations before 0.3 have no version check.
 """
 
 from __future__ import annotations
@@ -92,8 +89,8 @@ def _name_list(xs) -> str:
 def _is_num(x) -> bool:
     # bool is a subclass of int in Python, and a boolean where a number belongs is a mistake.
     # numbers.Real takes in NumPy's integer and floating types, which NumPy registers with the
-    # numbers ABCs, so a NumPy integer is no longer refused as a non-number. NumPy's bool_ is not
-    # registered, so it is refused along with bool.
+    # numbers ABCs, so a NumPy integer counts as a number. NumPy's bool_ is not registered, so it
+    # is refused along with bool.
     if isinstance(x, bool) or not isinstance(x, numbers.Real):
         return False
     # An integer too large for a double is infinite to R, which reads every JSON number as one,
@@ -216,9 +213,8 @@ def _required_spec_version(spec) -> str:
     """The lowest specification version that reads `spec` as written, never below 0.3.
 
     The R twin's build_spec() and spec_from_model() declare it, so that what they write stays
-    readable by the releases that read 0.3 (R 0.3.1, Python 0.3.0) unless it uses a 0.4 feature.
-    0.3 is what build_spec() has declared since 0.3.0, and a lower version would gain no reader,
-    since releases before 0.3 ignore the field.
+    readable by the releases that read 0.3 (R 0.3.0 and 0.3.1, Python 0.3.0) unless it uses a 0.4
+    feature. A lower version would gain no reader, since releases before 0.3 ignore the field.
     """
     return "0.4" if _features_0_4(spec) else "0.3"
 
@@ -234,8 +230,8 @@ def validate_spec(spec, strict: bool = True):
     column defined by two factors or named like another column, an interaction whose analysis
     column already exists, a level listed twice, a correlation that pairs a term with itself or
     gives one pair twice, a factor both between and within a unit, and a ``random.item`` entry in
-    a design without items each validated and then changed the data in silence. The rules are set
-    out under Names in the specification.
+    a design without items are each refused, since each would otherwise validate and change the
+    data in silence. The rules are set out under Names in the specification.
 
     Several factors may be between one unit only in a specification declaring version 0.4 or
     later, which allocates them jointly, one block of units per combination of their levels. Up to
@@ -293,8 +289,7 @@ def validate_spec(spec, strict: bool = True):
     import warnings
 
     if isinstance(spec, (str, os.PathLike)):
-        # A path used to be refused as no JSON object. Imported here because simulate.py, where
-        # the reader lives, imports this module.
+        # Imported here because simulate.py, where the reader lives, imports this module.
         from .simulate import load_spec
         spec = load_spec(spec, validate=False)
     if not isinstance(spec, dict):
@@ -309,8 +304,12 @@ def validate_spec(spec, strict: bool = True):
     def unknown(msg):
         (problems if strict else soft).append(msg)
 
-    # A JSON null in an optional field means the field is absent, as it does to R's jsonlite, so
-    # every optional field below is tested with `is None`, never by its presence or truthiness.
+    # A JSON null in an optional field reads as an absent field, as it does in R, where jsonlite
+    # gives NULL for it, so the value of every optional field below is tested with `is None`. A
+    # check that walks an object's keys still sees a key whose value is null, as R's names() does,
+    # so a null unknown field, a null unit, a null field that the family or the predictor's `dist`
+    # does not use and a null `over` or `n` under `random.subject` or `random.item` are reported in
+    # both twins as any other value would be.
 
     # ---- version ----
     declared = spec.get("spec_version")
@@ -710,10 +709,10 @@ def _check_names(spec, has_item, units_ok, version=None):
     """The rules that look at a specification's names together.
 
     They run after the per-field checks and mirror the R twin's ``.check_names()`` line for line.
-    Each case they refuse used to validate and then move an effect, rescale a variance or
-    overwrite a column without a word. Where a column was overwritten the twins also disagreed,
-    R replacing the earlier column and Python appending a second one under the same name, so one
-    specification gave two different tables. Only well-formed parts are inspected, since a
+    Each case they refuse would otherwise validate and then move an effect, rescale a variance or
+    overwrite a column without a word. Where a column is overwritten, the twins also disagree, R
+    replacing the earlier column and Python appending a second one under the same name, so one
+    specification would give two tables. Only well-formed parts are inspected, since a
     malformed one is reported by its own check. `version` is the declared version as
     `validate_spec` parsed it, a (major, minor) pair, or None when it could not be read.
 
@@ -996,8 +995,8 @@ def _normalise(spec):
       removed, and a missing `factors`, `predictors` or `random` becomes empty.
     * Every number becomes a Python int or float. Validation accepts NumPy's numbers, and the
       engine computes with Python ints and doubles, as the R twin computes in doubles. A NumPy
-      float64, which subclasses float, used to pass straight through into the simulated data,
-      where `Dataset.to_csv` wrote it as "np.float64(...)".
+      float64, which subclasses float, would otherwise pass straight through into the simulated
+      data, where `Dataset.to_csv` writes it as "np.float64(...)" under NumPy 2.
     * A count written as a whole-number float, such as ``"n": 8.0``, becomes an int. Draft-07
       counts 8.0 as an integer and R simulates it, while ``range()`` raised TypeError on it.
     * A single threshold written as a bare number, which pilotr's own spec_json() wrote before

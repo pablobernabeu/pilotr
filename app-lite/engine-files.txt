@@ -1,17 +1,17 @@
 # Engine sources staged into the serverless (shinylive / webR) build, one filename
 # per line, resolved against r/pilotr/R. Blank lines and #-comments are ignored.
 #
-# This is the ONE place the browser build's engine subset is named. It used to be
-# named in three: build_shinylive.R, .github/workflows/site.yml and app-lite/app.R,
-# each carrying a comment telling the next person to keep them in step. They went
-# out of step anyway when validate.R arrived with 0.3.0, and the deployed app
-# shipped with .SPEC_VERSION undefined, so every Simulate click failed. app.R now
-# loads whatever was staged beside it, and both staging paths read this file.
+# This is the ONE place the browser build's engine subset is named. app.R loads
+# whatever was staged beside it, and both staging paths, build_shinylive.R and
+# .github/workflows/site.yml, read this file. Lists kept in step by hand in each of
+# them would drift, and a subset without validate.R, which defines the
+# .required_spec_version() that build_spec() calls and the validate_spec() that
+# simulate_design() calls, would ship an app whose every Simulate click fails.
 #
-# The browser build deliberately carries a subset, not all of R/: the full engine
-# is roughly three times this size and the rest of it (mixed-effects power, the
-# brms bridge, the sweep and precision machinery) needs packages webR does not
-# carry. Crossed mixed-effects power is left to the installed package.
+# The browser build deliberately carries a subset, not all of R/: app.R calls no
+# function defined in the rest of it, which includes mixed-effects power, the
+# Bayesian design analysis, the brms bridge, the sweeps, the precision analysis
+# and the reports. Crossed mixed-effects power is left to the installed package.
 #
 # solve_curve.R is in the subset because the app draws a power curve against a
 # target line, and reporting where the curve meets it is the point of drawing it.

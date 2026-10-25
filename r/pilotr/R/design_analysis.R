@@ -300,11 +300,13 @@
 }
 
 # The SLURM array wrapper, one replicate per task. It has to run under any user's account
-# on any cluster, so the two site-specific values, the account to charge and a writable
-# project directory, are emitted as marked placeholders for the user to fill in, and the
-# analysis script is invoked from wherever the parts were saved, with no fixed path anywhere
-# in it. The account stays an #SBATCH directive because the scheduler reads directives
-# before the shell runs, so a directive cannot take its value from a shell variable.
+# on any cluster, so the account to charge and a writable project directory are emitted as
+# marked placeholders for the user to fill in, and the analysis script is invoked from
+# wherever the parts were saved, with no fixed path anywhere in it. The partitions it
+# names, short for the job and devel for the smoke test, are one cluster's, so its header
+# lists them among the settings to check and edit. The account stays an #SBATCH directive
+# because the scheduler reads directives before the shell runs, so a directive cannot take
+# its value from a shell variable.
 .da_slurm_lines <- function(spec) {
   c(
     "#!/bin/bash",
@@ -326,12 +328,14 @@
     "#   sbatch design_analysis.slurm                                    # 100 replicates",
     "#   sbatch --array=1 --partition=devel design_analysis.slurm        # smoke test",
     "# =============================================================================",
-    "# ---- EDIT THESE two values before submitting --------------------------------",
+    "# ---- EDIT THESE values before submitting ------------------------------------",
     "# 1. The account (allocation) the scheduler charges. The scheduler reads #SBATCH",
     "#    directives before the shell runs, so this one cannot come from a variable.",
     "#SBATCH --account=EDIT_ME_ACCOUNT",
     "# 2. PROJECT_DIR, just after the directives below: a directory you can write to,",
     "#    holding the R library at Rlib/.",
+    "# 3. The partitions, which are cluster-specific: --partition=short below, for",
+    "#    jobs of up to 12 hours, and --partition=devel in the smoke test above.",
     "# -----------------------------------------------------------------------------",
     "#SBATCH --job-name=pilotr_bda",
     "#SBATCH --array=1-100               # one replicate per task, numbered from 1",
@@ -518,17 +522,20 @@
 #'   array wrapper that runs one replicate per task and an aggregator that combines the
 #'   per-task results. The three parts are separated by `# ===== FILE n of 3` banners and are
 #'   meant to be split into three files, since the middle part is shell and so is not valid R.
-#'   The wrapper is written for a generic SLURM cluster and carries two placeholders, marked
-#'   `EDIT` in its header, that must be filled in before submission: the `#SBATCH --account`
-#'   directive and the writable `PROJECT_DIR`. It runs the `design_analysis.R` saved next to
-#'   it, so submit from the directory the parts were saved into.
+#'   The wrapper carries two placeholders, marked `EDIT` in its header, that must be filled in
+#'   before submission: the `#SBATCH --account` directive and the writable `PROJECT_DIR`. The
+#'   partitions it names, `short` in an `#SBATCH --partition` directive and `devel` in the
+#'   smoke-test command, are cluster-specific, and its header lists them with the placeholders
+#'   as settings to check and edit. It runs the `design_analysis.R` saved next to it, so submit
+#'   from the directory the parts were saved into.
 #' @param file Optional path. When given, the script is also written there, byte for byte
 #'   with LF line endings and a single trailing newline on every platform, and returned
 #'   invisibly.
 #' @return A length-one character string holding the emitted script, invisibly when `file` is
 #'   given. For `array = "slurm"` the string holds three banner-separated parts, an R analysis
 #'   script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
-#'   emitted, since its `--account` and `PROJECT_DIR` placeholders must be filled in first.
+#'   emitted, since its `--account` and `PROJECT_DIR` placeholders must be filled in first, and
+#'   its partitions checked against the cluster's.
 #' @references Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
 #'   American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}
 #'

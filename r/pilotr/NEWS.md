@@ -250,9 +250,10 @@
 
 * The no-code app, installed or in the browser, sends a design its power tab cannot analyse to
   the analysis that fits it. It sent every such design to the `power_mixed()` of both packages.
-  The Python one is now offered only for one within factor crossed with items, in a family whose
-  coefficients are on the scale it analyses, and ordinal and Beta designs are sent to
-  `generate_design_analysis()` and `brms_bridge()`.
+  The Python one is now offered only for one within factor crossed with items, the design that
+  pilotr 0.3.0 on PyPI takes, in the `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian`
+  family, and ordinal and Beta designs are sent to `generate_design_analysis()` and
+  `brms_bridge()`.
 
 * The no-code app, installed or in the browser, keeps the session open after an input its power
   tab cannot use, and says what is wrong. An N of 2, a cleared N subjects box or a pasted
@@ -569,11 +570,14 @@
   principle move by a whole category. The guarantee used to cover the Gaussian family everywhere
   and every family with `round` set, although `round` is refused for the discrete families.
   Rounding has removed every continuous difference observed, but it guarantees nothing. One Beta
-  case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power by
-  repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
-  exactly 1/3 or 1/4 can therefore differ in its last bits on any platform, and R's own data for
-  such a design changed with R 4.6.0. Within one language, the data are identical on one
-  platform, and across operating systems on the same terms as across languages. The vignettes
+  case can differ on Linux too. R's `^` computes a square by multiplication in every version,
+  and a cube or a fourth power from R 4.6.0, where Python calls `pow()`. A Beta response whose
+  Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can therefore differ in its
+  last bits, and R's own data for a shape of 1/3 or 1/4 changed with R 4.6.0. The short
+  statements of the guarantee, in `README.md`, `DESCRIPTION`, the `?pilotr` overview, Get started,
+  the contributing guide and the landing page, name that case. Within one language, the data are
+  identical on one platform, and across operating systems on the same terms as across languages.
+  The vignettes
   show determinism with `identical()`, since `all.equal()` allows a relative difference of 1.5e-8.
 
 * The specification documents every sampling rule a third implementation needs, in a section of
@@ -714,6 +718,41 @@
   installed app's guide says that the effect is the difference between the two levels on the
   scale of the model's linear predictor. It said the response scale, and then named the log and
   logit scales.
+
+* The specification says that base R's `sum()`, which rounds its long-double total to double a
+  second time, can differ from a plain double fold for an inner product of two terms, where it said
+  three terms or more. It says that `build_spec()` rounds an ex-Gaussian response to four decimals,
+  as it rounds the Gaussian and lognormal ones, and it sets out how `sweep_spec()` seeds its points
+  under Replicate seeds, beside the rule that paragraph extends. Where it described what earlier
+  releases did, it gives the rule and its reason. The repository's README names the packages pilotr
+  suggests for `run_app()`, `power_mixed()` and the precision functions, with the line that
+  installs them, and says that `workers` spreads the replicates over local worker processes, where
+  it said in-process. The note on advanced designs passes `effect` to `solve_curve()`, which a
+  curve over several focal effects needs. Its roadmap says that Python's `power_mixed` has no joint
+  test of several coefficients and refuses a design without random effects, where it said that
+  neither was planned. The guide in the browser build of the no-code app says, as the installed
+  app's does, that the effect is on the scale of the model's linear predictor. The contributing
+  guide lists all eight checks of the parity job and says how to build the Python documentation
+  site, where the two builds of the no-code app live and how to run their tests. The website's
+  landing page says that the browser app estimates power for a two-group Gaussian design with one
+  row per subject, and the security policy says that only that build runs client-side.
+
+* The cross-language vignette, the repository's README and its note on advanced designs say that
+  the parity harness allows the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous`
+  and `stress_exgaussian` to differ by up to 8 units in the last place, on Linux as on any other
+  platform, and holds every other case to the last bit. They said that continuous integration held
+  every case to the last bit. The cross-language vignette says that `tools/parity/solve_cross.py`
+  compares the text of a selection of the refusals of `solve_curve()`, where it said every refusal.
+
+* `?generate_design_analysis` and the header of the SLURM wrapper it writes say that the
+  partitions the wrapper names, `short` in an `#SBATCH --partition` directive and `devel` in the
+  smoke-test command, are cluster-specific settings to check and edit along with the account and
+  `PROJECT_DIR`. They said that only those two values needed editing.
+
+* `?pilotr_example`, the `?pilotr` overview, the worked examples and `README.md` say that eight
+  example specifications ship with the package, and the worked examples that they cover six of the
+  eight response families and between-subjects, crossed, nested and partially crossed designs. They
+  said one per design family.
 
 ## References
 

@@ -13,8 +13,8 @@
     }
     /* The link colour is restated in the media query as well as on
        html[data-theme="dark"]: without it a visitor whose system is dark but who
-       has never touched the toggle keeps the light blue, which sits at 2.4:1 on
-       the dark ground. */
+       has never touched the toggle keeps the light theme's blue, which sits at
+       3.4:1 on the dark ground. */
     @media (prefers-color-scheme: dark) {
       :root {
         --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#8FC4F0;
@@ -79,8 +79,8 @@
   that design would produce, then estimates the power and the precision it would buy. Twin packages
   read one portable JSON specification and draw from one random-number stream, so a given
   specification and seed produce the same data in either language, bit for bit wherever the two
-  share a maths library, as on Linux. Elsewhere, a value that passes through exp(), log() or pow()
-  can differ in its last bits.</p>
+  share a maths library, as on Linux, outside a rare Beta case. Elsewhere, a value that passes
+  through exp(), log() or pow() can differ in its last bits.</p>
   <div class="cards">
     <a class="card r" href="r/index.html">
       <div class="card-head">
@@ -100,11 +100,12 @@
     </a>
   </div>
   <h2 class="section-h">Try it in your browser</h2>
-  <p class="section-lead">The same workflow without a line of code and without an installation. The app
-  runs the R package itself through <a href="https://docs.r-wasm.org/webr/latest/">webR</a>, entirely on
-  your machine, so no design and no data leave the browser. Build a specification with the controls, look
-  at the simulated data, estimate power over a range of sample sizes, and download the specification, the
-  data and the R script that reproduces the run.</p>
+  <p class="section-lead">The core workflow without a line of code and without an installation. The app
+  runs the R package's own simulation and power code through
+  <a href="https://docs.r-wasm.org/webr/latest/">webR</a>, entirely on your machine, so no design and no
+  data leave the browser. Build a specification with the controls, look at the simulated data, estimate
+  power over a range of sample sizes for a two-group Gaussian design with one row per subject, and
+  download the specification, the data and the R script that reproduces the simulation.</p>
   <div class="cards">
     <a class="card app" href="app/">
       <div class="card-head">
@@ -123,9 +124,9 @@
     (function () {
       var root = document.documentElement, btn = document.getElementById('themeToggle');
       // A browser that blocks site storage throws on every attempt to use it, and an
-      // exception here stopped the script before the toggle was wired up. Storage is now
-      // read and written inside try blocks, and where it is blocked the theme lasts for
-      // the visit and is not remembered.
+      // uncaught exception here would stop the script before the toggle is wired up, so
+      // storage is read and written inside try blocks. Where it is blocked, the theme
+      // lasts for the visit and is not remembered.
       var saved = null;
       try { saved = localStorage.getItem('pilotr-theme'); } catch (e) {}
       if (saved) root.setAttribute('data-theme', saved);

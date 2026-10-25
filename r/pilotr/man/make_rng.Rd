@@ -26,3 +26,7 @@ rng <- make_rng(1)
 rng$uniform()
 rng$normals(3)
 }
+\references{
+L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
+\emph{Communications of the ACM}, 31(6), 742-751. \doi{10.1145/62959.62969}
+}

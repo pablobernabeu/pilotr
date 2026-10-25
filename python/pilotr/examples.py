@@ -26,8 +26,8 @@ def _available() -> list[str]:
 def pilotr_example(name: str | None = None) -> list[str] | str:
     """List the bundled example specifications, or return the path to one.
 
-    pilotr ships one ready-to-run specification per design family, as JSON. These
-    are the same files that drive the R twin and the no-code app.
+    pilotr ships eight ready-to-run design specifications, as JSON. These are the
+    same files that drive the R twin and the no-code app.
 
     Parameters
     ----------
@@ -40,8 +40,13 @@ def pilotr_example(name: str | None = None) -> list[str] | str:
     -------
     list of str, or str
         When ``name`` is ``None``, the available example names. Otherwise, the
-        path to that example's JSON file, ready to pass to
-        :func:`pilotr.simulate.load_spec`.
+        path to that example's JSON file, ready to pass to `load_spec`.
+
+    Raises
+    ------
+    ValueError
+        If `name` is not one of the bundled examples. The message lists those
+        available.
     """
     available = _available()
     if name is None:

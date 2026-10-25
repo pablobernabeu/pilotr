@@ -43,10 +43,12 @@ post-warmup draws ending in a divergent transition). A missing element takes its
 array wrapper that runs one replicate per task and an aggregator that combines the
 per-task results. The three parts are separated by \verb{# ===== FILE n of 3} banners and are
 meant to be split into three files, since the middle part is shell and so is not valid R.
-The wrapper is written for a generic SLURM cluster and carries two placeholders, marked
-\code{EDIT} in its header, that must be filled in before submission: the \verb{#SBATCH --account}
-directive and the writable \code{PROJECT_DIR}. It runs the \code{design_analysis.R} saved next to
-it, so submit from the directory the parts were saved into.}
+The wrapper carries two placeholders, marked \code{EDIT} in its header, that must be filled in
+before submission: the \verb{#SBATCH --account} directive and the writable \code{PROJECT_DIR}. The
+partitions it names, \code{short} in an \verb{#SBATCH --partition} directive and \code{devel} in the
+smoke-test command, are cluster-specific, and its header lists them with the placeholders
+as settings to check and edit. It runs the \code{design_analysis.R} saved next to it, so submit
+from the directory the parts were saved into.}
 
 \item{file}{Optional path. When given, the script is also written there, byte for byte
 with LF line endings and a single trailing newline on every platform, and returned
@@ -56,7 +58,8 @@ invisibly.}
 A length-one character string holding the emitted script, invisibly when \code{file} is
 given. For \code{array = "slurm"} the string holds three banner-separated parts, an R analysis
 script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
-emitted, since its \code{--account} and \code{PROJECT_DIR} placeholders must be filled in first.
+emitted, since its \code{--account} and \code{PROJECT_DIR} placeholders must be filled in first, and
+its partitions checked against the cluster's.
 }
 \description{
 Emit a runnable R script that simulates from a design specification, fits the confirmatory

@@ -5,10 +5,12 @@
 This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
 carrying its generative core. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in either language wherever
-the two share a maths library, as on Linux. Elsewhere, a value that passes through `exp()`, `log()`
-or `pow()` can differ in its last bits, as [Cross-language reproducibility](cross-language.md) sets
-out. Simulation, validation, the analysis model a specification implies, simulation-based power
-and the curve solvers are here. Precision/ROPE design analysis, the `lme4` reference backend for
+the two share a maths library, as on Linux, outside a rare Beta case that
+[Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that passes
+through `exp()`, `log()` or `pow()` can differ in its last bits, as the same page sets out.
+Simulation, validation, the analysis model a specification implies, simulation-based power, the
+sample-size report and the curve solvers are here. Precision/ROPE design analysis, power curves
+for mixed-effects designs, calibration and sweeps, the `lme4` reference backend for
 mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers that build
 specifications, and the app launcher are in the R package alone.
 
@@ -16,14 +18,16 @@ specifications, and the app launcher are in the R package alone.
 [Try the no-code app](https://pablobernabeu.github.io/pilotr/app/){ .md-button }
 
 A design specification names the units, the factors and their contrasts, the fixed effect
-sizes, any random effects and a response family. From that one file pilotr draws a data set,
-estimates power and precision by simulation, then emits the analysis code the design implies.
+sizes, any random effects and a response family. From that one file pilotr draws a data set and
+estimates power by simulation, and the R package also estimates precision and emits the analysis
+code the design implies.
 The same file drives the R package, the browser-based no-code app and this Python package, so a
 design built by pointing and clicking can be run unchanged in a script, and a design written in
 a script can be handed to a collaborator who has installed nothing.
 
 The generative core is pure Python and dependency-free. `scipy`, `statsmodels` and `pandas` are
-optional extras, needed only by the power tools. The [Get started](getting-started.md) guide
+optional extras, needed only by the power tools and `model_data`. The
+[Get started](getting-started.md) guide
 covers installing pilotr and simulating a first data set.
 
 ## Where to go next
@@ -33,7 +37,8 @@ that the two languages agree.
 
 - [Response families](families.md): Gaussian, lognormal, reaction times, accuracy, counts,
   ordinal, Beta and the ex-Gaussian.
-- [Worked examples](examples.md): one ready-to-run design per family.
+- [Worked examples](examples.md): eight ready-to-run designs, from a two-group comparison to
+  crossed, nested and partially crossed designs.
 - [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`, with
   `solve_curve` and `target_n` for the sample size a curve implies, and `power_report` for the
   sample-size justification.

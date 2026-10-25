@@ -6,16 +6,17 @@
 # estimate, a power curve and the sample size that curve solves to), a reproducible R
 # script, and spec/data download. The installed package keeps what the browser cannot
 # carry: crossed mixed-effects power through lme4, and precision/ROPE design analysis.
-# The engine and spec-builder files are staged next to this app by build_shinylive.R.
+# The engine and spec-builder files that engine-files.txt names are staged next to this app,
+# by build_shinylive.R for a local build and by .github/workflows/site.yml for the published site.
 
 library(shiny)
 library(bslib)
 library(ggplot2)
-# Load whatever engine files were staged beside this app rather than naming them.
-# This file used to carry its own copy of the staging list, and the two drifted:
-# validate.R defines the version that build_spec() stamps onto every spec, and
-# the omission shipped a deployed app whose every Simulate click failed. Reading
-# the directory leaves the staging step in build_shinylive.R as the only list.
+# Load whatever engine files were staged beside this app rather than naming them, so that
+# engine-files.txt, which both staging paths read, stays the only list of them. A copy of the
+# list here would drift from it, and leaving out validate.R, which defines the
+# .required_spec_version() that build_spec() calls and the validate_spec() that
+# simulate_design() calls, would make every Simulate click fail.
 local({
   staged <- setdiff(sort(list.files(".", pattern = "[.][Rr]$")), "app.R")
   if (!length(staged)) stop("No engine sources were staged beside app.R.")
@@ -73,7 +74,7 @@ copy_btn <- function(target, label = "Copy")
 
 # Type S and Type M are shown with the Monte Carlo error power_design() reports for each. Type S
 # has a Wilson interval and Type M a standard error. A rate whose error is undefined is shown
-# bare, as before. That happens to both at a zero true effect, and to Type M when a single
+# bare. That happens to both at a zero true effect, and to Type M when a single
 # replicate is significant. The installed app formats them in the same way.
 type_s_text <- function(r)
   if (is.na(r$type_s_lo)) sprintf("%.4f", r$type_s) else
@@ -88,9 +89,9 @@ type_m_text <- function(r)
 # sqrt(p (1 - p) / n_sims), a point half as large again is added above it, up to `cap` subjects.
 # While the bottom point's power exceeds the target by more than that, a point two thirds its
 # size is added below it, down to 4. The grid holds one point for each of `seeds`, so 10 at most.
-# The fixed grid stopped at twice N, which for the default design is the target itself (127.5
-# subjects by power.t.test()). About half of all runs were then refused, and the rest solved low,
-# since a run solved only when its top point happened to land above 0.80.
+# A grid fixed at twice N would stop, for the default design, at the target itself (127.5
+# subjects by power.t.test()). About half of all runs would then be refused, and the rest would
+# solve low, since a run would solve only when its top point happened to land above 0.80.
 #
 # power_at(size, seed) gives the power at `size` subjects. Each point takes the next of `seeds` in
 # the order the points are computed, so a point added below the grid never changes the seed, or
@@ -153,7 +154,7 @@ app_css <- tags$style(HTML(
   "table.shiny-table { width: auto !important; align-self: flex-start; margin-bottom: 0; }",
   ".shiny-table th, .shiny-table td { padding: 0.25rem 0.9rem; }",
   ".sidebar hr { margin: 0.5rem 0; }",
-  # Buttons: clear, smooth hover feedback (the solid primary did not visibly react).
+  # Buttons: clear, smooth hover feedback (without it, the solid primary does not visibly react).
   ".btn { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }",
   ".btn-primary:hover { background-color: #245d93; border-color: #21568a; }",
   ".btn-primary:active { background-color: #1f4f80 !important; border-color: #1f4f80 !important; }",
@@ -198,8 +199,9 @@ guide <- card(
     tags$h5("Field guide"),
     tags$ul(
       tags$li(tags$b("Effect (±0.5)"), ", the difference between the two levels on ",
-              "the response scale. This is the identity scale for Gaussian, the log scale ",
-              "for RT and Poisson, and the logit scale for accuracy, ordinal and Beta."),
+              "the scale of the model's linear predictor. This is the identity scale for ",
+              "Gaussian, the log scale for RT and Poisson, and the logit scale for accuracy, ",
+              "ordinal and Beta."),
       tags$li(tags$b("Residual SD / Precision"), ", the Gaussian and shifted-lognormal noise ",
               "(an SD). Beta instead uses a precision (phi)."),
       tags$li(tags$b("Random-effect SDs"), ", the by-subject and by-item intercept and slope ",
@@ -413,11 +415,10 @@ server <- function(input, output, session) {
   }
 
   # Simulate keeps the specification it ran beside the data it made, and the Data tab, the summary,
-  # the plot and the data download read the two together. The summary and the plot used to take
-  # the response and factor names from the controls, so a new family or response name after a
-  # simulation stopped both. The download simulated afresh from the controls. The Design spec tab
-  # and the specification download follow the controls, and sim_note says when the two have
-  # parted.
+  # the plot and the data download read the two together, so that a new family or response name
+  # in the controls after a simulation cannot stop the summary or the plot, and the download holds
+  # the data shown. The Design spec tab and the specification download follow the controls, and
+  # sim_note says when the two have parted.
   sim <- eventReactive(input$simulate, {
     s <- current_spec(); if (is.null(s)) return(NULL)
     list(spec = s, data = simulate_design(s))
@@ -469,8 +470,8 @@ server <- function(input, output, session) {
     s <- sim_req(); d <- s$data; yn <- resp_name(s$spec); gn <- group_name(s$spec)
     y <- d[[yn]]; base <- theme_minimal(base_size = 14)
     has_grp <- !is.na(gn) && !is.null(d[[gn]])
-    # The boxes take as many fill colours as the factor has levels. Two stopped the plot of a
-    # pasted three-level design with "Insufficient values in manual scale".
+    # The boxes take as many fill colours as the factor has levels, since two colours would stop
+    # the plot of a pasted three-level design with "Insufficient values in manual scale".
     if (has_grp && is.numeric(y)) {
       ggplot(d, aes(.data[[gn]], .data[[yn]], fill = .data[[gn]])) +
         geom_boxplot(alpha = 0.85, outlier.alpha = 0.35) +
@@ -496,18 +497,19 @@ server <- function(input, output, session) {
   # power_design() t-tests every row, so it runs only for a Gaussian design with one two-level
   # factor between subjects, one row per subject and no shared cluster. The browser build
   # sources power.R, so the app calls power_design()'s own check, which the installed app has
-  # to write out because it reaches only pilotr's exports. Testing the first factor alone let a
-  # pasted crossed design through to a t-test of its correlated rows, and let a three-level or
-  # 2 x 2 design stop the observer.
+  # to write out because it reaches only pilotr's exports. A test of the first factor alone would
+  # let a pasted crossed design through to a t-test of its correlated rows, and let a three-level
+  # or 2 x 2 design stop the observer.
   gaussian_two_group <- function(spec) is.null(.two_group_refusal(spec))
   # What to run instead, chosen by what can fit the design, by the installed app's rule. R's
   # power_mixed() fits every family but two on the scale of its coefficients, by lmer() or
-  # glmer(), or lm() and glm() without random effects. Python's power_mixed() takes one within
-  # factor crossed with items and fits a linear model on the response's own scale. It is offered
-  # only for such a design, in a family whose coefficients are on that scale or on the log scale
-  # it analyses. Ordinal and Beta outcomes have no frequentist model here and go to the Bayesian
-  # design analysis. A single text used to send every design to both power_mixed() functions,
-  # including designs neither fits on the scale of their coefficients.
+  # glmer(), or lm() and glm() without random effects. The Python suggestion follows
+  # power_mixed() in pilotr 0.3.0 on PyPI, the release a user installs, which takes one within
+  # factor crossed with items and fits a linear model on the response's own scale, or on the log
+  # scale for shifted_lognormal. The suggestion is made only for such a design, in the gaussian,
+  # lognormal, shifted_lognormal or exgaussian family. The repository's unreleased power_mixed()
+  # fits more designs, and analyses lognormal on the log scale too. Ordinal and Beta outcomes
+  # have no frequentist model here and go to the Bayesian design analysis.
   not_supported_msg <- function(spec) {
     family <- spec[["response"]][["family"]]
     opening <- paste0(
@@ -592,7 +594,7 @@ server <- function(input, output, session) {
       base_n <- spec$units$subject$n
       ns   <- min(nsims(), N_SIMS_CURVE)
       # Each point takes its own seed, so that target_n() below fits independent points, as it
-      # assumes. Every point used to keep the design's seed.
+      # assumes.
       curve <- power_curve_grid(base_n, min(8 * base_n, N_CURVE_MAX), ns,
                                 replicate_seeds(spec$seed, 10L), function(size, seed) {
         s <- spec; s$units$subject$n <- as.integer(size); s$seed <- seed
@@ -688,7 +690,7 @@ server <- function(input, output, session) {
     })
 
   # Keep the download links live even while their tab is hidden, so a click always works
-  # (Shiny suspends hidden outputs by default, which left the R-script download href empty).
+  # (Shiny suspends hidden outputs by default, which would leave the R-script download href empty).
   for (id in c("dl_script", "dl_spec", "dl_data"))
     outputOptions(output, id, suspendWhenHidden = FALSE)
 }

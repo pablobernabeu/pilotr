@@ -2,8 +2,9 @@
 
 `pilotr` turns a specification into evidence for study planning: simulate from the ground
 truth, fit the analysis model and summarise across replicates. Alongside power it reports the
-Type S (sign) and Type M (magnitude, or exaggeration) errors of Gelman and Carlin (2014),
-computed over the significant replicates.
+Type S (sign) and Type M (magnitude, or exaggeration) errors of
+[Gelman and Carlin (2014)](https://doi.org/10.1177/1745691614551642), computed over the
+significant replicates.
 
 ## Two-group Gaussian power
 
@@ -82,8 +83,8 @@ estimate in that direction. Its power exceeds the two-sided power above. Type S 
 are taken over the replicates significant in the predicted direction. Type S is therefore 0 by
 construction, and Type M is the exaggeration among the replicates that would support the
 prediction. `power_mixed` takes its one-sided p-value from the same Wald z, and its `backend`
-names the direction. Results from earlier versions were two-sided. In the direction of the true
-effect, a one-sided power at α is the two-sided power at 2α times one minus the Type S at 2α.
+names the direction. In the direction of the true effect, a one-sided power at α is the
+two-sided power at 2α times one minus the Type S at 2α.
 
 ## Power over sample size
 
@@ -124,8 +125,8 @@ and `power_hi`. The vertical band is the solved sample size, with its own interv
 
 Each point of the curve draws its own replicates. Point j of a sweep over J sizes takes
 `replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers, as
-`target_n` assumes when it fits them. Up to pilotr 0.3.0 every point took the specification's own
-seed, which `seeds="shared"` still does.
+`target_n` assumes when it fits them. `seeds="shared"` gives every point the specification's own
+seed instead, as every sweep did up to pilotr 0.3.0, and the points then share their noise.
 
 ## The sample size the curve implies
 
@@ -153,7 +154,14 @@ refused, and the refusal reports the range the sweep did cover. Had the sweep ab
 
 `solve_curve` is the general form. It takes any curve with a decision rate against a swept
 value, so an effect-size sweep or a sweep over items is solved the same way, with
-`transform="identity"` for an effect-size axis.
+`transform="identity"` for an effect-size axis. This package has no function that builds such a
+sweep, or a curve for a mixed-effects design. The R package's `power_curve_mixed()` sweeps the
+number of subjects for a mixed-effects design and `sweep_spec()` sweeps any field of the
+specification. `solve_curve` reads the data frame either returns, once R has written it with
+`write.csv(curve, "curve.csv", row.names = FALSE)` and pandas has read it back, with `effect`
+naming the focal effect when the curve holds several. Without `row.names = FALSE`, R writes the
+row names as a leading column, which `solve_curve` takes as the swept value unless `x` names the
+swept column.
 
 ## A sample-size justification
 
@@ -204,18 +212,17 @@ the coefficients are written on, which is the logit scale, or the log scale for 
 linear model of a 0/1 response estimates a difference in probability, for instance, and setting
 it against the true coefficient says nothing about exaggeration. For these families,
 `power_mixed` warns and returns `mean_estimate` and `type_m` as `nan`. `type_s` compares signs
-alone, which the link preserves for a main effect, and power is the rate at which the linear
-model's test rejects. A bounded response can reverse the sign of an interaction between the two
-scales, so the `type_s` of an interaction is `nan` as well.
+alone, and the link keeps the sign of a main effect unless an interaction reverses that effect
+between the levels of another factor. Power is the rate at which the linear model's test rejects.
+A bounded response can reverse the sign of an interaction between the two scales, so the `type_s`
+of an interaction is `nan` as well.
 
 Each random effect is fitted as an independent variance component. Where the specification
 correlates a grouping factor's intercept and slopes, the fitted model leaves the correlations out,
 and a warning names the grouping factors concerned. The R package's `power_mixed()` estimates
 them. A design without random effects is refused, since it leaves no variance component to fit.
 `power` analyses the two-group Gaussian design, and the R package's `power_mixed()` fits any other
-such design with `lm()` or `glm()`. Up to pilotr 0.3.0, the model here was the same whatever the
-specification declared, `yv ~ cc` with by-subject and by-item intercepts and slopes. It tested the
-first contrast of a single within factor crossed with items.
+such design with `lm()` or `glm()`.
 
 The design below has one within-subject factor and crossed by-subject and by-item random
 intercepts and slopes. It also declares a correlation between each unit's intercept and slope,
@@ -253,15 +260,17 @@ print(table([{"effect": name, **{k: e[k] for k in (
 )}} for name, e in res["effects"].items()]))
 ```
 
-`res["effects"]` holds one entry per focal effect, with the keys `power` returns. By default the
+`res["effects"]` holds one entry per focal effect, with the twelve keys of a `power` result from
+`power` to `type_m_mcse`. By default the
 focal effects are every coefficient of the specification, with the true values it gives them.
 `focal` chooses others: a list of names leaves their true values unknown, which leaves Type S and
 Type M undefined, and a dict from names to values gives the true values to compare with. A name is
 a column of the model, so `"a_b"` for the interaction `"a:b"`. A coefficient that the
 specification does not list is not in the model, so a null effect is planned with a coefficient
-of 0. Results from earlier versions held one effect's numbers at the top level, as `res["power"]`
-and so on, for the first contrast of a single within factor. Those keys are kept for this release
-beside `effects`, and reading one raises a FutureWarning that names its place in `effects`.
+of 0. When the design has a single within factor whose first contrast is a focal effect, the
+result also holds that effect's numbers at the top level, as `res["power"]` and so on. Those keys
+are deprecated and will be removed in the next release, and reading one raises a FutureWarning
+that names its place in `effects`.
 
 The priming design above is fully crossed, so each of the 12 subjects sees all 8 items in both
 conditions, 192 trials in all. A counterbalanced study, in which each subject sees each item in
@@ -282,10 +291,12 @@ judged by lme4's test of a standard deviation below 1e-4 of the residual one. `n
 fits whose optimisers did not converge or whose Hessian was not positive definite. A component at
 zero can fail statsmodels' check of the Hessian by itself, so in a singular fit that notice is
 left to `n_singular`. `n_converged` counts the fits that are neither singular nor warned. Given
-the model fitted here as its `formula`, the R package's `power_mixed()` reports the same five
-counts on this design. Here nearly every fit is singular, since 12 subjects and 8 items cannot
-support all four variance components when two of them are as small as these slopes. Such fits
-stay in `power`, as in the R package, because their fixed-effect estimates remain usable.
+the model fitted here as its `formula`, which `model_formula(spec_mixed, structure="zcp")` writes
+as `.y ~ cond + (1 + cond || subject) + (1 + cond || item)`, the R package's `power_mixed()`
+reports the same five counts on this design. Here nearly every fit is singular, since 12
+subjects and 8 items cannot support all four variance components when two of them are as small
+as these slopes. Such fits stay in `power`, as in the R package, because their fixed-effect
+estimates remain usable.
 statsmodels also notes that a fit may be on the boundary whenever a variance component is below
 0.01. On the log scale every fit draws that notice, so it counts towards none of these.
 
@@ -297,11 +308,10 @@ the R package, whose `power_mixed()` and `precision_design()` take a ladder of m
 
 Even at this tiny `n_sims`, the fixed effect is recovered (`mean_estimate` is close to
 `true_effect`). Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if
-Powell's does not converge. statsmodels' default chain of optimisers stopped short of the
-optimum in most crossed fits, a failure that earlier versions of this page described as
-statsmodels overstating random-slope variance. Over the first 12 replicates of the crossed
-reaction-time example, the standard error of the effect now matches the one `lme4` gives for the
-same independent components to four decimal places in 11. The same 6 replicates are significant
+Powell's does not converge. statsmodels' default chain of optimisers stops short of the optimum
+in most crossed fits. Over the first 12 replicates of the crossed reaction-time example, the
+standard error of the effect matches the one `lme4` gives for the same independent components to
+four decimal places in 11. The same 6 replicates are significant
 in both. A replicate whose Powell fit raises is fitted again with the default chain and counts
 in `n_warning`.
 

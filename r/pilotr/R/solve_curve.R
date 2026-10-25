@@ -56,8 +56,8 @@
 # The regression is written out here, with no call to glm(), because the Python twin has no glm
 # to hand it to and the two engines have to agree. With an intercept and one slope the weighted
 # normal equations are a two-by-two solve in closed form, small enough to mirror line for line,
-# and the reductions are spelled out as loops for the reason core.R gives: base R's sum() and
-# CPython's sum() are each more accurate than a plain double fold, and in different ways.
+# and the reductions are spelled out as loops for the reason core.R gives: neither base R's
+# sum() nor CPython's sum() is a plain double fold, and the two depart from it in different ways.
 #
 # Extrapolation is the one thing these functions must not do. A curve that does not reach the
 # target within the range it swept is refused, and so is a fit that solves outside that range.
@@ -202,13 +202,15 @@
 #' not separate the two links, and the probit is chosen for its shape.
 #'
 #' The interval is the delta-method interval of `MASS::dose.p()`, computed on the scale named by
-#' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural
-#' one. That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
-#' far more sample size than the same change lower down. Where the two-parameter model does not
-#' describe the curve, the interval is widened by the heterogeneity factor of probit analysis,
-#' Pearson's chi-square over its degrees of freedom (Finney, 1971), reported as `dispersion`. It
-#' is floored at 1, so a well-fitting curve is left alone and a badly-fitting one cannot report a
-#' narrower interval than its own residuals justify.
+#' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural one.
+#' That asymmetry is the honest shape: at the top of a power curve a given change in rate costs far
+#' more sample size than the same change lower down. In the checks against [stats::power.t.test()]
+#' above, Fieller's interval for a ratio (Fieller, 1954), tried as the alternative, covered the
+#' analytic answer as often, at nearly the same width, so the interval `MASS::dose.p()` reports is
+#' kept. Where the two-parameter model does not describe the curve, the interval is widened by the
+#' heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
+#' (Finney, 1971), reported as `dispersion`. It is floored at 1, so a well-fitting curve is left
+#' alone and a badly-fitting one cannot report a narrower interval than its own residuals justify.
 #'
 #' The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
 #' square root of the sample size. Sweep something else,

@@ -20,8 +20,8 @@ the study you plan to run: its groups and conditions, sample sizes, fixed
 effect sizes, random-effect standard deviations, and the response family.
 Assemble one from a flat list of design inputs with
 \code{\link[=build_spec]{build_spec()}}, or read one back from a JSON file with
-\code{\link[=load_spec]{load_spec()}}. The package ships one ready-to-run specification per
-design family, and \code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
+\code{\link[=load_spec]{load_spec()}}. The package ships eight ready-to-run specifications, and
+\code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
 \code{\link[=default_response_name]{default_response_name()}} gives the response column that a
 family uses by default, and \code{\link[=spec_json]{spec_json()}} serialises a specification
 back to JSON for the Python twin or the no-code app to read.
@@ -31,7 +31,8 @@ data frame with one row per observation. A specification carries its own
 seed, and both languages draw from the combined generator built by
 \code{\link[=make_rng]{make_rng()}} on top of the inverse-normal routine
 \code{\link[=as241]{as241()}}, so a given specification and seed produce identical data
-in either language wherever the two share a maths library, as on Linux.
+in either language wherever the two share a maths library, as on Linux,
+outside a rare Beta case.
 Elsewhere, a value that passes through \code{exp()}, \code{log()} or \code{pow()} can
 differ in its last bits, as \code{vignette("cross-language", package = "pilotr")}
 sets out.
@@ -59,6 +60,11 @@ writes a self-contained script that reproduces a simulation, and
 
 For a worked introduction, see
 \code{vignette("getting-started", package = "pilotr")}.
+}
+\references{
+Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+(sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+9(6), 641-651. \doi{10.1177/1745691614551642}
 }
 \seealso{
 Useful links:

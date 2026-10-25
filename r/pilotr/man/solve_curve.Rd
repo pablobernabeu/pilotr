@@ -77,13 +77,15 @@ as well on that draw, at 2.5\%, and worse on another, at 3.5\% against 2.2\%. Cu
 not separate the two links, and the probit is chosen for its shape.
 
 The interval is the delta-method interval of \code{MASS::dose.p()}, computed on the scale named by
-\code{transform} and mapped back, so it is symmetric on that scale and asymmetric on the natural
-one. That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
-far more sample size than the same change lower down. Where the two-parameter model does not
-describe the curve, the interval is widened by the heterogeneity factor of probit analysis,
-Pearson's chi-square over its degrees of freedom (Finney, 1971), reported as \code{dispersion}. It
-is floored at 1, so a well-fitting curve is left alone and a badly-fitting one cannot report a
-narrower interval than its own residuals justify.
+\code{transform} and mapped back, so it is symmetric on that scale and asymmetric on the natural one.
+That asymmetry is the honest shape: at the top of a power curve a given change in rate costs far
+more sample size than the same change lower down. In the checks against \code{\link[stats:power.t.test]{stats::power.t.test()}}
+above, Fieller's interval for a ratio (Fieller, 1954), tried as the alternative, covered the
+analytic answer as often, at nearly the same width, so the interval \code{MASS::dose.p()} reports is
+kept. Where the two-parameter model does not describe the curve, the interval is widened by the
+heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
+(Finney, 1971), reported as \code{dispersion}. It is floored at 1, so a well-fitting curve is left
+alone and a badly-fitting one cannot report a narrower interval than its own residuals justify.
 
 The default \code{transform} of \code{"sqrt"} suits a sample-size axis, where a rate rises with the
 square root of the sample size. Sweep something else,

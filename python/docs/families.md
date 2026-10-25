@@ -20,13 +20,13 @@ That is the identity scale for the Gaussian and ex-Gaussian families, the log sc
 lognormal reaction times, reading times and counts, and the logit scale for accuracy, ordinal
 and Beta outcomes.
 
-The ex-Gaussian, added in 0.3, is a normal plus an exponential, mean-centred by subtracting the
+The ex-Gaussian is a normal plus an exponential, mean-centred by subtracting the
 exponential's own mean so that the linear predictor stays the mean of the response. That is
 brms's `exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted
 to it agree on what the intercept means. A shifted lognormal is not a substitute, because
 `power_mixed` logs the response back and leaves a symmetric residual on the analysis scale. A
-specification using the ex-Gaussian has to declare `"spec_version": "0.3"`, since a 0.2
-implementation would read it differently.
+specification using the ex-Gaussian has to declare a `spec_version` of `"0.3"` or later, since a
+0.2 implementation would read it differently.
 
 Every Beta response lies strictly inside (0, 1), as a Beta regression requires. Near a ceiling or a
 floor, a draw can round to exactly 1 or 0 in double precision, and it then becomes the nearest
@@ -34,8 +34,7 @@ double inside the interval. A Beta specification that sets `round` needs at leas
 rounded onto 0 or 1 becomes the nearest value inside the interval at that many decimals: 0.001 or
 0.999 at three. A linear predictor beyond about 36.7, or below about −745, leaves a shape parameter
 of zero, and a lognormal response whose `exp(eta + sigma * z)` overflows has no value to return.
-`simulate` refuses both with the R twin's messages, where it raised `ZeroDivisionError` or
-`OverflowError` before.
+`simulate` refuses both with a `ValueError`, in the R twin's words.
 
 ## What the families look like
 
@@ -142,6 +141,6 @@ for g in ("control", "treatment"):
 print(table(rows))
 ```
 
-Every family ships as a ready-to-run [worked example](examples.md), and the full format,
-including the thresholds and the Beta precision `phi`, is on the
-[Specification](specification.md) page.
+Six of the eight families, all but `bernoulli` and `exgaussian`, appear in a ready-to-run
+[worked example](examples.md), and the full format, including the thresholds and the Beta
+precision `phi`, is on the [Specification](specification.md) page.

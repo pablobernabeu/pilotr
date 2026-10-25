@@ -19,8 +19,8 @@
 #' effect sizes, random-effect standard deviations, and the response family.
 #' Assemble one from a flat list of design inputs with
 #' [build_spec()], or read one back from a JSON file with
-#' [load_spec()]. The package ships one ready-to-run specification per
-#' design family, and [pilotr_example()] returns their paths.
+#' [load_spec()]. The package ships eight ready-to-run specifications, and
+#' [pilotr_example()] returns their paths.
 #' [default_response_name()] gives the response column that a
 #' family uses by default, and [spec_json()] serialises a specification
 #' back to JSON for the Python twin or the no-code app to read.
@@ -30,7 +30,8 @@
 #' seed, and both languages draw from the combined generator built by
 #' [make_rng()] on top of the inverse-normal routine
 #' [as241()], so a given specification and seed produce identical data
-#' in either language wherever the two share a maths library, as on Linux.
+#' in either language wherever the two share a maths library, as on Linux,
+#' outside a rare Beta case.
 #' Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
 #' differ in its last bits, as `vignette("cross-language", package = "pilotr")`
 #' sets out.
@@ -58,6 +59,10 @@
 #'
 #' For a worked introduction, see
 #' `vignette("getting-started", package = "pilotr")`.
+#'
+#' @references Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+#'   (sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+#'   9(6), 641-651. \doi{10.1177/1745691614551642}
 #'
 #' @author Pablo Bernabeu, author and maintainer
 #'   (\email{pcbernabeu@gmail.com},

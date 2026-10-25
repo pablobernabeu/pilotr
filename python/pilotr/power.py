@@ -3,8 +3,8 @@
 For each of the `n_sims` Monte Carlo replicates, we simulate a fresh data set from the
 known ground-truth spec, fit the analysis model, and record the estimate and p-value. In
 addition to classical power (the proportion of significant replicates), we report the
-design-analysis quantities of Gelman and Carlin (2014), computed over the significant
-replicates.
+design-analysis quantities of Gelman and Carlin (2014, doi:10.1177/1745691614551642),
+computed over the significant replicates.
 
 * Type S (sign) error: P(estimate has the wrong sign | significant)
 * Type M (magnitude): E(|estimate| / |true effect| | significant)  (exaggeration ratio)
@@ -54,7 +54,7 @@ def _check_workers(workers):
     """Validate `workers` as a single positive whole number and return it as an int.
 
     Any whole number is accepted, a NumPy integer or a float such as 2.0 included, as the R twin's
-    ``.check_workers()`` accepts one. Only a Python int used to pass.
+    ``.check_workers()`` accepts one.
     """
     if not _is_whole(workers) or workers < 1:
         raise ValueError("workers must be a positive whole number")
@@ -87,9 +87,8 @@ _CORRELATED_ROWS = (
 def _two_group_refusal(spec):
     """Why the two-group backend cannot analyse a validated specification, or None when it can.
 
-    A t-test of every row needs independent rows. It used to be applied to any Gaussian design
-    with a two-level between factor, and under the null the test of 30 subjects crossed with 20
-    items was then significant in 105 of 200 replicates. An item unit, a within factor or an
+    A t-test of every row needs independent rows. Applied under the null to 30 subjects crossed
+    with 20 items, it is significant in 105 of 200 replicates. An item unit, a within factor or an
     extra grouping factor is therefore refused, the first found being named. Predictors and a
     ``subject`` entry stay allowed, since with one row per subject they vary independently from
     row to row. A between factor on items needs an item unit, so the item test covers it.
@@ -158,7 +157,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
 
     Repeatedly simulate from the specification, apply a two-sample t-test, and report power
     together with the Type S (sign) and Type M (magnitude) errors of Gelman and Carlin
-    (2014), computed over the significant replicates.
+    (2014, doi:10.1177/1745691614551642), computed over the significant replicates.
 
     The t-test treats every row as an independent observation, which is valid only when each
     subject contributes one row and no rows share a cluster. `power` therefore takes a Gaussian
@@ -186,16 +185,17 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
     effect, Type S is 0 by construction, and Type M is the exaggeration among the replicates that
     would support the prediction.
 
-    Results from earlier versions were two-sided. A one-sided power at `alpha`, in the direction
-    of the true effect, can be read off a two-sided result at ``2 * alpha``: it is
-    ``power * (1 - type_s)``. Type M is recovered only when that result's Type S is 0, since the
-    wrong-signed replicates cannot otherwise be told apart from the others.
+    A one-sided power at `alpha`, in the direction of the true effect, can be read off a two-sided
+    result at ``2 * alpha``: it is ``power * (1 - type_s)``. Type M is recovered only when that
+    result's Type S is 0, since the wrong-signed replicates cannot otherwise be told apart from the
+    others.
 
     Parameters
     ----------
     spec : dict, str or os.PathLike
         A two-group Gaussian design specification with one row per subject (dict or path to a
-        JSON file).
+        JSON file). It is validated strictly, so an unrecognised field is an error, even in a
+        dict that `load_spec` read leniently.
     n_sims : int, optional
         Number of Monte Carlo replicates (default 1000).
     alpha : float, optional
@@ -236,8 +236,9 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
         has rows that are correlated because of an item unit, a within factor or a grouping
         factor besides ``subject``.
     ValueError
-        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, or if a level of
-        the between factor holds fewer than two subjects.
+        If the specification is invalid, if `workers` is not a positive whole number, if
+        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, or if a level of the
+        between factor holds fewer than two subjects.
 
     Notes
     -----
@@ -271,8 +272,7 @@ def _power_impl(spec, n_sims, alpha, executor, alternative="two.sided"):
     lev0, lev1 = factor["levels"]
     col, vals = next(iter(factor["contrasts"].items()))
     # A specification may leave the contrast out of `coefficients`, `{}` included, and the
-    # simulator then generates no effect, so the true effect is 0. The lookup used to raise
-    # KeyError.
+    # simulator then generates no effect, so the true effect is 0.
     true_effect = spec["fixed"]["coefficients"].get(col, 0.0) * (vals[1] - vals[0])
     yname = spec["response"]["name"]
 
@@ -313,9 +313,7 @@ def _power_impl(spec, n_sims, alpha, executor, alternative="two.sided"):
 
 # What power_mixed() leaves out of the model the specification implies. It fits each random effect
 # as an independent variance component, so it estimates no correlation between a grouping factor's
-# intercept and slopes, where the R twin's model_formula() writes `|` and lme4 estimates them. Up
-# to 0.3, the model was written into the source as `yv ~ cc`, and every other term the
-# specification declared was left out with it.
+# intercept and slopes, where the R twin's model_formula() writes `|` and lme4 estimates them.
 _UNCORRELATED = (
     "power_mixed() in Python fits each random effect as an independent variance component, so it "
     "leaves out the random-effect correlations this specification declares for %s. The R "
@@ -513,7 +511,7 @@ def _fit_mixed(model):
     does not converge. statsmodels' default chain of BFGS, L-BFGS and CG stopped short of the REML
     optimum in most crossed fits. On the first replicate of the crossed_mixed_rt example, it ended
     at a REML log-likelihood of -406.4, where lme4 reaches -389.8, and gave the effect a standard
-    error of 0.0345 against lme4's 0.0186. That chain now serves only when Powell's method raises,
+    error of 0.0345 against lme4's 0.0186. That chain serves only when Powell's method raises,
     and the replicate then counts as a fit with a warning. A fit is never repeated because of a
     warning or of its ``converged`` flag, since the boundary notice comes with every fit on the
     log scale, and a default fit flagged as converged could still fall short of the optimum.
@@ -559,7 +557,7 @@ def _power_mixed_replicate(seed, spec, fixed, groups, alternative="two.sided"):
     exog = pd.DataFrame({"(Intercept)": np.ones(n), **{c: d[c].to_numpy(dtype=float)
                                                         for c in fixed}})
     # Building the model is kept out of the fits' error handling, so that a fault there stops the
-    # call where it used to leave every replicate without a fit and power undefined.
+    # call, where catching it would leave every replicate without a fit and power undefined.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model = MixedLM(y, exog, np.ones(n), exog_vc=_variance_components(d, groups))
@@ -639,12 +637,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     other family is analysed on its own scale. A replicate whose response rounds to 0, or to the
     shift, has no logarithm and returns no estimate, as in the R twin.
 
-    Up to 0.3, the model was the same whatever the specification declared, ``yv ~ cc`` with
-    by-subject and by-item intercept and slope components, and it tested the first contrast of a
-    single within factor crossed with items, refusing every other design. Any design that declares
-    a random effect is now fitted, and one without random effects is refused, since MixedLM then
-    has no variance component to fit. The R package's ``power_mixed()`` fits such a design with
-    ``lm()`` or ``glm()``, and `power` analyses the two-group Gaussian design.
+    Any design that declares a random effect is fitted, and one without random effects is refused,
+    since MixedLM then has no variance component to fit. The R package's ``power_mixed()`` fits such
+    a design with ``lm()`` or ``glm()``, and `power` analyses the two-group Gaussian design.
 
     Where the specification correlates a grouping factor's intercept and slopes, the independent
     components leave the correlations out, and one warning per call names the grouping factors
@@ -665,7 +660,8 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     as a difference in the probability of a correct response, and comparing it with the true
     coefficient says nothing about exaggeration. For these families, `power_mixed` warns and
     returns `mean_estimate` and `type_m` as `nan` for every effect. `type_s` compares signs alone,
-    which the link preserves for a main effect. It does not preserve the sign of an interaction,
+    and the link keeps the sign of a main effect unless an interaction reverses that effect between
+    the levels of another factor. It does not preserve the sign of an interaction,
     since a bounded response compresses differences near the ends of its range, so the `type_s`
     of an interaction is `nan` too, as in the R twin. Power is the rate at which the linear
     model's test rejects. The R package's ``power_mixed()`` fits ``bernoulli`` and ``poisson``
@@ -692,10 +688,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     serial run for any worker count.
 
     Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if Powell's does
-    not converge. statsmodels' default chain of optimisers stopped short of the REML optimum in
-    most crossed fits, which earlier versions described as statsmodels overstating random-slope
-    variance. Over the first 12 replicates of the crossed_mixed_rt example, the standard error of
-    the effect now matches the one from lme4's uncorrelated model, ``(1 + cond || subject) +
+    not converge. statsmodels' default chain of optimisers stops short of the REML optimum in most
+    crossed fits. Over the first 12 replicates of the crossed_mixed_rt example, the standard error
+    of the effect matches the one from lme4's uncorrelated model, ``(1 + cond || subject) +
     (1 + cond || item)``, to four decimal places in 11. The same 6 replicates are significant in
     both. A replicate whose Powell fit raises is fitted again with the default chain and counts
     as a fit with a warning. The random-effects design is held in dense matrices when it is small
@@ -726,14 +721,15 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     one-sided test at `alpha` therefore rejects in exactly the replicates in which the two-sided
     test at ``2 * alpha`` rejects with the estimate in that direction. Type S and Type M are taken
     over the replicates significant in the tested direction, and `backend` names the direction. A
-    two-sided result at ``2 * alpha`` from an earlier version gives the one-sided power at
-    `alpha`, in the direction of the true effect, as ``power * (1 - type_s)``.
+    two-sided result at ``2 * alpha`` gives the one-sided power at `alpha`, in the direction of the
+    true effect, as ``power * (1 - type_s)``.
 
     Parameters
     ----------
     spec : dict, str or os.PathLike
         A design specification (dict or path to a JSON file) that declares at least one random
-        effect.
+        effect. It is validated strictly, so an unrecognised field is an error, even in a dict
+        that `load_spec` read leniently.
     n_sims : int, optional
         Number of Monte Carlo replicates (default 50, smaller than `power`'s 1000 because
         each replicate fits a mixed model).
@@ -764,9 +760,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
         of them.
 
         A design with a single within factor whose first contrast is a focal effect also has that
-        effect's twelve quantities at the top level, where earlier versions returned them. Those
-        keys are deprecated and will be removed in the next release, and reading one raises a
-        FutureWarning that names its place in `effects`.
+        effect's twelve quantities at the top level. Those keys are deprecated and will be removed
+        in the next release, and reading one raises a FutureWarning that names its place in
+        `effects`.
 
         The fit counts mean what they mean in the R twin. `n_attempted` is `n_sims`, and
         `n_returned` counts the replicates that returned a fit. Each effect's `power` is the
@@ -790,8 +786,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     Raises
     ------
     ValueError
-        If `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, if `focal` is none
-        of its forms or names an effect twice, or if there is no effect to test, as for a
+        If the specification is invalid, if `workers` is not a positive whole number, if
+        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, if `focal` is none of
+        its forms or names an effect twice, or if there is no effect to test, as for a
         specification without coefficients and no `focal`.
     NotImplementedError
         If the specification declares no random effect.
@@ -837,10 +834,11 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     if correlated:
         warnings.warn(_UNCORRELATED % _name_list(correlated), UserWarning, stacklevel=2)
     # A linear model of a 0/1, count, rating or proportion response estimates a difference on the
-    # response scale, which used to be set against the true value on the link scale. On the R
+    # response scale, which cannot be set against the true value on the link scale. On the R
     # twin's crossed accuracy design, such a model gave Type M 0.21 where a logistic one gives
     # 1.12. Type S survives for a main effect, since a monotone link keeps its sign but not its
-    # size. It does not survive for an interaction, a difference of differences, whose sign a
+    # size, unless an interaction reverses that effect between the levels of another factor. It
+    # does not survive for an interaction, a difference of differences, whose sign a
     # bounded response can reverse.
     withheld = fam in _LINK_SCALE
     if withheld:
@@ -875,8 +873,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     result = {
         "backend": "statsmodels MixedLM (crossed variance components, REML; %s)" % tests,
         "n_sims": n_sims, "alpha": alpha,
-        # The R twin's fit counts, with its meanings. n_converged used to count every fit that
-        # returned, the count now called n_returned.
+        # The R twin's fit counts, with its meanings.
         "n_attempted": n_sims, "n_returned": len(fits),
         "n_converged": sum(r["converged"] for r in fits),
         "n_singular": sum(r["singular"] for r in fits),
@@ -893,8 +890,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     return _MixedResult(result)
 
 
-# What each power_curve() record keeps of a power() result. A record used to hold power and Type M
-# without their Monte Carlo errors, and no Type S.
+# What each power_curve() record keeps of a power() result.
 _CURVE_KEYS = ("power", "power_mcse", "power_lo", "power_hi", "type_s", "type_s_lo", "type_s_hi",
                "type_m", "type_m_mcse", "n_sims", "n_significant")
 
@@ -921,7 +917,8 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     ----------
     spec : dict, str or os.PathLike
         A two-group Gaussian design specification with one row per subject, as `power`
-        requires.
+        requires. It is validated strictly, so an unrecognised field is an error, even in a dict
+        that `load_spec` read leniently.
     subject_ns : iterable of int
         Subject counts to evaluate: any whole numbers, such as a range, a list or a NumPy
         array from ``np.arange`` or ``np.linspace``.
@@ -952,9 +949,14 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     Raises
     ------
     ValueError
-        If `seeds` is neither ``"independent"`` nor ``"shared"``, or `alternative` is not
-        ``"two.sided"``, ``"greater"`` or ``"less"``, or a size in `subject_ns` is below 4, which
-        leaves a level of the between factor with fewer than two subjects (see `power`).
+        If the specification is invalid, if `workers` is not a positive whole number, if `seeds`
+        is neither ``"independent"`` nor ``"shared"``, if `alternative` is not ``"two.sided"``,
+        ``"greater"`` or ``"less"``, or if a size in `subject_ns` is not a whole number or is below
+        4, which leaves a level of the between factor with fewer than two subjects (see `power`).
+    NotImplementedError
+        For a design that `power` refuses: one that is not Gaussian, does not have exactly one
+        two-level between factor, or has rows correlated by an item unit, a within factor or a
+        grouping factor besides ``subject``.
 
     See Also
     --------
@@ -966,12 +968,13 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     alternative = _check_alternative(alternative)
     spec = _as_spec(spec)
     subject_ns = list(subject_ns)
-    # One seed per grid point, drawn from the specification's seed by the rule its replicates
-    # follow. Every point used to keep the specification's seed, so replicate i drew the same
-    # numbers at every point. The points of a curve then shared their noise, while solve_curve()
-    # fits them as independent binomial counts, and its 95% intervals covered the true sample
-    # size in 88% of solves on a tight grid. replicate_seeds() draws its seeds in turn, so
-    # appending points leaves the earlier ones alone.
+    # By default (seeds="independent"), each grid point takes its own seed, drawn from the
+    # specification's seed by the rule its replicates follow. replicate_seeds() draws its seeds in
+    # turn, so appending points leaves the earlier ones alone. With seeds="shared", every point
+    # keeps the specification's seed, so replicate i draws the same numbers at every point and the
+    # points of a curve share their noise, while solve_curve() fits them as independent binomial
+    # counts. On a tight grid, its 95% intervals then covered the true sample size in 88% of
+    # solves.
     if seeds == "independent":
         grid_seeds = replicate_seeds(spec["seed"], len(subject_ns))
     else:

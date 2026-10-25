@@ -23,9 +23,13 @@ The draw order is specified on the [Specification](specification.md) page.
 ## Where the data can differ
 
 Given the same specification and seed, the two implementations produce identical data wherever
-they share a maths library, as on Linux. Continuous integration checks every case of the parity
-harness to the last bit there. IEEE-754 fixes the rounding of arithmetic but leaves that of
-`exp()`, `log()` and `pow()` to the library, and on Windows Python and R do not share one.
+they share a maths library, as on Linux. Continuous integration runs every case of the parity
+harness there, and every cell has agreed to the last bit. The harness holds every case to the
+last bit except the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous` and
+`stress_exgaussian`, which `tools/parity/tolerance.json` allows to differ by up to 8 units in the
+last place, on Linux as on any other platform. IEEE-754 fixes the rounding of arithmetic but
+leaves that of `exp()`, `log()` and `pow()` to the library, and on Windows Python and R do not
+share one.
 CPython takes them from Microsoft's Universal C Runtime, and R from the MinGW-w64 toolchain it is
 built with. There, a value that passes through those functions can differ in its last bits, and
 every family has such a path. The figures below were measured on Windows 11 with Python 3.13 and
@@ -39,11 +43,12 @@ R 4.6.1.
 - A discrete outcome can in principle move by a whole category, although none did in 50,000
   rows of each discrete family.
 
-One Beta case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power
-by repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
-exactly 1/3 or 1/4 can therefore differ in its last bits on any platform. Such a shape needs a
-cell whose rows share one linear predictor, as in a Beta design with no random effects, a linear
-predictor of 0 and `phi` set to 0.5.
+One Beta case can differ on Linux too. R's `^` computes a square by multiplication in every
+version, and a cube or a fourth power from R 4.6.0, where Python calls `pow()`. A Beta response
+whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can therefore differ in its
+last bits. Such a shape needs a cell whose rows share one linear predictor, as in a Beta design
+with no random effects and a linear predictor of 0, where a `phi` of 1 gives shapes of 1/2 and a
+`phi` of 0.5 shapes of 1/4.
 
 Rounding has removed every continuous difference observed so far, but it guarantees nothing,
 since a last-bit difference can straddle a rounding boundary, and `round` is refused for the
@@ -102,9 +107,11 @@ write.csv(simulate_design(load_spec("design.json")), "r.csv", row.names = FALSE)
 The two CSVs compare exactly, up to CSV number formatting, wherever the two languages share a
 maths library. The repository's
 [`python/examples/parity_check.py`](https://github.com/pablobernabeu/pilotr/blob/main/python/examples/parity_check.py)
-runs this comparison across the worked example designs and reports the maximum difference:
-zero for every design with rounded responses, and below 1e-14 for the unrounded continuous
-design, where R's CSV writer prints 15 significant digits. At that precision the residual
+compares the CSVs that `python/examples/run_demo.py` and `r/pilotr/examples/run_demo.R` write to
+`build/` for six of the worked example designs, all but the ordinal and Poisson ones, so run both
+demos first. It reports the maximum difference: zero for every design whose columns are all
+rounded or whole, and below 1e-14 for `reading_time_continuous`, whose continuous predictors are
+unrounded and are printed by R's CSV writer to 15 significant digits. At that precision the residual
 cannot be told apart from the writer's own rounding, and the script's small tolerance (1e-6)
 is there to absorb it. The stricter harness under `tools/parity/` dumps 17 digits and resolves
 what is really there. On Windows, it finds a handful of cells one unit in the last place apart,
@@ -122,9 +129,10 @@ asked to land on the same bits, and a recorded hash would pin whichever maths li
 to record it. What they are asked for is agreement far closer than any reading of the result
 could depend on. The script `tools/parity/solve_cross.py` puts the same fixed curves through
 both engines and compares the solved value, its interval, the fitted coefficients and the text
-of every refusal. The largest relative difference measured over those cases is 5.0e-15, against
-an allowance of 1e-9. On a solved sample size of 220 subjects that allowance comes to two
-ten-millionths of a subject. Every refusal message is identical character for character.
+of a selection of refusals. The largest relative difference measured over those cases is about
+5e-15, against an allowance of 1e-9. On a solved sample size of 220 subjects that allowance
+comes to two ten-millionths of a subject. Each of those refusal messages is identical character
+for character.
 
 The mixed models of the two `power_mixed` functions come from `model_formula` and `model_data`,
 which this package ports from the R package. The script `tools/parity/formula_cross.py` gives the
@@ -141,8 +149,9 @@ functions that compute them in both packages, which return the same doubles for 
 and formats them in the same way. The script `tools/parity/report_cross.py` renders a set of
 stored records in both engines and requires the same text, byte for byte.
 
-A simulated crossed design has one row per subject-by-item observation. The first rows of the
-worked crossed reaction-time example look like this (the same rows the R package produces):
+In the worked crossed reaction-time example, every subject meets every item in both conditions,
+so the data have one row per subject, item and condition. The first rows look like this (the same
+rows the R package produces):
 
 ```python exec="true" session="xl"
 import sys; sys.path.insert(0, "docs")

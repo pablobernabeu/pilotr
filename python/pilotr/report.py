@@ -1,10 +1,10 @@
 """A sample-size justification, written in Markdown from a power result, mirroring power_report.R.
 
-The documentation calls the value `target_n` returns the number a preregistration quotes, yet the
-justification that goes with it had to be assembled by hand. It names the analysis and its test,
-each effect size and where it came from, the solved sample size with its interval and the power
-when the null hypothesis is true. A simulation adds its Monte Carlo error and fit counts, and a
-reader needs what reproduces the run. `power_report` writes all of these down.
+The documentation calls the value `target_n` returns the number a preregistration quotes. The
+justification that goes with it names the analysis and its test, each effect size and where it came
+from, the solved sample size with its interval and the power when the null hypothesis is true. A
+simulation adds its Monte Carlo error and fit counts, and a reader needs what reproduces the run.
+`power_report` writes all of these down.
 
 It works in two steps. `_power_report_record` reads a result, a solved curve and a specification
 file into a record of counts and strings, and `_render` writes the record as Markdown. Every rate
@@ -336,7 +336,10 @@ def _power_report_record(x, solved=None, spec_file=None, justification=None, nul
             "reproducibility": _reproducibility(spec_file, fitter)}
 
 
-# --- Rendering. Every line below has a twin in power_report.R. ------------------------------------
+# --- Rendering. -----------------------------------------------------------------------------------
+#
+# Every line below has a twin in power_report.R, which also renders a precision_design() result
+# in lines that exist in R alone, as the top of this file says.
 
 def _f3(v):
     return "%.3f" % v

@@ -33,11 +33,12 @@ This is the twin of [the Python
 package](https://pablobernabeu.github.io/pilotr/python/) of the same
 name. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in
-either language wherever the two share a maths library, as on Linux.
-Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
-differ in its last bits, as the [cross-language
+either language wherever the two share a maths library, as on Linux,
+outside a rare Beta case that the [cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
-sets out. The Python package carries the generative core,
+describes. Elsewhere, a value that passes through `exp()`, `log()` or
+`pow()` can differ in its last bits, as the same article sets out. The
+Python package carries the generative core,
 simulation-based power, the helpers that derive the analysis model,
 `power_report()` and the curve solvers `solve_curve()` and `target_n()`.
 The R package additionally offers precision/ROPE design analysis, the
@@ -63,9 +64,9 @@ remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
 
 ## Quick start
 
-The package ships a specification per design family, so the example
-below runs as it stands. `pilotr_example()` returns the path to one of
-them, here a crossed by-subject and by-item reaction-time design.
+The package ships eight example specifications, so the example below
+runs as it stands. `pilotr_example()` returns the path to one of them,
+here a crossed by-subject and by-item reaction-time design.
 
 ``` r
 library(pilotr)

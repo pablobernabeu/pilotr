@@ -21,10 +21,11 @@ options(cli.num_colors = 1, cli.hyperlink = FALSE, crayon.enabled = FALSE,
 library(pilotr)
 ```
 
-pilotr ships one ready-to-run specification per design family. The same JSON
-files drive the Python twin and the no-code app, so a design authored once runs
-unchanged across all three. `pilotr_example()` lists them, and returns the path
-to each for `load_spec()`.
+Eight ready-to-run specifications ship with the package, covering six of the
+eight response families and between-subjects, crossed, nested and partially
+crossed designs. The same JSON files drive the Python twin and the no-code app,
+so a design authored once runs unchanged across all three. `pilotr_example()`
+lists them, and returns the path to each for `load_spec()`.
 
 ```{r list}
 pilotr_example()

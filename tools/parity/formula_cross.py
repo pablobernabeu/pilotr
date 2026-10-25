@@ -15,8 +15,9 @@ same columns in the same order, and every cell must agree bit for bit, compared 
 17 significant digits, which reads back as the same double. The one exception is the .y column of
 the two lognormal families. It comes from the C library's log(), which can differ by an ulp between
 R and Python on Windows, as tools/parity/tolerance.json records, so it is allowed the 8 ulp that
-file gives the transcendental cases. The contrast and product columns are copies and products of
-doubles, which IEEE 754 rounds correctly, so they are allowed nothing.
+file gives the unrounded dumps of the lognormal, shifted-lognormal and ex-Gaussian cases. The
+contrast and product columns are copies and products of doubles, which IEEE 754 rounds correctly,
+so they are allowed nothing.
 
 Python is given R's simulated data, so that the simulator stays out of the comparison. The dump
 harness beside this file checks the simulator, and a normal draw that differed by an ulp between
@@ -47,8 +48,8 @@ RSCRIPT = os.environ.get("PILOTR_RSCRIPT", "Rscript")
 
 STRUCTURES = ("maximal", "zcp", "intercepts")
 
-# The allowance for .y under a lognormal family, in units in the last place, as tolerance.json
-# gives it to the cases whose bytes pass through exp() or log().
+# The allowance for .y under a lognormal family, in units in the last place, that tolerance.json
+# gives the unrounded dumps of crossed_mixed_rt, reading_time_continuous and stress_exgaussian.
 LOG_ULP = 8
 
 # Cases written here, for what no example or parity case exercises.

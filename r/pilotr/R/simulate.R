@@ -135,7 +135,7 @@ load_spec <- function(path, validate = TRUE) {
 #
 # The moments used are the population ones. R's mean() and sd() accumulate in long double and
 # Python's do not, so standardising against the sample mean and standard deviation of the values
-# drawn would make the two twins' data differ.
+# drawn could make the two twins' data differ.
 .attenuate <- function(latent, pmean, psd, rho, z) {
   pmean + (latent - pmean + psd * sqrt((1 - rho) / rho) * z) * sqrt(rho)
 }
@@ -205,7 +205,7 @@ simulate_design <- function(spec, validate = TRUE) {
   # From version 0.4, a within factor may be counterbalanced. Each subject then meets each item at
   # one combination of the counterbalanced factors' levels, rotated over subjects and items, so
   # only the other within factors expand rows. Without the field, every within factor expands
-  # rows, as it always has.
+  # rows.
   rotated <- Filter(function(f) isTRUE(f[["counterbalance"]]), within)
   within <- Filter(function(f) !isTRUE(f[["counterbalance"]]), within)
   within_sizes <- vapply(within, function(f) length(f[["levels"]]), integer(1))
@@ -243,7 +243,8 @@ simulate_design <- function(spec, validate = TRUE) {
     for (t in items_s) {
     # Subject s meets item t at combination ((s - 1) + (t - 1)) mod C of the counterbalanced
     # factors' levels, read like a cell of the between factors below, the first-listed factor
-    # varying slowest. Subject s therefore follows list (s - 1) mod C, and nothing is drawn.
+    # varying slowest. Subject s therefore follows list ((s - 1) mod C) + 1, counted from 1, and
+    # nothing is drawn.
     rotated_idx <- list()
     if (length(rotated)) {
       combination <- ((s - 1) + (t - 1)) %% n_lists

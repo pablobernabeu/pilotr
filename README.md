@@ -70,6 +70,16 @@ pip install "pilotr[mixed]"
 install.packages("pilotr")
 ```
 
+The R package's core needs nothing beyond jsonlite. The no-code app (`run_app()`) also needs
+shiny and ggplot2. Mixed-effects power (`power_mixed()`, `power_curve_mixed()`) needs lme4 and
+lmerTest, and precision-based design analysis (`precision_design()`, `precision_curve()`) needs
+lme4. pilotr suggests these packages rather than requiring them, so install them as well when you
+want those parts:
+
+```r
+install.packages(c("shiny", "ggplot2", "lme4", "lmerTest"))
+```
+
 The development version of the R package installs from this repository, where it sits in the
 `r/pilotr` subdirectory:
 
@@ -101,7 +111,10 @@ placeholder values and the statsmodels power module covers analytic classical te
 
 The last row deserves its exact scope. On Linux, where R and Python share a maths library, every
 shipped example and every case of the parity harness in [`tools/parity/`](tools/parity)
-reproduces bit for bit, rounded or not, and CI enforces it. IEEE-754 fixes the rounding of
+reproduces bit for bit, rounded or not. CI holds every case to the last bit except the unrounded
+dumps of `crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian`, which
+[`tools/parity/tolerance.json`](tools/parity/tolerance.json) allows to differ by up to 8 units in
+the last place, on Linux as on any other platform. IEEE-754 fixes the rounding of
 arithmetic but not of `exp()`, `log()` and `pow()`, and on Windows the two languages take those
 from different libraries. There, a value that passes through one of them can differ in its last
 bits. [Cross-language reproducibility](#cross-language-reproducibility) below gives the measured
@@ -114,14 +127,14 @@ pilotr/  (repo root)
   spec/          The portable design-specification format (the conceptual core)
     SPEC.md          human-readable format documentation + the RNG contract
     design.schema.json   JSON Schema for validation
-    examples/        worked design specs (between-groups; crossed mixed-effects RT)
+    examples/        worked design specs, which both packages ship (pilotr_example() lists them)
   python/        pilotr Python package (runnable; pure-Python generative core)
   r/pilotr/      pilotr R package (mirrors the Python core exactly)
     inst/app/      the no-code Shiny app, bundled in the package (pilotr::run_app())
   app-lite/      serverless (shinylive/webR) build of the light path -> static site
   hpc/           SLURM array job for large precision sweeps on a cluster
   tools/parity/  cross-language parity harness: the CI gate behind the bit-identical claim
-    tolerance.json   the per-case ulp allowance, and which cases pass through exp() or log()
+    tolerance.json   the per-case ulp allowance, and which cases pass through exp(), log() or pow()
     golden.json      hashes of the Gaussian R dumps, so the two halves cannot drift together
   docs/
     mixed_models_and_design_analysis.md   continuous predictors, interactions, the brms bridge
@@ -173,9 +186,9 @@ Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
 Simulation-based power and precision analyses are embarrassingly parallel, so they scale well on
 a cluster. Within one machine, every power and precision analysis takes a `workers` argument
-that parallelises the replicates in-process, with results identical to a serial run, while the
-SLURM array below covers multi-node sweeps. The [`hpc/`](hpc/) directory holds a SLURM array job
-([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
+that spreads the replicates over local worker processes, with results identical to a serial run,
+while the SLURM array below covers multi-node sweeps. The [`hpc/`](hpc/) directory holds a SLURM
+array job ([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
 [`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size. Each task calls
 `precision_design()` at its size, with the replicates spread across the task's cores, so its
 output has the columns and fit counts of `precision_curve()`.
@@ -235,7 +248,8 @@ behind R's `qnorm()`. Everything else (Cholesky factors for correlated random ef
 inverse-CDF draws for the Poisson, Bernoulli and ordinal families) derives from those two in a
 documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)).
 The same specification and seed therefore yield identical data in R and Python wherever the two
-share a maths library, as on Linux, where CI checks every case to the last bit.
+share a maths library, as on Linux, where CI checks every case to the last bit apart from the
+three unrounded dumps named above, which it allows 8 units in the last place.
 
 IEEE-754 leaves the rounding of `exp()`, `log()` and `pow()` to that library, and on Windows R
 and Python do not share one. There, a value that passes through those functions can differ in its
@@ -245,11 +259,11 @@ Responses of the lognormal families and the ex-Gaussian differed by 1 unit, and 
 Beta response by up to 35. A discrete outcome can in principle move by a whole category, though
 none did in 50,000 rows of each family. Rounding to four decimals removed every continuous
 difference measured, but it guarantees nothing, since a last-bit difference can straddle a
-rounding boundary. One Beta case can differ on Linux too. From R 4.6.0, R's `^` computes a cube
-or a fourth power by repeated multiplication, where Python calls `pow()`. A Beta response whose
-Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits on any platform. Within
-one language, the data are identical on one platform, and across operating systems on the same
-terms as across languages.
+rounding boundary. One Beta case can differ on Linux too. R's `^` computes a square by
+multiplication in every version, and a cube or a fourth power from R 4.6.0, where Python calls
+`pow()`. A Beta response whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4,
+can therefore differ in its last bits. Within one language, the data are identical on one
+platform, and across operating systems on the same terms as across languages.
 [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
 sets out the scope, and [`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the
 harness's allowances. The generator is auditable and free of external dependencies.
@@ -330,7 +344,8 @@ python -m pytest python/tests -q
 ```
 
 > A note on R and Python coverage. Data generation is bit-identical across languages wherever
-> they share a maths library, as on Linux (see Cross-language reproducibility above), and both
+> they share a maths library, as on Linux, outside a rare Beta case (see [Cross-language
+> reproducibility](#cross-language-reproducibility) above), and both
 > ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
 > however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
 > correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`

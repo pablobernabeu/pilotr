@@ -4,14 +4,17 @@ Thank you for considering a contribution. Issues and pull requests are both
 welcome, whether they fix a bug, improve the documentation or add a feature.
 
 pilotr ships as twin packages, R and Python, from this one repository. The R
-package lives in `r/pilotr/` and the Python package in `python/`, with the
-no-code app in `app-lite/`. All three consume the same portable JSON design
+package lives in `r/pilotr/` and the Python package in `python/`. The no-code
+app comes in two builds: the Shiny app in `r/pilotr/inst/app/`, which
+`pilotr::run_app()` launches, and a lighter build in `app-lite/` that runs in
+the browser without a server, on the engine files `app-lite/engine-files.txt`
+names. All of them consume the same portable JSON design
 specification (documented in `spec/`). The two packages share a random-number
 contract so that, given the same specification and seed, they produce
-bit-identical data wherever they share a maths library, as on Linux.
-`spec/SPEC.md` sets out what can differ elsewhere. A change to the generative
-core therefore usually needs to land in both packages, keeping that contract
-intact.
+bit-identical data wherever they share a maths library, as on Linux, outside a
+rare Beta case. `spec/SPEC.md` sets out that case and what can differ
+elsewhere. A change to the generative core therefore usually needs to land in
+both packages, keeping that contract intact.
 
 ## Reporting a problem or suggesting a feature
 
@@ -63,6 +66,20 @@ emit. After changing either, run `Rscript tools/brms/check_bridge.R` with brms
 installed. It checks every shipped example and a design in each of the two
 response families no example uses, and it compiles nothing.
 
+The two builds of the app share the engine in `r/pilotr/R/`, but each has its
+own `app.R`, and several rules are written out in both, so a change to one
+`app.R` usually belongs in the other. Their headless tests are scripts outside
+testthat. Neither `devtools::test()` nor `devtools::check()` runs them, and of
+the workflows only the scheduled dependency-health one does. After changing
+either app, `app-lite/engine-files.txt` or an engine file it names, run them from
+the repository root with shiny, ggplot2 and callr installed:
+
+```bash
+Rscript r/pilotr/tests/test_app_logic.R
+Rscript r/pilotr/tests/test_app_server.R
+Rscript r/pilotr/tests/test_app_lite_server.R
+```
+
 The Python package:
 
 ```bash
@@ -71,15 +88,30 @@ cd python
 pytest                        # run the test suite
 ```
 
+The Python documentation site builds with mkdocs from `python/`, with the
+plugins and packages that `.github/workflows/site.yml` installs. The guides'
+code runs during the build, and the build rewrites `docs/pilotr.bib` whenever
+the entry it holds is out of date. From the repository root:
+
+```bash
+pip install mkdocs-material "mkdocstrings[python]" markdown-exec matplotlib scipy statsmodels pandas
+cd python
+mkdocs build --strict
+```
+
 The cross-language contract is checked by the harness in `tools/parity/`. From
 the repository root, the first two commands below simulate every shipped and
 adversarial case from the local R and Python sources. The third compares the
 two dumps value for value, against the allowances in
 `tools/parity/tolerance.json` and the recorded hashes in
-`tools/parity/golden.json`. The last two check that both validators accept and
+`tools/parity/golden.json`. The next two check that both validators accept and
 refuse the same specifications with the same messages, and that both curve
 solvers agree. The validator check also holds `spec/design.schema.json` to the
-validators, for which it needs the jsonschema package.
+validators, for which it needs the jsonschema package. The last three hold the
+other outputs the twins share: `json_roundtrip.py` reads back in Python the
+numbers R's `spec_json()` writes, `formula_cross.py` compares the two
+`model_formula()` and `model_data()`, and `report_cross.py` compares the text
+the two `power_report()` functions write.
 
 ```bash
 Rscript tools/parity/run_r.R
@@ -87,10 +119,13 @@ python tools/parity/run_py.py
 python tools/parity/compare.py
 python tools/parity/validate_cross.py
 python tools/parity/solve_cross.py
+python tools/parity/json_roundtrip.py
+python tools/parity/formula_cross.py
+python tools/parity/report_cross.py
 ```
 
-The parity job in `.github/workflows/python-tests.yml` runs these and the
-harness's other cross-checks. Its Linux cell gates the workflow. Its Windows
+The parity job in `.github/workflows/python-tests.yml` runs all eight. Its
+Linux cell gates the workflow. Its Windows
 cell is informational, because there R and Python take `exp()`, `log()` and
 `pow()` from different maths libraries, and a value that passes through them can
 differ in its last bits.
@@ -108,8 +143,10 @@ green. pilotr handles no credentials and makes no network requests.
 
 Base your work on `main`, keep the change focused, and add or update tests and
 documentation alongside the code. A scheduled continuous-integration workflow
-runs both test suites against the latest released dependency versions, and the
-website build exercises the vignettes and guides on every push to `main`.
+runs the Python test suite and examples, and the R package's app tests, example
+scripts and brms check, against the latest released dependency versions, and the
+website build exercises the vignettes and guides on every push to `main` that
+changes the packages, the app or the specification.
 
 By contributing you agree that your contribution is licensed under the same MIT
 licence as the package, and that you will follow the
@@ -123,8 +160,8 @@ sets the version in `python/pyproject.toml`, `python/pilotr/__init__.py` and
 `extra.version` in `python/mkdocs.yml` together, after which a docs build
 rewrites `python/docs/pilotr.bib` for committing. `CITATION.cff` follows the
 newer release of the two, with the date it first became public. The README
-citations give no version. `python tools/check_versions.py` checks all of this,
-and CI runs it.
+citations give no version. `python tools/check_versions.py` checks the version
+numbers, though not the date, and CI runs it.
 
 On the day CRAN or PyPI accepts a release, push the exact tree submitted, tag it
 by name (for example `git push origin v0.4.0`, never `--tags`) and publish the

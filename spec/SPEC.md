@@ -69,13 +69,13 @@ battery of awkward files through both to check that they agree.
 
 A specification file is UTF-8, with or without a byte-order mark, whatever the locale of the
 machine reading it, so level labels such as `"fácil"` or `"Łatwy"` read the same everywhere.
-Every field is looked up by its exact name. R's `$` used to match a name partially, so a `random`
-entry named `subject_site` was also read as `random.subject`.
+Every field is looked up by its exact name, never by a partial match, so a `random` entry named
+`subject_site` is not read as `random.subject`.
 
 A file that repeats a key within one object is refused. JSON leaves the meaning of a repeated key
-undefined (RFC 8259, section 4), and the two readers differed: given `{"grp": 0.3, "grp": 0.5}` as
-coefficients, R applied 0.3 twice and Python 0.5 once. The refusal happens as the file is read, so
-it applies even when validation is switched off.
+undefined (RFC 8259, section 4), and without the refusal, the two readers would differ: given
+`{"grp": 0.3, "grp": 0.5}` as coefficients, R would apply 0.3 twice and Python 0.5 once. The
+refusal happens as the file is read, so it applies even when validation is switched off.
 
 A JSON `null` in an optional field means the field is absent, so `"spec_version": null` is a 0.2
 specification and `"slopes": null` means no slopes. A `null` in a required field counts as missing.
@@ -98,8 +98,8 @@ string avoids the difference.
 
 A seed must be a whole number between −9007199254740991 and 9007199254740991, that is
 ±(2^53 − 1). jsonlite reads a JSON number as a double, which holds every integer in that range and
-not every one beyond it, while Python reads an integer of any size exactly. A larger seed was
-therefore two different numbers in the two readers, which drew different data.
+not every one beyond it, while Python reads an integer of any size exactly. A larger seed would
+therefore be two different numbers in the two readers, which would draw different data.
 
 Both readers convert a decimal with correct rounding, jsonlite through the C library's `strtod()`
 and Python through `float()`, so a number means the same double to both. A writer keeps a value
@@ -241,9 +241,9 @@ interaction) and in random-effect `slopes` (e.g. a by-subject random slope on an
 predictor, as in `(1 + SyntaxPC | subject)`). The defaults are `mean` 0 and `sd` 1.
 
 `varies_by` is one of `"subject"`, `"item"` or `"observation"`. The last of these, new in 0.3,
-draws one value per row, which is what a predictor varying trial by trial needs. Before 0.3 any
-value other than `"subject"` was read as item-level, so a predictor declared to vary by `"trial"`
-was silently given one value per item. It is now validated against the three names that exist.
+draws one value per row, which is what a predictor varying trial by trial needs. Any other value,
+such as `"trial"`, is refused. A 0.2 implementation reads any value other than `"subject"` as
+item-level, which is why `"observation"` needs 0.3.
 
 `dist` (new in 0.3) selects the distribution, either `"normal"`, which uses `mean` and `sd`, or
 `"uniform"`, which uses `min` and `max`. A uniform draw consumes exactly as much of the random
@@ -303,24 +303,22 @@ normals. The unit's contribution to a row's linear predictor is
 `b[intercept] + Σ_k b[slope_k] · (design value of slope_k for that row)`.
 
 Slope keys follow exactly the same rule as fixed coefficients: a contrast column, a continuous
-predictor or an `"a:b"` interaction between them. Before 0.3 an interaction slope was accepted,
-sized into the covariance, drawn from the stream and then silently discarded, so the emitted
-analysis model contained a term the generative process did not, which inflates power in the
-direction Barr et al. (2013) warn about.
+predictor or an `"a:b"` interaction between them. Such a slope enters the simulated data as well
+as the emitted analysis model. A 0.2 implementation draws an interaction slope and then discards
+it, so the analysis model contains a term the generative process does not, which inflates power in
+the direction Barr et al. (2013) warn about.
 
 `Σ` must be positive definite. One that is not is an error naming the grouping factor and the
 random-effect column at which the factorisation failed. Clamping the failing pivot at zero and
-continuing, as earlier versions did, produced random effects whose standard deviations were several
-times the requested ones without reporting anything. A standard deviation of exactly zero is a
-different matter and remains valid, since it is how a term is held fixed while the rest of the
-structure is kept intact.
+continuing would produce random effects whose standard deviations are several times the requested
+ones without reporting anything. A standard deviation of exactly zero is a different matter and
+remains valid, since it is how a term is held fixed while the rest of the structure is kept intact.
 
 `correlated` (new in 0.3) says whether a group's random effects are correlated, defaulting to
 whether `correlations` is supplied. It decides whether an emitted `lmer` or `brms` formula uses a
-single or a double bar. Earlier versions always emitted a single bar and an LKJ prior, so a design
-whose slopes were uncorrelated by construction was nonetheless analysed as though a correlation were
-there to estimate. Setting `correlated` to `false` while also supplying `correlations` is
-contradictory and is refused.
+single or a double bar. A single bar and an LKJ prior would analyse a design whose slopes are
+uncorrelated by construction as though a correlation were there to estimate. Setting `correlated`
+to `false` while also supplying `correlations` is contradictory and is refused.
 
 ### Additional grouping factors
 
@@ -481,16 +479,14 @@ double, `1022·ln 2`, about 708.4. A subnormal carries fewer significant bits. F
 about 738, the walk's cumulative distribution no longer sums to 1, so its counts are biased or the
 drawn uniform lies out of its reach. Beyond about 745.1, `exp(−λ)` underflows to zero. Every
 implementation therefore refuses a mean above 708.3964185322641, the double nearest `1022·ln 2`,
-before the walk starts, and with the same message. Earlier versions served means up to about 745,
-with biased counts from about 738. The effect is to cap the linear predictor of a `poisson`
-response at about 6.56, a mean count of about 708, which is well above the rates count outcomes
-are normally specified at. The walk itself is set out under
+before the walk starts, and with the same message. The effect is to cap the linear predictor of a
+`poisson` response at about 6.56, a mean count of about 708, which is well above the rates count
+outcomes are normally specified at. The walk itself is set out under
 [Accumulation order](#accumulation-order-identical-across-all-implementations).
 
 A `lognormal` or `shifted_lognormal` response is refused when `exp(η + σ·z)` overflows, as it does
 once its argument passes about 709.78. The message is the same in every implementation and names
 `η`, since `exp(η)` can be finite in a row whose normal draw carries the argument past the limit.
-Earlier versions wrote an infinite response in R and raised a bare overflow error in Python.
 
 A `beta` response lies strictly inside (0, 1), the support of the Beta distribution and the range a
 Beta regression accepts. It is `x / (x + y)`, where `x` is a Gamma variate with shape `μ·φ` and
@@ -499,7 +495,7 @@ same messages in every implementation. The first is a shape of exactly zero. It 
 `invlogit(η)` rounds to 1 (from an `η` of about 36.74) or underflows to 0 (below about −745.1), or
 when `φ` is small enough to take either product to zero by itself. The second is a pair of
 variates that both underflow to zero, leaving the ratio undefined, as can happen when both shapes
-are tiny. Earlier versions returned 0, 1 or `NaN` in R and raised a division error in Python.
+are tiny.
 
 Otherwise, the ratio rounds to exactly 1 whenever `y` is below about 2^−54 of `x`. That happens at
 realistic means near a ceiling, as in 161 of 4,000 rows of a design with an intercept of 3 and
@@ -525,9 +521,8 @@ number is 0 or 1. The rounding follows the rule under
 
 The names in a specification become columns, of the simulated data or of the analysis data that
 `model_data()` builds from it. `validate_spec()` refuses a specification in which two of them
-would land in one place. Each case below used to validate and then move an effect, rescale a
-variance or overwrite a column without a word. R replaced a column written twice where Python
-appended a second one under the same name, so the two implementations also exported different
+would land in one place. Without the refusal, each case below would move an effect, rescale a
+variance or overwrite a column without a word, and the two implementations could export different
 tables from one specification.
 
 1. The simulated data has these columns, in this order: `subject`, `item` when the design has
@@ -543,8 +538,8 @@ tables from one specification.
 4. A factor lists each level once.
 5. A factor sets exactly one of `vary_within` and `between`.
 6. A correlation key names two different terms, and each pair is given once, in one order.
-7. `random.item` appears only in a design with an item unit. Without one it was dropped from the
-   simulated data, while `model_formula()` still put an item term into the analysis.
+7. `random.item` appears only in a design with an item unit. Without one, it would be dropped from
+   the simulated data, while `model_formula()` would still put an item term into the analysis.
 
 ## Accumulation order (identical across all implementations)
 
@@ -568,11 +563,12 @@ An interaction value is itself a left fold: `v ← 1`, then `v ← v · value(pa
 key in written order.
 
 Neither language's built-in summation may be used for any of this. Base R's `sum()` accumulates in
-80-bit long double on x86, and CPython's `sum()` has applied Neumaier compensation to floats since
-version 3.12. Both are more accurate than a plain double fold, but they are more accurate in
-different ways, so an inner product of three terms or more can land on different doubles in the two
-ports. Every inner product, including those inside the Cholesky factorisation and the matrix-vector
-product, is written as an explicit double fold.
+80-bit long double on x86, and CPython's `sum()` has applied Neumaier (1974) compensation to floats
+since version 3.12. Both differ from a plain double fold, in different ways. R rounds its
+long-double total to double a second time, which can move even a sum of two terms, and CPython's
+compensation can move a sum of three or more, so an inner product of two terms or more can land on
+different doubles in the two ports. Every inner product, including those inside the Cholesky
+factorisation and the matrix-vector product, is written as an explicit double fold.
 
 For the same reason, integer powers are written as repeated multiplication rather than with `^` or
 `**`. R special-cases small integer exponents while Python calls the library `pow()`, and
@@ -621,9 +617,9 @@ or 1 − 2^−53 where `1 − m` rounds to 1, as it does from `d = 17`. Up to 22
 double that step 5 returns for 10^−d, and up to 15 places, `1 − m` is the one it returns for
 1 − 10^−d. A proportion rounded onto 0 or 1 therefore moves to the nearest value inside the
 interval at `d` decimals, 0.001 or 0.999 at three. Validation refuses `d = 0` for `beta`, where
-no such value exists. Before this rule, rounding sent 17% of the rows of one realistic low-mean
-design to exactly 0. The parity case `tools/parity/cases/beta_boundary_rounded.json` checks the
-rule end to end.
+no such value exists. Without this step, rounding would send 17% of the rows of one realistic
+low-mean design to exactly 0. The parity case `tools/parity/cases/beta_boundary_rounded.json`
+checks the rule end to end.
 
 CPython's `round()` follows a different rule. It rounds the exact binary value of `y`, whereas
 step 5 compares the two candidates by their distances from `x` as computed in double precision.
@@ -742,17 +738,31 @@ The power and precision loops derive their per-replicate seeds from the specific
 generator seeded with it draws `u`, the next seed is `⌊u · 2147483562⌋ + 1`, and a seed already
 drawn is skipped, so no two replicates share one.
 
-Adding the replicate index, the rule the loops used before 0.3, does not give independent
-streams. Seeding is affine in the seed and each component recurrence is linear, so the `k`-th
-draws of consecutive seeds differ by very nearly the same amount mod 1 (to within 1e−7). For the
-first draw, the step `d` is −0.0091. Draws in arithmetic progression mod 1 correlate
-`1 − 6|d|(1 − |d|)`, so the first draw of replicate `i` correlated 0.95 with that of replicate
-`i + 1`. A longer warm-up changes `d` and leaves the progression in place: with 50 warm-up draws
-in place of 10, the step is −0.32 and the correlation −0.30. An affine rule for the seeds keeps
+Adding the replicate index to the seed does not give independent streams. Seeding is affine in
+the seed and each component recurrence is linear, so the `k`-th draws of consecutive seeds differ
+by very nearly the same amount mod 1 (to within 1e−7). For the first draw, the step `d` is
+−0.0091. Draws in arithmetic progression mod 1 correlate `1 − 6|d|(1 − |d|)`, so the first draw of
+replicate `i` would correlate 0.95 with that of replicate `i + 1`. A longer warm-up changes `d`
+and leaves the progression in place: with 50 warm-up draws in place of 10, the step is −0.32 and
+the correlation −0.30. An affine rule for the seeds keeps
 the draws in progression too, so no arithmetic scramble helps: a Weyl increment followed by a
 Lehmer step left the first draws correlated at −0.27. Matsumoto et al. (2007) describe the same
 defect in the initialisation of other linear generators. The first draws of the seeds the loops
-use correlate by 0.02 or less, either way. This changed every number pilotr produced before 0.3.
+use correlate by 0.02 or less, either way.
+
+A sweep runs the same loops at each point of a grid, such as a list of sample sizes, and gives
+each point a seed of its own by the same rule. Point `j` of a sweep over `J` values, counting from
+1, takes the `j`-th of the seeds `replicate_seeds(seed, J)` returns. Its replicates take their
+seeds from that one, so that no two points share their random numbers. The seeds are drawn in
+turn, so the first `J` of a longer sweep are the seeds of a shorter one, and appending points to
+a grid leaves the earlier points' results unchanged. A point's seed follows its position in the
+grid, though, not the value at that position. A sweep over the seed itself sets each point's seed
+to the value swept. Giving every point the specification's own seed would make replicate `i` draw
+the same numbers at every point, so the points of a curve would share their noise. The curve
+solvers fit the points as independent, and with shared seeds their nominal 95% intervals covered
+the true sample size in 87.8% of solves on a tight grid. Both packages offer shared seeds as an
+option, which reproduces sweeps up to R 0.3.1 and Python 0.3.0: `.seeds = "shared"` in R's
+`sweep_spec()` and `seeds = "shared"` in its curve functions and in Python's `power_curve`.
 
 ## Sampling algorithms (identical across all implementations)
 
@@ -919,20 +929,6 @@ too, with two exceptions. It computes a square as `u · u`, and, from R 4.6.0, i
 or a fourth power by repeated multiplication, which rounds two or three times (see
 [Scope of the guarantee](#scope-of-the-guarantee)).
 
-A sweep runs the same loops at each point of a grid, such as a list of sample sizes, and gives
-each point a seed of its own by the same rule. Point `j` of a sweep over `J` values, counting from
-1, takes the `j`-th of the seeds `replicate_seeds(seed, J)` returns. Its replicates take their
-seeds from that one, so that no two points share their random numbers. The seeds are drawn in
-turn, so the first `J` of a longer sweep are the seeds of a shorter one, and appending points to
-a grid leaves the earlier points' results unchanged. A point's seed follows its position in the
-grid, though, not the value at that position. A sweep over the seed itself sets each point's seed
-to the value swept. Sweeps up to R 0.3.1 and Python 0.3.0 gave every point the specification's own
-seed, so replicate `i` drew the same numbers at every point, and the points of a curve shared
-their noise. The curve solvers fit the points as independent, and with shared seeds their nominal
-95% intervals covered the true sample size in 87.8% of solves on a tight grid. Both packages keep
-that behaviour as an option, `.seeds = "shared"` in R's `sweep_spec()` and `seeds = "shared"` in
-its curve functions and in Python's `power_curve`.
-
 ## Scope of the guarantee
 
 Identical data means bit-identical. The guarantee holds wherever R and Python compute `exp()`,
@@ -973,15 +969,17 @@ every family has such a path. The figures below were measured on the same machin
   versions of that value, and then by a whole category. None of 50,000 rows differed for any of
   the three, but nothing rules it out.
 
-The Beta case can differ on any platform, Linux included. From R 4.6.0, R's `^` computes a cube or
-a fourth power by repeated multiplication, rounding two or three times, where Python's `**` calls
-`pow()`. On Windows, the two differed for 26% of uniforms raised to the third power and 34%
-raised to the fourth. A Beta response is affected wherever a Gamma shape below 1 has a reciprocal
-of exactly 3 or 4, so that its boost is a cube or a fourth power. That takes a linear predictor
-shared by every row of a cell, as in a design without random effects or continuous predictors.
-With `η = 0` and `φ = 0.5`, both shapes are 1/4, and 251 of 1,000 such rows differed on Windows,
-by up to 3 ulp. R before 4.6.0 computed those powers with the maths library, so R's own data for
-such a design changed with R 4.6.0.
+The Beta case can differ on Linux too. R's `^` computes a square as `u · u` in every version and,
+from R 4.6.0, a cube or a fourth power by repeated multiplication, rounding two or three times,
+where Python's `**` calls `pow()`. On Windows, the two differed for 26% of uniforms raised to the
+third power and 34% raised to the fourth, and on Linux for 0.08% of the generator's uniforms
+squared. A Beta response is affected wherever a Gamma shape below 1 has a reciprocal of exactly
+2, or from R 4.6.0 exactly 3 or 4, so that its boost is a square, a cube or a fourth power. That
+takes a linear predictor shared by every row of a cell, as in a design without random effects or
+continuous predictors. With `η = 0` and `φ = 0.5`, both shapes are 1/4, and 251 of 1,000 such
+rows differed on Windows, by up to 3 ulp. With `η = 0` and `φ = 1`, both shapes are 1/2, and 19
+of 20,000 such rows differed on Linux, by up to 2 ulp. R before 4.6.0 computed a cube or a fourth
+power with the maths library, so R's own data for a shape of 1/3 or 1/4 changed with R 4.6.0.
 
 Rounding has removed every continuous difference observed so far, in each rounded case of the
 parity harness and in the designs above rounded to four decimals, but it guarantees nothing. The
@@ -995,11 +993,11 @@ family confines any difference to the last bits of a rare normal draw, where a d
 can move a whole category.
 
 The R package's `build_spec()`, which builds the no-code app's specifications, rounds a response
-of the Gaussian and the two lognormal families to four decimals and leaves a `beta` response
-unrounded. Rounding moves every proportion near 0 or 1 onto the nearest value inside the interval
-at that many decimals. At four decimals, 9.8% of the 40,000 rows of the Beta design above landed
-on 0.0001 or 0.9999, and rows at such a bound dominate a Beta likelihood (see `?brms_bridge` in
-R). Unrounded, the data keep the distribution the specification describes.
+of the Gaussian, the two lognormal and the ex-Gaussian families to four decimals and leaves a
+`beta` response unrounded. Rounding moves every proportion near 0 or 1 onto the nearest value
+inside the interval at that many decimals. At four decimals, 9.8% of the 40,000 rows of the Beta
+design above landed on 0.0001 or 0.9999, and rows at such a bound dominate a Beta likelihood
+(see `?brms_bridge` in R). Unrounded, the data keep the distribution the specification describes.
 
 Within one language, the guarantee holds on one platform: a given build of R or Python produces
 the same data from the same specification and seed every time. Across operating systems, it
@@ -1033,9 +1031,6 @@ the values that would have been observed, which pilotr does not simulate, can bi
 * Barr, D. J., Levy, R., Scheepers, C., & Tily, H. J. (2013). Random effects structure for
   confirmatory hypothesis testing: Keep it maximal. *Journal of Memory and Language, 68*(3),
   255–278. https://doi.org/10.1016/j.jml.2012.11.001
-* Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H., & Bates, D. (2017). Balancing Type I error
-  and power in linear mixed models. *Journal of Memory and Language, 94*, 305–315.
-  https://doi.org/10.1016/j.jml.2017.01.001
 * Neumaier, A. (1974). Rundungsfehleranalyse einiger Verfahren zur Summation endlicher Summen.
   *Zeitschrift für Angewandte Mathematik und Mechanik, 54*(1), 39–51.
   https://doi.org/10.1002/zamm.19740540106

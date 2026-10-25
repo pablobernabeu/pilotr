@@ -246,7 +246,7 @@ generalized linear mixed models by simulation. \emph{Methods in Ecology and Evol
 
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 
 Kuznetsova, A., Brockhoff, P. B. and Christensen, R. H. B. (2017). lmerTest package: Tests
 in linear mixed effects models. \emph{Journal of Statistical Software}, 82(13), 1-26.

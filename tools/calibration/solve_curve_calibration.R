@@ -1,11 +1,13 @@
 # Calibration of solve_curve() against an analytic answer.
 #
-# solve_curve() defends two design choices with measured figures: it fits a probit link where a
-# logit was the obvious alternative, and it reports the delta-method interval where Fieller's
-# was. This script is where those figures come from, so that nothing quoted in the documentation
-# rests on a run nobody can repeat. It builds power curves for two-group Gaussian designs, the
-# one case stats::power.t.test() answers in closed form, solves each curve with the package's own
-# solve_curve(), and compares the solved sample size with the analytic one.
+# solve_curve() fits a probit link where a logit was the obvious alternative, and reports the
+# delta-method interval where Fieller's was. This script measures both choices against those
+# alternatives and produces the figures that r/pilotr/R/solve_curve.R and python/pilotr/solve.py
+# quote in comparing them, so that none of those figures rests on a run nobody can repeat. At the
+# default replicate count, twelve curves separate neither pair, and r/pilotr/R/solve_curve.R gives
+# the reasons each choice is kept. The script builds power curves for two-group Gaussian designs,
+# the one case stats::power.t.test() answers in closed form, solves each curve with the package's
+# own solve_curve(), and compares the solved sample size with the analytic one.
 #
 # The experiment is three grid shapes by four effect sizes by three target powers: 36 checks over
 # 12 curves. Grid points are placed by the analytic power they carry, because the size a design
@@ -30,11 +32,12 @@
 # Usage: Rscript tools/calibration/solve_curve_calibration.R [replicates] [output-file] [seed]
 #
 # The default of 400 replicates a point runs in about a minute, nearly all of it in the
-# simulation. The figures quoted in solve_curve.R and in the changelogs are the ones this default
-# produces, and they are meaningless without it: the error of a solved size is dominated by Monte
-# Carlo noise and falls with the square root of the replicate count. A larger count is a different
-# experiment, so raise it to study the solver. The figures the documentation quotes belong to the
-# default.
+# simulation. The figures that r/pilotr/R/solve_curve.R and python/pilotr/solve.py quote from this
+# script are the ones this default produces, at the default seed base and at the seed base 77000
+# they also cite. They are meaningless without that replicate count: the error of a solved size is
+# dominated by Monte Carlo noise and falls with the square root of the replicate count. A larger
+# count is a different experiment, so raise it to study the solver, not to reproduce the
+# documentation.
 
 args <- commandArgs(trailingOnly = TRUE)
 here <- dirname(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1]))
@@ -206,10 +209,10 @@ for (gname in names(GRIDS)) {
     spec <- build_spec(list(name = "calib", seed = seed, design_kind = "between",
       n_subject = sizes[1], factor_name = "group", lev1 = "a", lev2 = "b",
       intercept = 0, effect = d, family = "gaussian", resp_name = "score", sigma = 1))
-    # sweep_spec() gives each grid point its own seed, so the points of one curve draw
-    # independent replicates, as they do in a user's sweep. Up to 0.3.1 every point reused the
-    # specification's seed, and this calibration kept that sharing so as to measure the curves the
-    # package produced. solve_curve_coverage.R beside it shows what the sharing did to coverage.
+    # sweep_spec() gives each grid point its own seed by default, so the points of one curve draw
+    # independent replicates, as they do in a user's sweep. `.seeds = "shared"`, which reproduces
+    # the sweeps of 0.3.1 and earlier, gives every point the specification's seed instead, and
+    # solve_curve_coverage.R beside this script measures what that sharing does to coverage.
     curve <- sweep_spec(spec, "units$subject$n", sizes, power_design,
                         n_sims = n_sims, alpha = ALPHA)
 

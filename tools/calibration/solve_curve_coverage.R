@@ -2,11 +2,12 @@
 # when each point draws its own.
 #
 # solve_curve() fits the points of a curve as independent binomial counts, and the interval it
-# reports is nominal only when they are. Up to and including 0.3.1, every point of a sweep reused
-# the specification's seed, so replicate i was drawn from the same stream at every point and
-# neighbouring points shared most of their noise. Each point now draws its own replicates. This
-# script measures what the sharing did to the interval's coverage and what drawing each point
-# independently restores, over enough curves for a coverage figure to mean something.
+# reports is nominal only when they are. sweep_spec() gives every grid point its own seed by
+# default. With `.seeds = "shared"`, which reproduces the sweeps of 0.3.1 and earlier, every point
+# reuses the specification's seed, so replicate i is drawn from the same stream at every point and
+# neighbouring points share most of their noise. This script measures what that sharing does to
+# the interval's coverage and what drawing each point independently restores, over enough curves
+# for a coverage figure to mean something.
 # solve_curve_calibration.R beside it measures the solver on 12 curves, which can show a solved
 # size's error but not a coverage rate.
 #
@@ -16,9 +17,9 @@
 # first n/2 rows form the first group. The script checks that layout against simulate_design()
 # before it relies on it. In the "shared" arm, each replicate's stream is the same at every point
 # of a curve, so the rows of a smaller design are a prefix of a larger one's. That is what a sweep
-# produced when every point reused the specification's seed. In the "independent" arm, every point
-# draws afresh, as every point of a sweep now does. Each curve is then solved by the package's own
-# solve_curve(), so the interval measured is the one that ships.
+# with `.seeds = "shared"` produces. In the "independent" arm, every point draws afresh, as a sweep
+# does by default. Each curve is then solved by the package's own solve_curve(), so the interval
+# measured is the one that ships.
 #
 # The settings are those of solve_curve_calibration.R: three grid shapes, four effect sizes and
 # three target powers at 400 replicates a point, with the grid points placed by the analytic power
@@ -159,7 +160,7 @@ for (gname in names(GRIDS)) {
 }
 
 # The effect-size axis. The design is the same at every point, so in the shared arm one stream per
-# replicate serves every effect, as it did when a sweep over an effect reused the seed.
+# replicate serves every effect, as it does in a sweep over an effect with `.seeds = "shared"`.
 axis_truth <- stats::power.t.test(n = AXIS_N / 2, sd = 1, sig.level = ALPHA,
                                   power = AXIS_TARGET)$delta
 axis <- list(shared = matrix(NA_real_, n_curves, 4), independent = matrix(NA_real_, n_curves, 4))

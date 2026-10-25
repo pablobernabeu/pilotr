@@ -84,8 +84,9 @@ held intercept reaches, and it can return an intercept too large to simulate.
 component, leaving the random-effect components and the residual. In a balanced design, that is
 the variance within a condition. Westfall, Kenny and Judd (2014) define Cohen's d for designs in
 which participants respond to stimuli by dividing a difference between condition means by the
-square root of that variance. Once it is calibrated to 1, the coefficient of a two-level factor
-coded -0.5 and 0.5 is d, on the scale of the linear predictor and conditional on any covariates.
+square root of that variance (see also Brysbaert and Stevens, 2018). Once it is calibrated to 1,
+the coefficient of a two-level factor coded -0.5 and 0.5 is d, on the scale of the linear
+predictor and conditional on any covariates.
 The fixed component comes on top, so the total then exceeds \code{target_var}. With
 \code{tune = "sigma"}, the residual standard deviation makes up what the random components leave of
 the target. \code{\link[=response_variance]{response_variance()}} gives the conversion of a published d into a coefficient.

@@ -6,19 +6,20 @@ would mean a design that runs in R and fails in Python, or worse, one that runs 
 different meaning. This script runs four batteries through both twins.
 
 The spec battery hands each twin's validate_spec() the same parsed specification. The file
-battery writes raw JSON text to a file and has each twin read it with its own load_spec(), which
-is where the readers used to differ: one-element arrays, `[]`, JSON null, whole-number floats,
-repeated keys, seeds beyond 2^53 and a byte-order mark. Where both twins accept a file, each
-simulates it and the two dumps, in the 17-digit format of run_r.R and run_py.py, must hash alike.
-A refusal raised while simulating, such as the cap on a Poisson mean, is compared as text like
-any other.
+battery writes raw JSON text to a file and has each twin read it with its own load_spec(), so that
+the battery compares the two readers on the forms in which they can part: one-element arrays, `[]`,
+JSON null, whole-number floats, repeated keys, seeds beyond 2^53 and a byte-order mark. Where both
+twins accept a file, each simulates it and the two dumps, in the 17-digit format of run_r.R and
+run_py.py, must hash alike. A refusal raised while simulating, such as the cap on a Poisson mean,
+is compared as text like any other.
 
 The power battery checks the two-group backend's refusals, which power_design() in R and power()
 in Python raise before drawing any replicate. Each twin validates the specification and applies
 its two-group checks, the first steps of both functions, so the battery needs neither scipy nor
-any simulation. The checks refuse a design whose rows are correlated, naming the item unit,
-within factor or grouping factor that makes them so, and a design with fewer than two subjects at
-a level of the between factor.
+any simulation. The checks refuse a response other than Gaussian and a design without exactly
+one two-level between factor. They also refuse a design whose rows are correlated, naming the item
+unit, within factor or grouping factor that makes them so, and a design with fewer than two
+subjects at a level of the between factor.
 
 The scale battery compares, for every response family, the warning power_mixed() raises when it
 fits a linear model to a response whose coefficients are on a link scale. The R twin raises it for
@@ -30,15 +31,16 @@ A case passes when both twins accept it, or both refuse it with the same message
 character. In the spec battery the warnings the two validators raise, such as the deprecation of
 an incomplete `vary_within`, must also match character for character. A Python exception other
 than the one each battery expects (ValueError, and NotImplementedError from the two-group checks),
-or an R error raised by base R rather than by pilotr (which always stops with call. = FALSE),
-counts as a crash and fails the case whatever the other twin did.
+or an R error raised by base R rather than by pilotr (whose refusals on the paths these batteries
+reach are all raised with call. = FALSE), counts as a crash and fails the case whatever the other
+twin did.
 
 The schema check holds spec/design.schema.json to strict validation. Every specification of the
 spec battery that both twins accept with strict = TRUE must be valid under jsonschema's
-Draft7Validator. The schema used to be looser than the validators in one direction and stricter
-in the other. It accepted an unknown top-level field and a response parameter the family does
-not use, and it refused the single-value forms of vary_within and thresholds that both
-validators accept. The check needs the jsonschema package (pip install jsonschema).
+Draft7Validator, so that the schema refuses nothing both validators accept, such as the
+single-value forms of vary_within and thresholds. A specification either validator refuses is
+not put to the schema. The script needs the jsonschema package (pip install jsonschema), without
+which it runs no battery and exits with status 1.
 
 Usage: python tools/parity/validate_cross.py
 Exit status is 0 when the two agree on every case and the schema accepts every case they accept.
@@ -232,9 +234,11 @@ def _second_factor(s, **kw):
 
 
 def name_cases():
-    """Names, columns and structure: each validated before and then changed the data in silence.
+    """Names, columns and structure: colliding names and malformed fields, which both twins refuse.
 
-    The last few are accepted with a warning, which the spec battery compares as text too.
+    The case with three levels is accepted, since a contrast column may carry its own factor's
+    name. A vary_within that omits a unit is accepted with a warning, which the spec battery
+    compares as text too, and refused in a specification that declares 0.4.
     """
     item_less = lambda s: (s["units"].pop("item"),  # noqa: E731
                            s["factors"][0].__setitem__("vary_within", ["subject"]))
@@ -316,12 +320,13 @@ def _between_factor(name, unit, contrasts):
 
 
 def allocation_cases():
-    """Factors between one unit. Below specification version 0.4, pilotr assigned them to the
-    same or overlapping blocks of it, and version 0.4 allocates them jointly.
+    """Factors between one unit. Below specification version 0.4, pilotr assigns each to blocks of
+    that unit on its own, so their blocks coincide or overlap, and version 0.4 allocates them
+    jointly.
 
-    A specification declaring a version below 0.4 is refused for them. The rest are accepted: a
-    factor between subjects and another between items do not alias, and version 0.4 allocates
-    several factors on one unit jointly.
+    A specification below version 0.4, including one with no spec_version (read as 0.2), is
+    refused for them. The rest are accepted: a factor between subjects and another between items
+    do not alias, and version 0.4 allocates several factors on one unit jointly.
     """
     a = _between_factor("A", "subject", {"a": [-0.5, 0.5]})
     b = _between_factor("B", "subject", {"b": [-0.5, 0.5]})
@@ -353,11 +358,12 @@ _PRIME = {"name": "prime", "levels": ["p1", "p2"], "contrasts": {"pr": [-0.5, 0.
 def counterbalance_cases():
     """Counterbalanced lists, new in 0.4, which show each subject each item at one level.
 
-    The field is refused in a specification declaring less than 0.4, whatever its value, and
-    with a between factor, without items or with per_subject. Subjects or items that are not a
-    multiple of the number of lists draw a warning, which the spec battery compares as text. The
-    data of such a design name each subject's list in a column `list`, so another column of that
-    name is refused, and accepted beside counterbalance false.
+    The field is refused in a specification declaring less than 0.4, whatever its value, and on
+    a factor between a unit rather than within one. It is also refused in a design without items
+    or with per_subject. Subjects or items that are not a multiple of the number of lists draw a
+    warning, which the spec battery compares as text. The data of such a design name each subject's
+    list in a column `list`, so another column of that name is refused, and accepted beside
+    counterbalance false.
     """
     def counterbalanced(version="0.4", value=True, fn=None):
         def mutate(s):
@@ -665,8 +671,8 @@ def power_cases():
          _two_group(lambda s: s.__setitem__("response", {"family": "lognormal", "name": "RT",
                                                          "sigma": 0.3}))),
     ]
-    # Too few subjects for the t-test. R stopped in t.test() at 1 and 2, where Python raised
-    # StatisticsError at 1 and returned a power of 0 at 2. Both refuse up to 3 in one message.
+    # Too few subjects for the t-test: 1, 2 and 3 leave a level of the between factor with fewer
+    # than two, and both twins refuse them in one message.
     for n in (1, 2, 3, 4, 5):
         out.append(("%d subject%s" % (n, "" if n == 1 else "s"),
                     _two_group(lambda s, n=n: s["units"]["subject"].__setitem__("n", n))))
@@ -700,9 +706,10 @@ for (f in sort(list.files(src, pattern = "\\.R$", full.names = TRUE))) source(f)
   writeBin(charToRaw(enc2utf8(paste0(paste(lines, collapse = "\n"), "\n"))), con)
 }
 
-# A refusal from pilotr carries no call, since every one is raised with call. = FALSE; an
-# error with a call came from base R or a package beneath, which is a crash. Warnings are
-# collected, joined into one string, so that the spec battery can compare them as text.
+# A refusal from pilotr carries no call, since every one these batteries can reach is raised
+# with call. = FALSE. An error with a call came from base R or a package beneath, which is a
+# crash. Warnings are collected, joined into one string, so that the spec battery can compare
+# them as text.
 run <- function(expr) {
   warns <- character(0)
   res <- tryCatch({

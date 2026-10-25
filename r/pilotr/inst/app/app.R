@@ -113,9 +113,9 @@ type_m_text <- function(r)
 # sqrt(p (1 - p) / n_sims), a point half as large again is added above it, up to `cap` subjects.
 # While the bottom point's power exceeds the target by more than that, a point two thirds its
 # size is added below it, down to 4. The grid holds one point for each of `seeds`, so 10 at most.
-# The fixed grid stopped at twice N, which for the default design is the target itself (127.5
-# subjects by power.t.test()). About half of all runs were then refused, and the rest solved low,
-# since a run solved only when its top point happened to land above 0.80.
+# A grid fixed at twice N would stop, for the default design, at the target itself (127.5
+# subjects by power.t.test()). About half of all runs would then be refused, and the rest would
+# solve low, since a run would solve only when its top point happened to land above 0.80.
 #
 # power_at(size, seed) gives the power at `size` subjects. Each point takes the next of `seeds` in
 # the order the points are computed, so a point added below the grid never changes the seed, or
@@ -546,8 +546,9 @@ server <- function(input, output, session) {
   # factor between subjects, one row per subject and no shared cluster. That rules out an item
   # unit and any grouping factor besides subject, while an item entry groups nothing without an
   # item unit. This is power_design()'s own rule, written out because the installed app reaches
-  # only pilotr's exports. Testing the first factor alone let a pasted crossed design through to
-  # a t-test of its correlated rows, and let a three-level or 2 x 2 design stop the observer.
+  # only pilotr's exports. A test of the first factor alone would let a pasted crossed design
+  # through to a t-test of its correlated rows, and let a three-level or 2 x 2 design stop the
+  # observer.
   gaussian_two_group <- function(spec) {
     factors <- spec[["factors"]]
     identical(spec[["response"]][["family"]], "gaussian") && length(factors) == 1L &&
@@ -558,12 +559,14 @@ server <- function(input, output, session) {
   }
   # What to run instead, chosen by what can fit the design. R's power_mixed() fits every family
   # but two on the scale of its coefficients, by lmer() or glmer(), or lm() and glm() without
-  # random effects. Python's power_mixed() takes one within factor crossed with items and fits a
-  # linear model on the response's own scale. It is offered only for such a design, in a family
-  # whose coefficients are on that scale or on the log scale it analyses. Ordinal and Beta
-  # outcomes have no frequentist model here and go to the Bayesian design analysis. The installed
-  # app reaches only pilotr's exports, so the rule is written out here, as it is in the browser
-  # build.
+  # random effects. The Python suggestion follows power_mixed() in pilotr 0.3.0 on PyPI, the
+  # release a user installs, which takes one within factor crossed with items and fits a linear
+  # model on the response's own scale, or on the log scale for shifted_lognormal. The suggestion
+  # is made only for such a design, in the gaussian, lognormal, shifted_lognormal or exgaussian
+  # family. The repository's unreleased power_mixed() fits more designs, and analyses lognormal on
+  # the log scale too. Ordinal and Beta outcomes have no frequentist model here and go to the
+  # Bayesian design analysis. The installed app reaches only pilotr's exports, so the rule is
+  # written out here, as it is in the browser build.
   not_supported <- function(spec) {
     family <- spec[["response"]][["family"]]
     opening <- paste0(

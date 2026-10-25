@@ -33,7 +33,13 @@ class RNG:
     Parameters
     ----------
     seed : int
-        Seed for the generator (coerced to a non-negative integer).
+        Seed for the generator. Its absolute value is used, truncated to an integer, so a seed
+        and its negation give the same stream.
+
+    References
+    ----------
+    L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
+    *Communications of the ACM, 31*(6), 742-751. https://doi.org/10.1145/62959.62969
     """
 
     __slots__ = ("s1", "s2")
@@ -66,15 +72,15 @@ class RNG:
 def replicate_seeds(base, n: int) -> list[int]:
     """The seeds pilotr's replicate loops give to their replicates, from a specification's seed.
 
-    Until 0.3 the rule was ``base + i``, and consecutive seeds are not independent streams in this
-    generator. Seeding is affine in the seed, setting ``s1`` to ``1 + (seed mod 2147483562)`` and
-    ``s2`` from ``s1``, and each component recurrence is linear, so the ``k``-th draws of
-    consecutive seeds differ by very nearly the same amount mod 1. For the first draw that step is
-    -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755, 0.6665 and 0.6574.
-    Draws in arithmetic progression mod 1 with step ``d`` correlate ``1 - 6|d|(1 - |d|)``, so over
-    2,000 replicates the first draw of replicate ``i`` correlated 0.95 with the first draw of
-    ``i + 1``. A longer warm-up changes ``d`` and leaves the progression in place: with 50 warm-up
-    draws in place of 10, the step is -0.32 and the correlation -0.30.
+    The simpler rule, ``base + i``, will not do, because consecutive seeds are not independent
+    streams in this generator. Seeding is affine in the seed, setting ``s1`` to
+    ``1 + (seed mod 2147483562)`` and ``s2`` from ``s1``, and each component recurrence is linear,
+    so the ``k``-th draws of consecutive seeds differ by very nearly the same amount mod 1. For the
+    first draw that step is -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755,
+    0.6665 and 0.6574. Draws in arithmetic progression mod 1 with step ``d`` correlate
+    ``1 - 6|d|(1 - |d|)``, so over 2,000 replicates the first draw of replicate ``i`` correlated
+    0.95 with the first draw of ``i + 1``. A longer warm-up changes ``d`` and leaves the progression
+    in place: with 50 warm-up draws in place of 10, the step is -0.32 and the correlation -0.30.
 
     An arithmetic scramble does not fix that, because the seeding rule is affine in the seed:
     adding a Weyl increment and applying a Lehmer step left the first draws correlated at -0.27.
@@ -132,6 +138,11 @@ def as241(p: float) -> float:
     -------
     float
         The standard-normal quantile for `p`.
+
+    References
+    ----------
+    Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal distribution.
+    *Applied Statistics, 37*(3), 477-484. https://doi.org/10.2307/2347330
     """
     q = p - 0.5
     if abs(q) <= 0.425:
@@ -178,11 +189,11 @@ def dot(a, b, m: int) -> float:
 
     Neither language's built-in reduction is a plain double fold, and the two disagree with
     each other: CPython's `sum` has applied Neumaier compensation to float sequences since
-    version 3.12, while base R's `sum` accumulates in 80-bit long double on x86. Both are more
-    accurate than a naive fold, but they are more accurate in different ways, so an inner
-    product of length three or more can land on different doubles in the two ports. Spelling
-    the loop out keeps the arithmetic identical, which is what the cross-language guarantee
-    needs.
+    version 3.12, while base R's `sum` accumulates in 80-bit long double on x86 and rounds the
+    total to double. Rounding a second time can land R's on another double even for two terms
+    (`sum(c(1, 2^-53 + 2^-80))` is 1, where the fold gives the next double up), and CPython's
+    compensation can move a sum of three terms or more. Spelling the loop out keeps the
+    arithmetic identical, which is what the cross-language guarantee needs.
     """
     s = 0.0
     for k in range(m):
@@ -212,17 +223,17 @@ def cholesky(cov: list[list[float]], label=None, cols=None) -> list[list[float]]
 
     A negative pivot means the covariance implied by the specified standard deviations and
     correlations is not positive definite, so no random-effect distribution has those moments.
-    Clamping the pivot at zero and carrying on silently did not fail, but it did not honour the
-    specification either: the factor returned generated random effects whose standard
-    deviations were several times the requested ones. A correlation set that a standard
-    Cholesky routine rejects has to be an error, because the alternative is plausible-looking
-    data from a process the user never described.
+    Clamping the pivot at zero and carrying on would not fail, but it would not honour the
+    specification either: the factor returned would generate random effects whose standard
+    deviations are several times the requested ones. A correlation set that leaves a negative
+    pivot has to be an error, because the alternative is plausible-looking data from a process
+    the user never described.
 
     A pivot of exactly zero is left alone. It is a useful case, and no kind of failure: it is
     what a slope with a standard deviation of zero produces, which is how a term is held fixed
     while the rest of the structure is kept intact. The tolerance absorbs the rounding of an
     exactly-singular matrix, so a term that is negative only numerically, with no true
-    negativity behind it, is still clamped as before.
+    negativity behind it, is clamped at zero.
     """
     n = len(cov)
     L = [[0.0] * n for _ in range(n)]
@@ -262,7 +273,8 @@ def inv_logit(x: float) -> float:
     Returns
     -------
     float
-        The corresponding probability, in (0, 1).
+        The corresponding probability, in [0, 1]. It rounds to exactly 1 from an `x` of about
+        36.7 and underflows to exactly 0 below about -745.1.
     """
     if x >= 0:
         return 1.0 / (1.0 + math.exp(-x))
@@ -296,9 +308,9 @@ def poisson_inv(lam: float, u: float) -> int:
     """Inverse-CDF Poisson draw from a uniform u.
 
     Each term is ``p_k = (p_{k-1} * lam) / k``, multiplied before it is divided, as in the R
-    twin. spec/SPEC.md fixes that bracketing, because the one this function used before,
-    ``p * (lam / k)``, lands on a different double for most terms. A uniform falling between the
-    two cumulative sums then drew a different count. Within the cap, the cumulative sum reaches
+    twin. spec/SPEC.md fixes that bracketing, because the other one, ``p * (lam / k)``, lands on a
+    different double for most terms, and a uniform falling between the two cumulative sums would
+    then draw a different count. Within the cap, the cumulative sum reaches
     every uniform the generator draws long before the iteration cap, so the check after the loop
     only keeps an out-of-range ``u`` from being returned as a count.
     """
@@ -336,10 +348,11 @@ def gamma_mt(rng, shape: float) -> float:
     languages, and they also decide the rejection step, so aligning them keeps the
     accept/reject sequence (and hence the number of draws consumed) identical.
 
-    The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, unless the
-    exponent is exactly 2, 3 or 4. From R 4.6.0, R computes a cube or a fourth power by repeated
-    multiplication, so a shape of exactly 1/3 or 1/4 can draw a different variate here than in
-    the R twin. spec/SPEC.md sets the case out under Scope of the guarantee.
+    The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, except that R
+    computes a square as ``u * u`` and, from R 4.6.0, a cube or a fourth power by repeated
+    multiplication. On Linux, ``u ** 2.0`` differed from ``u * u`` for 0.08% of this generator's
+    uniforms, so a shape of exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can draw a different
+    variate here than in the R twin. spec/SPEC.md sets the case out under Scope of the guarantee.
     """
     if shape < 1.0:
         g = gamma_mt(rng, shape + 1.0)
@@ -398,10 +411,10 @@ def _stop_beta_underflow(eta: float, phi: float):
 def lognormal_exp(w: float, family: str, eta: float) -> float:
     """``exp(w)`` for the two lognormal families, where ``w = eta + sigma * z``.
 
-    ``exp()`` overflows beyond about 709.78. ``math.exp`` raised a bare OverflowError there,
-    while the R twin returned Inf for every such row. Both now refuse the value with the same
-    message. The test is on the value, as in R, so an infinite eta, for which ``math.exp``
-    returns inf without raising, is refused too. The refusal names eta, since ``exp(eta)``
+    ``exp()`` overflows beyond about 709.78, where ``math.exp`` raises a bare OverflowError and R's
+    ``exp()`` returns Inf. Both twins refuse the value instead, with the same message. The test
+    is on the value, as in R, so an infinite eta, for which ``math.exp`` returns inf without
+    raising, is refused too. The refusal names eta, since ``exp(eta)``
     itself can be finite in a row whose normal draw carries ``w`` past the limit.
     """
     try:
@@ -419,11 +432,11 @@ def beta_response(rng, eta: float, phi: float) -> float:
     The draw is ``x / (x + y)``, where `x` and `y` are Gamma variates with shapes ``mu * phi``
     and ``(1 - mu) * phi``, drawn in that order, and ``mu = inv_logit(eta)``.
 
-    A shape of zero leaves no distribution to draw from. ``inv_logit(eta)`` rounds to 1 from an
-    eta of about 36.74 and underflows to 0 below about -745.1, and a tiny `phi` can take either
-    product to zero by itself. `gamma_mt` then raised ZeroDivisionError, while the R twin
-    returned exactly 0, 1 or NaN. When both shapes are tiny, both variates can also underflow to
-    zero and leave 0 / 0. Both cases are refused before the division, in the R twin's words.
+    A shape of zero leaves no distribution to draw from. ``inv_logit(eta)`` rounds to 1 from an eta
+    of about 36.74 and underflows to 0 below about -745.1, and a tiny `phi` can take either product
+    to zero by itself. `gamma_mt` would then divide by zero. When both shapes are tiny, both
+    variates can also underflow to zero and leave 0 / 0. Both cases are refused before the division,
+    in the R twin's words.
 
     Otherwise, the ratio rounds to exactly 1 whenever `y` is below about 2^-54 of `x`, as happens
     at realistic means near a ceiling, and it is exactly 0 when `x` underflows. brms's ``Beta()``

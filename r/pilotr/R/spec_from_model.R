@@ -624,8 +624,8 @@
 #'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 #'
 #'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
-#'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods}, 53,
-#'   2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods},
+#'   53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
 #'   Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 #'   imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.

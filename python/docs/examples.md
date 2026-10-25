@@ -1,6 +1,7 @@
 # Worked examples
 
-One ready-to-run specification per design family ships with the package. `pilotr_example()`
+Eight ready-to-run specifications ship with the package, covering six of the eight response
+families and between-subjects, crossed, nested and partially crossed designs. `pilotr_example()`
 lists them and returns the path to each for `load_spec()`, and the same JSON files drive the R
 package and the no-code app. Each is simulated below, showing the design it describes and the
 first rows of the data it produces. The specification format is documented on the
@@ -27,7 +28,8 @@ DESC = {
         "Five-point Likert responses via a cumulative-logit model.",
     "poisson_counts_between": "Count outcomes through a log link.",
     "reading_time_continuous":
-        "A continuous predictor with a lognormal reading-time outcome.",
+        "Continuous item and subject predictors and a within factor, with"
+        " interactions among them, and a lognormal reading-time outcome.",
     "nested_clusters":
         "Subjects nested in higher-level clusters (an extra grouping factor).",
     "partial_crossing": "Each subject sees a sampled subset of items.",

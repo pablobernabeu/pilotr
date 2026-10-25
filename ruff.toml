@@ -1,18 +1,19 @@
-# Ruff settings for the parts of this repository outside python/, which in
-# practice means tools/parity: the cross-language harness that decides whether
-# the R and Python halves agree. It was linted by nothing.
+# Ruff settings for the Python files outside python/. CI lints tools/ with them:
+# the cross-language parity harness that decides whether the R and Python halves
+# agree, tools/check_versions.py and tools/calibration.
 #
 # Ruff resolves configuration by walking up from each file, so python/ finds
-# python/pyproject.toml and tools/ found nothing above it and fell back to
-# whatever ruff currently defaults to. That is not a standard but a moving
-# target: ruff 0.16 widened its defaults and turned a sibling package's green CI
-# red without a line of that package changing. Extending the real settings
-# rather than restating them keeps one source of truth, including the py39
-# target that stops ruff proposing syntax the declared floor cannot run.
+# python/pyproject.toml, and without this file, tools/ would find no settings and
+# fall back to ruff's own defaults, which change between ruff releases. Extending
+# the real settings rather than restating them keeps one source of truth,
+# including the py39 target that stops ruff proposing syntax the declared floor
+# cannot run.
 extend = "python/pyproject.toml"
 
 [lint.per-file-ignores]
-# UP031 would rewrite the harness's %-formatting as f-strings. Not here.
+# python/pyproject.toml already ignores UP031 everywhere, and the entry below
+# keeps the harness exempt even if that ignore is lifted. UP031 would rewrite the
+# harness's %-formatting as f-strings.
 # `_cell()` renders every numeric cell with "%.17g", which is the primitive the
 # whole parity guarantee rests on, and run_r.R renders its side with
 # sprintf("%.17g", ...) two lines away. The two halves are deliberately written

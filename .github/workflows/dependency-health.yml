@@ -4,15 +4,14 @@
 # rate-limited) authenticated by the built-in GITHUB_TOKEN. No paid API key or external service.
 #
 # Stages:
-#   1. detect - run the R and Python suites against the LATEST released CRAN/PyPI versions
-#               (no pinning), so an upstream breaking change surfaces here, not for a user.
+#   1. detect - run the Python test suite and examples, and the R package's app tests, example
+#               scripts, brms check and installed-app launch, against the LATEST released
+#               CRAN/PyPI versions (no pinning), so an upstream breaking change surfaces here,
+#               not for a user.
 #   2. triage - on failure, ask a free GitHub Models model to diagnose the failure and suggest
 #               the smallest fix, from the failed run's own logs.
 #   3. flag   - open/update a tracking issue (assigned to the maintainer) with the run link and
 #               the AI diagnosis; auto-close it when the checks pass again.
-#
-# Optional upgrade to a fully autonomous fix-and-open-PR loop (NOT free) is described in the
-# commented block at the end of this file.
 
 name: Dependency health
 
@@ -64,8 +63,9 @@ jobs:
         run: Rscript tools/brms/check_bridge.R
       # The smoke test runs the app from the source tree, where it sources R/ itself. Installed,
       # the app takes the package's functions from the namespace, which pilotr::run_app() loads
-      # without attaching the package. Nothing here exercised that path, so the documented
-      # launcher could stop before the app started while every step stayed green.
+      # without attaching the package. Without the steps below, nothing here would exercise
+      # that path, and the documented launcher could stop before the app started while every step
+      # stayed green.
       - name: Install pilotr from this checkout
         run: R CMD INSTALL r/pilotr
       - name: Run the installed app in a session that has not attached pilotr
@@ -84,9 +84,9 @@ jobs:
         run: |
           # run_app() blocks while the app runs, so it runs in a background process while this one
           # requests the page, and the step fails unless the page answers with HTTP 200. Before
-          # the app listens, run_app() starts one future worker per core, which can take minutes
-          # on a busy machine, so the deadline is generous. A crash ends the wait at once,
-          # because the loop stops when the process exits.
+          # the app listens, run_app() sets a multisession plan of two future workers, whose
+          # start-up can take a while on a busy machine, so the deadline is generous. A crash ends
+          # the wait at once, because the loop stops when the process exits.
           log <- tempfile(fileext = ".log")
           app <- callr::r_bg(function() pilotr::run_app(port = 8765, launch.browser = FALSE),
                              stdout = log, stderr = "2>&1")
@@ -128,7 +128,7 @@ jobs:
         run: |
           set -e
           python -m pip install --upgrade pip
-          pip install ".[dev]"          # latest scipy + pytest
+          pip install ".[dev]"          # latest scipy, statsmodels, pandas and pytest
           pytest tests -q
           python examples/run_demo.py
           python examples/families_demo.py

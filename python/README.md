@@ -14,21 +14,22 @@ portable JSON design specification.
 This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
 carrying its generative core. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in either language wherever
-the two share a maths library, as on Linux. Elsewhere, a value that passes through `exp()`, `log()`
-or `pow()` can differ in its last bits, as the
-[cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/) sets out.
-Simulation, validation, the analysis model a specification implies, simulation-based power and the
-curve solvers are here. Precision/ROPE design analysis, the `lme4` reference backend for
-mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers that build
-specifications, and the app launcher are in the R package alone. See the
+the two share a maths library, as on Linux, outside a rare Beta case that the
+[cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/) describes.
+Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits, as
+the same guide sets out. Simulation, validation, the analysis model a specification implies,
+simulation-based power, the sample-size report and the curve solvers are here. Precision/ROPE
+design analysis, power curves for mixed-effects designs, calibration and sweeps, the `lme4`
+reference backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the
+helpers that build specifications, and the app launcher are in the R package alone. See the
 [project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code app,
 the R package and the specification format).
 
 ## Install
 
 The first command below installs the core engine, which is pure Python. The second adds scipy,
-for the simulation-based power demo, and the third adds scipy, statsmodels and pandas, for
-crossed mixed-effects power. The double quotes keep zsh, the default shell on macOS, from
+for `power` and `power_curve`, and the third adds scipy, statsmodels and pandas, for
+`power_mixed` and `model_data`. The double quotes keep zsh, the default shell on macOS, from
 reading the brackets as a filename pattern.
 
 ```bash

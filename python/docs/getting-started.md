@@ -5,14 +5,15 @@ specification is what everything else reads. The same JSON file drives the
 [R package](https://pablobernabeu.github.io/pilotr/r/), the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
 the same file and seed all three produce identical data wherever they share a maths library, as
-on Linux. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
+on Linux, outside a rare Beta case that [Cross-language reproducibility](cross-language.md)
+describes. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
 last bits.
 
 ## Install
 
 The first command below installs the core engine, which is pure Python. The second adds scipy,
-for the simulation-based power demo, and the third adds scipy, statsmodels and pandas, for
-crossed mixed-effects power. The double quotes keep zsh, the default shell on macOS, from
+for `power` and `power_curve`, and the third adds scipy, statsmodels and pandas, for
+`power_mixed` and `model_data`. The double quotes keep zsh, the default shell on macOS, from
 reading the brackets as a filename pattern.
 
 ```bash
@@ -21,10 +22,9 @@ pip install "pilotr[power]"
 pip install "pilotr[mixed]"
 ```
 
-Requires Python 3.9 or later. The generative core has no dependencies. `scipy` (for `power`)
-and `statsmodels` with `pandas` (for `power_mixed`) are optional extras, so an install that
-only simulates stays dependency-free. For development, install from a checkout of the
-repository instead:
+Requires Python 3.9 or later. The generative core has no dependencies, so an install that only
+simulates stays dependency-free. For development, install from a checkout of the repository
+instead:
 
 ```bash
 git clone https://github.com/pablobernabeu/pilotr.git
@@ -84,13 +84,13 @@ data = simulate(load_spec(pilotr_example("poisson_counts_between")))
 print(table(data.head(5)))
 ```
 
-`pilotr_example()` with no argument lists every bundled specification, one per design family.
+`pilotr_example()` with no argument lists every bundled specification.
 
 ## Where to go next
 
 From here, [Response families](families.md) shows what each of the eight families generates and
-which scale its effect is written on, [Worked examples](examples.md) gives one ready-to-run
-design per family, and [Power and design analysis](power.md) turns a specification into a power
+which scale its effect is written on, [Worked examples](examples.md) gives eight ready-to-run
+designs, and [Power and design analysis](power.md) turns a specification into a power
 estimate with its Type S and Type M errors. [Cross-language reproducibility](cross-language.md)
 explains why an R run and a Python run agree, and where their last bits can differ,
 [Specification format](specification.md) documents the JSON itself, and the

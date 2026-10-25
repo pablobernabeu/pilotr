@@ -1,4 +1,5 @@
-"""Demo: simulate both example designs, recover parameters, run a power/design analysis."""
+"""Demo: simulate six of the shipped designs into build/ for parity_check.py, print a summary of
+each and run a power and design analysis."""
 import os, sys, statistics
 
 HERE = os.path.dirname(os.path.abspath(__file__))

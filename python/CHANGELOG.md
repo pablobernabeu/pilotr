@@ -205,12 +205,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to 35, and a discrete outcome can in principle move by a whole category. The guarantee used to
   cover the Gaussian family everywhere and every family with `round` set, although `round` is
   refused for the discrete families. Rounding has removed every continuous difference observed,
-  but it guarantees nothing. One Beta case can differ on Linux too. From R 4.6.0, R's `^`
-  computes a cube or a fourth power by repeated multiplication, where Python calls `pow()`. A
-  Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits on
-  any platform. Within one language, the data are identical on one platform, and across operating
-  systems on the same terms: on Windows, CPython's `exp()` departed from the correctly rounded
-  value for 0.48% of 700,000 arguments.
+  but it guarantees nothing. One Beta case can differ on Linux too. R's `^` computes a square by
+  multiplication in every version, and a cube or a fourth power from R 4.6.0, where Python calls
+  `pow()`. A Beta response whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4,
+  can therefore differ in its last bits. Within one language, the data are identical on one
+  platform, and across operating systems on the same terms: on Windows, CPython's `exp()`
+  departed from the correctly rounded value for 0.48% of 700,000 arguments.
 - The specification documents every sampling rule a third implementation needs, in a section of
   pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
   reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
@@ -228,9 +228,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   steps apart in one sequence.
 - The `solve_curve` docstring says that when an effect varies from item to item, power at a
   fixed number of items levels off below 1, however many subjects are added, as Westfall, Kenny
-  and Judd (2014) and Judd, Westfall and Kenny (2017) show. A curve over subjects that levels off
-  near the target can then be solved far from the true crossing, or as though it crossed when it
-  never does. The docstring points to curves over the number of items, one at each of a few
+  and Judd (2014, <https://doi.org/10.1037/xge0000014>) and Judd, Westfall and Kenny (2017,
+  <https://doi.org/10.1146/annurev-psych-122414-033702>) show. A curve over subjects that levels
+  off near the target can then be solved far from the true crossing, or as though it crossed when
+  it never does. The docstring points to curves over the number of items, one at each of a few
   subject counts large enough to keep their own ceiling well above the target. The R twin's
   `?solve_curve` says the same.
 - The contributing guide names the checks in `tools/parity/` that CI runs on the cross-language
@@ -241,6 +242,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The docstrings of `load_spec` and `simulate` say that a `validate` other than `True` or
   `False`, `None` and `0` among them, validates leniently, as in the R twin. `load_spec` named
   truthy values only, and `simulate` said nothing of it.
+- The worked examples, the home page, Get started and the `pilotr_example` docstring say that eight
+  example specifications ship with the package, and the worked examples and the response-families
+  guide that they cover six of the eight families, the guide naming the two left out, `bernoulli`
+  and `exgaussian`. They said one per family. The worked examples describe `reading_time_continuous`
+  as having continuous item and subject predictors and a within factor, where they named one
+  continuous predictor, and the `pilotr_example` docstring names the `ValueError` an unknown name
+  raises.
+- The README and Get started say that the `power` extra serves `power` and `power_curve`, and the
+  `mixed` extra `power_mixed` and `model_data`, where they called the first a power demo and the
+  second crossed mixed-effects power. The home page says that the extras serve the power tools and
+  `model_data`, where it named the power tools alone. The README, the home page and Get started
+  name the rare Beta case in which the twins' data can differ on Linux too, which the
+  cross-language guide describes.
+- The README and the home page give one list of what the R package alone offers: precision and ROPE
+  design analysis, power curves for mixed-effects designs, calibration and sweeps, the `lme4`
+  backend, the `brms` bridge, the analysis-script emitters, the helpers that build specifications
+  and the app. Each left out part of it, and the home page said that pilotr estimates precision and
+  emits analysis code, which only the R package does. The API reference names precision and
+  equivalence among the groups of the R package's reference that have no Python counterpart, and
+  says that `power_mixed` fits the model `model_formula` writes with each random effect as an
+  independent variance component.
+- The docstrings of `power`, `power_curve`, `power_mixed`, `model_formula` and `model_data` say
+  that they validate the specification strictly, even one that `load_spec` read leniently. The
+  three power functions list an invalid specification and an invalid `workers` among the
+  errors they raise, and `power_curve` lists the `NotImplementedError` it raises for a design
+  that `power` refuses. The `simulate` docstring lists the errors it raises, among them a
+  random-effect covariance that is not positive definite, which validation does not check, and
+  says that a seed and its negation give the same data, as the `RNG` docstring now does too.
+- The `inv_logit` docstring gives its range as [0, 1], since it rounds to exactly 1 from an
+  argument of about 36.7 and underflows to 0 below about -745.1. It said (0, 1).
+- The `power_mixed` docstring and the power guide say that the link keeps the sign of a main
+  effect unless an interaction reverses that effect between the levels of another factor, as the
+  R twin's `?power_mixed` says. They said that the link keeps it.
+- The `solve_curve` docstring says that `n` may be a list or tuple of counts, one per row that
+  `effect` keeps, recycled if shorter and cut if longer. `target_n` calls a power of 0.8 the
+  conventional target, where it named the plots of this package, which draws none.
+- The power guide says that each entry of `res["effects"]` holds the twelve keys from `power` to
+  `type_m_mcse`, where it said every key of a `power` result, and gives the formula of the model
+  `power_mixed` fits, `model_formula(spec_mixed, structure="zcp")`, for the R package's
+  `power_mixed()` to reproduce its fit counts.
+- The cross-language guide says that the parity harness allows the unrounded dumps of
+  `crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian` up to 8 units in the last
+  place on every platform, Linux included, and holds every other case to the last bit. It said
+  that every case was held to the last bit. It says that `examples/parity_check.py` compares the
+  CSV files both demo scripts write for six of the eight example designs, all but the ordinal and
+  Poisson ones, and that its difference below 1e-14 lies in the unrounded predictors of
+  `reading_time_continuous`, whose rounded response agrees exactly. It said that the check covered
+  every worked example and that the continuous design was unrounded. It says that
+  `tools/parity/solve_cross.py` compares the text of a selection of the refusals of `solve_curve`,
+  where it said every refusal. It also says that the crossed reaction-time example has one row per
+  subject, item and condition, where it said one per subject and item.
+- The response-families guide says that an ex-Gaussian specification has to declare a
+  `spec_version` of 0.3 or later. It named 0.3 alone.
+- The `RNG` and `as241` docstrings give the references they cite, L'Ecuyer (1988,
+  <https://doi.org/10.1145/62959.62969>) and Wichura (1988, <https://doi.org/10.2307/2347330>),
+  and the `power` docstring and the power guide give the DOI of Gelman and Carlin (2014,
+  <https://doi.org/10.1177/1745691614551642>). The `solve_curve` docstring cites Fieller (1954,
+  <https://doi.org/10.1111/j.2517-6161.1954.tb00159.x>), whom its references listed without a
+  citation: in the checks against R's `stats::power.t.test`, Fieller's interval covered the
+  analytic answer as often as the delta-method interval, at nearly the same width.
+- The specification says that base R's `sum()`, which rounds its long-double total to double a
+  second time, can differ from a plain double fold for an inner product of two terms, where it said
+  three terms or more. It says that `build_spec()` rounds an ex-Gaussian response to four decimals,
+  as it rounds the Gaussian and lognormal ones, and it sets out how a sweep seeds its points under
+  Replicate seeds, beside the rule that paragraph extends. Where it described what earlier releases
+  did, it gives the rule and its reason, and it no longer lists Matuschek et al. (2017,
+  <https://doi.org/10.1016/j.jml.2017.01.001>), whom it does not cite. The schema's comment on the
+  family blocks names the tables of both validators, where it gave the Python names for both.
+- The repository's README says that `workers` spreads the replicates over local worker
+  processes, where it said in-process, and that both packages ship the example specifications
+  `pilotr_example()` lists. It names the packages the R package suggests for its app, its
+  mixed-effects power and its precision analysis. The note on advanced designs in the repository
+  says that `power_mixed` has no joint test of several coefficients and refuses a design without
+  random effects, where it said that neither was planned, and passes `effect` to the R package's
+  `solve_curve()` for a curve over several focal effects.
+- The contributing guide lists all eight checks of the parity job and says how to build this
+  package's documentation site, where the two builds of the no-code app live and how to run
+  their tests. The website's landing page says that the browser app estimates power for a
+  two-group Gaussian design with one row per subject, where it called the app the same workflow
+  as the packages, and the security policy says that only that build runs client-side.
+- The repository's README and its note on advanced designs say that the parity harness allows
+  the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian` to
+  differ by up to 8 units in the last place, on Linux as on any other platform, and holds every
+  other case to the last bit. They said that continuous integration held every case to the last
+  bit. The README's note on R and Python coverage, the contributing guide and the website's
+  landing page name the rare Beta case in which the twins' data can differ on Linux too.
+- The power guide says that this package builds no sweep over items or effect sizes and no
+  curve for a mixed-effects design, that the R package's `power_curve_mixed()` and `sweep_spec()`
+  build them, and that `solve_curve` reads such a curve once R has written it to a CSV file and
+  pandas has read it back.
 
 ### Fixed
 
