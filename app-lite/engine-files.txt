@@ -19,6 +19,10 @@
 #
 # mcse.R is in the subset because power_design() in power.R reports each rate with
 # its Monte Carlo error, which mcse.R computes. It needs nothing beyond base R.
+#
+# autoformula.R is in the subset because validate_spec() in validate.R names the
+# analysis column of each interaction with the .us() that autoformula.R defines. It
+# needs nothing beyond base R, stats and the other files listed here.
 core.R
 simulate.R
 parallel.R
@@ -26,4 +30,5 @@ power.R
 mcse.R
 solve_curve.R
 validate.R
+autoformula.R
 spec_builder.R

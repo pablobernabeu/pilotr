@@ -491,6 +491,11 @@
 * The installed no-code app labels its paste box "Design spec (JSON)", as the browser build
   does. The label was empty, so a screen reader had only the placeholder to read out.
 
+* The browser build of the no-code app reads a pasted specification with an interaction, such as
+  the `reading_time_continuous` example. The build left out `R/autoformula.R`, whose `.us()`
+  names the analysis column of an interaction during validation, so the app refused every such
+  specification with `could not find function ".us"`. It now carries that file.
+
 ## Deprecated
 
 * A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
