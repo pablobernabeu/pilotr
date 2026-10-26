@@ -205,12 +205,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to 35, and a discrete outcome can in principle move by a whole category. The guarantee used to
   cover the Gaussian family everywhere and every family with `round` set, although `round` is
   refused for the discrete families. Rounding has removed every continuous difference observed,
-  but it guarantees nothing. One Beta case can differ on Linux too. R's `^` computes a square by
-  multiplication in every version, and a cube or a fourth power from R 4.6.0, where Python calls
-  `pow()`. A Beta response whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4,
-  can therefore differ in its last bits. Within one language, the data are identical on one
-  platform, and across operating systems on the same terms: on Windows, CPython's `exp()`
-  departed from the correctly rounded value for 0.48% of 700,000 arguments.
+  but it guarantees nothing. One Beta case can differ on Linux too, under R 4.6.0 or later. From
+  that version, R's `^` computes a cube or a fourth power by multiplication, where Python calls
+  `pow()`, so a Beta response whose Gamma shape is exactly 1/3 or 1/4 can differ in its last bits.
+  Within one language, the data are identical on one platform, and across operating systems on
+  the same terms: on Windows, CPython's `exp()` departed from the correctly rounded value for
+  0.48% of 700,000 arguments.
 - The specification documents every sampling rule a third implementation needs, in a section of
   pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
   reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
@@ -446,6 +446,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one subject at each level, `power` returned a power of 0, since scipy answers a group without
   variance with a nan p-value and a warning, while the R twin stopped in `t.test()`. With one
   subject in all, it raised `StatisticsError`. The error is a `ValueError`.
+- A Beta response whose Gamma shape is exactly 1/2 is drawn as the R twin draws it, which changes
+  this package's data for such designs. The Gamma sampler boosts a shape below 1 by
+  `u ** (1 / shape)`, and Python's `**` calls `pow()`, where R's `^` computes a square as `u * u`.
+  On Linux, the two differed for 0.08% of the generator's uniforms. A Beta design with a linear
+  predictor of 0 and a `phi` of 1, whose shapes are both 1/2, therefore differed from R in 13 to
+  19 of 20,000 rows at each of four seeds, by up to 2 units in the last place. The boost is now
+  `u * u` when `1 / shape` is exactly 2, and those rows hold R's values. No other row changes, and
+  a rounded response changes only where the difference crossed a rounding boundary. The boost for
+  a shape of exactly 1/3 or 1/4 still calls `pow()`, as R did before 4.6.0, and can differ from
+  R 4.6.0 or later.
+- `validate_spec` applies the checks on the unit columns to an empty `units` object, as the R twin
+  does, so the two report the same problems for one file. R reads `{}` as a named empty list and
+  checks it as an object, while this package skipped those checks for an empty object. A
+  specification with `"units": {}`, a within factor named `subject` and a `random.item` entry was
+  refused here for the missing `units.subject` alone. R also reported that the name `subject` is
+  used for more than one column and that `random.item` describes an item unit the design does not
+  have, and both twins now report all three.
 
 ### Deprecated
 

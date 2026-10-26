@@ -20,9 +20,9 @@ names. All of them consume the same portable JSON design
 specification (documented in `spec/`). The two packages share a random-number
 contract so that, given the same specification and seed, they produce
 bit-identical data wherever they share a maths library, as on Linux, outside a
-rare Beta case. `spec/SPEC.md` sets out that case and what can differ
-elsewhere. A change to the generative core therefore usually needs to land in
-both packages, keeping that contract intact.
+rare Beta case under R 4.6.0 or later. `spec/SPEC.md` sets out that case and
+what can differ elsewhere. A change to the generative core therefore usually
+needs to land in both packages, keeping that contract intact.
 
 ## Reporting a problem or suggesting a feature
 

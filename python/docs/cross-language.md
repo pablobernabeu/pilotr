@@ -43,18 +43,23 @@ R 4.6.1.
 - A discrete outcome can in principle move by a whole category, although none did in 50,000
   rows of each discrete family.
 
-One Beta case can differ on Linux too. R's `^` computes a square by multiplication in every
-version, and a cube or a fourth power from R 4.6.0, where Python calls `pow()`. A Beta response
-whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can therefore differ in its
-last bits. Such a shape needs a cell whose rows share one linear predictor, as in a Beta design
-with no random effects and a linear predictor of 0, where a `phi` of 1 gives shapes of 1/2 and a
-`phi` of 0.5 shapes of 1/4.
+One Beta case can differ on Linux too, under R 4.6.0 or later. From that version, R's `^` computes
+a cube or a fourth power by repeated multiplication, where Python calls `pow()`, as R did before.
+A Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits.
+Such a shape needs a cell whose rows share one linear predictor, as in a Beta design with no
+random effects and a linear predictor of 0, where a `phi` of 0.5 gives shapes of 1/4.
+
+A square is computed by multiplication in both languages. R's `^` computes it that way in every
+version, and Python computes a boost whose exponent is exactly 2 as `u * u` too, so a `phi` of 1,
+which gives shapes of 1/2, draws the same data in both. Up to version 0.3.0, the Python package
+computed that square with `pow()`, and such a design could differ in its last bits.
 
 Rounding has removed every continuous difference observed so far, but it guarantees nothing,
 since a last-bit difference can straddle a rounding boundary, and `round` is refused for the
 discrete families. Agreement to the last bit in every family has one route: run both languages
-on a platform where they share a maths library, outside that Beta case. The section Scope of the
-guarantee on the [Specification](specification.md) page gives the measurements in full.
+on a platform where they share a maths library, outside the Beta case under R 4.6.0 or later.
+The section Scope of the guarantee on the [Specification](specification.md) page gives the
+measurements in full.
 
 ## Determinism in Python
 

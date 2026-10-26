@@ -348,15 +348,19 @@ def gamma_mt(rng, shape: float) -> float:
     languages, and they also decide the rejection step, so aligning them keeps the
     accept/reject sequence (and hence the number of draws consumed) identical.
 
-    The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, except that R
-    computes a square as ``u * u`` and, from R 4.6.0, a cube or a fourth power by repeated
-    multiplication. On Linux, ``u ** 2.0`` differed from ``u * u`` for 0.08% of this generator's
-    uniforms, so a shape of exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can draw a different
+    The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, except for an
+    exponent of exactly 2. R computes that square as ``u * u``, and on Linux ``u ** 2.0`` differed
+    from ``u * u`` for 0.08% of this generator's uniforms, so the boost is computed as ``u * u``
+    here too. From R 4.6.0, R also computes a cube or a fourth power by repeated multiplication,
+    where earlier versions call pow(). This function calls pow() for those exponents, as R before
+    4.6.0 does, so under R 4.6.0 or later, a shape of exactly 1/3 or 1/4 can draw a different
     variate here than in the R twin. spec/SPEC.md sets the case out under Scope of the guarantee.
     """
     if shape < 1.0:
         g = gamma_mt(rng, shape + 1.0)
-        return g * rng.uniform() ** (1.0 / shape)
+        u = rng.uniform()
+        e = 1.0 / shape
+        return g * (u * u if e == 2.0 else u ** e)
     d = shape - 1.0 / 3.0
     c = 1.0 / math.sqrt(9.0 * d)
     while True:

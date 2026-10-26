@@ -349,11 +349,13 @@ validate_spec <- function(spec, strict = TRUE) {
       has_item <- !is.null(u[["item"]])
       for (nm in intersect(names(u), c("subject", "item"))) {
         un <- u[[nm]]
-        # The list test here, where an object is elsewhere tested by names(): an empty JSON
-        # object arrives as an unnamed empty list, and names() would call it the wrong shape
-        # where the twin reports the missing n. Without this guard the read of `n` below threw a
-        # base error such as "$ operator is invalid for atomic vectors" where Python said what
-        # was wrong.
+        # This tests for a list, where an object is elsewhere tested by names(). jsonlite reads an
+        # empty JSON object as a named empty list, which the names() test also accepts, but an R
+        # caller writes an empty object as list(), which has no names. The list test passes both
+        # on to the report of the missing n, as the twin reports it for `{}`. It also passes an
+        # empty JSON array, which jsonlite reads as list() and the twin refuses as not an object.
+        # Without this guard, the read of `n` below threw a base error such as "$ operator is
+        # invalid for atomic vectors" where Python said what was wrong.
         if (!is.list(un)) { bad("'units.", nm, "' must be an object"); next }
         for (k in setdiff(names(un), c("n", "per_subject")))
           unknown("unknown field 'units.", nm, ".", k, "'")

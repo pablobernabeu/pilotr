@@ -16,8 +16,8 @@ Description: Generative simulation of experimental and behavioural data sets fro
     <doi:10.1177/1745691614551642> and a region of practical equivalence. A shared
     cross-language random-number generator means that, given the same specification and
     seed, the R and 'Python' implementations produce identical data wherever they share a
-    maths library, as on Linux, outside a rare Beta case that the cross-language vignette
-    describes. Elsewhere, a value that passes through exp(), log() or
+    maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later, which the
+    cross-language vignette describes. Elsewhere, a value that passes through exp(), log() or
     pow(), whose rounding the IEEE-754 standard does not fix, can differ in its last bits.
 License: MIT + file LICENSE
 URL: https://pablobernabeu.github.io/pilotr/r/, https://github.com/pablobernabeu/pilotr

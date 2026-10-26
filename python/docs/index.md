@@ -5,9 +5,10 @@
 This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
 carrying its generative core. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in either language wherever
-the two share a maths library, as on Linux, outside a rare Beta case that
-[Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that passes
-through `exp()`, `log()` or `pow()` can differ in its last bits, as the same page sets out.
+the two share a maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later,
+which [Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that
+passes through `exp()`, `log()` or `pow()` can differ in its last bits, as the same page sets
+out.
 Simulation, validation, the analysis model a specification implies, simulation-based power, the
 sample-size report and the curve solvers are here. Precision/ROPE design analysis, power curves
 for mixed-effects designs, calibration and sweeps, the `lme4` reference backend for

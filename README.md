@@ -259,11 +259,12 @@ Responses of the lognormal families and the ex-Gaussian differed by 1 unit, and 
 Beta response by up to 35. A discrete outcome can in principle move by a whole category, though
 none did in 50,000 rows of each family. Rounding to four decimals removed every continuous
 difference measured, but it guarantees nothing, since a last-bit difference can straddle a
-rounding boundary. One Beta case can differ on Linux too. R's `^` computes a square by
-multiplication in every version, and a cube or a fourth power from R 4.6.0, where Python calls
-`pow()`. A Beta response whose Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4,
-can therefore differ in its last bits. Within one language, the data are identical on one
-platform, and across operating systems on the same terms as across languages.
+rounding boundary. One Beta case can differ on Linux too, under R 4.6.0 or later. From that
+version, R's `^` computes a cube or a fourth power by multiplication, where Python calls `pow()`,
+as R did before. A Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in
+its last bits. The boost for a Gamma shape of exactly 1/2 is a square, which both languages
+compute by multiplication. Within one language, the data are identical on one platform, and
+across operating systems on the same terms as across languages.
 [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
 sets out the scope, and [`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the
 harness's allowances. The generator is auditable and free of external dependencies.
@@ -344,8 +345,8 @@ python -m pytest python/tests -q
 ```
 
 > A note on R and Python coverage. Data generation is bit-identical across languages wherever
-> they share a maths library, as on Linux, outside a rare Beta case (see [Cross-language
-> reproducibility](#cross-language-reproducibility) above), and both
+> they share a maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later (see
+> [Cross-language reproducibility](#cross-language-reproducibility) above), and both
 > ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
 > however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
 > correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`

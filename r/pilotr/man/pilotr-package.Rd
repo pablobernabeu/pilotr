@@ -32,7 +32,7 @@ seed, and both languages draw from the combined generator built by
 \code{\link[=make_rng]{make_rng()}} on top of the inverse-normal routine
 \code{\link[=as241]{as241()}}, so a given specification and seed produce identical data
 in either language wherever the two share a maths library, as on Linux,
-outside a rare Beta case.
+outside a rare Beta case under R 4.6.0 or later.
 Elsewhere, a value that passes through \code{exp()}, \code{log()} or \code{pow()} can
 differ in its last bits, as \code{vignette("cross-language", package = "pilotr")}
 sets out.

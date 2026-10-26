@@ -575,15 +575,14 @@
   principle move by a whole category. The guarantee used to cover the Gaussian family everywhere
   and every family with `round` set, although `round` is refused for the discrete families.
   Rounding has removed every continuous difference observed, but it guarantees nothing. One Beta
-  case can differ on Linux too. R's `^` computes a square by multiplication in every version,
-  and a cube or a fourth power from R 4.6.0, where Python calls `pow()`. A Beta response whose
-  Gamma shape is exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can therefore differ in its
-  last bits, and R's own data for a shape of 1/3 or 1/4 changed with R 4.6.0. The short
-  statements of the guarantee, in `README.md`, `DESCRIPTION`, the `?pilotr` overview, Get started,
-  the contributing guide and the landing page, name that case. Within one language, the data are
-  identical on one platform, and across operating systems on the same terms as across languages.
-  The vignettes
-  show determinism with `identical()`, since `all.equal()` allows a relative difference of 1.5e-8.
+  case can differ on Linux too, under R 4.6.0 or later. From that version, R's `^` computes a
+  cube or a fourth power by multiplication, where Python calls `pow()`, so a Beta response whose
+  Gamma shape is exactly 1/3 or 1/4 can differ in its last bits, and R's own data for such a
+  shape changed with R 4.6.0. The short statements of the guarantee, in `README.md`,
+  `DESCRIPTION`, the `?pilotr` overview, Get started, the contributing guide and the landing page,
+  name that case. Within one language, the data are identical on one platform, and across
+  operating systems on the same terms as across languages. The vignettes show determinism with
+  `identical()`, since `all.equal()` allows a relative difference of 1.5e-8.
 
 * The specification documents every sampling rule a third implementation needs, in a section of
   pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
@@ -758,6 +757,15 @@
   example specifications ship with the package, and the worked examples that they cover six of the
   eight response families and between-subjects, crossed, nested and partially crossed designs. They
   said one per design family.
+
+* The cross-language vignette, the repository's `README.md` and the specification say that the
+  Beta case in which the twins' data can differ on Linux arises under R 4.6.0 or later, for a
+  Gamma shape of exactly 1/3 or 1/4, where they also named a shape of exactly 1/2. Get started,
+  `DESCRIPTION`, the `?pilotr` overview, the package's README, the contributing guide and the
+  landing page say that the case arises under R 4.6.0 or later. R's `^` computes a square as
+  `u * u`, and the Python package now computes the Gamma sampler's boost that way when its
+  exponent is exactly 2, where it called `pow()`, which on Linux returned another double for 0.08%
+  of the generator's uniforms. R's data are unchanged.
 
 ## References
 

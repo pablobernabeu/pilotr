@@ -34,7 +34,8 @@ package](https://pablobernabeu.github.io/pilotr/python/) of the same
 name. The two share the design specification and the random-number
 generator, so the same specification and seed produce identical data in
 either language wherever the two share a maths library, as on Linux,
-outside a rare Beta case that the [cross-language
+outside a rare Beta case under R 4.6.0 or later, which the
+[cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
 describes. Elsewhere, a value that passes through `exp()`, `log()` or
 `pow()` can differ in its last bits, as the same article sets out. The

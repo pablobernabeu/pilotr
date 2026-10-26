@@ -133,6 +133,22 @@ test_that("?pilotr names every response family", {
   expect_length(pilotr:::.family_params, 8L)
 })
 
+test_that("R's ^ computes a square as u * u, as core.py's boost for a shape of 1/2 does", {
+  # core.py's gamma_mt() computes the boost u^(1 / shape) as u * u when the exponent is exactly 2,
+  # since R's ^ does, where Python's ** calls pow(). glibc's pow() returned another double for
+  # 0.08% of this generator's uniforms. Should R stop squaring by multiplication, core.py and the
+  # paragraph of spec/SPEC.md under Scope of the guarantee need revising.
+  rng <- make_rng(1)
+  u <- vapply(1:2000, function(i) rng$uniform(), numeric(1))
+  expect_identical(u^(1 / 0.5), u * u)
+  # The 860th uniform of seed 1, for which glibc's pow() returned the double below u * u. With
+  # normals of 0, .gamma_mt() accepts its first proposal, 3/2 - 1/3, and boosts it with this
+  # uniform, as test_basics.py checks for core.py.
+  expect_identical(u[860], 0.6979060118654794)
+  draws <- list(normal = function() 0, uniform = function() u[860])
+  expect_identical(.gamma_mt(draws, 0.5), (1.5 - 1 / 3) * (u[860] * u[860]))
+})
+
 test_that("R's ^ computes a cube and a fourth power as the specification says", {
   # spec/SPEC.md, under Scope of the guarantee, says that from R 4.6.0 `^` computes a cube or a
   # fourth power by repeated multiplication, where Python's ** calls pow(), so a Beta shape of

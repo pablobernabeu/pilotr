@@ -151,6 +151,30 @@ def test_random_item_is_refused_in_a_design_without_items():
                "remove random.item")
 
 
+def test_an_empty_units_object_is_an_object_whose_unit_columns_are_checked(tmp_path):
+    # R reads {} as a named empty list and applies the rules on the unit columns to it. Python
+    # skipped them for an empty object, so it left out the last two problems below, which the R
+    # twin reports for the same file.
+    path = tmp_path / "empty_units.json"
+    path.write_text("""{
+  "name": "empty_units", "seed": 1, "units": {},
+  "factors": [{"name": "subject", "levels": ["a", "b"], "contrasts": {"c": [-0.5, 0.5]},
+               "vary_within": ["subject"]}],
+  "fixed": {"intercept": 0, "coefficients": {"c": 0.5}},
+  "random": {"item": {"intercept_sd": 0.3}},
+  "response": {"family": "gaussian", "name": "y", "sigma": 1}
+}""", encoding="utf-8")
+    with pytest.raises(ValueError) as e:
+        load_spec(str(path))
+    assert str(e.value) == (
+        "invalid design specification:\n"
+        "  - 'units.subject' is required\n"
+        "  - the name 'subject' is used for more than one column (the subject unit and "
+        "factors[1])" + COLUMN_OF_ITS_OWN + "\n"
+        "  - random.item describes an item unit the design does not have; add units.item or "
+        "remove random.item")
+
+
 def test_a_blank_name_is_refused_where_it_used_to_reach_the_data():
     # Ported from 7693ab2 on claude/meridian-packages-apps-review-g2a74i. An emptied name built a
     # spec that validated and then produced a column with no name at all, where the R twin

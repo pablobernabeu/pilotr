@@ -216,10 +216,12 @@ as241 <- function(p) {
 # hence the number of draws consumed) identical across the two ports.
 #
 # The boost u^(1 / shape) is computed with `^`, which calls pow(), as Python's `**` does, except
-# that R computes a square as u * u and, from R 4.6.0, a cube or a fourth power by repeated
-# multiplication. On Linux, Python's u ** 2.0 differed from u * u for 0.08% of this generator's
-# uniforms, so a shape of exactly 1/2, or from R 4.6.0 exactly 1/3 or 1/4, can draw a different
-# variate here than in core.py. spec/SPEC.md sets the case out under Scope of the guarantee.
+# for an exponent of exactly 2. R computes that square as u * u, and on Linux Python's u ** 2.0
+# differed from u * u for 0.08% of this generator's uniforms, so core.py computes it as u * u
+# too. From R 4.6.0, R also computes a cube or a fourth power by repeated multiplication, where
+# core.py calls pow(), as R did before 4.6.0. Under R 4.6.0 or later, a shape of exactly 1/3 or
+# 1/4 can therefore draw a different variate here than in core.py. spec/SPEC.md sets the case out
+# under Scope of the guarantee.
 .gamma_mt <- function(rng, shape) {
   if (shape < 1) return(.gamma_mt(rng, shape + 1) * rng$uniform()^(1 / shape))
   d <- shape - 1 / 3; cc <- 1 / sqrt(9 * d)

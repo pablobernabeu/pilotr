@@ -31,7 +31,7 @@
 #' [make_rng()] on top of the inverse-normal routine
 #' [as241()], so a given specification and seed produce identical data
 #' in either language wherever the two share a maths library, as on Linux,
-#' outside a rare Beta case.
+#' outside a rare Beta case under R 4.6.0 or later.
 #' Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can
 #' differ in its last bits, as `vignette("cross-language", package = "pilotr")`
 #' sets out.

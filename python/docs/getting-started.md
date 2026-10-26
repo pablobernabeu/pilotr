@@ -5,9 +5,9 @@ specification is what everything else reads. The same JSON file drives the
 [R package](https://pablobernabeu.github.io/pilotr/r/), the
 [no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
 the same file and seed all three produce identical data wherever they share a maths library, as
-on Linux, outside a rare Beta case that [Cross-language reproducibility](cross-language.md)
-describes. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
-last bits.
+on Linux, outside a rare Beta case under R 4.6.0 or later, which
+[Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that passes
+through `exp()`, `log()` or `pow()` can differ in its last bits.
 
 ## Install
 

@@ -281,6 +281,11 @@ def name_cases():
          _mut(lambda s: s["random"]["subject"].__setitem__(
              "correlations", {"intercept,cond": 0.9, "cond~intercept": -0.9}))),
         ("random.item without an item unit", _mut(item_less)),
+        # jsonlite reads {} as a named empty list, which R's validator takes for an object, so
+        # the rules on the unit columns apply to an empty units object in both twins.
+        ("empty units object, a factor named subject",
+         _mut(lambda s: (s.__setitem__("units", {}),
+                         s["factors"][0].__setitem__("name", "subject")))),
         ("blank factor name", _mut(lambda s: s["factors"][0].__setitem__("name", "  "))),
         ("blank grouping factor name",
          _mut(lambda s: s["random"].__setitem__("", {"intercept_sd": 0.5, "over": "subject",
@@ -524,6 +529,12 @@ def file_cases():
         ("spec_version null", _with(g, lambda s: s.__setitem__("spec_version", None))),
         ("units.item null",
          _with(_between, lambda s: s["units"].__setitem__("item", None))),
+        ("units {}, a within factor named subject and random.item",
+         _with(_between, lambda s: (s.__setitem__("units", {}),
+                                    s["factors"][0].pop("between"),
+                                    s["factors"][0].update(name="subject",
+                                                           vary_within=["subject"]),
+                                    s["random"].__setitem__("item", {"intercept_sd": 0.3})))),
         ("repeated key in coefficients",
          _repeat_key(_text(_gaussian()), '"coefficients": {', '"cond": 0.5, ')),
         ("repeated key at the top level", _repeat_key(_text(_gaussian()), "{", '"seed": 1, ')),
@@ -605,6 +616,14 @@ def file_cases():
                                  s["response"].__setitem__("phi", 1e-30)))),
         ("beta phi 0.001 (both Gamma variates underflow)",
          _with(_beta, lambda s: s["response"].__setitem__("phi", 0.001))),
+        # At an intercept of 0 and phi 1, both Gamma shapes are 1/2, and both twins compute the
+        # boost u^2 as u * u. While Python computed it with pow(), the twins' data differed in 8
+        # of these 20,000 rows.
+        ("beta intercept 0 and phi 1, unrounded (Gamma shapes of 1/2)",
+         _with(_beta, lambda s: (s["fixed"].__setitem__("intercept", 0.0),
+                                 s["response"].__setitem__("phi", 1),
+                                 s["response"].pop("round"),
+                                 s["units"]["subject"].__setitem__("n", 20000)))),
     ]
     return out
 

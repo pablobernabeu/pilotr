@@ -924,27 +924,27 @@ gamma(a):
         if log(u) < 0.5 · x · x + d − d · v + d · log(v): return d · v
 ```
 
-`u^(1/a)` is the maths library's `pow()`, as Python's `**` computes it. R's `^` calls `pow()`
-too, with two exceptions. It computes a square as `u · u`, and, from R 4.6.0, it computes a cube
-or a fourth power by repeated multiplication, which rounds two or three times (see
-[Scope of the guarantee](#scope-of-the-guarantee)).
+`u^(1/a)` is the maths library's `pow()`, except that an exponent of exactly 2 is computed as
+`u · u`. R's `^` computes a square that way, and the Python implementation tests for an exponent
+of 2, since its `**` calls `pow()` for a square too. From R 4.6.0, R's `^` also computes a cube or
+a fourth power by repeated multiplication, which rounds two or three times, where the Python
+implementation calls `pow()` (see [Scope of the guarantee](#scope-of-the-guarantee)).
 
 ## Scope of the guarantee
 
 Identical data means bit-identical. The guarantee holds wherever R and Python compute `exp()`,
 `log()` and `pow()` with one maths library, as on Linux, where continuous integration runs the
-parity harness and every case agrees to the last bit. One Beta case, set out below, is the
-exception. IEEE-754 requires correct rounding for addition, subtraction, multiplication,
-division and square root, so a value built from those alone is the same double everywhere. The
-uniform stream, AS 241's central branch and the Cholesky factors are such values, and the
-linear predictor is formed from its terms by those operations alone. The standard leaves the
-rounding of `exp()`, `log()` and `pow()` to the library, and on Windows R and CPython do not
+parity harness and every case agrees to the last bit. One Beta case under R 4.6.0 or later, set
+out below, is the exception. IEEE-754 requires correct rounding for addition, subtraction,
+multiplication, division and square root, so a value built from those alone is the same double
+everywhere. The uniform stream, AS 241's central branch and the Cholesky factors are such values,
+and the linear predictor is formed from its terms by those operations alone. The standard leaves
+the rounding of `exp()`, `log()` and `pow()` to the library, and on Windows R and CPython do not
 share one. R takes them from the MinGW-w64 toolchain it is built with, and CPython from
-Microsoft's Universal C Runtime. They were compared on Windows 11 with R 4.6.1 and Python 3.13,
-on arguments in the ranges pilotr's families use. The two returned different doubles for `exp()`
-on 0.47% of 700,000 arguments, for `log()` on 0.13% of 700,000 and for `pow()` on 0.11% of
-200,000. None differed by more than one unit in the last place (ulp). macOS has not been
-measured.
+Microsoft's Universal C Runtime. They were compared on Windows 11 with R 4.6.1 and Python 3.13, on
+arguments in the ranges pilotr's families use. The two returned different doubles for `exp()` on
+0.47% of 700,000 arguments, for `log()` on 0.13% of 700,000 and for `pow()` on 0.11% of 200,000.
+None differed by more than one unit in the last place (ulp). macOS has not been measured.
 
 On Windows, the cause can be isolated. Taking a shifted-lognormal design and switching only its
 family to `gaussian`, so that the seed, the random-effect structure, the linear predictor and the
@@ -969,17 +969,23 @@ every family has such a path. The figures below were measured on the same machin
   versions of that value, and then by a whole category. None of 50,000 rows differed for any of
   the three, but nothing rules it out.
 
-The Beta case can differ on Linux too. R's `^` computes a square as `u · u` in every version and,
-from R 4.6.0, a cube or a fourth power by repeated multiplication, rounding two or three times,
-where Python's `**` calls `pow()`. On Windows, the two differed for 26% of uniforms raised to the
-third power and 34% raised to the fourth, and on Linux for 0.08% of the generator's uniforms
-squared. A Beta response is affected wherever a Gamma shape below 1 has a reciprocal of exactly
-2, or from R 4.6.0 exactly 3 or 4, so that its boost is a square, a cube or a fourth power. That
-takes a linear predictor shared by every row of a cell, as in a design without random effects or
-continuous predictors. With `η = 0` and `φ = 0.5`, both shapes are 1/4, and 251 of 1,000 such
-rows differed on Windows, by up to 3 ulp. With `η = 0` and `φ = 1`, both shapes are 1/2, and 19
-of 20,000 such rows differed on Linux, by up to 2 ulp. R before 4.6.0 computed a cube or a fourth
+The Beta case can differ on Linux too, under R 4.6.0 or later. From that version, R's `^`
+computes a cube or a fourth power by repeated multiplication, rounding two or three times, where
+the Python implementation calls `pow()`. On Windows, the two differed for 26% of uniforms raised
+to the third power and 34% raised to the fourth. A Beta response is affected wherever a Gamma
+shape below 1 has a reciprocal of exactly 3 or 4, so that its boost is a cube or a fourth power.
+That takes a linear predictor shared by every row of a cell, as in a design without random
+effects or continuous predictors. With `η = 0` and `φ = 0.5`, both shapes are 1/4, and 251 of
+1,000 such rows differed on Windows, by up to 3 ulp. R before 4.6.0 computed a cube or a fourth
 power with the maths library, so R's own data for a shape of 1/3 or 1/4 changed with R 4.6.0.
+The Python implementation calls `pow()` there, as R did before 4.6.0, since it cannot follow
+both versions.
+
+A square is computed as `u · u` in both languages. R's `^` computes it that way in every version,
+and on Linux `pow()` returned another double for 0.08% of the generator's uniforms, so the Python
+implementation computes a boost whose exponent is exactly 2 as `u · u` too. With `η = 0` and
+`φ = 1`, both shapes are 1/2. The Python package called `pow()` there up to its version 0.3.0,
+and 19 of 20,000 such rows then differed on Linux, by up to 2 ulp.
 
 Rounding has removed every continuous difference observed so far, in each rounded case of the
 parity harness and in the designs above rounded to four decimals, but it guarantees nothing. The
@@ -988,9 +994,9 @@ last-bit difference that straddles a rounding boundary still rounds two ways. `r
 for the discrete families in any case, where a difference is a whole category.
 
 Agreement to the last bit in every family has one route: run both languages on a platform where
-they share a maths library, as on Linux, outside that Beta case. Short of that, the Gaussian
-family confines any difference to the last bits of a rare normal draw, where a discrete family
-can move a whole category.
+they share a maths library, as on Linux, outside that Beta case under R 4.6.0 or later. Short of
+that, the Gaussian family confines any difference to the last bits of a rare normal draw, where a
+discrete family can move a whole category.
 
 The R package's `build_spec()`, which builds the no-code app's specifications, rounds a response
 of the Gaussian, the two lognormal and the ex-Gaussian families to four decimals and leaves a

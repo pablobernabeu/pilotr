@@ -689,11 +689,11 @@ def validate_spec(spec, strict: bool = True):
                             "support")
 
     # ---- names and structure ----
-    # An empty object is no object to R, which reads `{}` as an unnamed empty list. The declared
+    # The rules on the unit columns apply whenever `units` is an object, an empty one included.
+    # R reads `{}` as a named empty list, which its validator takes for an object. The declared
     # version goes with it for the rules that changed with 0.4. It is None when the version cannot
     # be read, and those rules then apply as they did before 0.4.
-    found, found_soft = _check_names(spec, has_item,
-                                     units_ok=isinstance(units, dict) and len(units) > 0,
+    found, found_soft = _check_names(spec, has_item, units_ok=isinstance(units, dict),
                                      version=dv)
     problems.extend(found)
     soft.extend(found_soft)
