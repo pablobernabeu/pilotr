@@ -147,8 +147,9 @@ build_spec <- function(p) {
 # round-trip through load_spec().
 .spec_array_fields <- c("levels", "vary_within", "thresholds")
 
-# Fields that are JSON objects, so that an empty one emits `{}` rather than `[]`. R cannot tell
-# an empty named list from an empty unnamed one, and `"random": []` fails the schema.
+# Fields that are JSON objects, so that an empty one emits `{}` rather than `[]`. jsonlite writes
+# an empty list as `{}` only when it carries names, and one made with list() carries none, while
+# `"random": []` fails the schema.
 .spec_object_fields <- c("units", "subject", "item", "contrasts", "fixed", "coefficients",
                          "random", "slopes", "correlations", "response")
 
