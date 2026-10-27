@@ -120,8 +120,8 @@ def _read_like_jsonlite(spec):
 
     jsonlite simplifies a one-element array to its value, so a file that
     ``jsonlite::write_json()`` wrote with its defaults, ``"seed": [2024]`` and all, loads and
-    simulates in R. It also cannot tell an empty array from an empty object, so ``[]`` reads as
-    an empty ``coefficients``, ``slopes`` or ``correlations``. Both readings are applied here at
+    simulates in R. It also reads ``[]`` as an empty list, which R's checks accept as an empty
+    ``coefficients``, ``slopes`` or ``correlations``. Both readings are applied here at
     exactly the positions where the schema has a single value or an object, and nowhere else: R
     refuses ``[]`` for ``units``, ``fixed``, ``response`` and ``contrasts``, and so does this
     reader. jsonlite also turns a mixed array such as ``["a", 1]`` into strings; that reading is
