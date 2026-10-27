@@ -342,7 +342,7 @@ def gamma_mt(rng, shape: float) -> float:
     accept/reject decisions also agree, which preserves parity across the two languages.
 
     The cube is written as two multiplications rather than ``** 3``. Python's ``**`` calls the
-    library pow(), whereas R's ``^`` special-cases small integer exponents into repeated
+    library pow(), whereas R's ``^`` computes a square, and from R 4.6.0 a cube, by repeated
     multiplication; measured over 200,000 draws in this generator's range the two disagree on
     a third of inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both
     languages, and they also decide the rejection step, so aligning them keeps the

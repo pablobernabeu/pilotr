@@ -208,8 +208,8 @@ as241 <- function(p) {
 # Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG, mirroring core.py's gamma_mt()
 # operation for operation, with the one exception set out below for the boost.
 #
-# The cube is written as two multiplications rather than `^3`. R's `^` special-cases small
-# integer exponents into repeated multiplication, whereas Python's `**` calls the library
+# The cube is written as two multiplications rather than `^3`. R's `^` computes a square, and
+# from R 4.6.0 a cube, by repeated multiplication, whereas Python's `**` calls the library
 # pow(); measured over 200,000 draws in this generator's range the two disagree on a third of
 # inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both languages, and
 # they also decide the rejection step, so aligning them keeps the accept/reject sequence (and

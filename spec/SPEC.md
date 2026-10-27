@@ -571,9 +571,9 @@ different doubles in the two ports. Every inner product, including those inside 
 factorisation and the matrix-vector product, is written as an explicit double fold.
 
 For the same reason, integer powers are written as repeated multiplication rather than with `^` or
-`**`. R special-cases small integer exponents while Python calls the library `pow()`, and
-measured over 200,000 draws in the Gamma sampler's range the two disagreed on a third of inputs
-by up to 6 ulp. Because that value decides a rejection step, the disagreement also changed how
+`**`. R's `^` computes a square, and from R 4.6.0 a cube or a fourth power, by repeated
+multiplication, while Python calls the library `pow()`, and measured over 200,000 draws in the
+Gamma sampler's range the two disagreed on a third of inputs by up to 6 ulp. Because that value decides a rejection step, the disagreement also changed how
 many draws were consumed.
 
 The Poisson walk is fixed in the same way. It starts from `p_0 = exp(−λ)` and `c_0 = p_0`, and
