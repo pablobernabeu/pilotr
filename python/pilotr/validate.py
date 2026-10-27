@@ -374,6 +374,11 @@ def validate_spec(spec, strict: bool = True):
             # which then failed on subscripting None.
             for nm in [k for k in units if k in ("subject", "item")]:
                 un = units[nm]
+                # jsonlite reads an empty array as an empty list, which R's test for a list
+                # passes on to the report of the missing n, so an empty array is read here as
+                # an empty object.
+                if isinstance(un, list) and not un:
+                    un = {}
                 if not isinstance(un, dict):
                     bad("'units.%s' must be an object" % nm)
                     continue

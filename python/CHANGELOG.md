@@ -462,7 +462,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   specification with `"units": {}`, a within factor named `subject` and a `random.item` entry was
   refused here for the missing `units.subject` alone. R also reported that the name `subject` is
   used for more than one column and that `random.item` describes an item unit the design does not
-  have, and both twins now report all three.
+  have, and both twins now report all three. An empty array for `units.subject` or `units.item`,
+  which R reads as an empty list, is read as an empty object too, so both twins report its
+  missing `n`, where this package said that the unit must be an object.
 
 ### Deprecated
 

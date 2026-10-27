@@ -175,6 +175,13 @@ def test_an_empty_units_object_is_an_object_whose_unit_columns_are_checked(tmp_p
         "remove random.item")
 
 
+def test_an_empty_array_for_a_unit_is_read_as_an_empty_object():
+    # jsonlite reads [] as an empty list, which R checks as a unit and refuses for its missing n.
+    s = between()
+    s["units"]["subject"] = []
+    refused(s, "'units.subject.n' must be a whole number of at least 1")
+
+
 def test_a_blank_name_is_refused_where_it_used_to_reach_the_data():
     # Ported from 7693ab2 on claude/meridian-packages-apps-review-g2a74i. An emptied name built a
     # spec that validated and then produced a column with no name at all, where the R twin

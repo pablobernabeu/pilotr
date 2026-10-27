@@ -353,7 +353,7 @@ validate_spec <- function(spec, strict = TRUE) {
         # empty JSON object as a named empty list, which the names() test also accepts, but an R
         # caller writes an empty object as list(), which has no names. The list test passes both
         # on to the report of the missing n, as the twin reports it for `{}`. It also passes an
-        # empty JSON array, which jsonlite reads as list() and the twin refuses as not an object.
+        # empty JSON array, which jsonlite reads as list() and the twin as an empty object.
         # Without this guard, the read of `n` below threw a base error such as "$ operator is
         # invalid for atomic vectors" where Python said what was wrong.
         if (!is.list(un)) { bad("'units.", nm, "' must be an object"); next }
