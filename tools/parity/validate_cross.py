@@ -67,6 +67,7 @@ from pilotr.power import (  # noqa: E402
 from pilotr.simulate import _as_spec, load_spec, simulate  # noqa: E402
 from pilotr.validate import validate_spec  # noqa: E402
 from run_py import _dump  # noqa: E402  the dump format the parity harness compares
+from compare import _compare_case  # noqa: E402  the ulp comparison compare.py applies
 
 try:
     import jsonschema
@@ -618,7 +619,8 @@ def file_cases():
          _with(_beta, lambda s: s["response"].__setitem__("phi", 0.001))),
         # At an intercept of 0 and phi 1, both Gamma shapes are 1/2, and both twins compute the
         # boost u^2 as u * u. While Python computed it with pow(), the twins' data differed in 8
-        # of these 20,000 rows.
+        # of these 20,000 rows on Linux. Its Gamma variates also pass through log(), so it is
+        # one of LIBM_CASES.
         ("beta intercept 0 and phi 1, unrounded (Gamma shapes of 1/2)",
          _with(_beta, lambda s: (s["fixed"].__setitem__("intercept", 0.0),
                                  s["response"].__setitem__("phi", 1),
@@ -831,6 +833,14 @@ def _sha256(path):
 
 # ---- comparison ---------------------------------------------------------------------------
 
+# File cases whose unrounded values pass through exp(), log() or pow(). Where R and Python take
+# these from the same maths library, as on Linux, their data must agree bit for bit. Elsewhere
+# each cell may differ by up to LIBM_ULP units in the last place, the allowance tolerance.json
+# gives such dumps, because R for Windows and CPython do not share a libm.
+LIBM_CASES = {"beta intercept 0 and phi 1, unrounded (Gamma shapes of 1/2)"}
+LIBM_ULP = 8
+SHARED_LIBM = sys.platform.startswith("linux")
+
 def _compare(rv, pv, data=None, warned=False):
     """Return a list of problems with one case; empty when the twins agree.
 
@@ -846,10 +856,11 @@ def _compare(rv, pv, data=None, warned=False):
     if warned and not problems and rv.get("warnings", "") != pv.get("warnings", ""):
         problems.append("warning text")
     if data is not None and not problems and rv["verdict"] == "OK":
-        r_dump, p_dump = data
+        r_dump, p_dump, max_ulp = data
         if not os.path.exists(r_dump) or not os.path.exists(p_dump):
             problems.append("data missing")
-        elif _sha256(r_dump) != _sha256(p_dump):
+        elif _sha256(r_dump) != _sha256(p_dump) and (
+                not max_ulp or _compare_case(r_dump, p_dump, max_ulp)[0]):
             problems.append("data")
     return problems
 
@@ -925,12 +936,13 @@ def main() -> int:
         r_scale = _run_r(td, "scale", scale_payload)
 
         paths, data = [], []
-        for i, (_label, raw) in enumerate(files, start=1):
+        for i, (label, raw) in enumerate(files, start=1):
             path = os.path.join(td, "case%02d.json" % i)
             with open(path, "wb") as f:
                 f.write(raw)
             paths.append(path)
-            data.append((path + ".r.txt", path + ".py.txt"))
+            max_ulp = LIBM_ULP if label in LIBM_CASES and not SHARED_LIBM else 0
+            data.append((path + ".r.txt", path + ".py.txt", max_ulp))
         py_files = [_py(lambda p=p: _dump(simulate(load_spec(p)), p + ".py.txt")) for p in paths]
         listing = os.path.join(td, "files.txt")
         with open(listing, "w", encoding="utf-8") as f:
