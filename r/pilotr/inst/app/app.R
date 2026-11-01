@@ -559,14 +559,15 @@ server <- function(input, output, session) {
   }
   # What to run instead, chosen by what can fit the design. R's power_mixed() fits every family
   # but two on the scale of its coefficients, by lmer() or glmer(), or lm() and glm() without
-  # random effects. The Python suggestion follows power_mixed() in pilotr 0.3.0 on PyPI, the
-  # release a user installs, which takes one within factor crossed with items and fits a linear
-  # model on the response's own scale, or on the log scale for shifted_lognormal. The suggestion
-  # is made only for such a design, in the gaussian, lognormal, shifted_lognormal or exgaussian
-  # family. The repository's unreleased power_mixed() fits more designs, and analyses lognormal on
-  # the log scale too. Ordinal and Beta outcomes have no frequentist model here and go to the
-  # Bayesian design analysis. The installed app reaches only pilotr's exports, so the rule is
-  # written out here, as it is in the browser build.
+  # random effects. The Python suggestion follows power_mixed() in pilotr 0.4.0 on PyPI, released
+  # with this package, which fits any design that declares a random effect, with or without items
+  # and with any number of within factors, and refuses a design that declares none. It fits a
+  # linear model on the response's own scale, or on the log scale for lognormal and
+  # shifted_lognormal, so the suggestion is made only in the gaussian, lognormal,
+  # shifted_lognormal or exgaussian family, whose coefficients are on that scale. Ordinal and Beta
+  # outcomes have no frequentist model here and go to the Bayesian design analysis. The installed
+  # app reaches only pilotr's exports, so the rule is written out here, as it is in the browser
+  # build.
   not_supported <- function(spec) {
     family <- spec[["response"]][["family"]]
     opening <- paste0(
@@ -587,8 +588,7 @@ server <- function(input, output, session) {
         "\ngenerate_design_analysis() writes a script that simulates the design, fits that\n",
         "model with brms and decides about the effect, replicate by replicate."))
     }
-    within <- Filter(function(f) !is.null(f[["vary_within"]]), spec[["factors"]])
-    python <- length(within) == 1L && !is.null(spec[["units"]][["item"]]) &&
+    python <- length(spec[["random"]]) > 0L &&
       family %in% c("gaussian", "lognormal", "shifted_lognormal", "exgaussian")
     paste0(opening,
       "For this design, download the spec (the Design spec tab) and run it\n",
