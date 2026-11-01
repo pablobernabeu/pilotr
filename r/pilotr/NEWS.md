@@ -86,9 +86,9 @@
   every script recommended `power_mixed()`.
 
 * The repository's HPC precision-array job seeds each task as `sweep_spec()`
-  seeds its point, where every task took the specification's seed, and counts
-  fits as `precision_design()` does, where it counted every fit that returned an
-  estimate as converged.
+  seeds its point, where every task took the specification's seed, which made
+  `solve_curve()` intervals too narrow. It counts fits as `precision_design()`
+  does, where it counted every fit that returned an estimate as converged.
 
 * `n_warning` no longer counts boundary-singular fits, which `n_singular`
   counts, so it shows whether any fit failed to converge.
@@ -135,7 +135,8 @@
 
 * `sweep_spec()` refuses a `design_conditions()` condition that names a
   coefficient the specification lacks, where it used the condition as the whole
-  coefficient list. `unclass()` on the conditions restores the replacement.
+  coefficient list. With `unclass()` on the conditions, it uses each as the
+  whole list, as before.
 
 * `power_design()` refuses a design with fewer than two subjects at a level of
   the between factor, where three subjects in all left the pooled variance one
@@ -145,6 +146,11 @@
   and `power_mixed()`, `power_curve_mixed()`, `precision_design()` and
   `precision_curve()` return `fitter`, which names the fitter and the test. The
   power functions also return the Monte Carlo errors listed under New features.
+
+* In a data frame from `sweep_spec()` over `power_design()`, `power` and every
+  later column sit further right, as do `type_m` and the fit counts over
+  `power_mixed()` and from `power_curve_mixed()`. Code that selects them by
+  position gets other columns.
 
 * The specification `spec_from_model()` returns carries an `effects` attribute,
   which records how its effects were chosen.
@@ -161,7 +167,8 @@
   rounded every response to 0 or 1.
 
 * `load_spec()` refuses a key repeated within one object, which R and Python
-  read differently, even with `validate = FALSE`, and so does `validate_spec()`.
+  read differently, even with `validate = FALSE`, and so does every function
+  given a path. `validate_spec()` refuses such a key in a list too.
 
 * `validate_spec()` refuses a `spec_version` given as an array, which was read
   as its first element, and a factor level, a `vary_within` entry or a
@@ -177,10 +184,11 @@
 * `default_response_name("exgaussian")` returns `RT`, where it returned
   `outcome`.
 
-* The repository's HPC precision-array job runs on any SLURM cluster with pilotr
-  installed in `$PROJECT_DIR/Rlib`, where it charged the author's account, ran a
-  runner kept outside the repository and sourced the pilotr that `TOOLKIT`
-  named.
+* Once its `--account` and `PROJECT_DIR` are set, the repository's HPC
+  precision-array job runs on any SLURM cluster, submitted from the clone's
+  `hpc/` directory with pilotr installed in `$PROJECT_DIR/Rlib`, where it
+  charged the author's account, ran a runner kept outside the repository and
+  sourced the pilotr that `TOOLKIT` named.
 
 ### Changed output
 
@@ -243,9 +251,11 @@
 * The code that `brms_bridge()` returns says in a comment that
   `model_data(spec, simulate_design(spec))` adds the contrast columns that its
   formula names.
-* `citation("pilotr")` gives the DOI that CRAN registered,
-  <https://doi.org/10.32614/CRAN.package.pilotr>, where it gave the Zenodo
-  concept DOI, <https://doi.org/10.5281/zenodo.21266313>.
+
+* `citation("pilotr")` cites the R package, published by CRAN, with the DOI that
+  CRAN registered, <https://doi.org/10.32614/CRAN.package.pilotr>, and its CRAN
+  page, where it cited the R and Python packages with the Zenodo concept DOI,
+  <https://doi.org/10.5281/zenodo.21266313>.
 
 ## New features
 
@@ -441,9 +451,9 @@
 * The guides of both builds of the no-code app say that the effect is on the
   scale of the model's linear predictor, where both said the response scale.
 
-* The installed no-code app's Power tab says that the app caps the number of
-  simulations and that `PILOTR_MAX_SIMS` raises the cap, where it said the
-  number was unlimited once the package was installed.
+* The installed no-code app's Power tab says that `PILOTR_MAX_SIMS` raises its
+  cap on simulations, where it said the number was unlimited once the package
+  was installed.
 
 * `?run_app` and the article on the no-code app say that `async` frees the app's
   R process for other sessions while the session that started a run waits for
