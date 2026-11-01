@@ -1,6 +1,6 @@
 # pilotr (development version)
 
-## Upgrading from the previous release
+## Upgrading from the previous release (0.3.1)
 
 ### Changed results
 
@@ -243,6 +243,9 @@
 * The code that `brms_bridge()` returns says in a comment that
   `model_data(spec, simulate_design(spec))` adds the contrast columns that its
   formula names.
+* `citation("pilotr")` gives the DOI that CRAN registered,
+  <https://doi.org/10.32614/CRAN.package.pilotr>, where it gave the Zenodo
+  concept DOI, <https://doi.org/10.5281/zenodo.21266313>.
 
 ## New features
 
