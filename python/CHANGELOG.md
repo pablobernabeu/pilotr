@@ -180,9 +180,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   where a single value belongs, `[]` for an empty `coefficients`, `slopes` or
   `correlations` and a byte-order mark are accepted, where each raised an error
   or was refused.
-- A `null` in an optional field other than a unit, such as `predictors`,
-  `correlations` or `spec_version`, reads as an absent field, in a file or a
-  dict, where it raised an error or was refused.
+- A `null` in an optional field other than a unit or an entry of `random`, such
+  as `predictors`, `correlations` or `spec_version`, reads as an absent field,
+  in a file or a dict, where it raised an error or was refused.
 - `simulate` accepts, as R does, a whole number written as a float, such as
   `"n": 64.0`, a single ordinal threshold written as a bare number and, with
   `validate=False`, a `round` that is not a whole number, where each raised

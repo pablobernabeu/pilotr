@@ -168,7 +168,8 @@
 
 * `load_spec()` refuses a key repeated within one object, which R and Python
   read differently, even with `validate = FALSE`, and so does every function
-  given a path. `validate_spec()` refuses such a key in a list too.
+  given a path. `validate_spec()` and every function that validates a list
+  refuse such a key in a list too.
 
 * `validate_spec()` refuses a `spec_version` given as an array, which was read
   as its first element, and a factor level, a `vary_within` entry or a
@@ -184,11 +185,10 @@
 * `default_response_name("exgaussian")` returns `RT`, where it returned
   `outcome`.
 
-* Once its `--account` and `PROJECT_DIR` are set, the repository's HPC
-  precision-array job runs on any SLURM cluster, submitted from the clone's
-  `hpc/` directory with pilotr installed in `$PROJECT_DIR/Rlib`, where it
-  charged the author's account, ran a runner kept outside the repository and
-  sourced the pilotr that `TOOLKIT` named.
+* The repository's HPC precision-array job runs once its `--account` and
+  `PROJECT_DIR` are set, from the clone's `hpc/` directory with pilotr in
+  `$PROJECT_DIR/Rlib`. It no longer charges the author's account, runs a runner
+  kept outside the repository or sources the pilotr that `TOOLKIT` names.
 
 ### Changed output
 
