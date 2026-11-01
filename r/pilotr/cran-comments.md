@@ -1,78 +1,65 @@
 ## Submission
 
-This release fixes the test failure reported for 0.3.0 on the no-long-double
-check.
+This is an update from pilotr 0.3.1, which CRAN published on 2026-09-20, to
+0.4.0.
 
-    -- Failure ('test-core.R:296:3'): spec_json round-trips a coefficient exactly --
-    Expected `as.numeric(back$fixed$coefficients$cond)` to be identical to `1/3`.
-    Differences:
-      `actual`: 0.333333333333333259
-    `expected`: 0.333333333333333315
-
-The fault was in the package rather than in the test, and it was a real one:
-the saved design specification no longer held the coefficient the user had set.
-`spec_json()` wrote the document by asking `jsonlite` for 17 significant digits
-and then shortening each number in the resulting text, which meant reading the
-number back with `as.numeric()`. Without long doubles `as.numeric()` accumulates
-the mantissa in a double before applying the decimal exponent, and 17
-significant digits overflow the 53-bit mantissa on the way, so
-`"0.33333333333333331"` reads back one unit in the last place below `1/3`. The
-shortened form then recorded that wrong value.
-
-Each number is now formatted from the double itself, before `jsonlite` sees the
-document, so nothing is read back from text the package has just written. A
-coefficient of `1/3` is written at 16 significant digits rather than 17, which
-is both the shorter form and the one such a build reads back exactly. The same
-helper feeds `generate_r_script()`, where it could return nothing at all for a
-finite value and so embed `Inf` in place of a coefficient. It now falls back to
-17 significant digits instead.
-
-I do not have a no-long-double build to hand, so the fix was checked by
-reproducing in R the accumulation `R_strtod()` performs when `LDOUBLE` is
-`double`. Under that arithmetic the 17-digit form gives 0.333333333333333259,
-the value reported above, and the 16-digit form the package now writes gives
-`1/3` exactly. Two regression tests were added: one reads every number
-`spec_json()` writes under that same arithmetic, the other covers a label
-written to imitate the marker the new code uses internally.
+0.4.0 changes results and interfaces. Some functions return different values
+for the same input: `power_mixed()`, `precision_design()` and their curves fit
+'bernoulli' and 'poisson' responses with `lme4::glmer()`, and each point of a
+sweep draws its own replicates, so power, interval widths and Type M change.
+Some specifications that 0.3.1 accepted are refused, results gain elements and
+columns, and printed output changes. NEWS.md lists each of these changes under
+'Upgrading from the previous release (0.3.1)', in three parts: 'Changed
+results', 'Changed interface' and 'Changed output'.
 
 ## R CMD check results
 
-Local `R CMD check --as-cran` on a tarball built from the submitted sources
-(Windows 11 x64, R 4.6.1, pandoc 3.10, 2026-09-17):
-
-0 errors | 0 warnings | 1 note
-
-The note comes from the CRAN incoming feasibility check and is about the
-interval since the last release.
-
-    Maintainer: 'Pablo Bernabeu <pcbernabeu@gmail.com>'
-
-    Days since last update: 5
-
-0.3.0 was published five days ago and this release exists only to correct the
-fault that the no-long-double check found in it, so the short interval is the
-reason for the submission rather than an oversight.
-
-Examples, examples under `--run-donttest`, the tests, the re-building of the
-vignettes and both the PDF and the HTML manual were all checked in that run and
-all passed.
+0 errors | 0 warnings | 0 notes
 
 ## Test environments
 
-Version 0.3.1 was checked locally on Windows 11 x64 under R 4.6.1, with
-`R CMD check --as-cran` on the built tarball (2026-09-17).
+GitHub Actions, run 41320932481 on 2026-11-01, at commit 2cd4a72 on the release
+branch. The package sources of this submission are those of that commit. Only
+this file, which the tarball leaves out, has changed since. Each leg built the
+tarball with `--no-manual` and `--compact-vignettes=gs+qpdf` and ran
+`R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
+which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
-The repository's GitHub Actions workflow covers macOS-latest (release),
-windows-latest (release and devel) and ubuntu-latest (release, devel and
-oldrel-1), each running `R CMD check --no-manual --as-cran`, and runs on the
-commit carrying this change.
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-10-30 r90805)
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
+* windows-latest (Windows Server 2022 x64, build 26100), R 4.6.2
+* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-10-31
+  r90820)
+* macos-latest (macOS Tahoe 26.6.2, aarch64-apple-darwin23), R 4.6.2
+
+The test suite passed in every leg, with no failures or warnings. 34 tests skip
+everywhere because they read repository files that R CMD check cannot reach,
+such as the shared specification schema, the browser app and the vignette
+sources, and one because pkgdown is not installed. Under R 4.5.3, one more
+skips because it checks how R 4.6.0 and later compute integer powers.
+
+The same run installed the Suggests floors that DESCRIPTION declares (ggplot2
+3.4.0 and testthat 3.1.5) on R oldrel-3 under ubuntu-latest, and the check
+passed there without the vignettes.
 
 ## Notes
 
 * The package contains no compiled code.
-* Examples that fit mixed-effects models are wrapped in `\donttest{}` and additionally
-  guarded with `requireNamespace("lme4")` / `requireNamespace("lmerTest")`, so they are
-  skipped where those suggested packages are unavailable.
-* `run_app()` launches an interactive Shiny application, so its example is wrapped in
-  `\dontrun{}`.
-* There are no reverse dependencies.
+* lme4 and lmerTest are in Suggests. The mixed-model functions stop with a
+  message naming them when they are missing, and the examples that fit mixed
+  models are wrapped in `\donttest{}` and guarded with `requireNamespace()`, so
+  they are skipped where those packages are unavailable.
+* shiny, ggplot2, future and promises are used by the no-code app that
+  `run_app()` launches. The app is interactive, so the example of `run_app()`
+  is wrapped in `\dontrun{}`.
+* MASS, callr, codetools and spelling are used by the tests only, and each test
+  that needs one of them skips when it is absent. testthat runs the tests, and
+  knitr and rmarkdown build the vignettes.
+* Three vignette chunks that fit hundreds of mixed models are shown with
+  `eval = FALSE`, and the vignettes read their results from files in
+  vignettes/, so that the vignettes build in seconds.
+
+## Downstream dependencies
+
+There are no reverse dependencies on CRAN.
