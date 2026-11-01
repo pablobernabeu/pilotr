@@ -9,10 +9,11 @@ If you use pilotr in published work, please cite it:
 # from one string, using the version the package itself reports, so none of them can
 # drift away from the code. This reaches none of the copies that sit where no code can
 # run, and those still have to be bumped by hand when a release is cut. They are the
-# 'extra.version' chip in mkdocs.yml and the 'version' field in CITATION.cff, and
-# tools/check_versions.py fails CI when either disagrees with the package. The note names
-# the Python package alone, because the R and Python packages are released separately and
-# their version numbers need not agree.
+# version in pyproject.toml and the 'extra.version' chip in mkdocs.yml, which
+# tools/check_versions.py requires to equal the package's version, and the 'version' field
+# in CITATION.cff, which it requires to name the newer of the R and Python releases. The
+# note names the Python package alone, because the R and Python packages are released
+# separately and their version numbers need not agree.
 import pilotr
 
 version = pilotr.__version__

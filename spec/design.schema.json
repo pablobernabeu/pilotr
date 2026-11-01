@@ -71,7 +71,7 @@
           "varies_by": {
             "type": "string",
             "enum": ["subject", "item", "observation"],
-            "description": "\"observation\" (new in 0.3) draws one value per row, for a predictor that varies trial by trial. Before 0.3 any value other than \"subject\" was read as item-level, so a design declaring \"trial\" silently received one value per item."
+            "description": "\"observation\" (new in 0.3) draws one value per row, for a predictor that varies trial by trial. A 0.2 implementation reads any value other than \"subject\" as item-level, which is why \"observation\" needs 0.3."
           },
           "mean": { "type": "number" },
           "sd": { "type": "number", "minimum": 0 },
@@ -149,7 +149,7 @@
         }
       },
       "additionalProperties": false,
-      "$comment": "One block per family: the parameters it requires and the fields it refuses, as in FAMILY_PARAMS and ROUNDING_FAMILIES of the validators. python/tests/test_schema.py and r/pilotr/tests/testthat/test-contract.R check that the two agree.",
+      "$comment": "One block per family: the parameters it requires and the fields it refuses, as in FAMILY_PARAMS and ROUNDING_FAMILIES of the Python validator (python/pilotr/validate.py) and .family_params and .rounding_families of the R one (r/pilotr/R/validate.R). python/tests/test_schema.py and r/pilotr/tests/testthat/test-contract.R check that these blocks agree with each validator's tables.",
       "allOf": [
         {
           "if": { "properties": { "family": { "const": "gaussian" } }, "required": ["family"] },
@@ -233,7 +233,7 @@
         "slopes": {
           "type": "object",
           "additionalProperties": { "type": "number", "minimum": 0 },
-          "description": "Keys follow the same rule as fixed coefficients, so an \"a:b\" interaction slope is allowed from 0.3. Before 0.3 such a slope was accepted, sized into the covariance, drawn from the stream, and then discarded, which made the analysis model richer than the process that generated the data."
+          "description": "Keys follow the same rule as fixed coefficients, so an \"a:b\" interaction slope is allowed from 0.3. A 0.2 implementation draws such a slope and then discards it, which makes the analysis model richer than the process that generated the data."
         },
         "correlations": {
           "type": "object",

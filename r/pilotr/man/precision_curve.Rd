@@ -74,7 +74,8 @@ coefficient overrides for it.
 
 Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
 so the points of the curve are independent, as \code{\link[=solve_curve]{solve_curve()}} assumes when it fits them.
-\code{seeds = "shared"} runs every point from the specification's own seed instead, as up to 0.3.1.
+\code{seeds = "shared"} runs every point from the specification's own seed instead, and the points
+then share their noise (see \code{\link[=sweep_spec]{sweep_spec()}}).
 With \code{workers > 1}, one worker pool is created and reused across all sample sizes.
 
 Reading the crossing off the returned curve, or off a plot of it, is what \code{\link[=solve_curve]{solve_curve()}}

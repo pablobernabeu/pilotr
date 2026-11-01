@@ -30,8 +30,9 @@ a complete, executable description rather than a screenshot of a graphical inter
 language-specific script. You can place it under version control, attach it to a
 preregistration, share it with a collaborator and run it unchanged in R or Python to obtain
 identical data. The data agree to the last bit wherever R and Python share a maths library, as
-on Linux. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
-last bits, which the cross-language vignette quantifies.
+on Linux, outside a rare Beta case under R 4.6.0 or later, which the
+[cross-language vignette](cross-language.html) describes. Elsewhere, a value that passes through
+`exp()`, `log()` or `pow()` can differ in its last bits, which the same vignette quantifies.
 
 This vignette walks through the core loop of describe, simulate, inspect and export. The
 other vignettes, listed at the end, each go deeper into one part of the workflow.
@@ -88,8 +89,8 @@ The design is crossed, so every subject sees every item in both conditions
 pilotr ships a shared random-number generator, so the same specification and seed produce the
 same data every time. This holds in the current R session and in a fresh one on the same
 machine. In Python, and on another machine, it holds to the last bit wherever the maths library
-is the same, as on Linux. Elsewhere, values that pass through `exp()`, `log()` or `pow()` can
-differ in their last bits.
+is the same, as on Linux, outside the rare Beta case under R 4.6.0 or later mentioned above.
+Elsewhere, values that pass through `exp()`, `log()` or `pow()` can differ in their last bits.
 
 ```{r}
 identical(simulate_design(spec), simulate_design(spec))
@@ -118,6 +119,8 @@ that read it.
 
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,
   count, ordinal and proportion outcomes.
+- [Worked examples](worked-examples.html), which simulates each specification that ships with
+  the package.
 - [Power and design analysis](power-analysis.html), covering simulation-based power with Type
   S and Type M errors, for two-group and crossed mixed-effects designs.
 - [Precision / ROPE design analysis](precision-rope.html), which plans by precision against a

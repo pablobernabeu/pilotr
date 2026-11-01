@@ -1,8 +1,8 @@
 # Cross-language parity harness, R side.
 #
-# Simulates every specification in spec/examples/ from the *local* package sources (not an
-# installed copy) and writes one canonical dump per case. The Python driver writes the same
-# dumps from python/pilotr/, and compare.py diffs them byte for byte.
+# Simulates every specification in spec/examples/ and tools/parity/cases/ from the *local*
+# package sources (not an installed copy) and writes one canonical dump per case. The Python
+# driver writes the same dumps from python/pilotr/, and compare.py diffs them byte for byte.
 #
 # Each specification is run twice: "asis", and "noround" with `response.round` deleted. The
 # second case matters because six of the eight shipped examples set `round`, which quantises

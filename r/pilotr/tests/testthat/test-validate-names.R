@@ -124,6 +124,30 @@ test_that("random.item is refused in a design without items", {
                     "units.item or remove random.item"))
 })
 
+test_that("an empty units object is an object whose unit columns are checked", {
+  # jsonlite reads {} as a named empty list, so the rules on the unit columns apply to it. The
+  # Python twin skipped them for an empty object and reported only the first problem below.
+  path <- tempfile(fileext = ".json")
+  on.exit(unlink(path))
+  writeLines(c(
+    '{',
+    '  "name": "empty_units", "seed": 1, "units": {},',
+    '  "factors": [{"name": "subject", "levels": ["a", "b"], "contrasts": {"c": [-0.5, 0.5]},',
+    '               "vary_within": ["subject"]}],',
+    '  "fixed": {"intercept": 0, "coefficients": {"c": 0.5}},',
+    '  "random": {"item": {"intercept_sd": 0.3}},',
+    '  "response": {"family": "gaussian", "name": "y", "sigma": 1}',
+    '}'), path)
+  err <- tryCatch(load_spec(path), error = conditionMessage)
+  expect_identical(err, paste0(
+    "invalid design specification:\n",
+    "  - 'units.subject' is required\n",
+    "  - the name 'subject' is used for more than one column (the subject unit and ",
+    "factors[1])", COLUMN_OF_ITS_OWN, "\n",
+    "  - random.item describes an item unit the design does not have; add units.item or ",
+    "remove random.item"))
+})
+
 test_that("a blank name is refused where it used to fail inside the simulator", {
   # Ported from 7693ab2 on claude/meridian-packages-apps-review-g2a74i. An emptied name built a
   # spec that validated and then stopped in simulate_design() with base R's "replacement has

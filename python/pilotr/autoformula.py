@@ -3,8 +3,7 @@
 A port of the R twin's autoformula.R. `model_data` adds to a simulated data set the columns the
 model reads, and `model_formula` writes the model as the R twin writes it, term for term, in lme4's
 notation. `power_mixed` fits the model the two describe, so it analyses every coefficient and every
-declared random effect, where it used to fit one model written into its source whatever the
-specification declared.
+declared random effect.
 
 Interactions ``"a:b"`` become product columns named ``"a_b"``. Categorical factors become their
 numeric contrast columns. The response is logged for the lognormal families, whose coefficients
@@ -25,8 +24,8 @@ _STRUCTURES = ("maximal", "zcp", "intercepts")
 _LOG_FAMILIES = ("lognormal", "shifted_lognormal")
 
 # Raised when a specification has neither a coefficient nor a random effect, word for word as the
-# R twin's model_formula() stops. It used to write ".y ~ " with nothing after it, and as.formula()
-# stopped on that with a parse error.
+# R twin's model_formula() stops. Without the refusal, the formula would read ".y ~ " with nothing
+# after it, which as.formula() cannot parse.
 _NO_MODEL =("this specification has no fixed coefficients and no random effects, so it implies "
              "no model to fit")
 
@@ -114,7 +113,8 @@ def model_formula(spec, structure="maximal"):
     Parameters
     ----------
     spec : dict, str or os.PathLike
-        A design specification (dict or path to a JSON file). It is validated first.
+        A design specification (dict or path to a JSON file). It is validated first, strictly, so
+        an unrecognised field is an error, even in a dict that `load_spec` read leniently.
     structure : {"maximal", "zcp", "intercepts"}, optional
         The random-effects structure (default ``"maximal"``).
 
@@ -170,7 +170,8 @@ def model_data(spec, dataset):
     Parameters
     ----------
     spec : dict, str or os.PathLike
-        A design specification (dict or path to a JSON file). It is validated first.
+        A design specification (dict or path to a JSON file). It is validated first, strictly, so
+        an unrecognised field is an error, even in a dict that `load_spec` read leniently.
     dataset : Dataset or pandas.DataFrame
         A data set simulated from `spec`, as `simulate` returns it, or a DataFrame with its columns.
         A DataFrame is copied, so the one given is left as it was.

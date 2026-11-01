@@ -20,8 +20,8 @@ the study you plan to run: its groups and conditions, sample sizes, fixed
 effect sizes, random-effect standard deviations, and the response family.
 Assemble one from a flat list of design inputs with
 \code{\link[=build_spec]{build_spec()}}, or read one back from a JSON file with
-\code{\link[=load_spec]{load_spec()}}. The package ships one ready-to-run specification per
-design family, and \code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
+\code{\link[=load_spec]{load_spec()}}. The package ships eight ready-to-run specifications, and
+\code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
 \code{\link[=default_response_name]{default_response_name()}} gives the response column that a
 family uses by default, and \code{\link[=spec_json]{spec_json()}} serialises a specification
 back to JSON for the Python twin or the no-code app to read.
@@ -31,14 +31,15 @@ data frame with one row per observation. A specification carries its own
 seed, and both languages draw from the combined generator built by
 \code{\link[=make_rng]{make_rng()}} on top of the inverse-normal routine
 \code{\link[=as241]{as241()}}, so a given specification and seed produce identical data
-in either language wherever the two share a maths library, as on Linux.
+in either language wherever the two share a maths library, as on Linux,
+outside a rare Beta case under R 4.6.0 or later.
 Elsewhere, a value that passes through \code{exp()}, \code{log()} or \code{pow()} can
 differ in its last bits, as \code{vignette("cross-language", package = "pilotr")}
 sets out.
 
-For analysis, \code{\link[=model_data]{model_data()}} adds the response column that the
-model expects, and \code{\link[=model_formula]{model_formula()}} derives the maximal
-mixed-model formula the design implies. \code{\link[=brms_bridge]{brms_bridge()}} returns
+For analysis, \code{\link[=model_data]{model_data()}} adds the response, contrast and interaction columns that the
+model expects, and \code{\link[=model_formula]{model_formula()}} derives the mixed-model formula
+the design implies, maximal by default. \code{\link[=brms_bridge]{brms_bridge()}} returns
 the formula, family and priors for a Bayesian fit.
 
 Design analysis runs from that same specification.
@@ -46,7 +47,8 @@ Design analysis runs from that same specification.
 design with one row per subject, together with the Type S and Type M errors
 of Gelman and Carlin (2014). \code{\link[=power_mixed]{power_mixed()}} does the same for a crossed
 mixed-effects design, and \code{\link[=power_curve_mixed]{power_curve_mixed()}} sweeps
-sample size to locate where a design becomes adequately powered.
+sample size. \code{\link[=target_n]{target_n()}} solves that curve for the sample size at which
+a design becomes adequately powered, with an interval on it.
 \code{\link[=precision_design]{precision_design()}} and its curve counterpart
 \code{\link[=precision_curve]{precision_curve()}} report the width of the interval a design
 buys and the decision probabilities against a region of practical
@@ -58,6 +60,11 @@ writes a self-contained script that reproduces a simulation, and
 
 For a worked introduction, see
 \code{vignette("getting-started", package = "pilotr")}.
+}
+\references{
+Gelman, A. and Carlin, J. (2014). Beyond power calculations: Assessing Type S
+(sign) and Type M (magnitude) errors. \emph{Perspectives on Psychological Science},
+9(6), 641-651. \doi{10.1177/1745691614551642}
 }
 \seealso{
 Useful links:

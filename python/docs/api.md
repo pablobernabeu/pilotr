@@ -6,9 +6,9 @@ order, so a name is found in the same place on either site. Import every name
 here from the top-level package, for example `from pilotr import simulate,
 power`.
 
-The R package covers more ground. Calibration, sweeps, the generated-analysis
-emitters and the no-code app have no Python counterpart yet, so the groups they
-occupy on that side do not appear below.
+The R package covers more ground. Precision and equivalence, calibration and
+sweeps, the generated-analysis emitters and the no-code app have no Python
+counterpart yet, so the groups they occupy on that side do not appear below.
 
 ## Design specifications
 
@@ -28,7 +28,8 @@ version of that format this release understands.
 
 Draw a data set from a specification, returned together with the design
 information an analysis needs. `model_data` and `model_formula` give the
-analysis model the specification implies, the one `power_mixed` fits.
+analysis model the specification implies, which `power_mixed` fits with each
+random effect as an independent variance component.
 
 ::: pilotr.simulate.simulate
 

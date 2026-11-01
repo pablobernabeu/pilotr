@@ -2,14 +2,16 @@
 # analysis and power can run from a spec alone, without a hand-coded formula. Interactions
 # "a:b" become product columns named "a_b". Categorical factors become their numeric contrast
 # columns. The response is log-transformed for the (shifted_)lognormal families. The same formula
-# serves every family: .fit_model() in lmer_fits.R fits it by lmer for the continuous families and
-# by glmer, with the binomial or Poisson link, for bernoulli and poisson.
+# serves every family: .fit_model() in lmer_fits.R fits it by lmer, or lm() when it has no random
+# terms, for the continuous families and, as a linear fallback, for ordinal and beta, and by
+# glmer, or glm(), with the binomial or Poisson link, for bernoulli and poisson.
 
 .us <- function(k) gsub(":", "_", k, fixed = TRUE)   # "a:b" -> "a_b"
 
 #' Build the modelling data frame from a simulated data set and its specification
 #'
-#' Add the analysis response column `.y` (log-transformed for the lognormal families), the
+#' Add the analysis response column `.y` (`log(y)` for `lognormal`, `log(y - shift)` for
+#' `shifted_lognormal` and the response itself otherwise), the
 #' numeric contrast columns implied by the categorical factors, and any interaction product
 #' columns (an `a:b` coefficient becomes a column `a_b`).
 #'

@@ -1,17 +1,17 @@
 # Build the R site's favicons into r/pilotr/pkgdown/favicon/: the files pkgdown 2.1.2 and later
 # link from every page (favicon.ico, favicon-96x96.png, favicon.svg, apple-touch-icon.png and
 # site.webmanifest) and the two icons the manifest names. pkgdown copies the folder into the site
-# as it stands, and an older set left those links returning 404 on every page.
+# as it stands, so a file missing from it leaves its link returning 404 on every page.
 #
 # pkgdown::build_favicons() makes the same set by sending the package logo to
 # realfavicongenerator.net. This script makes it offline, and from a different master:
 # python/docs/assets/favicon.svg, the logo's hexagon and power curve without the wordmark. The
-# wordmark cannot be read at 16 or 32 pixels, which is why the R site's earlier favicons, the
+# wordmark cannot be read at 16 or 32 pixels, which is why the R site's favicons, the
 # Python site's and both apps' show this design, while build_favicons() would take
 # man/figures/logo.svg, wordmark included.
 #
 # Run from anywhere:  Rscript tools/favicons/build_favicons.R
-# It needs the rsvg and magick packages, and it replaces the folder's contents.
+# It needs the rsvg, magick and jsonlite packages, and it replaces the folder's contents.
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
@@ -36,7 +36,7 @@ png_icon(180, "apple-touch-icon.png")
 png_icon(192, "web-app-manifest-192x192.png")
 png_icon(512, "web-app-manifest-512x512.png")
 
-# One .ico holding the three sizes a browser picks from, as the earlier set did.
+# One .ico holding the three sizes a browser picks from.
 ico <- magick::image_join(lapply(c(16, 32, 48), function(size)
   magick::image_read(rsvg::rsvg_png(master, width = size, height = size))))
 magick::image_write(ico, file.path(out, "favicon.ico"), format = "ico")

@@ -1,6 +1,7 @@
-# Build the serverless (shinylive / webR) static site for the lite app.
-# Stages the lite app.R next to the engine + spec-builder sources (so webR can source them),
-# then exports a static site to build/shinylive-demo/. Deploy that folder to GitHub Pages.
+# Build the serverless (shinylive / webR) static site for the lite app, for a local preview.
+# Stages the lite app.R next to the engine + spec-builder sources that engine-files.txt names
+# (so webR can source them), then exports a static site to build/shinylive-demo/. The published
+# app is built and deployed by .github/workflows/site.yml, which stages the same files.
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
@@ -22,9 +23,9 @@ file.copy(file.path(pkg_R, engine), stage)
 file.copy(file.path(here, "app.R"), stage, overwrite = TRUE)
 
 cat("Exporting shinylive site (downloads webR assets on first run)...\n")
-# Without template_params the page is titled "Shiny App" and has no icon, which is what a browser
-# tab showed. The site workflow (.github/workflows/site.yml) passes the same values, and the
-# icons it links are the R site's, copied beside the page.
+# Without template_params the page is titled "Shiny App" and has no icon. The site workflow
+# (.github/workflows/site.yml) passes the same values, and the icons it links are the R site's,
+# copied beside the page.
 icons <- paste(
   '<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">',
   '<link rel="icon" type="image/svg+xml" href="favicon.svg">', sep = "\n")

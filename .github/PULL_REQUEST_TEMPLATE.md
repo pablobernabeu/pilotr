@@ -10,6 +10,8 @@ R package (`r/pilotr/`):
 - [ ] `devtools::document()` has been run if the roxygen comments changed.
 - [ ] `devtools::test()` passes, and new behaviour has tests.
 - [ ] `devtools::check()` is clean.
+- [ ] If either app, `app-lite/engine-files.txt` or an engine file it names
+      changed, the three `r/pilotr/tests/test_app_*.R` scripts pass.
 
 Python package (`python/`):
 

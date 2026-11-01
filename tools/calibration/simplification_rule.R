@@ -1,9 +1,10 @@
 # Power and the Type I error rate under a preregistered simplification rule, on the power
 # vignette's priming design.
 #
-# power_mixed() fits one model to every replicate, by default the maximal model the specification
+# By default, power_mixed() fits one model to every replicate, the maximal model the specification
 # implies, and keeps a singular fit. An analysis plan may instead simplify the model whenever its
-# fit is singular: drop the correlations, then the slopes. The model analysed then depends on the
+# fit is singular: drop the correlations, then the slopes. power_mixed() simulates such a rule when
+# `formula` is given as a ladder of models. The model analysed then depends on the
 # replicate's data, so the rule has its own power and its own Type I error rate. Ending on random
 # intercepts alone ignores how much the effect varies over subjects and items, and a test that
 # ignores a large variation rejects a true null hypothesis too often (Barr et al., 2013; Matuschek

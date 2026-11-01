@@ -12,11 +12,12 @@ text is required to match exactly, with no tolerance.
 The records are stored in report_cases.json, not produced by live analyses, so that the check
 tests the renderer alone. A live result depends on its fitter, lme4 in R and statsmodels in
 Python, and its counts would differ between the languages for reasons that have nothing to do with
-the report. The cases cover every section and every variant of a line: a ladder of models, a
-joint test, a one-sided test, an effect with no true value, an effect no replicate estimated, a
-Type M with too few significant replicates for a standard error, a solve over an axis other than
-sample size, a solve over the precision analysis's rate, a null condition, a missing
-specification, a negative seed and a justification with a character outside ASCII.
+the report. The cases cover every section the two twins share and these variants of a line: a
+ladder of models, a joint test, a one-sided test, an effect with no true value, an effect no
+replicate estimated, a Type M with too few significant replicates for a standard error, a solve
+over an axis other than sample size, a solve over the precision analysis's rate, a null
+condition, a missing specification, a negative seed and a justification with a character outside
+ASCII. A precision_design() record, which the R twin alone renders, is not checked here.
 
 Usage: python tools/parity/report_cross.py
 Exit status is 0 when the two twins write the same text for every case.

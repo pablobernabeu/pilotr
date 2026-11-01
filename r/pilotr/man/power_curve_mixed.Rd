@@ -66,7 +66,8 @@ specification, in reporting Type S and Type M errors, and in built-in parallelis
 
 Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
 so the points of the curve are independent, as \code{\link[=target_n]{target_n()}} assumes when it fits them.
-\code{seeds = "shared"} runs every point from the specification's own seed instead, as up to 0.3.1.
+\code{seeds = "shared"} runs every point from the specification's own seed instead, and the points
+then share their noise (see \code{\link[=sweep_spec]{sweep_spec()}}).
 
 For any axis other than sample size, call \code{\link[=sweep_spec]{sweep_spec()}} directly. Effect size is the axis a
 design analysis most often needs after sample size, and \code{\link[=design_conditions]{design_conditions()}} builds the
@@ -117,7 +118,7 @@ factor: Designs, analytic models, and statistical power. \emph{Annual Review of 
 
 Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
-Methods}, 53, 2528-2543. \doi{10.3758/s13428-021-01546-0}
+Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 
 Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
 experiments in which samples of participants respond to samples of stimuli. \emph{Journal of

@@ -1,11 +1,10 @@
 # Build and publish the Python package to PyPI through trusted publishing
 # (OIDC), so no API token is ever stored in the repository.
 #
-# One-time setup on PyPI: add this repository as a pending publisher for the
-# pilotr project (workflow file "publish.yml", environment "pypi"; PyPI creates
-# the project on the first upload). The workflow runs when a GitHub release is
-# published; the manual trigger exists so a release cut before this workflow
-# was added can still be shipped from the same commit.
+# The pilotr project on PyPI must list this repository as a trusted publisher
+# (workflow file "publish.yml", environment "pypi"). The workflow runs when a
+# GitHub release is published, and can also be run by hand. The publish step's
+# skip-existing leaves a version already on PyPI untouched.
 name: Publish to PyPI
 
 on:

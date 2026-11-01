@@ -1,7 +1,9 @@
-# Portable numerical core for pilotr, a bit-identical mirror of pilotr/core.py.
+# Portable numerical core for pilotr, mirrored operation for operation by python/pilotr/core.py.
 # Shared L'Ecuyer (1988) combined LCG, Wichura AS 241 inverse-normal, hand-rolled
 # Cholesky, and inverse-CDF response transforms. All LCG products stay below 2^53, so
-# the arithmetic is exact in IEEE-754 doubles and matches the Python integer port.
+# the arithmetic is exact in IEEE-754 doubles and matches the Python integer port. Values that
+# pass through exp(), log() or pow() are bit-identical only within the limits spec/SPEC.md sets
+# out under Scope of the guarantee.
 
 .M1 <- 2147483563; .M2 <- 2147483399; .A1 <- 40014; .A2 <- 40692
 
@@ -17,6 +19,8 @@
 #' @return A list of three functions: `uniform()` returns one standard-uniform draw,
 #'   `normal()` returns one standard-normal draw, and `normals(k)` returns a length-`k`
 #'   numeric vector of standard-normal draws.
+#' @references L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
+#'   \emph{Communications of the ACM}, 31(6), 742-751. \doi{10.1145/62959.62969}
 #' @examples
 #' rng <- make_rng(1)
 #' rng$uniform()
@@ -57,6 +61,8 @@ make_rng <- function(seed) {
 #'
 #' @param p A probability in the open interval (0, 1).
 #' @return The standard-normal quantile (a numeric value) corresponding to `p`.
+#' @references Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal
+#'   distribution. \emph{Applied Statistics}, 37(3), 477-484. \doi{10.2307/2347330}
 #' @examples
 #' as241(0.975)   # about 1.959964
 #' @export
@@ -104,11 +110,12 @@ as241 <- function(p) {
 # Inner product of the first `m` elements, written as an explicit IEEE-754 double fold.
 #
 # Neither language's built-in reduction is a plain double fold, and the two disagree with each
-# other: base R's sum() accumulates in 80-bit long double on x86, while CPython's sum() has
-# applied Neumaier compensation to float sequences since version 3.12. Both are more accurate
-# than a naive fold, but they are more accurate in different ways, so an inner product of
-# length three or more can land on different doubles in the two ports. Spelling the loop out
-# keeps the arithmetic identical, which is what the cross-language guarantee needs.
+# other: base R's sum() accumulates in 80-bit long double on x86 and rounds the total to double,
+# while CPython's sum() has applied Neumaier compensation to float sequences since version 3.12.
+# Rounding a second time can land R's on another double even for two terms
+# (sum(c(1, 2^-53 + 2^-80)) is 1, where the fold gives the next double up), and CPython's
+# compensation can move a sum of three terms or more. Spelling the loop out keeps the arithmetic
+# identical, which is what the cross-language guarantee needs.
 .dot <- function(a, b, m) {
   s <- 0
   if (m > 0) for (k in seq_len(m)) s <- s + a[k] * b[k]
@@ -119,17 +126,17 @@ as241 <- function(p) {
 #
 # A negative pivot means the covariance implied by the specified standard deviations and
 # correlations is not positive definite, so no random-effect distribution has those moments.
-# The previous code clamped the pivot at zero and carried on silently, which did not fail but
-# did not honour the specification either: the factor it returned generated random effects
-# whose standard deviations were several times the requested ones. A correlation set that base
-# R's chol() rejects has to be an error, because the alternative is plausible-looking data from
-# a process the user never described.
+# Clamping the pivot at zero and carrying on would not fail, but it would not honour the
+# specification either: the factor would generate random effects whose standard deviations are
+# several times the requested ones. A correlation set that leaves a negative pivot is therefore
+# an error, because the alternative is plausible-looking data from a process the user never
+# described. (Base R's chol() also refuses a zero pivot, which this one accepts, as below.)
 #
 # A pivot of exactly zero is left alone. It is a useful case, and no kind of failure: it is
 # what a slope with a standard deviation of zero produces, which is how a term is held fixed
 # while the rest of the structure is kept intact. The tolerance below absorbs the rounding of
 # an exactly-singular matrix, so a term that is negative only numerically, with no true
-# negativity behind it, is still clamped as before.
+# negativity behind it, is clamped at zero.
 .cholesky <- function(cov, label = NULL, cols = NULL) {
   n <- nrow(cov); L <- matrix(0, n, n)
   tol <- .Machine$double.eps * n * max(c(diag(cov), 1))
@@ -198,19 +205,23 @@ as241 <- function(p) {
   length(thresholds) + 1
 }
 
-# Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG; bit-identical with core.py.
+# Marsaglia-Tsang Gamma(shape, scale=1) from the shared RNG, mirroring core.py's gamma_mt()
+# operation for operation, with the one exception set out below for the boost.
 #
-# The cube is written as two multiplications rather than `^3`. R's `^` special-cases small
-# integer exponents into repeated multiplication, whereas Python's `**` calls the library
+# The cube is written as two multiplications rather than `^3`. R's `^` computes a square, and
+# from R 4.6.0 a cube, by repeated multiplication, whereas Python's `**` calls the library
 # pow(); measured over 200,000 draws in this generator's range the two disagree on a third of
 # inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both languages, and
 # they also decide the rejection step, so aligning them keeps the accept/reject sequence (and
 # hence the number of draws consumed) identical across the two ports.
 #
-# The boost u^(1 / shape) is computed with `^`, which calls pow(), as Python's `**` does, unless
-# 1 / shape is exactly 2, 3 or 4. From R 4.6.0, a cube or a fourth power is repeated
-# multiplication, so a shape of exactly 1/3 or 1/4 can draw a different variate here than in
-# core.py. spec/SPEC.md sets the case out under Scope of the guarantee.
+# The boost u^(1 / shape) is computed with `^`, which calls pow(), as Python's `**` does, except
+# for an exponent of exactly 2. R computes that square as u * u, and on Linux Python's u ** 2.0
+# differed from u * u for 0.08% of this generator's uniforms, so core.py computes it as u * u
+# too. From R 4.6.0, R also computes a cube or a fourth power by repeated multiplication, where
+# core.py calls pow(), as R did before 4.6.0. Under R 4.6.0 or later, a shape of exactly 1/3 or
+# 1/4 can therefore draw a different variate here than in core.py. spec/SPEC.md sets the case out
+# under Scope of the guarantee.
 .gamma_mt <- function(rng, shape) {
   if (shape < 1) return(.gamma_mt(rng, shape + 1) * rng$uniform()^(1 / shape))
   d <- shape - 1 / 3; cc <- 1 / sqrt(9 * d)
@@ -248,9 +259,9 @@ as241 <- function(p) {
 }
 
 # exp(w) for the two lognormal families, where w = eta + sigma * z. exp() overflows beyond about
-# 709.78, and R returned Inf for every such row while Python's math.exp() raised a bare
-# OverflowError. The refusal names eta, since exp(eta) itself can be finite in a row whose
-# normal draw carries w past the limit.
+# 709.78, where R's exp() returns Inf and Python's math.exp() raises a bare OverflowError, so both
+# twins refuse the value with the same message. The refusal names eta, since exp(eta) itself can
+# be finite in a row whose normal draw carries w past the limit.
 .lognormal_exp <- function(w, family, eta) {
   val <- exp(w)
   if (!is.finite(val)) .stop_lognormal_overflow(family, eta)
@@ -262,9 +273,9 @@ as241 <- function(p) {
 #
 # A shape of zero leaves no distribution to draw from. invlogit(eta) rounds to 1 from an eta of
 # about 36.74 and underflows to 0 below about -745.1, and a tiny phi can take either product to
-# zero by itself. R's Gamma sampler then returned 0, so the response came out as exactly 0, 1 or
-# NaN, while Python's raised ZeroDivisionError. When both shapes are tiny, both variates can also
-# underflow to zero and leave 0 / 0. Both cases are refused before the division.
+# zero by itself. R's Gamma sampler would return 0 there and leave a response of exactly 0, 1 or
+# NaN, while Python's would raise ZeroDivisionError. When both shapes are tiny, both variates can
+# also underflow to zero and leave 0 / 0. Both cases are refused before the division.
 #
 # Otherwise, the ratio rounds to exactly 1 whenever y is below about 2^-54 of x, as happens at
 # realistic means near a ceiling, and it is exactly 0 when x underflows. brms's Beta() refuses

@@ -17,7 +17,7 @@ names. Otherwise, the full path to that example's JSON file, ready to pass
 to \code{\link[=load_spec]{load_spec()}}.
 }
 \description{
-pilotr ships one ready-to-run specification per design family, as JSON, in the
+pilotr ships eight ready-to-run design specifications, as JSON, in the
 package's \verb{examples/} directory. These are the same files that drive the
 Python twin and the no-code app, so a design authored in one place runs
 unchanged in the others. \code{pilotr_example()} lists them, or returns the path to

@@ -1,8 +1,7 @@
 """Check that the version strings set by hand at release agree with the packages.
 
-The R and Python packages are released separately, so their version numbers can differ
-(R 0.3.1 reached CRAN while PyPI stayed at 0.3.0), and the check compares each language
-with itself instead of requiring every file to agree:
+The R and Python packages are released separately, so their version numbers can differ,
+and the check compares each language with itself instead of requiring every file to agree:
 
 - R: DESCRIPTION's Version is the only R-side copy. inst/CITATION and the About article
   read it at run time.

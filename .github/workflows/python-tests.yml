@@ -48,10 +48,9 @@ name: python-tests
 permissions: read-all
 
 jobs:
-  # The R half is held to R CMD check on six OS and version cells. Nothing held the Python half
-  # to any standard, although its sources already carried noqa markers from a linter that had
-  # stopped being run. The rule set is pinned in python/pyproject.toml rather than given here, so
-  # that a ruff release cannot silently widen or narrow what CI enforces.
+  # The R half is held to R CMD check on six OS and version cells, and this job holds the Python
+  # half to ruff. The rule set is pinned in python/pyproject.toml rather than given here, so that
+  # a ruff release cannot silently widen or narrow what CI enforces.
   lint:
     name: ruff
     runs-on: ubuntu-latest
@@ -62,14 +61,14 @@ jobs:
           python-version: '3.12'
       - name: Install ruff
         run: python -m pip install --upgrade pip ruff
-      # python and tools: naming python/ alone left tools/parity -- the harness
-      # that decides whether the two halves agree -- linted by nothing at all.
+      # python and tools: naming python/ alone would leave tools/parity -- the
+      # harness that decides whether the two halves agree -- linted by nothing at all.
       # tools/ is covered by the root ruff.toml, which extends the same pinned
       # settings so both trees are held to one rule set.
       - name: Lint the Python sources
         run: ruff check python tools
       # The version strings set by hand at release (CITATION.cff, the Python copies and the
-      # README citations) drifted apart before this check existed. It needs only the
+      # README citations) can drift apart unless something checks them. It needs only the
       # standard library, so it runs here beside the linter.
       - name: Check that the release metadata agree
         run: python tools/check_versions.py
@@ -92,8 +91,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # The mixed extra adds statsmodels and pandas to the power extra's scipy. With the power extra
-      # alone, every power_mixed test skipped here and ran only in the minimum-versions job below,
-      # so only the oldest supported statsmodels release was tested. jsonschema lets
+      # alone, every power_mixed test would skip here, and only the minimum-versions job below,
+      # which installs the oldest supported statsmodels release, would run them. jsonschema lets
       # tests/test_schema.py put specifications through spec/design.schema.json. The package
       # itself never reads the schema, so jsonschema is installed for the tests alone.
       - name: Install with the mixed extra
@@ -103,11 +102,10 @@ jobs:
 
       # A file opened without an encoding is read and written in the locale's encoding, which is
       # UTF-8 on these Linux runners and cp1252 on most Windows machines, so a test of non-ASCII
-      # text can pass here and fail there. Dataset.to_csv raised UnicodeEncodeError for a Polish
-      # label on Windows for that reason. From Python 3.10, -X warn_default_encoding issues an
+      # text can pass here and fail there. From Python 3.10, -X warn_default_encoding issues an
       # EncodingWarning wherever an encoding is left out (PEP 597), and -W error makes the
       # warning a failure, so the suite catches such a call on Linux. Python 3.9 has no
-      # EncodingWarning, so its cell runs the suite as before.
+      # EncodingWarning, so its cell runs the suite without those two flags.
       - name: Run the test suite
         working-directory: python
         run: |
@@ -256,27 +254,31 @@ jobs:
       - name: Compare the dumps against tolerance.json and golden.json
         run: python tools/parity/compare.py
 
-      # The validators are the other half of the parity contract: a specification
-      # accepted by one implementation and refused by the other means a design that
-      # runs in one language and fails in the other. The script exits non-zero on
-      # any disagreement over its battery of valid and invalid specifications, and
-      # when the schema refuses a specification both validators accept.
-      - name: Cross-check the two validators on the shared battery
+      # The validators and readers are the other half of the parity contract: a specification
+      # accepted by one implementation and refused by the other means a design that runs in one
+      # language and fails in the other. validate_cross.py puts the same parsed specifications to
+      # both validate_spec() functions and the same file bytes to both load_spec() readers, and
+      # where both accept a file, the data each simulates from it must hash alike. It also
+      # compares the two-group checks of power_design() and power() and the wording of
+      # power_mixed()'s link-scale warning. It exits non-zero on any disagreement, and when the
+      # schema refuses a specification both validators accept.
+      - name: Cross-check the two validators, readers and power checks
         run: python tools/parity/validate_cross.py
 
       # solve_curve() sits outside the dump harness because its fit calls exp() and
       # log(), whose rounding no standard fixes and whose implementations the two
       # languages do not share, so a golden hash over it would pin one platform's
       # maths library. It is gated by a relative-difference comparison instead,
-      # together with the text of every refusal it can raise.
+      # together with the text of a selection of its refusals.
       - name: Cross-check the two curve solvers
         run: python tools/parity/solve_cross.py
 
       # A specification file is the one artefact the two halves share, so each number in it has
       # to name the same double in both readers. R writes spec_json() for 20,000 doubles and
       # Python reads them back, and a single number read differently fails the job. This runner's
-      # R has long doubles, with which the 0.3.1 writer put several of the 20,000 one unit in the
-      # last place away.
+      # R has long doubles, under which spec_json(), checking its digits with as.numeric() alone,
+      # would write several of the 20,000 one unit in the last place away, so the script's count of
+      # those shows the batch can catch that fault.
       - name: Read back in Python the numbers R writes with spec_json()
         run: python tools/parity/json_roundtrip.py
 

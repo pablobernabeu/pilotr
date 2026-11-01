@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pytest
 
 from pilotr import RNG, as241, replicate_seeds, simulate, load_spec, validate_spec
+from pilotr.core import gamma_mt
 
 SPEC = os.path.join(os.path.dirname(__file__), "..", "..", "spec", "examples")
 
@@ -271,6 +272,42 @@ def test_a_beta_response_with_a_shape_of_zero_or_two_gamma_variates_of_zero_is_r
     # Within the bounds the message gives, a proportion is drawn.
     p = simulate(_beta_spec(36.7, 2, n=8, grp=0.0)).column("p")
     assert all(0.0 < v < 1.0 for v in p)
+
+
+class _FixedDraws:
+    """Normals of 0 and one fixed uniform. gamma_mt() then accepts its first proposal and returns
+    shape - 1/3 for a shape of at least 1. For a shape below 1, it boosts the variate for
+    shape + 1 with the same uniform."""
+
+    def __init__(self, u):
+        self.u = u
+
+    def normal(self):
+        return 0.0
+
+    def uniform(self):
+        return self.u
+
+
+def test_a_gamma_shape_of_one_half_is_boosted_by_u_times_u_as_in_the_r_twin():
+    # R's ^ computes a square as u * u, where ** calls pow(). For this uniform, the 860th that
+    # RNG(1) draws, glibc's pow() returned the double below u * u, so a Beta design with eta = 0
+    # and phi = 1, whose Gamma shapes are both 1/2, drew different data in the twins.
+    u = 0.6979060118654794
+    assert u * u == float.fromhex("0x1.f2c336631a082p-2")
+    g = gamma_mt(_FixedDraws(u), 1.5)
+    assert gamma_mt(_FixedDraws(u), 0.5) == g * (u * u)
+    # Any other exponent goes through pow(), as in R before 4.6.0.
+    for shape in (1 / 3, 0.25, 0.4):
+        g = gamma_mt(_FixedDraws(u), shape + 1.0)
+        assert gamma_mt(_FixedDraws(u), shape) == g * u ** (1.0 / shape)
+    # The boost's uniform is still drawn after the Gamma(3/2) variate.
+    a, b = RNG(2026), RNG(2026)
+    for _ in range(2000):
+        x = gamma_mt(a, 0.5)
+        g = gamma_mt(b, 1.5)
+        v = b.uniform()
+        assert x == g * (v * v)
 
 
 def test_a_lognormal_response_that_overflows_is_refused():

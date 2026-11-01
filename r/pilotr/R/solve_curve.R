@@ -25,9 +25,7 @@
 # where the logit's covered eight. Two draws that disagree this much show that twelve curves
 # cannot separate the links at this replicate count. Most of what separates a solved size from
 # the analytic one is Monte Carlo noise in the curve, and only a little of it is the link. The
-# probit is kept for its shape. Up to 0.3.1 the calibration's curves shared their random numbers
-# across grid points, as every sweep did then, and on those smoother curves the probit led in both
-# draws.
+# probit is kept for its shape.
 #
 # The inversion and its interval are the delta method that MASS::dose.p() applies to a fitted
 # glm: the solved point on the fitted scale is (link(target) - intercept) / slope, and its
@@ -58,8 +56,8 @@
 # The regression is written out here, with no call to glm(), because the Python twin has no glm
 # to hand it to and the two engines have to agree. With an intercept and one slope the weighted
 # normal equations are a two-by-two solve in closed form, small enough to mirror line for line,
-# and the reductions are spelled out as loops for the reason core.R gives: base R's sum() and
-# CPython's sum() are each more accurate than a plain double fold, and in different ways.
+# and the reductions are spelled out as loops for the reason core.R gives: neither base R's sum()
+# nor CPython's sum() is a plain double fold, and the two depart from it in different ways.
 #
 # Extrapolation is the one thing these functions must not do. A curve that does not reach the
 # target within the range it swept is refused, and so is a fit that solves outside that range.
@@ -204,13 +202,15 @@
 #' not separate the two links, and the probit is chosen for its shape.
 #'
 #' The interval is the delta-method interval of `MASS::dose.p()`, computed on the scale named by
-#' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural
-#' one. That asymmetry is the honest shape: at the top of a power curve a given change in rate costs
-#' far more sample size than the same change lower down. Where the two-parameter model does not
-#' describe the curve, the interval is widened by the heterogeneity factor of probit analysis,
-#' Pearson's chi-square over its degrees of freedom (Finney, 1971), reported as `dispersion`. It
-#' is floored at 1, so a well-fitting curve is left alone and a badly-fitting one cannot report a
-#' narrower interval than its own residuals justify.
+#' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural one.
+#' That asymmetry is the honest shape: at the top of a power curve a given change in rate costs far
+#' more sample size than the same change lower down. In the checks against [stats::power.t.test()]
+#' above, Fieller's interval for a ratio (Fieller, 1954), tried as the alternative, covered the
+#' analytic answer as often, at nearly the same width, so the interval `MASS::dose.p()` reports is
+#' kept. Where the two-parameter model does not describe the curve, the interval is widened by the
+#' heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
+#' (Finney, 1971), reported as `dispersion`. It is floored at 1, so a well-fitting curve is left
+#' alone and a badly-fitting one cannot report a narrower interval than its own residuals justify.
 #'
 #' The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
 #' square root of the sample size. Sweep something else,
@@ -243,13 +243,15 @@
 #' subject counts must be large enough to put that ceiling well above the target.
 #'
 #' What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between the
-#' fitted shape and the true curve, and it treats the points of the curve as independent. Every
-#' sweep in pilotr now draws each point's replicates from a seed of its own (see [sweep_spec()]).
+#' fitted shape and the true curve, and it treats the points of the curve as independent. By
+#' default, every sweep in pilotr draws each point's replicates from a seed of its own (see
+#' [sweep_spec()]).
 #' Over 1,000 simulated curves for each combination of four effect sizes and three target powers,
 #' at 400 replicates a point, the nominal 95% interval covered the analytic sample size in 96.5%,
 #' 95.9% and 96.2% of solves on the three grid shapes. For an effect size swept at a fixed sample
-#' size, it covered the analytic effect in 95.7% of solves. When every point reused the
-#' specification's seed, as up to 0.3.1, the figures were 87.8%, 94.0%, 93.5% and 70.3%. A curve
+#' size, it covered the analytic effect in 95.7% of solves. With `seeds = "shared"` (`.seeds` in
+#' [sweep_spec()]), every point reused the specification's seed, and the figures were
+#' 87.8%, 94.0%, 93.5% and 70.3%. A curve
 #' assembled by hand, from separate runs that each started from the same seed, shares its noise in
 #' the same way. In the calibration's 36 checks, the solved size sat within 2.6% of the analytic
 #' answer on average and within 7.7% at worst. Nearly all of that error is the Monte Carlo noise

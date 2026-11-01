@@ -8,6 +8,9 @@
 #' package's functions directly. Running locally gives each user a private R process, so no one
 #' else's work waits on theirs.
 #'
+#' The app needs the 'shiny' and 'ggplot2' packages, which pilotr only suggests, and its Verify
+#' button needs the 'callr' package.
+#'
 #' Each power analysis and power curve in the app runs in one R process, and the session that
 #' asked for it waits for the result. Its controls and outputs do not update until the run ends.
 #' For a heavy run, download the specification and call [power_design()] or [power_mixed()] from
@@ -38,17 +41,14 @@ run_app <- function(..., async = NULL) {
   if (async && !async_installed)
     stop("Please install 'future' and 'promises' to run power in the background, ",
          "or set async = FALSE.")
-  # The app reads this option when shiny sources app.R, which happens inside runApp() below. The
-  # app used to decide for itself, from whether future and promises were installed, so
-  # async = FALSE changed nothing.
+  # The app reads this option when shiny sources app.R, which happens inside runApp() below, and
+  # runs power in a background process only when it is TRUE.
   old_options <- options(pilotr.app_async = async)
   on.exit(options(old_options), add = TRUE)
   # A plan the caller has set is theirs, and is kept. Over a sequential one, two workers are
   # enough: a session runs one power analysis at a time, and each further worker is an idle R
-  # process. This function used to set a plan with a worker for every core and to end by setting
-  # a sequential plan, which discarded whatever plan had been in force. future's vignette for
-  # package developers ("Avoid changing the future backend") asks a function that sets a plan to
-  # undo it on exit, on error as well.
+  # process. future's vignette for package developers ("Avoid changing the future backend") asks
+  # a function that sets a plan to undo it on exit, on error as well.
   if (async && inherits(future::plan(), "sequential")) {
     old_plan <- future::plan(future::multisession, workers = 2)
     on.exit(future::plan(old_plan), add = TRUE)

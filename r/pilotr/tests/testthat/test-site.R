@@ -186,6 +186,47 @@ test_that("the browser build's page has the app's title and an icon", {
   }
 })
 
+# The files app-lite/engine-files.txt lists, sourced into an environment of their own. The browser
+# build sources these files and no others. devtools::test() puts every pilotr function on the
+# search path, internal ones included, so the environment sees the default packages alone.
+browser_engine <- function() {
+  listed <- trimws(sub("#.*$", "", readLines(repo_path("app-lite", "engine-files.txt"))))
+  listed <- listed[nzchar(listed)]
+  r_dir <- site_file("R")
+  engine <- new.env(parent = as.environment("package:stats"))
+  for (f in listed) {
+    path <- file.path(r_dir, f)
+    if (!file.exists(path)) stop("app-lite/engine-files.txt lists ", f, ", which r/pilotr/R lacks")
+    sys.source(path, envir = engine)
+  }
+  engine
+}
+
+test_that("the browser build's engine files define every function they call", {
+  # codetools::findGlobals() names each function and variable that a function uses without
+  # defining it, so one that neither the files nor the default packages define fails here,
+  # wherever the files use it.
+  skip_if_not_installed("codetools")
+  engine <- browser_engine()
+  for (name in ls(engine, all.names = TRUE)) {
+    if (!is.function(engine[[name]])) next
+    used <- codetools::findGlobals(engine[[name]])
+    expect_identical(used[!vapply(used, exists, logical(1), envir = engine)], character(0),
+                     info = name)
+  }
+})
+
+test_that("the browser build's engine files load and simulate every shipped example", {
+  engine <- browser_engine()
+  for (ex in pilotr_example()) {
+    refusal <- tryCatch({
+      engine$simulate_design(engine$load_spec(pilotr_example(ex)))
+      NULL
+    }, error = conditionMessage)
+    expect_null(refusal, info = ex)
+  }
+})
+
 test_that("the hub's pages read and write site storage inside try blocks", {
   for (page in c("landing.html", "404.html")) {
     path <- repo_path(".github", page)

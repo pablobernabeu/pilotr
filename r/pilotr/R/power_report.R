@@ -340,7 +340,10 @@ print.pilotr_report <- function(x, ...) {
 }
 
 
-# --- Rendering. Every line below has a twin in python/pilotr/report.py. ---------------------------
+# --- Rendering. -----------------------------------------------------------------------------------
+#
+# Every line below has a twin in python/pilotr/report.py, except those that render a
+# precision_design() result, which exist in R alone, as the top of this file says.
 #
 # Fields are read with [[ ]], which matches a name exactly. A record read from JSON leaves out a
 # field it has no value for, and `$` would then match a longer name: `solved$n` found `n_points`

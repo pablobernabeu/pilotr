@@ -6,7 +6,7 @@
 
 #' Example design specifications shipped with pilotr
 #'
-#' pilotr ships one ready-to-run specification per design family, as JSON, in the
+#' pilotr ships eight ready-to-run design specifications, as JSON, in the
 #' package's `examples/` directory. These are the same files that drive the
 #' Python twin and the no-code app, so a design authored in one place runs
 #' unchanged in the others. `pilotr_example()` lists them, or returns the path to

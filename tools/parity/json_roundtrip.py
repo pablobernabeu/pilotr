@@ -3,20 +3,21 @@
 A specification file is the one artefact the two packages share, so each number in it has to
 name the same double in both. spec_json() writes a number at the shortest width, 15, 16 or 17
 significant digits, that a correctly rounded reader brings back to the double R holds. It checks
-each candidate with jsonlite, whose strtod() rounds correctly, as Python's json does. It used to
-check them with as.numeric(), which on a build of R with long doubles, such as R on x86 Windows
-and Linux, rounds a decimal twice, first to long double and then to double. About one number in
-5,000 to 7,000 was then written in a form that jsonlite and Python read one unit in the last
-place away, and a specification saved and reloaded simulated different data.
+each candidate with jsonlite, whose strtod() rounds correctly, as Python's json does. A check with
+as.numeric() alone, which old_rule() in the R driver reproduces, is not enough: on a build of R
+with long doubles, such as R on x86 Windows and Linux, as.numeric() rounds a decimal twice, first
+to long double and then to double, so it passes some numbers at a width that jsonlite and Python
+read one unit in the last place away, and a specification saved and reloaded would simulate
+different data.
 
 The R side sources r/pilotr/R and writes spec_json() for 20,000 doubles drawn with a fixed
 seed, after four fixed ones, together with each double's exact hexadecimal form from
 sprintf("%a"). Half of the random doubles come from runif(), with its 32-bit resolution, and
-half from rnorm() scaled over 31 orders of magnitude. The double rounding was first measured on
-both kinds. Python reads the document with json and compares every number with float.fromhex().
-The R side also counts how many of the doubles the old as.numeric() check would have written in
-a form jsonlite reads differently. On a build with long doubles, that count shows the batch is
-large enough to catch the old fault. On a build without them, it is 0.
+half from rnorm() scaled over 31 orders of magnitude. Python reads the document with json and
+compares every number with float.fromhex(). The R side also counts how many of the doubles that
+as.numeric() check would have written in a form jsonlite reads differently. On a build with long
+doubles, that count shows the batch is large enough to catch the fault. On a build without them,
+it is 0.
 
 Usage: python tools/parity/json_roundtrip.py
 Exit status is 0 when every number reads back exactly.

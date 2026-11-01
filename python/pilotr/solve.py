@@ -25,8 +25,7 @@ coarse one. Its lead is largest on the grid that reaches a power of 0.995, with 
 where the logit's covered eight. Two draws that disagree this much show that twelve curves cannot
 separate the links at this replicate count. Most of what separates a solved size from the analytic
 one is Monte Carlo noise in the curve, and only a little of it is the link. The probit is kept for
-its shape. Up to 0.3.0 the calibration's curves shared their random numbers across grid points, as
-every sweep did then, and on those smoother curves the probit led in both draws.
+its shape.
 
 The inversion and its interval are the delta method that R's ``MASS::dose.p`` applies to a
 fitted glm: the solved point on the fitted scale is ``(link(target) - intercept) / slope``, and
@@ -57,8 +56,8 @@ The regression is written out here, with no call to a fitting library, because t
 to reproduce it and because the package's core carries no numerical dependency. With an
 intercept and one slope the weighted normal equations are a two-by-two solve in closed form,
 small enough to mirror line for line, and the reductions are spelled out as loops for the
-reason core.py gives: base R's ``sum`` and CPython's ``sum`` are each more accurate than a
-plain double fold, and in different ways.
+reason core.py gives: neither base R's ``sum`` nor CPython's ``sum`` is a plain double fold,
+and the two depart from it in different ways.
 
 Extrapolation is the one thing these functions must not do. A curve that does not reach the
 target within the range it swept is refused, and so is a fit that solves outside that range.
@@ -199,7 +198,7 @@ def _dispersion(eta, y, m):
 
 def _is_real(v) -> bool:
     """A single real number and no bool, NumPy's numbers included, which NumPy registers with the
-    numbers ABCs. The test was ``isinstance(v, (int, float))``, which refused a NumPy integer."""
+    numbers ABCs."""
     return isinstance(v, numbers.Real) and not isinstance(v, bool)
 
 
@@ -207,9 +206,8 @@ def _records(curve):
     """A curve as the records the solver reads.
 
     A pandas data frame, or any table with the same ``to_dict("records")`` method, gives its rows
-    as records, so pandas never has to be imported here. A data frame used to be refused as no
-    table of curve points. An object whose ``to_dict`` takes no such argument is returned as it
-    is, for the check that follows to refuse.
+    as records, so pandas never has to be imported here. An object whose ``to_dict`` takes no such
+    argument is returned as it is, for the check that follows to refuse.
     """
     if isinstance(curve, (list, tuple)) or not callable(getattr(curve, "to_dict", None)):
         return curve
@@ -289,9 +287,9 @@ def _numeric(curve, name, keep, what):
 
 
 def _weights(curve, n, keep):
-    """The replicate count behind each rate: a column name, a numeric value repeated over the
-    rows, or the first count column the curve carries. A NumPy count used to be looked up as a
-    column name."""
+    """The replicate count behind each rate: a column name, a number repeated over the rows (a
+    NumPy number included), a list or tuple of numbers recycled over them, or the first count
+    column the curve carries."""
     if _is_real(n):
         return [float(n)] * len(keep)
     if isinstance(n, (list, tuple)):
@@ -329,15 +327,17 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     at 3.5% against 2.2%. Curves this noisy do not separate the two links, and the probit is
     chosen for its shape.
 
-    The interval is the delta-method interval of R's `MASS::dose.p`, computed on the scale
-    named by `transform` and mapped back, so it is symmetric on that scale and asymmetric on
-    the natural one. That asymmetry is the honest shape: at the top of a power curve a given
-    change in rate costs far more sample size than the same change lower down. Where the
-    two-parameter model does not describe the curve, the interval is widened by the
-    heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
-    (Finney, 1971), reported as `dispersion`. It is floored at 1, so a well-fitting curve is
-    left alone and a badly-fitting one cannot report a narrower interval than its own
-    residuals justify.
+    The interval is the delta-method interval of R's `MASS::dose.p`, computed on the scale named
+    by `transform` and mapped back, so it is symmetric on that scale and asymmetric on the
+    natural one. That asymmetry is the honest shape: at the top of a power curve a given change
+    in rate costs far more sample size than the same change lower down. In the checks against
+    R's `stats::power.t.test` above, Fieller's interval for a ratio (Fieller, 1954), tried as
+    the alternative, covered the analytic answer as often, at nearly the same width, so the
+    interval R's `MASS::dose.p` reports is kept. Where the two-parameter model does not describe
+    the curve, the interval is widened by the heterogeneity factor of probit analysis, Pearson's
+    chi-square over its degrees of freedom (Finney, 1971), reported as `dispersion`. It is
+    floored at 1, so a well-fitting curve is left alone and a badly-fitting one cannot report a
+    narrower interval than its own residuals justify.
 
     The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
     square root of the sample size. Sweep something else, an effect size or a random-effect
@@ -363,22 +363,22 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
 
     What the interval covers is the Monte Carlo uncertainty of the fit, not the gap between
     the fitted shape and the true curve, and it treats the points of the curve as independent.
-    `power_curve` now draws each point's replicates from a seed of its own. Over 1,000
+    By default, `power_curve` draws each point's replicates from a seed of its own. Over 1,000
     simulated curves for each combination of four effect sizes and three target powers, at 400
     replicates a point, the nominal 95% interval covered the analytic sample size in 96.5%,
     95.9% and 96.2% of solves on the three grid shapes. For an effect size swept at a fixed
     sample size, it covered the analytic effect in 95.7% of solves. When every point reused the
-    specification's seed, as up to 0.3.0, the figures were 87.8%, 94.0%, 93.5% and 70.3%. A
-    curve assembled by hand, from separate runs that each started from the same seed, shares its
-    noise in the same way. In the calibration's 36 checks, the solved size sat within 2.6% of the
-    analytic answer on average and within 7.7% at worst. Nearly all of that error is the Monte
-    Carlo noise the interval is describing, and it falls with the square root of the replicate
-    count. Raise the count far enough and the interval narrows onto a fitted shape that is still
-    slightly the wrong shape, so replicates alone do not make a solved size arbitrarily accurate.
-    The remedies are more replicates, a finer grid or a design with a closed form to check
-    against. A finer grid helps only while its points are independent. With shared seeds, its
-    points share more of their noise, and the tight grid, whose points lie closest together,
-    covered 87.8% where the coarse one covered 94.0%.
+    specification's seed, as with ``seeds="shared"``, the figures were 87.8%, 94.0%, 93.5% and
+    70.3%. A curve assembled by hand, from separate runs that each started from the same seed,
+    shares its noise in the same way. In the calibration's 36 checks, the solved size sat within
+    2.6% of the analytic answer on average and within 7.7% at worst. Nearly all of that error is
+    the Monte Carlo noise the interval is describing, and it falls with the square root of the
+    replicate count. Raise the count far enough and the interval narrows onto a fitted shape
+    that is still slightly the wrong shape, so replicates alone do not make a solved size
+    arbitrarily accurate. The remedies are more replicates, a finer grid or a design with a
+    closed form to check against. A finer grid helps only while its points are independent. With
+    shared seeds, its points share more of their noise, and the tight grid, whose points lie
+    closest together, covered 87.8% where the coarse one covered 94.0%.
 
     Parameters
     ----------
@@ -394,10 +394,11 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     y : str, optional
         Name of the column holding the decision rate. `None`, the default, takes `power` or
         `p_meaningful`, whichever is present.
-    n : str, float or sequence, optional
-        The number of replicates behind each rate, either the name of a column or a numeric
-        value, a NumPy number included. `None`, the default, takes `n_returned`, `n_converged`
-        or `n_sims`, whichever is present.
+    n : str, float, list or tuple, optional
+        The number of replicates behind each rate: the name of a column, one number for every
+        row (a NumPy number included), or a list or tuple of counts, one per row that `effect`
+        keeps, recycled if shorter and cut if longer. `None`, the default, takes `n_returned`,
+        `n_converged` or `n_sims`, whichever is present.
     effect : str, optional
         Which focal effect to solve for, when the curve holds more than one. Matched against
         the `effect` or `param` column. `None`, the default, uses every record, which is
@@ -560,7 +561,7 @@ def target_n(curve, target=0.8, **kwargs):
     curve : sequence of dict, or data frame
         A power curve, as returned by `power_curve`, or a pandas data frame of one.
     target : float, optional
-        The power to reach (default 0.8, the convention this package's plots draw a line at).
+        The power to reach (default 0.8, the conventional target).
     **kwargs
         Further arguments passed to `solve_curve`, such as `effect` to pick one focal effect
         out of a curve holding several, or `level` for the interval.

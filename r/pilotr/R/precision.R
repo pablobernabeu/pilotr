@@ -72,9 +72,9 @@
 #'   default, after a fit that is boundary-singular or failed, and `"warning"` also after a fit with
 #'   a warning or an optimiser convergence message. It has no effect on a single formula.
 #' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL`
-#'   it is derived via [model_data()], which log-transforms the outcome and
-#'   builds the contrast and interaction columns, so focal names follow the
-#'   auto-formula (interactions written as `a_b`).
+#'   it is derived via [model_data()], which adds the analysis response `.y`, on the log scale
+#'   for the lognormal families, and builds the contrast and interaction columns, so focal names
+#'   follow the auto-formula (interactions written as `a_b`).
 #' @param rope The region of practical equivalence, as a half-width or as an interval. A single
 #'   non-negative number `r` is the region from `-r` to `r`, so that an effect with
 #'   `abs(beta) < r` is treated as practically equivalent to zero. A pair `c(lower, upper)` with
@@ -251,10 +251,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 
 # The region of practical equivalence as c(lower, upper). A single finite half-width r >= 0 is
 # the region c(-r, r), and a pair of finite numbers in increasing order is the region it names.
-# Anything else is refused. The decisions used to compare each interval with `rope` and `-rope`.
-# A pair was therefore recycled across the replicates, each bound standing in turn for the
-# half-width, and a negative half-width was used as given, all without a word.
-# hpc/precision_array.R hands its ROPE variable to precision_design(), which checks it here.
+# Anything else is refused. hpc/precision_array.R hands its ROPE variable to precision_design(),
+# which checks it here.
 .as_rope <- function(rope) {
   ok <- is.numeric(rope) && all(is.finite(rope)) &&
     ((length(rope) == 1L && rope >= 0) || (length(rope) == 2L && rope[1] < rope[2]))
@@ -273,8 +271,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 # Each interval's decisions against the region c(lower, upper) from .as_rope(): meaningful when
 # the interval lies wholly above or below the region, equivalent when it lies wholly inside. Both
 # inequalities are strict, so an interval that touches a bound counts as neither. For a half-width
-# these are the comparisons made before, so its results are unchanged. hpc/precision_array.R
-# calls precision_design(), where it used to repeat the comparisons and their defect.
+# r, they are the comparisons with -r and r. hpc/precision_array.R calls precision_design(), so it
+# makes the same decisions.
 .rope_decisions <- function(lo, hi, rope) {
   list(meaningful = lo > rope[2] | hi < rope[1],
        equivalent = lo > rope[1] & hi < rope[2])
@@ -295,7 +293,8 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'
 #' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
 #' so the points of the curve are independent, as [solve_curve()] assumes when it fits them.
-#' `seeds = "shared"` runs every point from the specification's own seed instead, as up to 0.3.1.
+#' `seeds = "shared"` runs every point from the specification's own seed instead, and the points
+#' then share their noise (see [sweep_spec()]).
 #' With `workers > 1`, one worker pool is created and reused across all sample sizes.
 #'
 #' Reading the crossing off the returned curve, or off a plot of it, is what [solve_curve()]
@@ -363,8 +362,8 @@ precision_curve <- function(spec, focal = NULL, subject_ns, formula = NULL, prep
   workers <- .check_workers(workers)
   .as_rope(rope)                    # a malformed region is refused before any worker starts
   .as_ladder(formula, fallback, spec)   # and so is a malformed ladder
-  # One pool for the whole sweep, handed to every grid point. Since 0.3.0 `workers` had travelled
-  # to precision_design(), which started and stopped a pool at every point.
+  # One pool for the whole sweep, handed to every grid point, so that precision_design() does
+  # not start and stop a pool at every point.
   cl <- NULL
   if (workers > 1L) {
     cl <- parallel::makeCluster(workers)

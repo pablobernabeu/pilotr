@@ -25,3 +25,7 @@ On Windows, 14 of 1,000,000 draws differed, by 1 to 3 units in the last place.
 \examples{
 as241(0.975)   # about 1.959964
 }
+\references{
+Wichura, M. J. (1988). Algorithm AS 241: The percentage points of the normal
+distribution. \emph{Applied Statistics}, 37(3), 477-484. \doi{10.2307/2347330}
+}

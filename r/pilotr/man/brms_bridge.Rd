@@ -17,10 +17,12 @@ it is the standard deviation of the prior on the coefficient itself, on the link
 \item{interaction_scale}{The same for interaction terms. Defaults to half of \code{prior_scale}.}
 }
 \value{
-An object of class \code{pilotr_bridge}: a list with elements \code{formula}, \code{family},
-\code{priors}, and \code{code}, the last being a ready-to-fit \code{brms} model. The object is returned
-visibly, and \code{\link[=print.pilotr_bridge]{print.pilotr_bridge()}} writes \code{code} to the console, so a bare call shows
-the model while an assignment stays silent.
+An object of class \code{pilotr_bridge}, a list whose four elements are text. \code{formula} is
+the model formula, and \code{family} the brms family call, such as \code{"shifted_lognormal()"}.
+\code{priors} holds the \code{prior()} calls, one string each, and \code{code} the lines that load brms and
+fit the model with \code{brm()}, ready to copy into a script once \code{your_data} names the data. The
+object is returned visibly, and \code{\link[=print.pilotr_bridge]{print.pilotr_bridge()}} writes \code{code} to the console, so a
+bare call shows the model while an assignment stays silent.
 }
 \description{
 Derive a brms formula, family, and priors from a design spec
@@ -47,6 +49,8 @@ coefficient's column in \code{model_data(spec, simulate_design(spec))}, an inter
 column included. The coefficient's prior is then \code{normal(0, s * sd_y / sd_x)}, where \code{s} is
 \code{prior_scale} for a main effect and \code{interaction_scale} for an interaction, and the
 random-effect standard deviations take a half-normal prior with standard deviation \code{sd_y}.
+A coefficient whose column does not vary in the design cannot be told apart from the
+intercept. For these families, it draws a warning, and its prior is scaled as if \code{sd_x} were 1.
 For \code{bernoulli}, \code{poisson}, \code{ordinal} and \code{beta}, the coefficients are on the logit or log
 scale, which does not depend on the response's units. A coefficient's prior is then
 \code{normal(0, s)} per unit of its column, and the random-effect standard deviations take

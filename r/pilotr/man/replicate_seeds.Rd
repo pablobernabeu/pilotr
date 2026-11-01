@@ -21,8 +21,9 @@ task that has to reproduce one replicate on its own, can use the same rule and s
 same data.
 }
 \details{
-Until 0.3 the rule was \code{base + (i - 1)}, and consecutive seeds are not independent streams in
-this generator. Seeding is affine in the seed, setting \code{s1} to \verb{1 + (seed mod 2147483562)} and
+The simpler rule, \code{base + (i - 1)}, will not do, because consecutive seeds are not independent
+streams in this generator.
+Seeding is affine in the seed, setting \code{s1} to \verb{1 + (seed mod 2147483562)} and
 \code{s2} from \code{s1}, and each component recurrence is linear, so at every position \code{k} the draws of
 consecutive seeds differ by very nearly the same amount mod 1. For the first draw that step
 is -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755, 0.6665 and 0.6574.
@@ -45,9 +46,7 @@ Duplicates are skipped, so no two replicates are handed the same seed and silent
 identical data, and the skipping is deterministic, so the R and 'Python' implementations
 still agree.
 
-This changed every number pilotr produced before 0.3, and the first replicate no longer uses the
-specification's own seed. Both are deliberate; pin an earlier version to reproduce earlier
-output.
+The first replicate's seed is drawn like the rest, so it is not the specification's own seed.
 }
 \examples{
 replicate_seeds(90210, 5)

@@ -1,8 +1,8 @@
 """Cross-language parity harness, Python side.
 
-Simulates every specification in spec/examples/ from the *local* package sources (not an
-installed copy) and writes one canonical dump per case, in the same format as run_r.R.
-compare.py then diffs the two sets byte for byte.
+Simulates every specification in spec/examples/ and tools/parity/cases/ from the *local*
+package sources (not an installed copy) and writes one canonical dump per case, in the same
+format as run_r.R. compare.py then diffs the two sets byte for byte.
 
 Each specification is run twice: "asis", and "noround" with ``response.round`` deleted. The
 second case matters because six of the eight shipped examples set ``round``, which quantises

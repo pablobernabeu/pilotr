@@ -1,697 +1,463 @@
 # pilotr (development version)
 
-## Read this first
+## Upgrading from the previous release (0.3.1)
 
-* `power_design()` refuses designs whose rows are correlated. It t-tests every row as an
-  independent observation, yet it accepted any Gaussian design with a two-level between factor.
-  That included designs crossed with items, designs with a within factor and subjects nested in
-  sites. Take 30 subjects crossed with 20 items, with by-subject and residual standard
-  deviations of 1 and a by-item one of 0.3. With no true effect, the row-wise t-test was
-  significant in 105 of 200 replicates, against 16 for a t-test of the subject means on the same
-  data. The power it reported was inflated and its Type M understated. It now takes one row per
-  subject and no clustering, and otherwise names the item unit, within factor or grouping factor
-  it found and points to `power_mixed()`. The no-code app, installed or in the browser, applies
-  the same rule.
+### Changed results
 
-* `brms_bridge()` and `generate_design_analysis()` emit models that brms accepts, with priors on
-  the data's scale. A prior on random-effect standard deviations was emitted for designs without
-  random effects, which brms rejects, so four of the eight shipped examples failed before
-  sampling. An interaction key was used as written, `cond:age`, where brms names the coefficient
-  `age:cond`, so brms refused a fifth example's prior on it. The priors were also fixed at a unit
-  scale described as standardised, although nothing standardised the data. On a Gaussian design
-  with a residual SD of 10, the effect's prior was N(0, 0.5) and the Savage-Dickey Bayes factor
-  was about 1 whatever the data. Priors for the continuous families now scale with the response
-  and with each column's realised standard deviation, the intercept takes brms's default, and
-  the emitted call says that its data come from `model_data()`. Emitted scripts, priors and
-  Bayes factors change.
+* `power_mixed()`, `precision_design()` and their curves fit `bernoulli` and
+  `poisson` responses with `lme4::glmer()`, where a linear model compared
+  response-scale estimates with link-scale true values. Estimates, interval
+  widths, Type M, ROPE decisions and power change. Where `formula` is taken,
+  `formula = model_formula(spec)` restores the old model.
 
-* `generate_design_analysis()` accepts a focal interaction with its parts in either order and
-  writes it into the script under the name brms gives it. `brms_bridge()` validates a
-  specification given as a list, as the other entry points do, since its priors are now
-  measured on the data that specification simulates. It refuses a `prior_scale` or
-  `interaction_scale` that is not a single positive number, and a specification that gives one
-  interaction two keys, such as `cond:age` and `age:cond`, since brms estimates one coefficient
-  for both. A coefficient whose column does not vary is reported in a warning.
+* Each point of a sweep draws its own replicates, so the results at every point
+  of `sweep_spec()`, `power_curve_mixed()`, `precision_curve()` and the no-code
+  app's power curve change. Shared seeds made `solve_curve()` intervals too
+  narrow. `seeds = "shared"` (`.seeds` in `sweep_spec()`) restores the 0.3.1
+  seeding.
 
-* A specification with two or more factors between the same unit is refused unless it declares
-  specification version 0.4, which allocates such factors jointly. pilotr assigned the levels of
-  each between factor to blocks of units on its own, so two such factors fell into the same or
-  overlapping blocks. A 2 × 2 between-subjects design over 40 subjects produced cells of 20, 0, 0
-  and 20, and the second effect and the interaction could not be estimated. The refusal names the
-  encoding that works in every version, one between factor whose levels are the cells.
-  `spec_from_model()` now builds that factor itself when it reads two factors between one unit
-  off a fitted pilot, and says so in a message. It used to write a specification that left half
-  the cells of a 2 × 2 pilot empty.
+* For `ordinal` and `beta` responses, `power_mixed()`, `precision_design()` and
+  their curves warn and withhold the mean estimate, Type M, ROPE decisions and
+  an interaction's Type S, where they compared a response-scale estimate with a
+  link-scale true value or ROPE. `formula = model_formula(spec)`, where taken,
+  restores them.
 
-* Specification version 0.4 allocates several between factors on one unit jointly, so a 2 × 2
-  between-subjects design over 40 subjects has four cells of 10. The units fall into one block
-  per combination of levels, with the first-listed factor varying slowest, and nothing is drawn.
-  A specification using this must declare `"spec_version": "0.4"`, a version pilotr 0.3.x
-  refuses to read. One that does not still gets the refusal introduced above, which names both
-  remedies. `build_spec()` and `spec_from_model()` declare the lowest version a specification
-  needs, so their output stays readable by earlier releases unless it uses a 0.4 feature. A 0.4
-  specification whose `vary_within` omits a unit of the design is refused.
+* `sweep_spec()` merges each condition from `design_conditions()` into the
+  specification's coefficients, where it replaced them and dropped every
+  coefficient a condition did not name. `unclass()` on the conditions restores
+  the replacement.
 
-* `spec_from_model()` turned a counterbalanced pilot, each subject seeing each item under one
-  condition, into a specification that crosses every subject with every item under every
-  condition, without saying so. Planning a counterbalanced study that way doubles the observations
-  per subject and overstates power. By the formulas of Judd, Westfall and Kenny (2017), the
-  `crossed_mixed_rt` example, with 30 subjects, 24 items and an effect of 0.05 on the log scale,
-  has a power of about 0.80 crossed and 0.55 counterbalanced. The specification it returns for
-  such a pilot now sets `counterbalance` on the factor, a field of specification version 0.4 (see
-  New features). `counterbalance = FALSE` returns the crossed specification, which earlier
-  releases read, with a warning. The warning names the field, and for a two-level factor also
-  the encoding that earlier releases read, a list factor between subjects and an item-set factor
-  between items.
+* For a counterbalanced pilot, `spec_from_model()` sets `counterbalance` and
+  declares specification version 0.4, where it crossed every subject with every
+  item in every condition and so overstated power. `counterbalance = FALSE`
+  restores the crossed specification, with a warning.
 
-* `power_mixed()` and `precision_design()` fit the model each family needs. They fitted a linear
-  mixed model to every response, so for `bernoulli` and `poisson` outcomes the estimate was a
-  difference on the response scale, compared with a true value on the link scale. Take 20
-  subjects crossed with 16 items and an effect of 0.5 on the logit scale. Over 30 replicates, the
-  mean estimate was 0.090 and Type M 0.21, where a logistic mixed model of the same replicates
-  gives 0.47 and 1.12, so real exaggeration read as underestimation. Against a region of
-  practical equivalence of 0.1, the interval was 0.14 wide and fell outside the region in none of
-  the replicates, against 0.71 wide and 17 of 30 on the logit scale. Counts on the same crossing,
-  with an effect of 0.3 on the log scale, gave a mean estimate of 0.90 and Type M 3.01 over 20
-  replicates, against 0.31 and 1.02. Bernoulli and Poisson designs are now fitted with
-  `lme4::glmer()` and tested with a Wald z, so Type M, mean estimates, interval widths and ROPE
-  decisions change materially. Power barely moves: 22 of the 30 accuracy replicates are
-  significant under either model. A Wald z is the test Bolker et al. (2009) recommend for such a
-  model. With few subjects or items, it rejects more often than its nominal level (Li and Redden,
-  2015).
+* For two or more factors between one unit, `spec_from_model()` builds one
+  factor whose levels are the cells, where its specification left cells empty,
+  half of them in a 2 × 2 pilot.
 
-* A design without random effects, which failed every replicate with "No random effects terms
-  specified in formula", is fitted with `lm()` or `glm()`, so every between-subjects example has
-  a power path. That includes the shipped `poisson_counts_between`, `ordinal_likert_between` and
-  `beta_proportion`, which had none in either language.
+* With `validate = FALSE`, `simulate_design()` allocates two or more factors
+  between one unit jointly, one block per combination of levels, where each
+  factor took its own blocks, which coincided or overlapped and left cells
+  empty.
 
-* For `ordinal` and `beta` outcomes, which have no frequentist backend here yet, both functions
-  warn, withhold the mean estimate, Type M and the ROPE decisions, and point to
-  `generate_design_analysis()`. A later release will refuse them or fit a proportional-odds and a
-  Beta model. Type S, which compares signs, is kept for main effects and withheld for
-  interactions. A bounded response compresses differences near the ends of its range, so an
-  interaction that is positive on the logit scale can be negative on the response scale.
+* `model_data()` fills every contrast column of a factor whose first contrast
+  column carries the factor's own name, where it left the later columns `NA`, so
+  a model using them could not be fitted and every replicate of `power_mixed()`
+  and `precision_design()` failed.
 
-* Results name the fitter and the test. `power_mixed()` returns them as `fitter` and prints them,
-  and `precision_design()` and the sweeps carry them as a column. A formula given by the user is
-  fitted as written, by `lmer()`, or by `lm()` when it has no random terms, whatever the family.
+* `calibrate_response(tune = "all")` holds the intercept, where scaling it
+  raised the responses of both lognormal families, less any shift, to the power
+  of the scaling factor. For `poisson` and `beta`, the scaling factor and the
+  attainable targets change too. `scale_intercept = TRUE` scales it as before.
 
-* `calibrate_response(tune = "all")` holds the intercept and rescales only what carries
-  variance, since the intercept is a location. Multiplying the intercept too raised every
-  response of the lognormal families, less any shift, to the power of the scaling factor. The
-  documented example turned a median reaction time of 600 ms into 16.6 hours. For `poisson` and
-  `beta`, the search for the factor began where every term, the intercept included, is zero.
-  `poisson_counts_between`, whose own total variance is 0.27, was refused a target of 1 by a
-  message that put the family's residual alone at 1.64. A target of 2 returned an intercept of
-  11.4, too large to simulate. The example now calibrates to either target and simulates.
-  Through a log or logit link, the output changes materially. For `gaussian` and `exgaussian`,
-  only the intercept of the output changes, and no power or precision result for a coefficient
-  does. `scale_intercept = TRUE` restores the old behaviour.
+* `brms_bridge()` and `generate_design_analysis()` leave the intercept to brms's
+  default prior, centred on the response for the continuous families and
+  `poisson` and on zero for the others, where a fixed `normal(0, 2.5)` prior
+  pulled the intercept of a response far from zero towards zero.
 
-* Each point of a sweep draws its own replicates. Every grid point reused the specification's
-  seed, so neighbouring points shared their random numbers, while `solve_curve()` treats them as
-  independent. Over 1,000 emulated curves a setting, its nominal 95% intervals covered the true
-  sample size in 88% of solves on a tight grid, and the true effect in 70% on an effect-size
-  axis. Grid point i of `sweep_spec()` now takes `replicate_seeds(seed, length(values))[i]`,
-  which brings the two to 96.5% and 95.7%. Every number a sweep produces changes, in
-  `power_curve_mixed()`, `precision_curve()`, the power curve of the no-code app, installed or in
-  the browser, and the HPC precision-array job, whose tasks a local `precision_curve()` over the
-  same grid now reproduces. `seeds = "shared"` (`.seeds` in `sweep_spec()`) keeps the old
-  behaviour. The coverage figures quoted for `solve_curve()` come from a new calibration,
-  `tools/calibration/solve_curve_coverage.R`, where the earlier 35 in 36 rested on 12 curves
-  whose points shared their seeds. Rerun with independent points, those 12 curves no longer
-  favour the probit link over the logit, and the documentation now says so.
+* For `gaussian`, `lognormal`, `shifted_lognormal` and `exgaussian` responses,
+  `brms_bridge()` and `generate_design_analysis()` scale the priors to the
+  response and to each column's standard deviation, where a unit scale ignored
+  the data's scale. Posteriors and Bayes factors change.
+
+* Specification fields are read by their exact names, where partial matching let
+  a random entry `subject_site` act as `subject` and, under lenient validation,
+  a misspelt `rounding` act as `round`.
+
+* `rope = c(lower, upper)` in `precision_design()` and `precision_curve()` is an
+  interval, where each value was recycled across replicates. A single
+  non-negative half-width gives unchanged results. The repository's HPC
+  precision-array job reads a `ROPE` such as `-0.02,0.05` as an interval, where
+  it gave `NA`.
+
+* The no-code app's power curve extends its grid until it brackets the 0.80
+  target, where it stopped at twice N and so was often refused or solved too
+  low.
+
+* For a design its Power tab cannot analyse, the no-code app recommends only
+  analyses that fit it, where it recommended the `power_mixed()` of both
+  packages for every such design. For ordinal and Beta designs, it recommends
+  `generate_design_analysis()` and `brms_bridge()`.
+
+* Scripts from `generate_r_script()` recommend `power_design()` for a two-group
+  Gaussian design with one row per subject, `generate_design_analysis()` for
+  ordinal and Beta responses and `power_mixed()` for any other design, where
+  every script recommended `power_mixed()`.
+
+* The repository's HPC precision-array job seeds each task as `sweep_spec()`
+  seeds its point, where every task took the specification's seed, which made
+  `solve_curve()` intervals too narrow. It counts fits as `precision_design()`
+  does, where it counted every fit that returned an estimate as converged.
+
+* `n_warning` no longer counts boundary-singular fits, which `n_singular`
+  counts, so it shows whether any fit failed to converge.
+
+* A Beta response that came out as exactly 0 or 1, which brms's `Beta()`
+  refuses, becomes the nearest double inside (0, 1) or, for a rounded response,
+  the nearest value inside it at its number of decimals. No other value changes.
+
+* `spec_json()` writes some 15- and 16-digit numbers differently, so that R and
+  Python read back exactly the double R holds, where, on R builds with long
+  doubles, some came back one unit in the last place away.
+
+* Scripts from `generate_r_script()` and `generate_design_analysis()` embed the
+  specification as JSON read with `load_spec()`, where R builds without long
+  doubles, such as on Apple silicon, could parse a number in their R code one
+  unit in the last place away and simulate different data.
+
+### Changed interface
+
+* `power_design()` refuses a design whose rows are correlated by an item unit, a
+  within factor or a grouping factor besides `subject`, where it t-tested every
+  row as independent and overstated power. The no-code app applies the same
+  rule.
+
+* `validate_spec()` refuses two or more factors between the same unit unless the
+  specification declares `"spec_version": "0.4"`, where such factors fell into
+  overlapping blocks that left cells empty. One between factor whose levels are
+  the cells works in every version.
+
+* `validate_spec()` refuses colliding names, such as a factor called `subject`
+  or a level listed twice, which moved an effect or overwrote a column, and
+  blank names. It also refuses a `random.item` entry in a design without items,
+  which was dropped.
+
+* `validate_spec()` refuses a factor that sets both `vary_within` and `between`,
+  which gave each unit one row per level, all at one level. It also refuses a
+  correlation that pairs a term with itself, which rescaled its variance, and
+  two correlations for one pair.
+
+* `precision_design()` and `precision_curve()` refuse a `rope` other than a
+  non-negative half-width or an increasing pair, where they used a negative
+  half-width as given and recycled any other vector. So does the repository's
+  HPC precision-array job for its `ROPE`.
+
+* `sweep_spec()` refuses a `design_conditions()` condition that names a
+  coefficient the specification lacks, where it used the condition as the whole
+  coefficient list. With `unclass()` on the conditions, it uses each as the
+  whole list, as before.
+
+* `power_design()` refuses a design with fewer than two subjects at a level of
+  the between factor, where three subjects in all left the pooled variance one
+  degree of freedom.
+
+* Results gain elements and columns. `power_design()` returns `alternative`,
+  and `power_mixed()`, `power_curve_mixed()`, `precision_design()` and
+  `precision_curve()` return `fitter`, which names the fitter and the test. The
+  power functions also return the Monte Carlo errors listed under New features.
+
+* In a data frame from `sweep_spec()` over `power_design()`, `power` and every
+  later column sit further right, as do `type_m` and the fit counts over
+  `power_mixed()` and from `power_curve_mixed()`. Code that selects them by
+  position gets other columns.
+
+* The specification `spec_from_model()` returns carries an `effects` attribute,
+  which records how its effects were chosen.
+
+* `simulate_design()` refuses a Poisson mean above about 708, where counts were
+  biased or intermittently refused from a mean of about 738 upwards.
+
+* `simulate_design()` refuses extreme linear predictors with the same message as
+  the Python twin, where it returned `Inf` for an overflowing lognormal or
+  shifted lognormal response and 0, 1 or `NaN` for a Beta response.
+
+* `validate_spec()` refuses a seed beyond ±(2^53 − 1), which R and Python can
+  read as different numbers, and a `round` of 0 for a Beta response, which
+  rounded every response to 0 or 1.
+
+* `load_spec()` refuses a key repeated within one object, which R and Python
+  read differently, even with `validate = FALSE`, and so does every function
+  given a path. `validate_spec()` and every function that validates a list
+  refuse such a key in a list too.
+
+* `validate_spec()` refuses a `spec_version` given as an array, which was read
+  as its first element, and a factor level, a `vary_within` entry or a
+  `correlated` flag written as `null`, which became `NA` or `false`.
+
+* `build_spec()` leaves a seed, number of subjects or number of items that is
+  not a whole number for `validate_spec()` to refuse, where it truncated it.
+
+* `brms_bridge()` validates a specification given as a list. It refuses an
+  interaction given two keys, such as `cond:age` and `age:cond`, and a
+  `prior_scale` or `interaction_scale` that is not a single positive number.
+
+* `default_response_name("exgaussian")` returns `RT`, where it returned
+  `outcome`.
+
+* The repository's HPC precision-array job runs once its `--account` and
+  `PROJECT_DIR` are set, from the clone's `hpc/` directory with pilotr in
+  `$PROJECT_DIR/Rlib`. It no longer charges the author's account, runs a runner
+  kept outside the repository or sources the pilotr that `TOOLKIT` names.
+
+### Changed output
+
+* Printing a `power_mixed()` result names the fitter, shows Type S and Type M
+  with their Monte Carlo errors in a second table and applies `digits` to the
+  interval bounds, which had three decimals whatever `digits` said.
+
+* The no-code app's Verify button runs the exported script and certifies it only
+  when its data are identical, where it compared response sums within a
+  tolerance without running it. Otherwise, it names the first column and row
+  that differ.
+
+* Scripts from `generate_r_script()` embed a specification given as a path,
+  where they wrote the path itself, and install pilotr from CRAN, where the
+  installation line said 'once available'. Where they recommend
+  `power_mixed()`, the installation line also names lme4 and lmerTest.
+
+* The browser build of the no-code app gives commands that install pilotr from
+  CRAN, with lme4 and lmerTest or brms, and the Python package from PyPI, where
+  it installed both from GitHub with a pip command that failed in zsh.
+
+* The comments in the scripts `generate_design_analysis()` writes match what the
+  scripts do, where they named the wrong output directory, tied the R-hat limit
+  to 1.01 whatever `gate` set and left the partitions out of the settings to
+  edit.
+
+* Each task of the repository's HPC precision-array job writes the columns of a
+  `precision_curve()` row plus `pilotr_version` and `lme4_version`, where it
+  wrote `n_sims` and no `n_attempted`, `n_returned`, `n_singular`, `n_warning`
+  or `fitter`.
+
+* The no-code app's Data tab, summary, plot and data download show the last
+  simulation and its seed, where the download simulated afresh, the installed
+  app's Data tab showed the Seed box and the plot lost its grouping after a
+  factor was renamed.
+
+* The no-code app names each download after the specification it holds, where
+  the installed app used the Design name box.
+
+* `spec_from_model()` says in messages which fixed effects it took from the
+  pilot and which factors it combined or counterbalanced, and warns when it
+  returns a crossed specification for a counterbalanced pilot.
+
+* For `gaussian`, `lognormal`, `shifted_lognormal` and `exgaussian` responses,
+  `brms_bridge()` warns about a coefficient whose column does not vary.
+
+* A within factor whose `vary_within` omits a unit of the design warns (see
+  Deprecated).
+
+* `validate_spec()` reports a malformed `response`, `predictors`, `random` or
+  `spec_version` in its own words, where some stopped with a base R error.
+
+* `model_formula()` refuses, with the same message as the Python twin, a
+  specification with neither a fixed coefficient nor a random effect, where it
+  stopped with a parse error.
+
+* `validate_spec()` words its refusals of a `correlated` flag that is not a
+  boolean and of a malformed `response.thresholds` as the Python twin does.
+
+* The code that `brms_bridge()` returns says in a comment that
+  `model_data(spec, simulate_design(spec))` adds the contrast columns that its
+  formula names.
+
+* `citation("pilotr")` cites the R package, published by CRAN, with the DOI that
+  CRAN registered, <https://doi.org/10.32614/CRAN.package.pilotr>, and its CRAN
+  page, where it cited the R and Python packages with the Zenodo concept DOI,
+  <https://doi.org/10.5281/zenodo.21266313>.
 
 ## New features
 
-* `calibrate_response()` gains `denominator = "random"`, which calibrates the random components
-  plus the residual. The coefficient of a contrast coded `c(-0.5, 0.5)` is then Cohen's d in the
-  sense of Westfall, Kenny and Judd (2014). The documentation no longer calls the total, which
-  includes the fixed effects, the right denominator for an effect size, and
-  `?response_variance` shows how to turn a published d into a coefficient. In
-  `reading_time_continuous`, whose fixed effects carry 15% of the total, `cond` calibrates to
-  0.127 against the random components and the residual, and to 0.117 against the total.
+* Specification version 0.4 allocates several between factors on one unit
+  jointly, one block per combination of levels with the first-listed factor
+  varying slowest. pilotr 0.3.0 and 0.3.1 refuse a specification that declares
+  it, and earlier releases do not check the version. `build_spec()` and
+  `spec_from_model()` declare version 0.4 only for a specification that uses a
+  0.4 feature, and 0.3 otherwise, so a specification without one stays readable
+  by pilotr 0.3.0 and 0.3.1.
 
-* Every rate carries its Monte Carlo error. `power_design()` gains `power_mcse`, `power_lo` and
-  `power_hi`, the standard error and 95% Wilson interval of power, which `power_mixed()` already
-  reported, and it still returns a plain list. Both functions gain `type_m_mcse`, the standard
-  error of Type M, and a Wilson interval for Type S, `type_s_lo` and `type_s_hi`, since the
-  standard error of Type S is zero whenever no sign is wrong. `power_curve_mixed()` and
-  `sweep_spec()` return them as columns. Type S and Type M rest on the significant replicates
-  alone, which are often a handful, yet they were reported without any uncertainty. Printing a
-  `power_mixed()` result shows them in a second table, and the no-code app, installed or in the
-  browser, shows each rate with its error. The Python twin computes these values with the same
-  operations in the same order, and both test suites pin them bit for bit.
+* `counterbalance`, a specification-0.4 field on a within factor, gives each
+  subject one condition per item, rotating the lists as in a Latin square, and
+  adds a `list` column to the simulated data. `build_spec()` and the no-code app
+  offer it.
 
-* `power_mixed()` and `precision_design()` simulate a preregistered simplification rule. An
-  analysis plan that drops the random correlations, then the slopes, whenever a fit is singular
-  analyses each replicate with a model that depends on its data. Its power and Type I error rate
-  are therefore not those of the maximal model, which pilotr fitted to every replicate. `formula`
-  takes a ladder of models, and `fallback`, `"singular"` or `"warning"`, says when a replicate
-  moves on to the next rung. Each replicate keeps the first fit the rule accepts, or else the last
-  rung's fit. `model_formula()` gains `structure = c("maximal", "zcp", "intercepts")`. A ladder
-  written as those names, such as `c("maximal", "zcp", "intercepts")`, is fitted with the model
-  the family needs, and a list of formulas is fitted as written. `power_mixed()` returns and
-  prints the share of the replicates analysed at each rung as `rung_shares`, and
-  `precision_design()`, `precision_curve()` and the sweeps return it as `rung_<name>` columns.
-  `precision_curve()` gains `fallback` as well. The power vignette runs the rule on its priming
-  design, null condition included, since a rule that can end on random intercepts alone can
-  reject a true null hypothesis too often (Barr et al., 2013; Matuschek et al., 2017). A single
-  formula, the default included, gives the results it gave before.
+* `calibrate_response()` gains `denominator = "random"`, which calibrates the
+  random components plus the residual, so that, at the default
+  `target_var = 1`, the coefficient of a contrast coded `c(-0.5, 0.5)` is
+  Cohen's d (Westfall, Kenny and Judd, 2014,
+  <https://doi.org/10.1037/xge0000014>).
 
-* `spec_from_model()` reports which fixed effects it took from the pilot, and gains
-  `effects = "safeguard"`, which replaces each effect by the bound of its 60% interval nearer zero
-  (Perugini, Gallucci and Costantini, 2014), and `sesoi`, which sets named effects to a smallest
-  effect size of interest. A pilot's point estimates are noisy and, when a pilot is followed up
-  because it looked promising, biased upwards, so a study powered for them tends to be
-  underpowered (Albers and Lakens, 2018). An interval that includes zero leaves even the sign of
-  the effect open, so the safeguard then stops with an error that points to `sesoi`. The result
-  records the choice in its `effects` attribute. By default, the coefficients are the pilot's
-  estimates, as before. `?spec_from_model` explains when each choice fits, and that a named
-  `focal` in `power_mixed()` leaves the simulated effect as it is.
+* Every rate carries its Monte Carlo error: the standard error and 95% Wilson
+  interval of power (`power_mcse`, `power_lo`, `power_hi`), the standard error
+  of Type M (`type_m_mcse`) and a Wilson interval for Type S (`type_s_lo`,
+  `type_s_hi`). `power_design()` reports them all, and `power_mixed()` and
+  `power_curve_mixed()` add the last three. The no-code app shows each rate with
+  its error.
 
-* `counterbalance` on a within factor gives each subject one condition per item, rotating the
-  lists across subjects and items, as in a Latin-square design. Planning such a study with a
-  fully crossed specification doubled the observations per participant and overstated power.
-  Subject s meets item t in condition ((s − 1) + (t − 1)) mod C, where C counts the conditions,
-  or the combinations of levels when several factors are counterbalanced, and nothing is drawn.
-  The field belongs to specification version 0.4, needs an item unit and is refused with
-  `per_subject`. A warning says when the lists are unequal, because the subjects or the items are
-  not a multiple of C. `model_formula()` and `model_data()` are unchanged, since with at least C
-  subjects and C items every subject meets every condition across items and every item every
-  condition across subjects. `build_spec()` gains `counterbalance = TRUE`, and the no-code app,
-  installed or in the browser, offers it as "Counterbalanced lists" for a within design with
-  items. `spec_from_model()` sets the field when it reads a counterbalanced pilot, as the next
-  entry describes. The two-list encoding of the specification suits two conditions only, and it
-  stays documented for releases that read no version above 0.3.
+* `power_mixed()`, `precision_design()` and `precision_curve()` simulate a
+  preregistered simplification rule of the kind Barr et al. (2013,
+  <https://doi.org/10.1016/j.jml.2012.11.001>) and Matuschek et al. (2017,
+  <https://doi.org/10.1016/j.jml.2017.01.001>) discuss, given as a ladder of
+  models in `formula` and a criterion in `fallback`, and report the share of the
+  replicates analysed at each rung.
 
-* The simulated data of a counterbalanced specification name each subject's list in a column
-  `list`, placed after `subject` and `item`. Subject s follows list ((s − 1) mod C) + 1, and
-  nothing is drawn for it, so a specification without a counterbalanced factor simulates as
-  before. Such a design keeps the name `list` for that column, and `validate_spec()` refuses a
-  factor, predictor, grouping factor, contrast column or response of that name in it.
-  `spec_from_model()` recognises a counterbalanced pilot and returns a specification-0.4 design
-  with `counterbalance` set, and says so in a message. `counterbalance = FALSE` keeps the earlier
-  output, a crossed specification that releases reading 0.3 accept, with a warning. A pilot whose
-  subjects each saw only some of the items keeps `per_subject` and stays crossed, with the
-  warning, since the field needs every subject to see every item. A pilot whose model has a term
-  named `list`, as when the list is fitted beside the condition, stays crossed too, with a
-  warning that asks for that term to be renamed.
+* `model_formula()` gains `structure`, which builds the maximal,
+  zero-correlation or random-intercepts-only model, the rungs of a ladder such
+  as `c("maximal", "zcp", "intercepts")`.
 
-* `power_design()`, `power_mixed()` and `power_curve_mixed()` gain `alternative`, which plans
-  the one-sided test of a directional prediction with `"greater"` or `"less"`. Every earlier
-  result was two-sided, and the default, `"two.sided"`, leaves every number as it was. The
-  one-sided p-value comes from the statistic behind the two-sided one, a t with its degrees of
-  freedom from `t.test()`, `lm()` or lmerTest, or a Wald z. Type S and Type M are taken over the
-  replicates significant in the tested direction. `power_design()` records the test in
-  a new element, `alternative`, and the `fitter` of `power_mixed()` names the direction. On the
-  same replicates, a one-sided test at alpha rejects exactly where the two-sided test at
-  2 alpha rejects with the estimate in the tested direction. A two-sided result at 2 alpha from
-  an earlier version therefore gives the one-sided power at alpha, in the direction of the true
-  effect, as `power * (1 - type_s)`.
+* `spec_from_model()` gains `effects = "safeguard"`, which takes the bound
+  nearer zero of each effect's interval at `safeguard_level`, 60% by default
+  (Perugini, Gallucci and Costantini, 2014,
+  <https://doi.org/10.1177/1745691614528519>), and `sesoi`, which sets named
+  effects to a smallest effect size of interest (Albers and Lakens, 2018,
+  <https://doi.org/10.1016/j.jesp.2017.09.004>).
 
-* `focal` in `power_mixed()` and `power_curve_mixed()` accepts named sets of coefficients, each
-  tested jointly, so the power of a multi-degree-of-freedom effect, such as a three-level factor
-  or its interaction, can be planned. `list(interaction = c("A1_B", "A2_B"))` tests the two
-  coefficients of a 3 × 2 interaction together. Each coefficient could only be tested by itself,
-  and the power of the joint test differs from that of either coefficient. A linear mixed model
-  has Satterthwaite's F from `lmerTest::contest()`, a `glmer()` or `glm()` fit a Wald chi-square
-  and an `lm()` fit the F test of the model with and without the set, so a set of one
-  coefficient reproduces the single-coefficient test. Each set's power carries its Monte Carlo
-  error and Wilson interval, and `fitter` names the joint test. A joint test has neither a single
-  estimate nor a direction, so Type S and Type M are `NA` and a one-sided `alternative` is
-  refused. The result records the sets, its printout lists their coefficients and a sweep adds a
-  `coefficients` column. `precision_design()` and `precision_curve()` refuse sets, since a set has
-  no single interval. The Python twin's `power_mixed()` has no joint test, and its documentation
-  says so.
+* `power_design()`, `power_mixed()` and `power_curve_mixed()` gain
+  `alternative`, which plans a one-sided test with `"greater"` or `"less"`. The
+  default, `"two.sided"`, is the test of earlier releases.
 
-* `power_report()` writes a sample-size justification in Markdown from a power result and,
-  optionally, a solved curve. The documentation called the sample size from `target_n()` the
-  number a preregistration quotes, but the justification behind it had to be assembled by hand.
-  The report gives the items Lakens (2022, Table 4) asks for. It states the primary analysis with
-  its fitter, test, alpha and sidedness, and the desired power with the solved sample size, its
-  interval, transform and heterogeneity factor. Each focal effect follows with the justification
-  given for its size, and `null_result` gives the power when every focal effect is zero. The
-  simulation is accounted for as Morris, White and Crowther (2019) recommend, with the
-  replicates, the fit counts, the share analysed at each rung of a simplification rule and the
-  Monte Carlo standard error and Wilson interval of every rate, computed in the report from the
-  counts. The report ends with the versions of pilotr, R, lme4 and lmerTest, the specification's
-  seed and an MD5 checksum of the specification file's bytes. For a `precision_design()` result, each focal effect has its
-  mean interval width and the probabilities of the two decisions about the region of practical
-  equivalence, which `rope` states. The Python twin's `power_report()` writes the same text, byte
-  for byte, from the same counts, which `tools/parity/report_cross.py` checks in CI. The power
-  vignette writes one for its priming design.
+* `focal` in `power_mixed()` and `power_curve_mixed()` accepts named sets of
+  coefficients, each tested jointly, so the power of a multi-degree-of-freedom
+  effect, such as a 3 × 2 interaction, can be planned.
+
+* `power_report()` writes a sample-size justification in Markdown from a power
+  or precision result and, optionally, a solved curve, with the items of Lakens
+  (2022, <https://doi.org/10.1525/collabra.33267>) and the simulation accounting
+  of Morris, White and Crowther (2019, <https://doi.org/10.1002/sim.8086>). For
+  a precision result, each focal effect has its mean interval width and the
+  probabilities of the two decisions about the region of practical equivalence.
+  For a power result, the Python twin writes the same text from the same counts.
+
+## Minor improvements
+
+* `power_curve_mixed()` and `precision_curve()` start one worker pool for the
+  whole sweep, where each grid point started its own. `power_design()`,
+  `power_mixed()` and `precision_design()` gain `cl`, which runs them on a
+  cluster the caller has made, and, through `sweep_spec()`, one such cluster
+  runs every point of a sweep.
+
+* With `async`, the no-code app runs its power curve in a background process as
+  well as its power analysis, and, over a sequential future plan, `run_app()`
+  starts two workers, where it started one for every core.
+
+* For a design without random effects or continuous predictors, the no-code
+  app's power curve also reports the sample size that `power.t.test()` gives for
+  a power of 0.80.
+
+* In a browser tab, the browser build of the no-code app is titled 'pilotr:
+  no-code app' and shows the pilotr icon.
+
+* The no-code app shows a note when its controls have changed since the last
+  simulation.
 
 ## Fixes
 
-* Printing a `power_mixed()` result applies `digits` to the interval bounds as well as to the
-  rates. The bounds were written with three decimals whatever `digits` said, and the
-  documentation called `digits` significant digits, where it counts decimal places.
+* `power_mixed()` and `precision_design()` fit a design without random effects
+  with `lm()` or `glm()`, where every replicate failed, so every
+  between-subjects example can be analysed.
 
-* The no-code app, installed or in the browser, sends a design its power tab cannot analyse to
-  the analysis that fits it. It sent every such design to the `power_mixed()` of both packages.
-  The Python one is now offered only for one within factor crossed with items, in a family whose
-  coefficients are on the scale it analyses, and ordinal and Beta designs are sent to
-  `generate_design_analysis()` and `brms_bridge()`.
+* `power_design()` reads a missing coefficient for the tested contrast as a true
+  effect of 0, with Type S and Type M undefined, where it stopped with an error.
 
-* The no-code app, installed or in the browser, keeps the session open after an input its power
-  tab cannot use, and says what is wrong. An N of 2, a cleared N subjects box or a pasted
-  three-level design ended the session, and the design was lost with it. The Power tab now asks
-  for at least 4 subjects and reports any other error as text. In the installed app, a pasted
-  specification that `load_spec()` refuses made the power buttons do nothing, and its refusal now
-  appears there.
+* `model_data()` and `model_formula()` read a specification from its path, as
+  documented.
 
-* In the no-code app, installed or in the browser, the Data tab, the summary, the plot and the
-  data download show the last simulation, labelled with its own seed, and a note above the tabs
-  says when the controls have changed since. The summary and the plot failed after a change of
-  family or response name and lost the grouping after a change of factor name. The data download
-  was simulated afresh from the controls, so it could differ from the table on screen, and the
-  installed app's Data tab printed the Seed box, which after a change or under a pasted
-  specification was not the seed of the data. The download is now named after the simulated
-  specification and its seed. The plot of a pasted design whose factor has more than two levels
-  used to stop with "Insufficient values in manual scale" and now draws.
+* `build_spec()` assembles a valid `exgaussian` response.
 
-* The no-code app's power curve, installed or in the browser, extends its grid until it brackets
-  the 0.80 target. The grid stopped at twice the current N, which for the default design is the
-  target itself (127.5 subjects by `power.t.test()`), so about half of all runs were refused and
-  those that solved were biased low, at 122 subjects on average in an emulation of 3,000 runs. A
-  point half as large again is now added above the grid while the top point's power falls short
-  of 0.80 by more than twice its Monte Carlo error, and a point two thirds the size is added below
-  it while the bottom point's power exceeds 0.80 by as much. The grid stops at 8 times N in the
-  installed app and at 2,000 subjects in the browser, and holds 10 points at most. Each point keeps
-  the seed it was first given. At the six seeds the app's tests use, the default design now solves
-  every time, to a mean of 129 subjects, where three of the six were refused. For a design without
-  random effects or continuous predictors, the Power tab also gives the sample size
-  `power.t.test()` computes, as a check on the curve's.
+* `build_spec()` and `spec_from_model()` keep a seed of 2^31 or more, which
+  became `NA`, and the no-code app accepts such a seed and prints it in full.
 
-* `run_app()` restores the caller's future plan when the app stops, sets a plan only over a
-  sequential one, with two workers in place of one for every core, and honours `async = FALSE`,
-  which the app ignored. It used to end by setting a sequential plan, discarding any plan set
-  before. With `async`, the power curve now runs in the background process as well as the power
-  analysis. The documentation of `run_app()`, the README and the article on the no-code app say
-  what this does: it frees the app's R process for other sessions, while the session that started
-  a run waits for its result. They used to say that the app does not block and that its
-  simulations use all of your local cores.
+* `load_spec()` reads a file that starts with a byte-order mark without a
+  warning.
 
-* `n_warning` no longer counts boundary-singular fits, which `n_singular` already counts. lme4
-  records its singular-fit notice among the optimiser's messages, so every singular fit was also
-  counted as a fit with warnings, and a run could not show whether any fit had failed to
-  converge. `n_converged` and `n_singular` are unchanged.
+* `generate_design_analysis()` accepts a focal interaction with its parts in
+  either order and writes it under the name brms gives it.
 
-* Every specification field is read by its exact name. R looked fields up with `$`, which
-  matches a name partially, so a design whose random entries were `subject_site` and no
-  `subject` acquired by-subject random effects it never declared, and its data differed from the
-  Python twin's in every row. With `strict = FALSE`, a misspelt field such as `rounding` acted as
-  the field it resembled, although the warning said it would be ignored.
+* `brms_bridge()` and `generate_design_analysis()` emit models that brms
+  accepts, with a prior on random-effect standard deviations only where the
+  design has random effects and each interaction named as brms names it.
 
-* `load_spec()` and `validate_spec()` refuse a specification that repeats a key within one
-  object. JSON leaves a repeated key undefined and the two readers disagree: `{"grp": 0.3,
-  "grp": 0.5}` applied 0.3 twice in R and 0.5 once in Python. The refusal does not depend on
-  `validate`.
+* `run_app()` works without attaching pilotr, keeps a parallel future plan the
+  caller has set, restores the caller's plan when the app stops and honours
+  `async = FALSE`.
 
-* A seed must lie within ±(2^53 − 1), the range in which both twins read a JSON integer exactly.
-  Larger seeds were read as different numbers by the two readers, which then drew different data.
+* The no-code app keeps the session open after an input that its Power tab or
+  Verify button cannot use and says what is wrong.
 
-* `build_spec()` and `spec_from_model()` keep a seed of 2^31 or more, which they used to turn
-  into `NA`, and leave a non-whole seed for `validate_spec()` to refuse, where they used to
-  truncate it. Seeds in the integer range are stored as before. The app accepts a larger seed
-  for the same reason and prints it in full.
+* The no-code app's summary and plot work after a change of family or response
+  name, and the plot draws factors with more than two levels.
 
-* A factor level, a `vary_within` entry or a `correlated` flag written as `null` is refused, as
-  the Python twin refuses it. R labelled those rows `NA` and read the flag as `false`.
-
-* A malformed `response`, `predictors`, `random` or `spec_version` value is reported in the
-  validator's own words. Some shapes stopped with a base R error, and a `spec_version` given as
-  an array of two versions was read as the first.
-
-* `load_spec()` reads a file that starts with a byte-order mark without warning about it. The
-  specification format allows one, since some Windows editors add it.
-
-* `design_conditions()` changes only the effects it names. Through `sweep_spec()`, its
-  conditions replaced the whole coefficient list, so every coefficient they did not name was
-  dropped from data generation, from `model_formula()` and from the default focal set, contrary
-  to the documentation. On `reading_time_continuous`, a sweep of `cond` simulated and analysed a
-  one-coefficient model. Conditions are now merged into the specification's own coefficients, in
-  its order, and a condition naming a coefficient the specification lacks is refused. They carry
-  the class `pilotr_conditions`, which subsetting them with `[` and joining them with `c()` keep.
-  Any other list still replaces the addressed field wholesale. With 0.3.x, pass
-  `.base = spec$fixed$coefficients` to `design_conditions()` for the same result.
-
-* The `sweep_spec()` example no longer runs the null condition twice.
-
-* `pilotr::run_app()` works in a session that has not attached pilotr. The app looked for the
-  package's functions among attached packages and then for source files, and in an installed
-  package found neither, so the documented launcher stopped with "no pilotr engine sources". The
-  app now takes the functions from the package's namespace, without attaching the package.
-
-* `validate_spec()` refuses specifications whose names collide. Each of these validated and then
-  moved an effect, rescaled a variance or overwrote a column without a word: two columns with one
-  name (a factor called `subject`, a response named like a factor), a contrast column defined by
-  two factors or named like a predictor, a unit, a grouping factor, another factor or the
-  response, an interaction whose analysis column `a_b` already exists, a level listed twice, a
-  correlation pairing a term with itself or giving one pair twice, a factor both between and
-  within a unit, and a `random.item` entry in a design without items, which was dropped. Each
-  refusal reads the same in the Python twin. The rules are set out under Names in the
-  specification.
-
-* `validate_spec()` refuses a factor, predictor or extra grouping-factor name that is empty or
-  made only of spaces, and a response name made only of spaces (an empty one was already
-  refused). Such a name validated and then became a column with no visible name. An empty factor
-  name stopped `simulate_design()` with base R's "replacement has length zero", which does not
-  say which field is at fault, and a blank `random` key was reported as
-  `random. must be an object`.
-
-* Two refusals read as the Python twin's do. A `correlated` flag that is not a boolean must be
-  `true or false`, as the JSON file spells it, and `response.thresholds` must be "a number or a
-  non-empty numeric array".
-
-* `model_data()` no longer fills a factor's later contrast columns with `NA` when the first
-  contrast column carries the factor's own name. With three levels, every `power_mixed()`
-  replicate then failed to fit.
-
-* `power_design()` reports a true effect of 0, with Type S and Type M undefined (`NaN`), when the
-  specification has no coefficient for the factor's contrast, as with `"coefficients": {}`. It
-  stopped with "missing value where TRUE/FALSE needed".
-
-* `precision_design()` and `precision_curve()` check `rope`. A vector was recycled across
-  replicates, and a negative value was used as given. On the design of the `precision_design()`
-  example, the range form `c(-0.02, 0.02)` reported a `p_meaningful` of 0.200 over 30
-  replicates, where `0.02` gave 0.067. `rope` takes a half-width or an increasing pair
-  `c(lower, upper)`, which also allows an asymmetric region, and anything else is refused.
-  Results for a non-negative half-width are unchanged. The HPC precision-array job reads its
-  `ROPE` variable in either form, as `0.05` or `-0.02,0.05`, and checks it in the same way.
-
-* A Poisson mean above about 708 is refused. The sampler's starting value `exp(-mean)` is
-  subnormal there, and from a mean of about 738 the counts were biased or intermittently refused,
-  while the specification promised service up to 746. Over 40,000 draws, a mean of 744 drew counts
-  with a mean of 733.5 and a variance of 407, and a mean of 742 was refused for 4% of them. The
-  refusal reads as the Python twin's and asks for a mean of at most 708.
-
-* `spec_json()` writes each number so that 'jsonlite' and 'Python' read back exactly the double
-  R holds. Version 0.3.1 checked each candidate width with `as.numeric()`. On builds with
-  long-double arithmetic, among them R on x86 Windows and Linux, `as.numeric()` rounds a decimal
-  twice, so the check accepted some 15- and 16-digit forms that a correctly rounded reader puts
-  one unit in the last place away, about one number in 5,000 to 7,000. A specification saved and
-  reloaded then simulated different unrounded data, in R and in 'Python' alike. Candidates are
-  now checked with 'jsonlite', the reader `load_spec()` uses.
-
-* `generate_r_script()` and `generate_design_analysis()` embed the specification as the JSON
-  text `spec_json()` writes, and the script reads it with `load_spec()`, so 'jsonlite' recovers
-  every number exactly on every build of R. The specification used to be written as R code. A
-  build without long-double arithmetic, such as R on Apple silicon, can parse a 17-digit decimal
-  in R code one unit in the last place away, and likewise a 16-digit one whose digits exceed
-  2^53. A script carrying a fitted coefficient could then simulate different data there. In a
-  design analysis, the decision rule, the gate and the true values stay plain decimals wherever
-  every build reads them exactly, as it does any value typed with up to four decimal places. Any
-  other value is read through 'jsonlite'.
-
-* Beta responses stay inside (0, 1). Near a ceiling, `x / (x + y)` rounds to exactly 1 in double
-  precision (161 of 4,000 rows at an intercept of 3 and `phi = 2`), and rounding sent low
-  proportions to exactly 0 (17% of the rows at three decimals in one realistic design). brms's
-  `Beta()` refuses either value. An exact 1 or 0 now becomes the nearest double inside the
-  interval, a rounded value at 0 or 1 becomes the nearest value inside it at that many decimals,
-  and `round = 0` is refused for Beta. No other value changes, so the shipped examples simulate
-  the same data as before.
-
-* Extreme linear predictors are refused with the same message in both twins. R returned `Inf` for
-  a lognormal or shifted lognormal response whose `exp(eta + sigma * z)` overflowed, and 0, 1 or
-  `NaN` for a Beta response whose shape parameter was zero or whose two Gamma variates both
-  underflowed. Python raised a bare `OverflowError` or `ZeroDivisionError` in the same cases.
-
-* `power_curve_mixed()` and `precision_curve()` start one worker pool for the whole sweep, as their
-  documentation said. Since 0.3.0 every grid point started and stopped its own, at a cost of 20 to
-  50 seconds a point on a loaded machine. `power_mixed()`, `precision_design()` and
-  `power_design()` gain `cl`, for a cluster the caller has made, which they run on and leave
-  running. Passed through `sweep_spec()`, as in `sweep_spec(spec, path, values, power_mixed,
-  cl = cl)`, one cluster serves every point of an effect-size sweep as well.
-
-* The no-code app's Verify button runs the script that `generate_r_script()` exports, in a clean
-  R session, and reports reproduction only when the script's data are identical, column by
-  column, to the data the current specification produces. Otherwise, it names the first column
-  and row that differ. It used to simulate from the JSON in that session without running the
-  script, and compared the sums of the response column with a tolerance, so it certified a script
-  it had never run. A specification the engine refuses is now reported beside the button, where a
-  cleared N subjects box used to end the session.
-
-* Exported scripts give the CRAN installation line, naming lme4 and lmerTest only where the
-  suggested analysis needs them, and suggest the analysis that fits the design:
-  `power_design()` for a two-group Gaussian design with one row per subject,
-  `generate_design_analysis()` for ordinal and Beta outcomes, and `power_mixed()` for any other
-  design. Every script used to suggest `power_mixed()`, and its installation line said "once
-  available", although pilotr is on CRAN.
-
-* `generate_r_script()` reads a specification given as the path of its file. It used to embed
-  the path itself, so the script ran only while the file stayed at that path.
-
-* The tests need testthat 3.1.5, which added `expect_no_error()` and `expect_no_warning()`, so
-  DESCRIPTION now asks for it in place of 3.0.0. The continuous-integration job meant to test the
-  declared floors had never installed them: on R 4.6, testthat 3.0.0 does not compile and
-  ggplot2 3.4.0 does not load, and the job went on to pass on the current releases. It now runs
-  on an older R, reads the floors from DESCRIPTION and fails unless each one is installed.
-
-* The browser build of the no-code app gives the command that installs the Python package as
-  the bare `pip install "pilotr[mixed]"`, with its explanation on the line before. The command
-  ended with a `#` comment, which an interactive `zsh`, the default shell on macOS, passes on to
-  pip, so a pasted line stopped with "Invalid requirement: '#'". The R installation line keeps
-  its trailing comment, which R ignores.
-
-* `power_design()` refuses a design with fewer than two subjects at a level of the between
-  factor, so fewer than 4 subjects in all, in the 'Python' twin's words. With one subject at each
-  level, `stats::t.test()` stopped with "not enough observations", while the 'Python' twin
-  returned a power of 0. With one subject in all, the two twins stopped with different errors,
-  and with three, the pooled variance rested on a single degree of freedom. The no-code app
-  already asked for 4 subjects.
-
-* `model_data()` and `model_formula()` read a specification from its path. Both documented
-  `spec` as a path or a list, as the other entry points do, and stopped with "subscript out of
-  bounds" when given a path. The 'Python' twin's ports read one.
-
-* `model_formula()` refuses a specification with neither a fixed coefficient nor a random effect,
-  in the 'Python' twin's words. It wrote `.y ~` with nothing after it, and `as.formula()` stopped
-  on that with a parse error. `tools/parity/formula_cross.py` now compares the two twins'
-  refusals as text.
-
-* `build_spec()` assembles an `exgaussian` response. It wrote neither `sigma` nor `beta` for the
-  family, so `validate_spec()` refused the specification it returned, and
-  `default_response_name()` named the response `outcome`, the name for an unknown family, where
-  it now gives `RT`. The response is rounded to four decimals, as in the other continuous
-  families but Beta.
-
-* `build_spec()` leaves a number of subjects or items that is not a whole number for
-  `validate_spec()` to refuse, as it already did for the seed. It truncated 10.5 subjects to 10
-  in silence. Whole numbers are stored as before.
-
-* The installed no-code app names its specification, script and data downloads after the
-  specification they hold, with `design` for an empty name, as the browser build does. The
-  specification and script downloads took the Design name box, so a pasted specification was
-  saved under the name in that box, and an emptied box named the files `.json`, `.R` and
-  `_seed2024.csv`, which are hidden on Unix.
-
-* The installed no-code app labels its paste box "Design spec (JSON)", as the browser build
-  does. The label was empty, so a screen reader had only the placeholder to read out.
+* The installed no-code app labels its paste box for screen readers.
 
 ## Deprecated
 
-* A within factor whose `vary_within` omits a unit of the design now warns, in strict and lenient
-  validation alike. pilotr has always crossed a within factor with every unit, so the list
-  changed nothing. From spec version 0.4, such a list is refused.
+* A within factor whose `vary_within` omits a unit of the design warns, since
+  pilotr crosses a within factor with every unit whatever the list says. List
+  every unit instead, or make the factor between `item` if items carry it. From
+  specification version 0.4, such a list is refused.
 
 ## Documentation
 
-* `citation("pilotr")` names the R package version alone. It read "R and Python package
-  version 0.3.1" while the Python package stood at 0.3.0, and the two packages are released
-  separately. It also gives the author's ORCID iD now.
+* The cross-language guarantee is stated as it holds: R and Python simulate
+  bit-identical data where they share a maths library, as on Linux, except a
+  Beta response whose Gamma shape is exactly 1/3 or 1/4 under R 4.6.0 or later.
+  It was claimed for the Gaussian family on every platform and for any rounded
+  response. The documentation also says that one language's data can differ
+  across operating systems in the same way, where it said that a specification
+  and seed always give the same data.
 
-* `citation("pilotr")`, the About page and the repository's `README.md` name the R package's
-  publisher, in full: "Comprehensive R Archive Network (CRAN)" stands before the DOI in the
-  reference, and the BibTeX entry gives it as `publisher`. The reference named no publisher
-  before. Every reference across the package family and the author's website now names CRAN in
-  the same words.
+* The specification sets out how units are allocated to levels and clusters,
+  with worked encodings for a 2 × 2 between design, a two-list counterbalanced
+  design and randomisation within clusters, and gives every sampling rule in
+  pseudocode, correcting its account of the draws the Gamma sampler consumes.
+  Its JSON schema requires each family's parameters and refuses unknown
+  top-level fields and unused response parameters. It accepts the single-value
+  forms of `vary_within` and `thresholds`, as strict validation does.
 
-* `citation("pilotr")` and the website give the DOI that CRAN assigned to the package,
-  <https://doi.org/10.32614/CRAN.package.pilotr>, in place of the Zenodo concept DOI. It names
-  the R package across all its versions, and it is the DOI that the CRAN page and the citation
-  R generates for a CRAN package already gave, so the R package no longer circulates under two.
-  `CITATION.cff` describes both packages, so it keeps the Zenodo DOI, which archives every
-  GitHub release of both alike, and now lists each package's identifiers, marked with the
-  package they name. The repository's `README.md` gives a reference for each package.
-  The CRAN DOI and the Zenodo DOI are shown as full links on the website and in the `README.md`
-  files. The R package's `README.md` gains a badge for the DOI CRAN assigned, for GitHub and
-  CRAN, which the home page leaves out of its sidebar, where the DOI is already given under
-  Citation.
+* `?power_curve_mixed`, `?solve_curve` and the power vignette say that when an
+  effect varies from item to item, power at a fixed number of items levels off
+  below 1, however many subjects are added, so a curve over subjects can be
+  solved far from the true sample size.
 
-* The 0.3.0 and 0.3.1 entries below no longer give release dates. Both gave dates on which
-  neither version reached CRAN, and the site already prints the CRAN date beside each entry.
+* `?solve_curve` reports the coverage of its interval over 1,000 curves a
+  setting, where it reported coverage in 35 of 36 checks on curves whose points
+  shared their seeds. It says that such a curve, including one built from runs
+  that each start from the same seed, gets too narrow an interval, and that a
+  finer grid helps only while its points are independent.
 
-* The tree CRAN published as pilotr 0.3.0 is tagged `cran-0.3.0` on GitHub, and 0.3.1 is
-  tagged `v0.3.1` and archived on Zenodo. The `v0.3.0` tag and its Zenodo record predate two
-  changes that CRAN's 0.3.0 carried, namely that `brms_bridge()` returns a visible
-  `pilotr_bridge` object and that this object has a print method.
+* The power vignette gains sections on one-sided tests, a preregistered
+  simplification rule, the model and test each family gets, a sample-size
+  justification with `power_report()` and a comparison of designs with
+  different numbers of subjects and items.
 
-* DESCRIPTION declares British English (`Language: en-GB`), as the author's other R packages
-  do. A new spelling test checks the help pages, the vignettes, `README.md` and `NEWS.md`
-  against that dictionary and `inst/WORDLIST`. It fails a check run with `NOT_CRAN` set, as in
-  `devtools::check()` and on GitHub Actions, at any word found in neither, and CRAN and a plain
-  `R CMD check` skip it. The word list holds the names, terms and abbreviations that the
-  dictionary lacks, none of them a misspelling, and seven passages of the help and vignettes
-  are reworded so that the checker can read them.
+* The power and precision vignettes say that their priming example is fully
+  crossed and that a counterbalanced study has half the observations and is
+  planned with `counterbalance` or the two-list encoding. The power vignette and
+  the specification say that simulated data are complete, so a study that
+  expects to lose a proportion p of its participants recruits N / (1 − p) to
+  analyse N.
 
-* `sweep_spec()` and `solve_curve()` say that a sweep over lists, `design_conditions()`
-  included, records a grid index in its leading column, and that `solve_curve()` solves for that
-  index unless `x` names another column. Both pages show the sweep to use for a single effect,
-  `sweep_spec(spec, "fixed$coefficients$cond", values, power_mixed)`. It keeps the other
-  coefficients, and `solve_curve()` returns a minimum detectable effect from its curve.
+* The power and precision vignettes show results computed by this version, where
+  their cached results predated 0.3.0, and state that each rate is taken over
+  `n_returned`.
 
-* The specification states how units are allocated: the block rule for between factors and
-  extra grouping factors, the nesting of a between factor within clusters that follows from it,
-  and the full crossing of within factors. It gives worked encodings for a 2 × 2 between design,
-  a two-list counterbalanced design and randomisation within clusters, each held bit-identical
-  across the twins by the parity harness. The power vignette says that its priming example is
-  fully crossed, and that simulated data are complete, so expected attrition is allowed for by
-  recruiting N / (1 − p).
+* `?response_variance` no longer calls the total variance, which includes the
+  fixed effects, the right denominator for an effect size, and shows how to turn
+  a published Cohen's d into a coefficient.
 
-* The precision vignette says that its priming example is fully crossed, and that a
-  counterbalanced study has half the observations and is planned with `counterbalance = TRUE` in
-  `build_spec()` or with the two-list encoding. `?spec_from_model` explains the counterbalancing
-  warning, the field and that encoding. It also shows a `prep` function for `power_mixed()` and
-  `precision_design()` that drops the rows a counterbalanced study would not observe and runs in
-  the worker processes of `workers > 1`.
+* `?sweep_spec` and `?solve_curve` say that a sweep over lists,
+  `design_conditions()` included, records a grid index, which `solve_curve()`
+  solves for unless `x` names another column, where `?sweep_spec` said that a
+  sweep could be solved as it stood.
 
-* The cross-language guarantee is stated as it holds, in the specification, the README files,
-  `DESCRIPTION`, the vignettes, the apps' guides and the landing page. R and Python produce
-  bit-identical data wherever they share a maths library, as on Linux. On Windows they do not,
-  and a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits.
-  Measured there, about 1.4e-5 of normal draws differed, since the tail branch of AS 241 calls
-  `log()`, so Gaussian data are not exempt. Lognormal and ex-Gaussian responses differed by one
-  unit in the last place and unrounded Beta responses by up to 35, and a discrete outcome can in
-  principle move by a whole category. The guarantee used to cover the Gaussian family everywhere
-  and every family with `round` set, although `round` is refused for the discrete families.
-  Rounding has removed every continuous difference observed, but it guarantees nothing. One Beta
-  case can differ on Linux too. From R 4.6.0, R's `^` computes a cube or a fourth power by
-  repeated multiplication, where Python calls `pow()`. A Beta response whose Gamma shape is
-  exactly 1/3 or 1/4 can therefore differ in its last bits on any platform, and R's own data for
-  such a design changed with R 4.6.0. Within one language, the data are identical on one
-  platform, and across operating systems on the same terms as across languages. The vignettes
-  show determinism with `identical()`, since `all.equal()` allows a relative difference of 1.5e-8.
+* `?print.pilotr_power` says that `digits` counts decimal places, where it said
+  significant digits.
 
-* The specification documents every sampling rule a third implementation needs, in a section of
-  pseudocode: the partial Fisher-Yates shuffle, the block rules, uniform predictors and
-  reliability, the Cholesky factorisation, the two-branch inverse logit, each family's response,
-  the Poisson walk, the ordinal rule, the Marsaglia-Tsang Gamma sampler and the Beta ratio. It
-  corrects the Gamma sampler's draw consumption. A proposal draws a uniform only when its normal
-  gives a positive `v`, and a boosted variate draws its uniform after the Gamma(shape + 1)
-  variate. The schema refuses an unknown top-level field and a response parameter its family
-  does not use, requires each family's parameters, and accepts the single-value forms of
-  `vary_within` and `thresholds`, as strict validation does. `?build_spec` says why a Beta
-  response is left unrounded: at four decimals, rounding put 9.8% of the rows of one design on
-  0.0001 or 0.9999, and such rows dominate a Beta likelihood.
+* `?model_data` and `?precision_design` say that `model_data()` logs the
+  response only for the two lognormal families, where `?precision_design` said
+  for every family.
 
-* `?replicate_seeds` gives the right reason why consecutive seeds correlate. Seeding is affine in
-  the seed, so the first draws of consecutive seeds step by a constant mod 1 and correlate 0.95,
-  and a longer warm-up changes only the step (Matsumoto et al., 2007). It said that consecutive
-  replicates began a few steps apart in one sequence.
+* The guides of both builds of the no-code app say that the effect is on the
+  scale of the model's linear predictor, where both said the response scale.
 
-* The power and precision vignettes show results produced by this version, with the denominator
-  of power stated correctly (`n_returned`), Wilson intervals taken from the returned columns and
-  the model that `power_mixed()` fits. Their cached results predated 0.3.0. The precision
-  vignette no longer says that every replicate converged, and it computes each figure it quotes
-  from the cached sweep. `tools/vignette-caches.R` in the source repository regenerates the
-  caches, and a test fails when the seeds, the generative engine or a cached chunk change and the
-  caches do not.
+* The installed no-code app's Power tab says that `PILOTR_MAX_SIMS` raises its
+  cap on simulations, where it said the number was unlimited once the package
+  was installed.
 
-* `?power_curve_mixed`, `?solve_curve` and the power vignette say that when an effect varies from
-  item to item, power at a fixed number of items levels off below 1, however many subjects are
-  added (Westfall, Kenny and Judd, 2014; Judd, Westfall and Kenny, 2017). A curve over subjects
-  that levels off near the target can then be solved far from the true crossing, or as though it
-  crossed when it never does. The vignette shows how to compare designs that trade subjects for
-  items, by sweeping the number of items at a few subject counts and solving each curve.
-
-* The HPC job runs on any SLURM cluster and calls `precision_design()`, so its output has the
-  same columns and fit accounting as `precision_curve()`. The job charged the author's account,
-  wrote under the author's project paths and ran a copy of its runner kept outside the
-  repository, with a bootstrap script the repository did not hold. Its runner repeated the
-  replicate loop and counted every fit that returned an estimate as converged, the definition
-  0.3.0 replaced. The wrapper now marks the account and the project directory as the two values
-  to fill in, and runs the runner saved beside it. The README gives the commands that install
-  pilotr, lme4 and lmerTest into the project's library, shows how the task files combine into a
-  curve for `solve_curve()`, and limits the claim of exact reproduction to the simulated data,
-  since the model fits depend on the lme4 release and the platform.
-
-* The power vignette's table of fitters, the cross-language vignette and `README.md` describe the
-  Python twin's `power_mixed()` as it now stands. It fits the model the specification implies,
-  with each random effect as an independent variance component, from ports of `model_formula()`
-  and `model_data()`. `tools/parity/formula_cross.py` holds the ports to this package's functions
-  on every shipped example and parity case, the formulas character for character and the contrast
-  and product columns bit for bit.
-
-* Both apps' guides say that crossed mixed-effects power runs in R through lme4, the reference
-  backend, and in Python through statsmodels. They named lme4 for both. Before a run, the
-  installed app's power tab said that simulations were unlimited once you install the package,
-  although the app is part of the installed package. It now gives the app's cap, which
-  `PILOTR_MAX_SIMS` sets, and says to call `power_design()` directly for more. The vignette on
-  the no-code app names the tabs of both apps. It named only the tabs of the browser build.
-
-* The website's R pages link favicons that exist. pkgdown 2.1.2 changed the set of favicon files
-  its pages link, and three of them, `favicon-96x96.png`, `favicon.svg` and `site.webmanifest`,
-  returned 404 on every page. `tools/favicons/build_favicons.R` in the source repository builds
-  the set offline. In a browser tab, the browser build of the app is titled "pilotr: no-code
-  app", not "Shiny App", and shows the pilotr icon. The theme toggle on the site's landing and
-  not-found pages works in a browser that blocks site storage, where its script used to stop
-  before the toggle was wired up. The contributing guide names the checks in `tools/parity/` that
-  CI runs, in place of a comparison of CSV files to a tolerance of 1e-6. The note on advanced
-  designs in the repository describes specification 0.3.
-
-* `?load_spec` and `?simulate_design` say that a `validate` other than `TRUE` or `FALSE`
-  validates leniently, with `strict = FALSE`. `?load_spec` said that such a value was passed to
-  `validate_spec()` as its `strict` argument, and `?simulate_design` said nothing of it.
-
-* The `?pilotr` overview lists the ex-Gaussian among the response families, and the guide in the
-  browser build of the no-code app says that the paste box links to example specifications and
-  to the format. The guide sent the reader to example buttons, which the app does not have.
-
-## References
-
-Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are biased: Inaccurate
-effect size estimators and follow-up bias. *Journal of Experimental Social Psychology, 74*,
-187-195. <doi:10.1016/j.jesp.2017.09.004>
-
-Barr, D. J., Levy, R., Scheepers, C. and Tily, H. J. (2013). Random effects structure for
-confirmatory hypothesis testing: Keep it maximal. *Journal of Memory and Language, 68*(3),
-255-278. <doi:10.1016/j.jml.2012.11.001>
-
-Bolker, B. M., Brooks, M. E., Clark, C. J., Geange, S. W., Poulsen, J. R., Stevens, M. H. H. and
-White, J.-S. S. (2009). Generalized linear mixed models: A practical guide for ecology and
-evolution. *Trends in Ecology & Evolution, 24*(3), 127-135. <doi:10.1016/j.tree.2008.10.008>
-
-Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than one random factor:
-Designs, analytic models, and statistical power. *Annual Review of Psychology, 68*, 601-625.
-<doi:10.1146/annurev-psych-122414-033702>
-
-Lakens, D. (2022). Sample size justification. *Collabra: Psychology, 8*(1), 33267.
-<doi:10.1525/collabra.33267>
-
-Li, P. and Redden, D. T. (2015). Comparing denominator degrees of freedom approximations for the
-generalized linear mixed model in analyzing binary outcome in small sample cluster-randomized
-trials. *BMC Medical Research Methodology, 15*, 38. <doi:10.1186/s12874-015-0026-x>
-
-Matsumoto, M., Wada, I., Kuramoto, A. and Ashihara, H. (2007). Common defects in initialization
-of pseudorandom number generators. *ACM Transactions on Modeling and Computer Simulation,
-17*(4), 15. <doi:10.1145/1276927.1276928>
-
-Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H. and Bates, D. (2017). Balancing Type I error
-and power in linear mixed models. *Journal of Memory and Language, 94*, 305-315.
-<doi:10.1016/j.jml.2017.01.001>
-
-Morris, T. P., White, I. R. and Crowther, M. J. (2019). Using simulation studies to evaluate
-statistical methods. *Statistics in Medicine, 38*(11), 2074-2102. <doi:10.1002/sim.8086>
-
-Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
-imprecise power estimates. *Perspectives on Psychological Science, 9*(3), 319-332.
-<doi:10.1177/1745691614528519>
-
-Westfall, J., Kenny, D. A. and Judd, C. M. (2014). Statistical power and optimal design in
-experiments in which samples of participants respond to samples of stimuli. *Journal of
-Experimental Psychology: General, 143*(5), 2020-2045. <doi:10.1037/xge0000014>
+* `?run_app` and the article on the no-code app say that `async` frees the app's
+  R process for other sessions while the session that started a run waits for
+  it, where they said that the app does not block and uses all local cores.
 
 # pilotr 0.3.1
 

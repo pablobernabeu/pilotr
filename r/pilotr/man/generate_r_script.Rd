@@ -27,8 +27,10 @@ The script ends with a commented suggestion of the analysis that fits the design
 Gaussian design with one row per subject is sent to \code{\link[=power_design]{power_design()}}, whose t-test takes no
 other. An \code{ordinal} or \code{beta} outcome is sent to \code{\link[=generate_design_analysis]{generate_design_analysis()}}, which writes a
 Bayesian design analysis on the link scale to \code{design_analysis.R}, since \code{\link[=power_mixed]{power_mixed()}} fits
-such an outcome only on the response scale. Any other design is sent to \code{\link[=power_mixed]{power_mixed()}}, and
-only then does the installation line name \code{lme4} and \code{lmerTest}, which it needs.
+such an outcome only on the response scale. Running that file needs \code{brms} and a working Stan
+backend, which the installation line does not name. Any other design is sent to
+\code{\link[=power_mixed]{power_mixed()}}, and only then does the installation line name \code{lme4} and \code{lmerTest}, which it
+needs.
 
 Since the point of the script is bit-for-bit reproduction, the embedded specification has to
 preserve every coefficient exactly. The JSON text sits in a raw string that \code{\link[=load_spec]{load_spec()}}

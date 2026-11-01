@@ -1,5 +1,6 @@
-# Demo mirroring the Python run_demo.py: simulate both designs, recover parameters,
-# run a simulation-based power + design analysis, and write CSVs for the parity check.
+# Demo mirroring the Python run_demo.py: simulate six of the shipped designs,
+# recover parameters, run a simulation-based power + design analysis, and write
+# CSVs for the parity check.
 
 args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))

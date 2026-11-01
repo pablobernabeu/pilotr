@@ -8,10 +8,13 @@ build_spec(p)
 }
 \arguments{
 \item{p}{A named list of design inputs. Common fields are \code{name}, \code{seed},
-\code{n_subject}, \code{design_kind} (\code{"between"} or \code{"within"}), \code{include_items},
-\code{n_item}, \code{factor_name}, \code{lev1}, \code{lev2}, \code{intercept}, \code{effect},
-\code{family}, \code{resp_name}, and family parameters such as \code{sigma}, \code{shift}, \code{beta},
-\code{thresholds}, or \code{phi}; within-design random effects use \code{subj_int_sd},
+\code{n_subject}, \code{design_kind} (\code{"between"} or \code{"within"}), \code{include_items} and \code{n_item}
+(read for a within design only), \code{factor_name}, \code{lev1}, \code{lev2}, \code{intercept}, \code{effect},
+\code{family}, \code{resp_name} (blank or \code{NULL} for the name \code{\link[=default_response_name]{default_response_name()}} gives) and
+the family's parameters: \code{sigma} for the four continuous families, \code{shift} for
+\code{"shifted_lognormal"}, \code{beta} for \code{"exgaussian"}, \code{phi} for \code{"beta"} and, for \code{"ordinal"},
+\code{thresholds} as a single comma-separated string such as \code{"-2, -0.6, 0.6, 2"}, as the
+no-code app supplies it. Within-design random effects use \code{subj_int_sd},
 \code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
 \code{item_corr}. \code{counterbalance = TRUE} counterbalances the factor of a
 within design with items, and is ignored in any other design.}
