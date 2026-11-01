@@ -51,10 +51,11 @@ passed there without the vignettes.
   models are wrapped in `\donttest{}` and guarded with `requireNamespace()`, so
   they are skipped where those packages are unavailable.
 * shiny, ggplot2, future and promises are used by the no-code app that
-  `run_app()` launches. The app is interactive, so the example of `run_app()`
-  is wrapped in `\dontrun{}`.
-* MASS, callr, codetools and spelling are used by the tests only, and each test
-  that needs one of them skips when it is absent. testthat runs the tests, and
+  `run_app()` launches, and callr by the app's Verify button, which asks for
+  callr to be installed when it is absent. The app is interactive, so the
+  example of `run_app()` is wrapped in `\dontrun{}`.
+* MASS, codetools and spelling are used by the tests only. Each test that needs
+  one of them, or callr, skips when it is absent. testthat runs the tests, and
   knitr and rmarkdown build the vignettes.
 * Three vignette chunks that fit hundreds of mixed models are shown with
   `eval = FALSE`, and the vignettes read their results from files in
