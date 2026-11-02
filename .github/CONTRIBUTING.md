@@ -60,6 +60,27 @@ are built by `Rscript tools/favicons/build_favicons.R`. Run it, not
 `pkgdown::build_favicons()`, when the icon changes, since pkgdown's function
 would draw them from the logo, whose wordmark cannot be read at favicon sizes.
 
+Three chunks of the power and precision vignettes fit hundreds of mixed models.
+The vignettes therefore show them with `eval = FALSE` and read their results
+from three files in `r/pilotr/vignettes/`, which
+`r/pilotr/tools/vignette-caches.R` writes together with `cache-fingerprint.txt`,
+a fingerprint that only the cache test reads. The two tables and the
+`power_mixed()` object record the versions of pilotr and lme4 that produced
+them. `r/pilotr/tests/testthat/test-vignette-caches.R`, which `devtools::test()`
+runs and R CMD check skips, fails after a change to the seeds, the simulated
+data or the code of those chunks, until the caches are written afresh.
+`.github/workflows/refresh-vignette-caches.yaml` writes them on GitHub. It runs
+when the last commit of a push to a branch other than main has
+`[refresh vignette caches]` in its message, and once the workflow is on main, it
+can also be started by hand from the Actions tab. It runs the script on Linux with
+the current R release, on as many workers as the runner has cores. When the
+caches record the version in `r/pilotr/DESCRIPTION` and the cache test passes, it
+pushes the files that changed to the branch as a separate commit and starts CI
+on that commit. The fingerprint changes only with the seeds, the data or the
+chunks, so after a version bump alone that commit holds three files. Without the
+workflow, run `Rscript tools/vignette-caches.R [workers]` from `r/pilotr` and
+commit the four files it writes. On two workers a run takes about 35 minutes.
+
 brms is not a dependency of the package, so its test suite cannot ask brms
 whether it accepts the code that `brms_bridge()` and `generate_design_analysis()`
 emit. After changing either, run `Rscript tools/brms/check_bridge.R` with brms

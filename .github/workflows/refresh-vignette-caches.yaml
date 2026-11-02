@@ -1,0 +1,203 @@
+name: refresh-vignette-caches
+
+# Regenerates the cached results that the power and precision vignettes read, by
+# running r/pilotr/tools/vignette-caches.R from r/pilotr on Linux with the current R
+# release and the package's dependencies, on as many workers as the runner has
+# cores. It checks that the two tables and the power_mixed() object record the
+# version in r/pilotr/DESCRIPTION and that the cache test,
+# r/pilotr/tests/testthat/test-vignette-caches.R, passes on the result. It then
+# pushes those of the four files the script writes that changed to the branch as a
+# separate commit and starts the CI workflows on that commit, because a push made
+# with GITHUB_TOKEN starts none.
+#
+# It runs when the last commit of a push to a branch other than main has
+# '[refresh vignette caches]' in its message. Once this file is on main, it can also
+# be started by hand on a branch other than main. It never pushes to main.
+
+on:
+  push:
+    branches-ignore: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  refresh:
+    if: >-
+      startsWith(github.ref, 'refs/heads/') &&
+      github.ref_name != 'main' && github.ref_name != 'master' &&
+      (github.event_name == 'workflow_dispatch' ||
+       contains(github.event.head_commit.message, '[refresh vignette caches]'))
+    # Here rather than at the top, because every push to a branch starts a run, and a
+    # run joins a workflow-level group before the if: above skips its job. Pushes
+    # without the token would then wait behind a refresh and cancel a refresh that
+    # was waiting. A skipped job joins no group.
+    concurrency:
+      group: refresh-vignette-caches-${{ github.ref }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    # On two workers the script takes about 35 minutes, and the runner has at least
+    # two cores. The rest of the limit is room for a slow day.
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+        working-directory: r/pilotr
+    env:
+      # The four files the script writes, which are the only files this job commits.
+      CACHE_FILES: >-
+        r/pilotr/vignettes/power-mixed-cache.rds
+        r/pilotr/vignettes/power-curve-cache.csv
+        r/pilotr/vignettes/precision-curve-cache.csv
+        r/pilotr/vignettes/cache-fingerprint.txt
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      # Imports and Suggests, which hold lme4 and lmerTest for the chunks and testthat
+      # for the cache test, as R-CMD-check.yaml installs them.
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          working-directory: r/pilotr
+
+      - name: Check the R environment
+        shell: Rscript {0}
+        run: |
+          cat(R.version.string, "\n")
+          if (nzchar(R.version$status))
+            stop("R is ", R.version$status, ", where a release was expected.", call. = FALSE)
+          for (p in c("lme4", "lmerTest", "testthat")) {
+            if (!requireNamespace(p, quietly = TRUE)) stop(p, " is not installed.", call. = FALSE)
+            cat(p, format(utils::packageVersion(p)), "\n")
+          }
+          if (utils::packageVersion("testthat") < "3.1.5")
+            stop("testthat is older than the 3.1.5 that DESCRIPTION asks for.", call. = FALSE)
+
+      # The worker count changes how long the script takes and never what it returns.
+      # The fresh checkout has to be clean, so that the check before the commit judges
+      # only what the script wrote.
+      - name: Read the pilotr version and the worker count, and check the checkout
+        run: |
+          version=$(sed -n 's/^Version: *//p' DESCRIPTION | tr -d '\r')
+          test -n "$version" || { echo '::error::DESCRIPTION gives no Version'; exit 1; }
+          workers=$(nproc)
+          echo "pilotr $version from DESCRIPTION, $workers workers"
+          echo "PILOTR_VERSION=$version" >> "$GITHUB_ENV"
+          echo "WORKERS=$workers" >> "$GITHUB_ENV"
+          for f in $CACHE_FILES; do
+            git -C "$GITHUB_WORKSPACE" ls-files --error-unmatch -- "$f" > /dev/null
+          done
+          out=$(git status --porcelain --untracked-files=all)
+          test -z "$out" || { echo "$out"; echo '::error::the checkout has changes before the run'; exit 1; }
+
+      - name: Regenerate the caches
+        run: Rscript tools/vignette-caches.R "$WORKERS"
+
+      # read.csv() would read a version such as 1.0 as a number, so every column is read
+      # as text.
+      - name: Check that the caches record the version in DESCRIPTION
+        shell: Rscript {0}
+        run: |
+          want <- Sys.getenv("PILOTR_VERSION")
+          lme4 <- format(utils::packageVersion("lme4"))
+          cat("DESCRIPTION", want, "and lme4", lme4, "\n")
+          for (f in c("vignettes/power-curve-cache.csv", "vignettes/precision-curve-cache.csv")) {
+            x <- utils::read.csv(f, colClasses = "character")
+            if (!nrow(x) || !all(c("pilotr_version", "lme4_version") %in% names(x)))
+              stop(f, " has no rows or no version columns.", call. = FALSE)
+            cat(f, "records pilotr", unique(x$pilotr_version), "and lme4", unique(x$lme4_version), "\n")
+            if (!all(x$pilotr_version == want) || !all(x$lme4_version == lme4))
+              stop(f, " does not record pilotr ", want, " and lme4 ", lme4, ".", call. = FALSE)
+          }
+          v <- attr(readRDS("vignettes/power-mixed-cache.rds"), "versions")
+          cat("vignettes/power-mixed-cache.rds records", paste(names(v), v), "\n")
+          if (!identical(unname(v[c("pilotr", "lme4")]), c(want, lme4)))
+            stop("vignettes/power-mixed-cache.rds does not record pilotr ", want, " and lme4 ",
+                 lme4, ".", call. = FALSE)
+
+      # test_local() loads the package from this source tree, where the test finds
+      # vignettes/ and tools/. A skip would mean that the step tested nothing, so it
+      # fails the step too.
+      - name: Run the cache test
+        shell: Rscript {0}
+        env:
+          NOT_CRAN: 'true'
+        run: |
+          res <- as.data.frame(testthat::test_local(".", filter = "^vignette-caches$",
+                                                    reporter = "summary",
+                                                    stop_on_failure = FALSE))
+          print(res[c("test", "failed", "skipped", "error", "warning", "passed")])
+          if (!nrow(res)) stop("No test ran.", call. = FALSE)
+          if (any(res$failed > 0 | res$error | res$skipped))
+            stop("The cache test failed or was skipped.", call. = FALSE)
+
+      - name: Commit and push the caches
+        id: commit
+        working-directory: .
+        run: |
+          read -r -a files <<< "$CACHE_FILES"
+          allowed=$(printf '%s\n' "${files[@]}")
+          stray=$(git status --porcelain --untracked-files=all | cut -c4- | grep -v -x -F "$allowed" || true)
+          test -z "$stray" || { echo "$stray"; echo '::error::files other than the four the script writes changed'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "${files[@]}"
+          git status --short
+          if git diff --cached --quiet; then
+            echo 'The caches are unchanged, so there is nothing to commit.'
+            echo 'committed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          r_version=$(Rscript -e 'cat(format(getRversion()))')
+          lme4_version=$(Rscript -e 'cat(format(utils::packageVersion("lme4")))')
+          git commit -q -F - <<EOF
+          Refresh the vignette caches with pilotr ${PILOTR_VERSION} and lme4 ${lme4_version}
+
+          The refresh-vignette-caches workflow wrote this commit from ${GITHUB_SHA}
+          (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+          r/pilotr/tools/vignette-caches.R ran on ${WORKERS} workers under R ${r_version}
+          on ${ImageOS:-Linux}. The tables and the power_mixed() object record pilotr
+          ${PILOTR_VERSION}, and r/pilotr/tests/testthat/test-vignette-caches.R passed on
+          the result.
+          EOF
+          git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}" || {
+            echo "::error::the push failed. If ${GITHUB_REF_NAME} moved on during the run, start the workflow again."
+            exit 1
+          }
+          echo 'committed=true' >> "$GITHUB_OUTPUT"
+
+      # gh workflow run starts each workflow at the head of the branch. The bot's
+      # commit becomes the head of the branch and of any pull request from it, and
+      # checks count per commit, so every workflow that checks a pull request is
+      # started, whether or not it reads the caches. site.yml and publish.yml are left
+      # out because they deploy, and dependency-health.yml because it runs on a
+      # schedule. If the branch has moved on since the bot's push, CI is left to the
+      # newer push.
+      - name: Start CI on the commit
+        if: steps.commit.outputs.committed == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(git rev-parse HEAD)
+          remote=$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)
+          if [ "$remote" != "$head" ]; then
+            echo "::warning::${GITHUB_REF_NAME} is at $remote, not at the bot's commit $head, so CI is left to that push"
+            exit 0
+          fi
+          failed=0
+          for wf in R-CMD-check.yaml python-tests.yml test-coverage.yaml doi-display.yaml; do
+            gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" || {
+              echo "::error::could not start $wf"
+              failed=1
+            }
+          done
+          exit $failed
