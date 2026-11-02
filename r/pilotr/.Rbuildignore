@@ -16,3 +16,5 @@
 ^Meta$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^CRAN-SUBMISSION$
+^revdep$

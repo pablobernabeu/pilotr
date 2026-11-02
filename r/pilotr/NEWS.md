@@ -1,4 +1,4 @@
-# pilotr (development version)
+# pilotr 0.4.0
 
 ## Upgrading from the previous release (0.3.1)
 

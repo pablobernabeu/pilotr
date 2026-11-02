@@ -13,7 +13,7 @@ authors:
 # either, with the date it first became public (on CRAN or PyPI). tools/check_versions.py
 # fails CI when the version is not the newer of the two package versions.
 # First public on CRAN, 2026-09-20 (R package, while PyPI stays at 0.3.0).
-version: "0.3.1"
+version: "0.4.0"
 date-released: "2026-09-20"
 # This file describes the repository, which holds both packages, so its DOI is Zenodo's
 # concept DOI, which archives every GitHub release of both and favours neither. Each
