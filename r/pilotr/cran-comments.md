@@ -18,19 +18,22 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 41320932481 on 2026-11-01, at commit 2cd4a72 on the release
-branch. The package sources of this submission are those of that commit. Only
-this file, which the tarball leaves out, has changed since. Each leg built the
-tarball with `--no-manual` and `--compact-vignettes=gs+qpdf` and ran
+GitHub Actions, run 41537328086 on 2026-11-02, at commit cde86bd on the release
+branch. The refresh-vignette-caches workflow regenerated the three files of
+cached mixed-model results in vignettes/, so that they record 0.4.0, committed
+them as cde86bd and then started the run. The package sources of this
+submission are those of cde86bd. Only this file, which `.Rbuildignore` keeps
+out of the tarball, has changed since. Each leg built the tarball with
+`--no-manual` and `--compact-vignettes=gs+qpdf` and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-10-30 r90805)
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-11-01 r90825)
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
 * windows-latest (Windows Server 2022 x64, build 26100), R 4.6.2
-* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-10-31
-  r90820)
+* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-11-01
+  r90825)
 * macos-latest (macOS Tahoe 26.6.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with no failures or warnings. 34 tests skip
