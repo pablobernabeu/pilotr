@@ -23,32 +23,33 @@ library(pilotr)
 
 ## The challenge
 
-A toolkit that spans R and Python faces a subtle obstacle. The two ecosystems use different
-default random-number generators (R's Mersenne-Twister with inversion, NumPy's PCG64), so a
-direct port produces different data from the same seed. That would undermine the guarantee
-that a design authored once can be reproduced anywhere.
+The R and Python ecosystems use different default random-number generators (R's
+Mersenne-Twister with inversion, NumPy's PCG64), so a direct port produces different data from
+the same seed. That would undermine the guarantee that a design authored once can be reproduced
+anywhere.
 
 ## A shared generator
 
-pilotr sets aside the native RNGs and provides a shared generator implemented identically
+In place of the default generators, pilotr provides a shared generator implemented identically
 in both languages. Uniform deviates come from L'Ecuyer's (1988) combined linear congruential
-generator, whose arithmetic stays below $2^{53}$ and is therefore exact in IEEE-754 doubles
-(R) and Python integers alike. Normal deviates use Wichura's (1988) Algorithm AS 241
-inverse-CDF, the algorithm R's `qnorm()` uses. The remaining draws (Cholesky-correlated
+generator. Every intermediate product stays below $2^{53}$, so the arithmetic is exact in R's
+IEEE-754 doubles and in Python integers alike. Normal deviates use Wichura's (1988) Algorithm
+AS 241 inverse-CDF, the algorithm R's `qnorm()` uses. The remaining draws (Cholesky-correlated
 random effects, inverse-CDF Poisson and ordinal draws, Marsaglia–Tsang gamma draws for the
 Beta family, a Fisher–Yates item sampler for partial crossing) are derived from those two
-through a documented, identical consumption order.
+through a documented, identical draw order.
 
 As a result, given the same specification and seed, the R and Python implementations produce
-identical data sets wherever they share a maths library, as on Linux. Continuous integration
-runs every case of the parity harness there and holds each to the last bit, except the unrounded
-dumps of `crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian`, which
-`tools/parity/tolerance.json` allows to differ by up to 8 units in the last place, on Linux as on
-any other platform. IEEE-754 fixes the rounding of
-arithmetic but leaves that of `exp()`, `log()` and `pow()` to the library, and on Windows R and
-Python do not share one. There, a value that passes through those functions can differ in its
-last bits, and every family has such a path. The figures below were measured on Windows 11 with
-R 4.6.1 and Python 3.13.
+identical data wherever they share a maths library, as on Linux. Continuous integration
+runs every case of the parity harness there. The harness holds every case to the last bit
+except the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous` and
+`stress_exgaussian`, which `tools/parity/tolerance.json` allows to differ by up to 8 units in the
+last place, on Linux as on any other platform.
+
+IEEE-754 fixes the rounding of arithmetic but leaves that of `exp()`, `log()` and `pow()` to the
+library. On Windows, R and Python do not share one. There, a value that passes through those
+functions can differ in its last bits, and every family has such a path. The figures below were
+measured on Windows 11 with R 4.6.1 and Python 3.13.
 
 - Normal draws pass through `log()` in AS 241's tail branch, which about 15% of draws take.
   About 1.4e-5 of normal draws differed, by 1 to 3 units in the last place (ulp), so Gaussian
@@ -65,20 +66,20 @@ Such a shape needs a cell whose rows share one linear predictor, as in a Beta de
 random effects and a linear predictor of 0, where a `phi` of 0.5 gives shapes of 1/4.
 
 A square is computed by multiplication in both languages. R's `^` computes it that way in every
-version, and Python computes a boost whose exponent is exactly 2 as `u * u` too, so a `phi` of 1,
-which gives shapes of 1/2, draws the same data in both. Up to version 0.3.0, the Python package
-computed that square with `pow()`, and such a design could differ in its last bits.
+version, and Python computes a boost whose exponent is exactly 2 as `u * u`. A design with a
+`phi` of 1, which gives shapes of 1/2, therefore draws the same data in both. Up to version 0.3.0,
+the Python package computed that square with `pow()`, and such a design could differ in its last
+bits.
 
-Rounding has removed every continuous difference observed so far, but it guarantees nothing,
-since a last-bit difference can straddle a rounding boundary, and `round` is refused for the
-discrete families. `build_spec()`, which builds the no-code app's specifications, rounds the
-Gaussian, lognormal, shifted lognormal and ex-Gaussian responses to four decimals and leaves a
-Beta response unrounded, for the reason `?build_spec` gives. Agreement to the last bit in every
-family has one route: run both languages on a platform where they share a maths library, outside
-the Beta case under R 4.6.0 or later. The specification is the source of truth, and every
-implementation answers to it. Its section
+Rounding has removed every continuous difference observed so far, but it guarantees nothing. A
+last-bit difference can straddle a rounding boundary, and `round` is not allowed for the discrete
+families. `build_spec()`, which builds the no-code app's specifications, rounds the Gaussian,
+lognormal, shifted lognormal and ex-Gaussian responses to four decimals and leaves a Beta
+response unrounded, for the reason `?build_spec` gives. The only way to obtain agreement to the
+last bit in every family is to run both languages on a platform where they share a maths
+library, outside the Beta case under R 4.6.0 or later. The section
 [Scope of the guarantee](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
-gives the measurements in full.
+of the specification gives the measurements in full.
 
 ## Determinism in R
 
@@ -107,9 +108,9 @@ identical(simulate_design(spec)$score, simulate_design(spec2)$score)
 
 ## The same design in Python
 
-The Python package reads the same specification and produces the same data. The code below is
-not evaluated here. It shows the Python you would run, and its output matches the R data to
-the last bit wherever the two share a maths library.
+The Python package reads the same specification. The code below, which is not evaluated here,
+shows the Python you would run. Its output matches the R data to the last bit wherever the two
+share a maths library.
 
 ```python
 from pilotr import simulate, load_spec
@@ -119,13 +120,9 @@ data = simulate("design.json")
 ```
 
 The repository includes a parity check that compares the CSV files the R and Python demo
-scripts write for six of the shipped example designs, all but the ordinal and Poisson ones, and
-reports the maximum absolute difference per design. This is the CSV-level check, read at the
-precision a written file carries and with a tolerance of 1e-6. The stricter one is
-the harness under `tools/parity/`, which dumps every value at 17 significant digits, accounts
-for each differing cell in units in the last place against a recorded allowance, and runs as a
-gate in continuous integration. The table below is the readable summary, and that harness is
-what the bit-identical claim rests on.
+scripts write for six of the worked example designs, all but the ordinal and Poisson ones. It
+reports the maximum absolute difference per design, reads values at the precision a written file
+carries and has a tolerance of 1e-6. The table below summarises it.
 
 ```{r, echo = FALSE}
 # Output of python/examples/parity_check.py --csv, precomputed and shipped with
@@ -139,59 +136,56 @@ knitr::kable(read.csv("parity-summary.csv",
 ```
 
 The difference is exactly zero for five of the six designs. The sixth, `continuous`
-(`reading_time_continuous`), has a rounded response that agrees exactly and continuous
-predictors that are not rounded, which R's CSV writer prints to 15 significant digits. Those
-predictors differ by about 5e-15. At that precision the residual cannot be told apart from the
-writer's own rounding,
-and it is what the 1e-6 tolerance of the check is there to absorb. The stricter harness dumps 17
-digits and resolves what is really there. On Windows, it finds a handful of cells one unit in
-the last place apart, from `exp()`, and no categorical mismatches. On Linux, where it runs in
-continuous integration, every cell agrees. The uniform stream is exact by construction, since
-every intermediate product stays below $2^{53}$. The harness pins the Gaussian cases to recorded
-hashes in `tools/parity/golden.json`, on the observed agreement of AS 241's `log()` across
-platforms. The cases are small enough that none has met one of the rare normal draws that
-differ. The cases whose values pass through `exp()`, `log()` or `pow()` on the way to the
-response are deliberately left unpinned, because those last bits belong to the maths library and
-so are not the specification's to fix. The cross-language comparison still gates them on every
-run. The parity check can be rerun on any new platform, so a design verified on a laptop can be
-confirmed on an HPC node before a large run.
+(`reading_time_continuous`), has a rounded response that agrees exactly. Its continuous predictors
+are unrounded, and R's CSV writer prints them to 15 significant digits. Those predictors differ by
+about 5e-15. At that precision, the residual cannot be told apart from the writer's own rounding,
+and the tolerance of 1e-6 is there to absorb it. The parity check can be rerun on any new
+platform, so a design verified on a laptop can be confirmed on an HPC node before a large run.
+
+The bit-identical claim rests on a stricter check, the harness under `tools/parity/`. It dumps
+every value at 17 significant digits, which shows whether the values themselves differ. It
+accounts for each differing cell in units in the last place against a recorded allowance and must
+pass in continuous integration. On Windows, it finds a handful of cells one unit in the last place
+apart, from `exp()`, and no categorical mismatches. On Linux, where it runs in continuous
+integration, every cell agrees. The uniform stream is exact by construction. The harness checks
+the Gaussian cases against recorded hashes in `tools/parity/golden.json`, relying on the observed
+agreement of AS 241's `log()` across platforms. The cases are small enough that none has met one
+of the rare normal draws that differ. The cases whose values pass through `exp()`, `log()` or
+`pow()` on the way to the response have no recorded hashes, because the maths library determines
+those last bits. They must still pass the cross-language comparison on every run.
 
 ## The analysis layer
 
-Everything above concerns the data the generator produces. `solve_curve()` sits a layer above
-it, taking a curve that has already been simulated and fitting a model to it, and it is held to
-a different standard on purpose. Its fit calls `exp()` and the normal distribution function at
-every iteration, so the two engines cannot be asked to land on the same bits, and a recorded
-hash would pin whichever maths library happened to record it. What they are asked for is
-agreement far closer than any reading of the result could depend on. The script
+`solve_curve()` fits a model to a curve that has already been simulated, and it is held to a
+different standard from the generator. Its fit calls `exp()` and the normal distribution function
+at every iteration. A recorded hash would therefore be valid only for the maths library that
+produced it, and the two engines cannot be expected to agree to the last bit. They must instead
+agree far more closely than any reading of the result could depend on. The script
 `tools/parity/solve_cross.py` puts the same fixed curves through both engines and compares the
-solved value, its interval, the fitted coefficients and the text of a selection of refusals.
-The largest relative difference measured over those cases is about 5e-15, against an allowance
-of 1e-9. On a solved sample size of 220 subjects that allowance comes to two ten-millionths of
-a subject. Each of those refusal messages is identical character for character.
+solved value, its interval, the fitted coefficients and the text of a selection of error
+messages. Each of those error messages is identical character for character. The largest
+relative difference measured over those curves is about 5e-15, against an allowance of 1e-9. On a
+solved sample size of 220 subjects, that allowance comes to two ten-millionths of a subject.
 
 The mixed models of the two `power_mixed()` functions come from `model_formula()` and
 `model_data()`, which the Python package ports from this one. The script
-`tools/parity/formula_cross.py` gives the Python ports the data R simulated for every shipped
-example and parity case. Both must write the same formula character for character and the same
-contrast and product columns bit for bit. The fits that follow are another matter. `lme4` and
+`tools/parity/formula_cross.py` gives the Python ports the data R simulated for every worked
+example and parity case. Both packages must write the same formula character for character and the
+same contrast and product columns bit for bit. The fits that follow can differ. `lme4` and
 `statsmodels` are different programs, this package estimates the random-effect correlations that
 the Python one leaves out, and the two test with different statistics. The Python power guide sets
 out where their results diverge.
 
-`power_report()` writes a sample-size justification from the counts of a result, the
-significant replicates and the replicates behind each rate. It computes each Monte Carlo error
-with the functions that compute them in both packages, which return the same doubles for the same
-counts, and formats them in the same way. The script `tools/parity/report_cross.py` renders a set
-of stored records in both engines and requires the same text, byte for byte.
+`power_report()` writes a sample-size justification from a result's counts of significant
+replicates and of the replicates behind each rate. It computes each Monte Carlo error with the
+functions both packages use to compute these errors, which return the same doubles for the same
+counts, and formats the errors in the same way. The script `tools/parity/report_cross.py` renders
+a set of stored records in both engines and requires the same text, byte for byte.
 
 ## Why this matters
 
-Because the specification is the source of truth and the generator is shared, a design can be
-authored once (in the app, in R or in Python) and reproduced everywhere. It can be preregistered
-as a small JSON file that anyone can run, scaled from a laptop to a cluster and handed between
-collaborators who work in different languages, with data that agree to the last bit wherever
-the machines share a maths library.
-
-This property turns an informal request to simulate some data into a reproducible, shareable
-methodological artefact.
+Because every implementation must follow the specification and the generator is shared, a
+design authored once in the app, in R or in Python can be reproduced everywhere. It can be
+preregistered as a small JSON file that anyone can run, scaled from a laptop to a cluster and
+handed between collaborators who work in different languages. Its data agree to the last bit
+wherever the machines share a maths library.

@@ -31,21 +31,22 @@ package.
 
 This is the twin of [the Python
 package](https://pablobernabeu.github.io/pilotr/python/) of the same
-name. The two share the design specification and the random-number
+name. Both packages use the same design specification and random-number
 generator, so the same specification and seed produce identical data in
-either language wherever the two share a maths library, as on Linux,
-outside a rare Beta case under R 4.6.0 or later, which the
+either language wherever the two share a maths library, as on Linux. The
+exception there is a rare Beta case under R 4.6.0 or later, which the
 [cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
 describes. Elsewhere, a value that passes through `exp()`, `log()` or
-`pow()` can differ in its last bits, as the same article sets out. The
-Python package carries the generative core,
-simulation-based power, the helpers that derive the analysis model,
-`power_report()` and the curve solvers `solve_curve()` and `target_n()`.
-The R package additionally offers precision/ROPE design analysis, the
-`lme4` reference backend for mixed-effects power, the `brms` bridge, the
-analysis-script emitters, the helpers that build, calibrate and sweep
-specifications, and the app launcher.
+`pow()` can differ in its last bits, as the same article sets out.
+
+The Python package includes the generative core, simulation-based power,
+the helpers that derive the analysis model, `power_report()` and the
+curve solvers `solve_curve()` and `target_n()`. The R package
+additionally offers precision/ROPE design analysis, the `lme4` reference
+backend for mixed-effects power, the `brms` bridge, the analysis-script
+emitters, the helpers that build, calibrate and sweep specifications,
+and the app launcher.
 
 ## Installation
 
@@ -65,7 +66,7 @@ remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
 
 ## Quick start
 
-The package ships eight example specifications, so the example below
+The package includes eight example specifications, so the example below
 runs as it stands. `pilotr_example()` returns the path to one of them,
 here a crossed by-subject and by-item reaction-time design.
 
@@ -84,7 +85,7 @@ head(data)
 #> 6       1    3 unrelated 516.6668
 ```
 
-The specification carries a seed, so those rows are the same on every
+The specification includes a seed, so those rows are the same on every
 machine and in the Python twin, to the last bit wherever the maths
 library is the same. Point `load_spec()` at your own `design.json` to
 simulate a design of your own.
@@ -100,24 +101,25 @@ cat(generate_r_script(spec))      # a self-contained, reproducible script
 
 The [power
 article](https://pablobernabeu.github.io/pilotr/r/articles/power-analysis.html)
-shows its output, alongside a power curve over sample size and
-`target_n()`, which solves that curve for the sample size a target power
-needs and reports an interval on it.
+shows the output of `power_mixed()`, alongside a power curve over sample
+size and `target_n()`, which solves that curve for the sample size a
+target power needs and reports an interval on it.
 
 ## Try it without installing
 
-A serverless build runs entirely in your browser, with no installation
-required and no data uploaded. It is available as a [no-code
-app](https://pablobernabeu.github.io/pilotr/app/).
+A serverless build of the [no-code
+app](https://pablobernabeu.github.io/pilotr/app/) runs in your browser,
+with no installation required and no data uploaded.
 
 ## Learn more
 
 The [Get started
 article](https://pablobernabeu.github.io/pilotr/r/articles/getting-started.html)
-walks through the core loop of describe, simulate, inspect and export,
-and the other articles each go deeper into one part of the workflow. The
-full repository, including the specification format and the no-code app,
-is at <https://github.com/pablobernabeu/pilotr>.
+walks through the core workflow of describing, simulating, inspecting
+and exporting a design, and each of the other articles covers one part
+of the workflow in more detail. The repository, including the
+specification format and the no-code app, is at
+<https://github.com/pablobernabeu/pilotr>.
 
 ## Citation
 
@@ -131,9 +133,9 @@ version.
 
 The [About
 page](https://pablobernabeu.github.io/pilotr/r/articles/about.html)
-carries the same citation with a BibTeX entry, and a short note on the
-developer. The repository also ships `CITATION.cff`, which is what
-GitHub’s *Cite this repository* button reads.
+gives the same citation, with a BibTeX entry, and a short note on the
+developer. The repository also includes `CITATION.cff`, which GitHub’s
+*Cite this repository* button reads.
 
 ## Licence
 

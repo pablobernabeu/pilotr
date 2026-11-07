@@ -1,20 +1,21 @@
 # Get started
 
-This guide installs pilotr and simulates a first data set from a design specification. The
-specification is what everything else reads. The same JSON file drives the
+This guide covers installing pilotr and simulating a first data set from a design specification.
+The same JSON specification drives the
 [R package](https://pablobernabeu.github.io/pilotr/r/), the
-[no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package, and given
-the same file and seed all three produce identical data wherever they share a maths library, as
-on Linux, outside a rare Beta case under R 4.6.0 or later, which
+[no-code app](https://pablobernabeu.github.io/pilotr/app/) and this Python package. Given the
+same file and seed, all three produce identical data wherever they share a maths library, as on
+Linux, except in a rare Beta case under R 4.6.0 or later that
 [Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that passes
 through `exp()`, `log()` or `pow()` can differ in its last bits.
 
 ## Install
 
-The first command below installs the core engine, which is pure Python. The second adds scipy,
-for `power` and `power_curve`, and the third adds scipy, statsmodels and pandas, for
-`power_mixed` and `model_data`. The double quotes keep zsh, the default shell on macOS, from
-reading the brackets as a filename pattern.
+pilotr requires Python 3.9 or later. The first command below installs the generative core,
+which is pure Python and has no dependencies. The second adds scipy, for `power` and
+`power_curve`, and the third adds scipy, statsmodels and pandas, for `power_mixed` and
+`model_data`. The double quotes keep zsh, the default shell on macOS, from reading the brackets
+as a filename pattern.
 
 ```bash
 pip install pilotr
@@ -22,9 +23,7 @@ pip install "pilotr[power]"
 pip install "pilotr[mixed]"
 ```
 
-Requires Python 3.9 or later. The generative core has no dependencies, so an install that only
-simulates stays dependency-free. For development, install from a checkout of the repository
-instead:
+For development, install from a checkout of the repository instead:
 
 ```bash
 git clone https://github.com/pablobernabeu/pilotr.git
@@ -37,9 +36,9 @@ A design is a plain dictionary, or a JSON file, describing the units, factors, f
 optional random effects and a response family. Simulate from it with `simulate`:
 
 !!! note "These examples run live"
-    The code blocks on this page (and throughout these docs) are executed when the site is
-    built, so the tables and plots are real `pilotr` output. `table(...)` and `show(...)` are
-    small helpers that render a result as a Markdown table or an inline figure.
+    The code blocks on this page and throughout these docs are executed when the site is built,
+    and the tables and plots are their output. `table(...)` and `show(...)` are small helpers
+    that render a result as a Markdown table or an inline figure.
 
 ```python exec="true" session="quick"
 import sys; sys.path.insert(0, "docs")
@@ -66,16 +65,16 @@ print(table(data.head(5)))          # the first rows, as a table
 dicts, and `data.to_csv("data.csv")` writes the table to disk.
 
 The specification is checked before anything is drawn, because several ways of getting one
-wrong produce plausible data rather than an error. A mistyped coefficient key resolves to no
+wrong produce plausible data without raising an error. A mistyped coefficient key resolves to no
 column and so silently sets that effect to zero, which generates exactly the data of a null
 design. Pass `validate=False` to skip the check in a loop that has already validated the
 specification once.
 
 ## Running a specification authored elsewhere
 
-To run a spec authored elsewhere, for example one downloaded from the no-code app, load it with
-`load_spec` and simulate. Here we load one of the worked examples that ship with pilotr, using
-`pilotr_example` to find it inside the installed package:
+To run a specification authored elsewhere, for example one downloaded from the no-code app, load
+it with `load_spec` and simulate. The code below loads one of the worked examples bundled with
+pilotr, using `pilotr_example` to find it inside the installed package:
 
 ```python exec="true" source="material-block" session="quick"
 from pilotr import load_spec, pilotr_example, simulate
@@ -88,10 +87,10 @@ print(table(data.head(5)))
 
 ## Where to go next
 
-From here, [Response families](families.md) shows what each of the eight families generates and
-which scale its effect is written on, [Worked examples](examples.md) gives eight ready-to-run
-designs, and [Power and design analysis](power.md) turns a specification into a power
-estimate with its Type S and Type M errors. [Cross-language reproducibility](cross-language.md)
-explains why an R run and a Python run agree, and where their last bits can differ,
+[Response families](families.md) shows what each of the eight families generates and which
+scale its effect is written on. [Worked examples](examples.md) gives eight ready-to-run designs,
+and [Power and design analysis](power.md) turns a specification into a power estimate with its
+Type S and Type M errors. [Cross-language reproducibility](cross-language.md) explains why an R
+run and a Python run agree and where their last bits can differ.
 [Specification format](specification.md) documents the JSON itself, and the
 [API reference](api.md) lists every public function and class.

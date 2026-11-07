@@ -31,11 +31,10 @@ library(pilotr)
 
 Behavioural outcomes are seldom Gaussian. pilotr maps the linear predictor
 $\eta = \beta_0 + \sum_k \beta_k x_k + (\text{random effects})$ to an outcome through one of
-eight response families. An important consequence is that the fixed intercept and effect live on
-the family's own scale. That scale is the identity for the Gaussian and ex-Gaussian families,
-the log scale for lognormal reaction times, reading times and counts, and the logit scale for
-accuracy, ordinal and proportion outcomes. This vignette presents each family with
-scale-appropriate parameters.
+eight response families. The fixed intercept and effect are therefore on the family's own scale.
+That is the identity scale for the Gaussian and ex-Gaussian families, the log scale for lognormal
+reaction times, reading times and counts, and the logit scale for accuracy, ordinal and proportion
+outcomes. This vignette presents each family with scale-appropriate parameters.
 
 The helper below builds a two-group between-subjects design and reports the group means.
 
@@ -98,7 +97,7 @@ fam_hist(rt$y, "#B0402C", "Shifted lognormal (RT)", "RT (ms)")
 
 The plain `lognormal` family is the shifted lognormal without the shift,
 $y = \exp(\eta + \varepsilon)$, suited to positive continuous outcomes such as per-word reading
-times. As with reaction times the effect is on the log scale.
+times. As with reaction times, the effect is on the log scale.
 
 ```{r}
 ln <- demo("lognormal", intercept = 6, effect = 0.1, sigma = 0.3)
@@ -118,8 +117,8 @@ round(acc$by_group, 3)   # P(correct) by group
 
 ## Poisson (counts)
 
-Counts via a log link (e.g. number of fixations, errors or events). An intercept of 1.5
-implies a base rate near `exp(1.5)`.
+Counts, such as the number of fixations, errors or events, are modelled through a log link. An
+intercept of 1.5 implies a base rate near `exp(1.5)`.
 
 ```{r}
 cts <- demo("poisson", intercept = 1.5, effect = 0.3)
@@ -129,8 +128,8 @@ table(cts$y)[1:8]
 
 ## Ordinal (Likert)
 
-Ordered categorical responses via a cumulative-logit model with user thresholds. The effect
-shifts the latent distribution across the thresholds.
+Ordered categorical responses follow a cumulative-logit model with thresholds set by the user.
+The effect shifts the latent distribution across the thresholds.
 
 ```{r}
 ord <- build_spec(list(
@@ -154,14 +153,14 @@ round(bt$by_group, 3)   # mean proportion by group
 fam_hist(bt$y, "#2E8B57", "Beta", "proportion")
 ```
 
-Every simulated proportion lies strictly inside (0, 1), as `brms::Beta()` and other Beta
+Every simulated Beta response lies strictly inside (0, 1), as `brms::Beta()` and other Beta
 regressions require. Near a ceiling or a floor, a draw can round to exactly 1 or 0 in double
-precision, and it then becomes the nearest double inside the interval. A `round` set for the
-family must be at least 1. A value rounded onto 0 or 1 then becomes the nearest value inside the
-interval at that many decimals, 0.001 or 0.999 at three. A linear predictor beyond about 36.7, or
-below about −745, leaves a shape parameter of zero and is refused. When `mu * phi` or
-`(1 - mu) * phi` is well below 1, many rows sit at the bounds, and `?brms_bridge` explains how
-they weigh on a Beta fit.
+precision, and it then becomes the nearest double inside the interval. When a Beta specification
+sets `round`, the setting must be at least 1. A response rounded onto 0 or 1 then becomes the
+nearest value inside the interval at that many decimals, 0.001 or 0.999 at three. A linear
+predictor beyond about 36.7, or below about −745, leaves a shape parameter of zero, and simulation
+stops with an error. When `mu * phi` or `(1 - mu) * phi` is well below 1, many rows sit at the
+bounds, and `?brms_bridge` explains how they affect a Beta fit.
 
 ## Choosing a family
 
@@ -181,23 +180,24 @@ written on.
 | Proportions in (0, 1) | `beta` | logit (mean) |
 
 These match the families that researchers fit in `lme4`, `glmmTMB` and `brms`, so a design
-simulated here corresponds to the model that will later be fit. pilotr's own `power_mixed()` and
-`precision_design()` fit the continuous families with `lmer()` and accuracy and counts with
+simulated here corresponds to the model that will later be fitted. pilotr's own `power_mixed()`
+and `precision_design()` fit the continuous families with `lmer()`, and accuracy and counts with
 `glmer()`, so their estimates are on the scale in the table's last column. Ordinal and Beta
 outcomes have no frequentist model there yet, and their design analysis runs in brms through
-`generate_design_analysis()`. The point-and-click application
-exposes six of the eight families, all but the plain lognormal and the ex-Gaussian, and
-`build_spec()` builds all eight. The rest of the engine, including continuous predictors,
-interactions, nesting and partial crossing, is reached by writing the specification directly,
-as the last section of this vignette shows.
+`generate_design_analysis()`.
 
-The `exgaussian` family, which a specification must declare version 0.3 or later to use, takes
-`sigma` and `beta` and draws a normal plus an exponential, mean-centred by subtracting the mean
-of the exponential so that $\eta$ remains the mean of the response. That is brms's
-`exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted to it
-agree on what the intercept means. A shifted lognormal will not stand in for it, because
-`model_data()` logs the response back and leaves a symmetric residual on the analysis scale.
-`build_spec()` builds an ex-Gaussian design from `family = "exgaussian"` with `sigma` and `beta`.
+The `exgaussian` family takes `sigma` and `beta` and draws a normal plus an exponential,
+mean-centred by subtracting the mean of the exponential so that $\eta$ remains the mean of the
+response. That is brms's `exgaussian(mu, sigma, beta)` parameterisation, so a specification and
+the model fitted to it agree on what the intercept means. A shifted lognormal is not a
+substitute, because `model_data()` logs the response back and leaves a symmetric residual on the
+analysis scale. `build_spec()` builds an ex-Gaussian design from `family = "exgaussian"` with
+`sigma` and `beta`. A specification that uses the ex-Gaussian must declare version 0.3 or later.
+
+The point-and-click application exposes six of the eight families, all but the plain lognormal
+and the ex-Gaussian, and `build_spec()` builds all eight. The rest of the engine, including
+continuous predictors, interactions, nesting and partial crossing, is available by writing the
+specification directly, as the last section of this vignette shows.
 
 ## Writing the specification directly
 
@@ -230,14 +230,14 @@ head(simulate_design(spec))
 ```
 
 The derived columns follow from the specification: `freq` is the continuous predictor and
-`class` is the nesting factor. The auto-derived formula picks up the interaction as
+`class` is the nesting factor. The auto-derived formula includes the interaction as
 `effect_freq` and the extra grouping factor as `(1 | class)`.
 
 ```{r}
 model_formula(spec)
 ```
 
-Ready-to-run specifications of this kind, including a continuous-predictor reading-time design,
-a nested-clusters design and a partial-crossing design, ship with the package. `pilotr_example()`
+The package includes ready-to-run specifications of this kind, among them a continuous-predictor
+reading-time design, a nested-clusters design and a partial-crossing design. `pilotr_example()`
 lists them and returns the path of each for `load_spec()`, and the
 [worked examples](worked-examples.html) simulate every one.

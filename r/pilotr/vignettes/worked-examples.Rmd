@@ -21,19 +21,19 @@ options(cli.num_colors = 1, cli.hyperlink = FALSE, crayon.enabled = FALSE,
 library(pilotr)
 ```
 
-Eight ready-to-run specifications ship with the package, covering six of the
-eight response families and between-subjects, crossed, nested and partially
-crossed designs. The same JSON files drive the Python twin and the no-code app,
-so a design authored once runs unchanged across all three. `pilotr_example()`
-lists them, and returns the path to each for `load_spec()`.
+Eight ready-to-run specifications are bundled with the package, covering six of
+the eight response families and between-subjects, crossed, nested and partially
+crossed designs. The same JSON files drive the Python package and the no-code
+app. `pilotr_example()` lists them and returns the path to each for
+`load_spec()`.
 
 ```{r list}
 pilotr_example()
 ```
 
-Each specification is simulated below, showing the family it draws from and the
-first rows of the data it produces. The specification format itself is covered
-in the [Get started](getting-started.html) article.
+Each specification is simulated below, showing the design it describes, its
+response family and the first rows of the data it produces. The specification
+format is covered in the [Get started](getting-started.html) article.
 
 ```{r examples, results = "asis"}
 desc <- c(

@@ -1,20 +1,17 @@
 # API reference
 
-The public API, in the groups the [R package's reference
+The public API is listed in the groups the [R package's reference
 index](https://pablobernabeu.github.io/pilotr/r/reference/) uses and in the same
-order, so a name is found in the same place on either site. Import every name
-here from the top-level package, for example `from pilotr import simulate,
-power`.
-
-The R package covers more ground. Precision and equivalence, calibration and
-sweeps, the generated-analysis emitters and the no-code app have no Python
-counterpart yet, so the groups they occupy on that side do not appear below.
+order. Precision and equivalence, calibration and sweeps, generated analysis
+code and the no-code app have no Python counterpart yet, so their groups do not
+appear below. Import every name here from the top-level package, for example
+`from pilotr import simulate, power`.
 
 ## Design specifications
 
 Load and validate the portable JSON specification that everything else reads.
 The specification is the same file in either language, and `SPEC_VERSION` is the
-version of that format this release understands.
+newest version of that format this release reads.
 
 ::: pilotr.simulate.load_spec
 

@@ -8,38 +8,36 @@
 [![DOI 10.5281/zenodo.21266313](https://zenodo.org/badge/DOI/10.5281/zenodo.21266313.svg)](https://doi.org/10.5281/zenodo.21266313)
 <!-- badges: end -->
 
-Python implementation of pilotr. It simulates experimental and behavioural data from a
+The Python implementation of pilotr simulates experimental and behavioural data from a
 portable JSON design specification.
 
-This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
-carrying its generative core. The two share the design specification and the random-number
-generator, so the same specification and seed produce identical data in either language wherever
-the two share a maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later,
-which the [cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/)
-describes.
-Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits, as
-the same guide sets out. Simulation, validation, the analysis model a specification implies,
-simulation-based power, the sample-size report and the curve solvers are here. Precision/ROPE
-design analysis, power curves for mixed-effects designs, calibration and sweeps, the `lme4`
-reference backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the
-helpers that build specifications, and the app launcher are in the R package alone. See the
-[project README](https://github.com/pablobernabeu/pilotr) for the full toolkit (the no-code app,
-the R package and the specification format).
+This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name
+and contains its generative core. Both packages use the same design specification and
+random-number generator, so the same specification and seed produce identical data in either
+language wherever the two share a maths library, as on Linux. The exception there is a rare
+Beta case under R 4.6.0 or later, which the
+[cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/) describes.
+Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits,
+as the same guide sets out.
+
+This package provides simulation, validation, the analysis model a specification implies,
+simulation-based power, the sample-size report and the curve solvers. Precision/ROPE design
+analysis, power curves for mixed-effects designs, calibration and sweeps, the `lme4` reference
+backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers
+that build specifications, and the app launcher are in the R package alone.
 
 ## Install
 
-The first command below installs the core engine, which is pure Python. The second adds scipy,
-for `power` and `power_curve`, and the third adds scipy, statsmodels and pandas, for
-`power_mixed` and `model_data`. The double quotes keep zsh, the default shell on macOS, from
-reading the brackets as a filename pattern.
+pilotr requires Python 3.9 or later. The first command below installs the generative core, which
+is pure Python and has no dependencies. The second adds scipy, for `power` and `power_curve`, and
+the third adds scipy, statsmodels and pandas, for `power_mixed` and `model_data`. The double
+quotes keep zsh, the default shell on macOS, from reading the brackets as a filename pattern.
 
 ```bash
 pip install pilotr
 pip install "pilotr[power]"
 pip install "pilotr[mixed]"
 ```
-
-Requires Python 3.9 or later. The generative core has no dependencies.
 
 For development, install from a checkout of the repository instead. Clone
 <https://github.com/pablobernabeu/pilotr> and run `pip install .` (or `pip install ".[dev]"`)
@@ -70,29 +68,30 @@ last bit wherever the two share a maths library.
 
 ## Try it without installing
 
-A serverless build runs entirely in your browser, with no installation required and no data
-uploaded. It is available as a [no-code app](https://pablobernabeu.github.io/pilotr/app/).
+A serverless build of the [no-code app](https://pablobernabeu.github.io/pilotr/app/) runs in
+your browser, with no installation required and no data uploaded.
 
 ## Learn more
 
 The [Python documentation site](https://pablobernabeu.github.io/pilotr/python/) walks through the
 quick start, the response families, power and design analysis, the specification format and the
-API reference. The full repository, including the R package and the no-code app, is at
-<https://github.com/pablobernabeu/pilotr>.
+API reference. The [project README](https://github.com/pablobernabeu/pilotr) describes the
+toolkit as a whole, including the R package, the no-code app and the specification format.
 
 ## Citation
 
 If pilotr contributes to published work, please cite it, with the version of the package you
-used (`pilotr.__version__`).
+used (`pilotr.__version__`). The R and Python packages are released separately, so their version
+numbers can differ.
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable
 > design specification*. <https://doi.org/10.5281/zenodo.21266313>
 
-The [About page](https://pablobernabeu.github.io/pilotr/python/about/) carries the same citation
-with the Python package's version and a BibTeX entry, and a short note on the developer. The R
-and Python packages are released separately, so their version numbers can differ. The repository also ships
-[`CITATION.cff`](https://github.com/pablobernabeu/pilotr/blob/main/CITATION.cff), which is what
-GitHub's *Cite this repository* button reads.
+The [About page](https://pablobernabeu.github.io/pilotr/python/about/) gives the same citation,
+with the Python package's version and a BibTeX entry, and a short note on the developer. The
+repository also includes
+[`CITATION.cff`](https://github.com/pablobernabeu/pilotr/blob/main/CITATION.cff), which GitHub's
+'Cite this repository' button reads.
 
 ## Licence
 
