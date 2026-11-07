@@ -24,7 +24,7 @@ The ex-Gaussian is a normal plus an exponential, mean-centred by subtracting the
 exponential so that the linear predictor remains the mean of the response. That is brms's
 `exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted to it
 agree on what the intercept means. A shifted lognormal is not a substitute, because
-`power_mixed` logs the response back and leaves a symmetric residual on the analysis scale. A
+`model_data` logs the response back and leaves a symmetric residual on the analysis scale. A
 specification that uses the ex-Gaussian must declare a `spec_version` of `"0.3"` or later, since
 a 0.2 implementation would read it differently.
 

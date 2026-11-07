@@ -16,18 +16,18 @@ and in Python integers alike. That holds for seeds within ±(2^53 − 1), the ra
 accepts. R reads a JSON number as a double, so beyond that range the two readers would hold
 different seeds. Normal deviates use Wichura's (1988) Algorithm AS 241 inverse-CDF, the
 algorithm R's `qnorm` uses. The remaining draws (Cholesky-correlated random effects,
-inverse-CDF Poisson and ordinal draws, Marsaglia–Tsang gamma draws for the Beta family) are
-derived from those two through a documented, identical draw order, which the
-[Specification](specification.md) page sets out.
+inverse-CDF Poisson and ordinal draws, Marsaglia–Tsang gamma draws for the Beta family, a
+Fisher–Yates item sampler for partial crossing) are derived from those two through a documented,
+identical draw order, which the [Specification](specification.md) page sets out.
 
 ## Where the data can differ
 
 Given the same specification and seed, the two implementations produce identical data wherever
-they share a maths library, as on Linux. Continuous integration runs every case of the parity
-harness there. The harness holds every case to the last bit except the unrounded dumps of
-`crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian`, which
-`tools/parity/tolerance.json` allows to differ by up to 8 units in the last place, on Linux as on
-any other platform.
+they share a maths library, as on Linux, except in a rare Beta case under R 4.6.0 or later.
+Continuous integration runs every case of the parity harness on Linux. The harness holds every
+case to the last bit except the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous`
+and `stress_exgaussian`, which `tools/parity/tolerance.json` allows to differ by up to 8 units in
+the last place, on Linux as on any other platform.
 
 IEEE-754 fixes the rounding of arithmetic but leaves that of `exp()`, `log()` and `pow()` to the
 library. On Windows, Python and R do not share one. CPython takes them from Microsoft's Universal

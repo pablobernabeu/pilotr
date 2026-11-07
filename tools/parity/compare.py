@@ -32,7 +32,7 @@ TOLERANCE = os.path.join(ROOT, "tools", "parity", "tolerance.json")
 MAX_REPORTED = 5      # differing cells shown per case, so a systematic fault stays readable
 
 # The size from which a case may not be anchored. A Gaussian case is anchored on the observed
-# agreement of AS 241's log() across platforms, and on Windows about 1.5e-5 of normal draws
+# agreement of AS 241's log() across platforms, and on Windows about 1.4e-5 of normal draws
 # differ between R and Python, so a case of 50,000 rows, each of which draws at least one normal,
 # has an even chance or better of meeting such a draw. See the comment above `anchored` in main().
 MAX_ANCHORED_ROWS = 50_000
@@ -188,7 +188,7 @@ def main() -> int:
     # normal they draw comes from AS 241, whose tail branch calls log() for
     # about 15% of draws. IEEE-754 leaves the rounding of log() to the maths
     # library, and R and Python on Windows do not share one (MinGW-w64 against
-    # UCRT): there about 1.5e-5 of normal draws differ, by 1 to 3 ulp. The
+    # UCRT): there about 1.4e-5 of normal draws differ, by 1 to 3 ulp. The
     # anchored cases are small enough that none has met such a draw on Linux or
     # Windows, which is the agreement the anchor rests on. A case of 50,000
     # draws or more is at least as likely to meet one as not, so such a case is

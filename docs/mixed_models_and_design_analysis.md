@@ -12,7 +12,7 @@ planning.
 | Continuous predictors | `predictors` block, with one value per subject, item or row (`varies_by` is `"subject"`, `"item"` or `"observation"`), drawn `N(mean, sd)` or, with `dist` set to `"uniform"`, `Uniform(min, max)` |
 | Predictors measured with error | `reliability` on a predictor: the latent value drives the response, and the data carry an observed value that correlates `sqrt(reliability)` with it |
 | Interactions | fixed-effect coefficient keys like `"x1:x2"` (product of columns) |
-| Random slopes on continuous predictors | random `slopes` keyed by predictor, e.g. `(1 + x1 + x2 | subject)` |
+| Random slopes on continuous predictors | random `slopes` keyed by predictor, e.g. `(1 + x1 + x2 \| subject)` |
 | Additional grouping factors | any `random` entry beyond subject/item with `over` + `n` (e.g. subjects nested in clusters) |
 | Positive/log outcomes | `lognormal` and `shifted_lognormal` families |
 | Reaction times with a long right tail | the `exgaussian` family (`sigma`, `beta`), whose mean is the linear predictor, as in brms's `exgaussian()` |
@@ -23,10 +23,11 @@ planning.
 
 ## Validation (`r/pilotr/examples/precision_design_analysis.R`, `r/pilotr/examples/run_demo.R`, `python/examples/run_demo.py`)
 
-- A maximal `lmer` fit to a large simulation recovers the full fixed-effect model, including
-  main effects, interactions and the by-subject random slopes on continuous predictors (e.g.
-  interaction 0.020→0.020, by-subject slope SDs 0.055/0.042 vs spec 0.06/0.04, residual 0.251 vs
-  0.25).
+- An `lmer` fit to a large simulation recovers the main effects and interactions of the full
+  fixed-effect model and the SDs of the by-subject random slopes on continuous predictors (e.g.
+  interaction 0.020→0.020, by-subject slope SDs 0.055/0.042 vs spec 0.06/0.04, residual 0.251
+  vs 0.25). The fit uses the model that `model_formula()` derives from the spec. Its random
+  effects are those of the generating model.
 - In the precision/ROPE design analysis, the probability that the 95% CI lies entirely outside
   the ROPE rises with *N* for a meaningful effect (β=0.10, outside the ROPE). The probability that
   it lies entirely inside is high for a negligible effect (β=0.02, inside the ROPE). This is the
@@ -44,8 +45,8 @@ planning.
 
 ## Recommended workflow
 
-1. Build the design spec. You can point and click in the app, using the 'Advanced: paste a JSON
-   spec' option for continuous-predictor designs, or edit a spec under `spec/examples/`. The same
+1. Build the design spec. You can point and click in the app, using its advanced option to paste
+   a JSON spec for continuous-predictor designs, or edit a spec under `spec/examples/`. The same
    spec runs in R and Python.
 2. Plan *N* by precision. `precision_curve(spec, focal, subject_ns, rope = 0.05)` sweeps the
    sample size and reports, per focal effect, P(meaningful) and P(equivalent) along with the

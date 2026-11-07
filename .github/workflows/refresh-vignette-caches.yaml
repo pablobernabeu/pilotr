@@ -10,9 +10,9 @@ name: refresh-vignette-caches
 # separate commit and starts the CI workflows on that commit, because a push made
 # with GITHUB_TOKEN starts none.
 #
-# It runs when the last commit of a push to a branch other than main has
+# It runs when the last commit of a push to a branch other than main or master has
 # '[refresh vignette caches]' in its message. Once this file is on main, it can also
-# be started by hand on a branch other than main. It never pushes to main.
+# be started by hand on such a branch. It never pushes to main or master.
 
 on:
   push:

@@ -138,7 +138,9 @@ reference:
   - brms_bridge
   - print.pilotr_bridge
 - title: Reproducibility
-  desc: The shared random-number stream that makes an R run and a Python run agree, bit for bit wherever the two share a maths library.
+  desc: The shared random-number stream that makes an R run and a Python run agree, bit for bit
+    wherever the two share a maths library, except in a rare Beta case under R 4.6.0 or later that
+    the cross-language vignette describes.
   contents:
   - make_rng
   - replicate_seeds

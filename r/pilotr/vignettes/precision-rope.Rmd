@@ -44,12 +44,12 @@ decision with a target probability.
 
 ## A worked design
 
-We reuse the crossed priming design, which represents a small priming effect on log reaction
-time. Every subject sees every item in both conditions. A counterbalanced study, in which each
-subject sees each item in one condition only, has half the observations and wider intervals, so
-it needs more subjects than the sweep below finds. Plan such a study with
-`counterbalance = TRUE` in `build_spec()`, which needs specification version 0.4, or with the
-two-list encoding among the
+We reuse the crossed priming design, which represents a small priming effect on log(RT − 200),
+the logarithm of the reaction time less its shift. Every subject sees every item in both
+conditions. A counterbalanced study, in which each subject sees each item in one condition only,
+has half the observations and wider intervals, so it needs more subjects than the sweep below
+finds. Plan such a study with `counterbalance = TRUE` in `build_spec()`, which needs
+specification version 0.4, or with the two-list encoding among the
 [worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
 of the specification, which earlier releases read too.
 
@@ -72,8 +72,8 @@ model_formula(spec_c)
 ```
 
 The companion `model_data()` adds the other two derivations to a simulated data set: the
-numeric `effect` contrast column the formula's terms refer to, and the `.y` response, here the
-log-transformed RT because the family is `shifted_lognormal`.
+numeric `effect` contrast column the formula's terms refer to, and the `.y` response, here
+log(RT − 200) because the family is `shifted_lognormal` with a shift of 200.
 
 ```{r}
 head(model_data(spec_c, simulate_design(spec_c)))
@@ -91,15 +91,15 @@ pr <- precision_design(
 pr
 ```
 
-`p_meaningful` is the probability that the interval falls entirely outside the ROPE, a
-determinate 'meaningful' decision. `p_equivalent` is the probability that it falls entirely
-inside, a determinate 'equivalent' decision. `mean_ci_width` is the expected precision.
+`p_meaningful` is the probability that the 95% confidence interval falls entirely outside the
+ROPE, a determinate 'meaningful' decision. `p_equivalent` is the probability that it falls
+entirely inside, a determinate 'equivalent' decision. `mean_ci_width` is the expected precision.
 
 ## Sweeping sample size
 
-The sweep has to be given the same ROPE. Leaving `rope` at its default would compare the
-interval against a region as wide as the effect itself, and the decision probability would then
-fall as *N* grew.
+The sweep has to be given the same ROPE. Leaving `rope` at its default of 0.05 would put the
+upper bound of the region at the true effect, and `p_meaningful` would then stay near 0.025 at
+every *N*.
 
 ```{r precision-curve, eval = FALSE}
 prc <- precision_curve(spec_c, focal = c(effect = 0.05),
@@ -229,10 +229,11 @@ ggplot(long, aes(n_subject, y)) +
         strip.background = element_rect(fill = NA, colour = NA))
 ```
 
-The two panels address the same question, one through the decision probability and the other
-through the interval width. On the left, the horizontal dashed line marks the 0.90 target, and
-the vertical band the sample size solved against it. On the right, the dashed line marks a width
-of 0.06, at which a confidence interval centred on the true effect just clears a ROPE of 0.02.
+The two panels show the same sweep, one through the decision probability and the other through
+the interval width. On the left, the horizontal dashed line marks the 0.90 target, the vertical
+dashed line the sample size solved against it and the vertical band its interval. On the right,
+the dashed line marks a width of 0.06, at which a confidence interval centred on the true effect
+just clears a ROPE of 0.02.
 The interval has to keep its lower limit above the ROPE, so it must be narrower than
 2 × (0.05 − 0.02). Width falls below that line well before the decision probability reaches
 0.90, because an interval centred exactly on the true effect is the best case and sampling

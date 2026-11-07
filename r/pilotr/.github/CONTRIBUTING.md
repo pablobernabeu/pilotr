@@ -81,17 +81,17 @@ test, and R CMD check skips it. The test fails after a change to the seeds, the
 simulated data or the code of those chunks, until the caches are written afresh.
 
 `.github/workflows/refresh-vignette-caches.yaml` writes the caches on GitHub. It
-runs when the last commit of a push to a branch other than main has
+runs when the last commit of a push to a branch other than main or master has
 `[refresh vignette caches]` in its message. Once the workflow is on main, it can
-also be started by hand from the Actions tab. The workflow runs the script on
-Linux with the current R release, on as many workers as the runner has cores.
-When the caches record the version in `r/pilotr/DESCRIPTION` and the cache test
-passes, the workflow pushes the files that changed to the branch as a separate
-commit and starts CI on that commit. The fingerprint changes only with the
-seeds, the data or the chunks, so after a version bump alone that commit holds
-three files. Without the workflow, run `Rscript tools/vignette-caches.R [workers]`
-from `r/pilotr` and commit the four files it writes. On two workers, a run takes
-about 35 minutes.
+also be started by hand on such a branch from the Actions tab. The workflow
+runs the script on Linux with the current R release, on as many workers as the
+runner has cores. When the caches record the version in `r/pilotr/DESCRIPTION`
+and the cache test passes, the workflow pushes the files that changed to the
+branch as a separate commit and starts CI on that commit. The fingerprint
+changes only with the seeds, the data or the chunks, so after a version bump
+alone that commit holds three files. Without the workflow, run
+`Rscript tools/vignette-caches.R [workers]` from `r/pilotr` and commit the four
+files it writes. On two workers, a run takes about 35 minutes.
 
 brms is not a dependency of the package, so the package's test suite cannot
 check whether brms accepts the code that `brms_bridge()` and

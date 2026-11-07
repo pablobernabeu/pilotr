@@ -208,7 +208,8 @@ guide <- card(
               "standard deviations and their correlation, for crossed designs."),
       tags$li(tags$b("Seed"), ", which fixes the pseudo-random draws, so the same specification ",
               "and seed give the same data here, in R and in Python, bit for bit wherever they ",
-              "share a maths library. Elsewhere, a value that passes through ", tags$code("exp()"),
+              "share a maths library, except in a rare Beta case under R 4.6.0 or later. ",
+              "Elsewhere, a value that passes through ", tags$code("exp()"),
               ", ", tags$code("log()"), " or ", tags$code("pow()"), " can differ in its last bits, ",
               "as the ", tags$a(href = paste0(DOCS, "r/articles/cross-language.html"),
                                target = "_blank", "cross-language guide"), " explains.")

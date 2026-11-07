@@ -25,9 +25,10 @@
 #
 #   Rscript tools/vignette-caches.R [workers]
 #
-# On a branch other than main, the repository's .github/workflows/refresh-vignette-caches.yaml
-# does both on GitHub, on as many workers as the runner has cores, when the last commit of a push
-# has '[refresh vignette caches]' in its message. .github/CONTRIBUTING.md describes it.
+# On a branch other than main or master, the repository's
+# .github/workflows/refresh-vignette-caches.yaml does both on GitHub, on as many workers as the
+# runner has cores, when the last commit of a push has '[refresh vignette caches]' in its message.
+# .github/CONTRIBUTING.md describes it.
 #
 # The chunks are read from the vignettes by their labels and evaluated as they stand, except that
 # power_mixed(), power_curve_mixed() and precision_curve() are given `workers`. The worker count

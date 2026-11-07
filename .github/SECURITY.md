@@ -11,7 +11,7 @@ you informed as the issue is investigated and resolved.
 ## A note on data and credentials
 
 pilotr reads a design specification and simulates data locally. It handles no
-credentials, stores nothing outside the paths you pass it, and makes no network
-requests. The browser build of the no-code app runs entirely client-side, and
-the installed app, which `pilotr::run_app()` launches, runs as a Shiny app in an
-R process on your own machine.
+credentials, stores nothing outside the paths you pass it and R's temporary
+directory, and makes no network requests. The browser build of the no-code app
+runs entirely client-side, and the installed app, which `pilotr::run_app()`
+launches, runs as a Shiny app in an R process on your own machine.

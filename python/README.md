@@ -14,8 +14,8 @@ portable JSON design specification.
 This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name
 and contains its generative core. Both packages use the same design specification and
 random-number generator, so the same specification and seed produce identical data in either
-language wherever the two share a maths library, as on Linux. The exception there is a rare
-Beta case under R 4.6.0 or later, which the
+language wherever the two share a maths library, as on Linux, except in a rare Beta case under
+R 4.6.0 or later that the
 [cross-language guide](https://pablobernabeu.github.io/pilotr/python/cross-language/) describes.
 Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits,
 as the same guide sets out.

@@ -84,7 +84,7 @@ and the design specification alike.
 
 Each release is tagged on GitHub and archived on Zenodo. The concept DOI,
 <https://doi.org/10.5281/zenodo.21266313>, always resolves to the
-latest archived release, so a citation stays current without naming a version. The
+latest archived release, and the version in the citation identifies the release used. The
 [changelog](changelog.md) records what changed in each release.
 
 ## Contributing and support

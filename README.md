@@ -24,7 +24,10 @@ see how often the planned analysis would detect the effect and, when an estimate
 significance, how far it would be exaggerated (a Type M error) or take the wrong sign (a Type S
 error). For accuracy and counts, the R package fits logistic and Poisson mixed models, so Type M
 is measured on the logit or log scale on which the effect is written. Likert ratings and
-proportions are analysed through a Bayesian design analysis, on the logit scale of their model.
+proportions are fitted by a linear model on the response scale, so `power_mixed()` withholds
+Type M and `precision_design()` withholds the ROPE decisions. For an analysis on the logit scale
+of their model, `generate_design_analysis()` writes a script that runs a Bayesian design analysis
+in brms.
 
 ## How it works
 
@@ -245,8 +248,9 @@ behind R's `qnorm()`. Everything else (Cholesky factors for correlated random ef
 inverse-CDF draws for the Poisson, Bernoulli and ordinal families) derives from those two in a
 documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)).
 The same specification and seed therefore yield identical data in R and Python wherever the two
-share a maths library, as on Linux. There, CI checks every case to the last bit apart from the
-three unrounded dumps named above, which it allows 8 units in the last place.
+share a maths library, as on Linux, except in a rare Beta case under R 4.6.0 or later described
+below. On Linux, CI checks every case to the last bit apart from the three unrounded dumps named
+above, which it allows 8 units in the last place.
 
 IEEE-754 fixes the rounding of arithmetic but leaves the rounding of `exp()`, `log()` and `pow()`
 to the maths library, and, on Windows, R and Python do not share one. There, a value that passes
@@ -276,9 +280,10 @@ Every command below runs from the repository root.
 
 ### Simulate a design, in either language
 
-The two demo scripts are the shortest introduction to pilotr. Each simulates the bundled designs
-and runs classical simulation-based power with the Type S and Type M errors, and the parity check
-then confirms that the two languages produce identical data.
+The two demo scripts are the shortest introduction to pilotr. Each simulates six of the eight
+bundled designs and runs classical simulation-based power, with the Type S and Type M errors, on
+the two-group Gaussian design. The parity check then confirms that the two languages produce
+identical data.
 
 ```bash
 python python/examples/run_demo.py         # Python
@@ -386,8 +391,8 @@ documentation site gives it with that package's version and a BibTeX entry, for
 [the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
 [the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
 ready-made citation from [`CITATION.cff`](CITATION.cff) through its 'Cite this repository'
-button. That file describes both packages, so it gives the Zenodo DOI and lists each package's
-identifiers.
+button. That file describes both packages, so it gives the Zenodo DOI, which favours neither,
+and lists each package's identifiers.
 
 ## Licence
 

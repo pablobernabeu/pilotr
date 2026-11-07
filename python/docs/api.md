@@ -57,7 +57,9 @@ sample-size justification.
 ## Reproducibility
 
 The shared random-number stream and the numerical primitives that make a Python
-run and an R run agree, bit for bit wherever the two share a maths library.
+run and an R run agree, bit for bit wherever the two share a maths library,
+except in a rare Beta case under R 4.6.0 or later that
+[Cross-language reproducibility](cross-language.md) describes.
 
 ::: pilotr.core.RNG
 

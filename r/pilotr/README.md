@@ -33,8 +33,8 @@ This is the twin of [the Python
 package](https://pablobernabeu.github.io/pilotr/python/) of the same
 name. Both packages use the same design specification and random-number
 generator, so the same specification and seed produce identical data in
-either language wherever the two share a maths library, as on Linux. The
-exception there is a rare Beta case under R 4.6.0 or later, which the
+either language wherever the two share a maths library, as on Linux,
+except in a rare Beta case under R 4.6.0 or later that the
 [cross-language
 article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.html)
 describes. Elsewhere, a value that passes through `exp()`, `log()` or
@@ -43,10 +43,10 @@ describes. Elsewhere, a value that passes through `exp()`, `log()` or
 The Python package includes the generative core, simulation-based power,
 the helpers that derive the analysis model, `power_report()` and the
 curve solvers `solve_curve()` and `target_n()`. The R package
-additionally offers precision/ROPE design analysis, the `lme4` reference
-backend for mixed-effects power, the `brms` bridge, the analysis-script
-emitters, the helpers that build, calibrate and sweep specifications,
-and the app launcher.
+additionally offers precision/ROPE design analysis, power curves for
+mixed-effects designs, the `lme4` reference backend for mixed-effects
+power, the `brms` bridge, the analysis-script emitters, the helpers that
+build, calibrate and sweep specifications, and the app launcher.
 
 ## Installation
 
@@ -135,7 +135,7 @@ The [About
 page](https://pablobernabeu.github.io/pilotr/r/articles/about.html)
 gives the same citation, with a BibTeX entry, and a short note on the
 developer. The repository also includes `CITATION.cff`, which GitHub’s
-*Cite this repository* button reads.
+‘Cite this repository’ button reads.
 
 ## Licence
 

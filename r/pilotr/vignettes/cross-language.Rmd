@@ -40,11 +40,11 @@ Beta family, a Fisher–Yates item sampler for partial crossing) are derived fro
 through a documented, identical draw order.
 
 As a result, given the same specification and seed, the R and Python implementations produce
-identical data wherever they share a maths library, as on Linux. Continuous integration
-runs every case of the parity harness there. The harness holds every case to the last bit
-except the unrounded dumps of `crossed_mixed_rt`, `reading_time_continuous` and
-`stress_exgaussian`, which `tools/parity/tolerance.json` allows to differ by up to 8 units in the
-last place, on Linux as on any other platform.
+identical data wherever they share a maths library, as on Linux, except in a rare Beta case
+under R 4.6.0 or later. Continuous integration runs every case of the parity harness on Linux.
+The harness holds every case to the last bit except the unrounded dumps of `crossed_mixed_rt`,
+`reading_time_continuous` and `stress_exgaussian`, which `tools/parity/tolerance.json` allows
+to differ by up to 8 units in the last place, on Linux as on any other platform.
 
 IEEE-754 fixes the rounding of arithmetic but leaves that of `exp()`, `log()` and `pow()` to the
 library. On Windows, R and Python do not share one. There, a value that passes through those
@@ -188,4 +188,4 @@ Because every implementation must follow the specification and the generator is 
 design authored once in the app, in R or in Python can be reproduced everywhere. It can be
 preregistered as a small JSON file that anyone can run, scaled from a laptop to a cluster and
 handed between collaborators who work in different languages. Its data agree to the last bit
-wherever the machines share a maths library.
+wherever the machines share a maths library, outside the Beta case under R 4.6.0 or later.

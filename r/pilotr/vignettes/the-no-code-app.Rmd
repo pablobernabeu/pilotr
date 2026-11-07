@@ -88,10 +88,10 @@ design after a simulation, a note above the tabs says so until you select 'Simul
 
 From the app, you can download the specification (`.json`) or the data (`.csv`). The
 specification runs unchanged in R with `simulate_design()` or in Python with `pilotr.simulate()`
-for the same data, identical to the last bit wherever R and Python share a maths library (see the
-[cross-language article](cross-language.html)). The app rounds Gaussian and reaction-time
-responses to four decimals and leaves a Beta response unrounded, for the reason `?build_spec`
-gives.
+for the same data, identical to the last bit wherever R and Python share a maths library, except
+in a rare Beta case under R 4.6.0 or later (see the [cross-language article](cross-language.html)).
+The app rounds Gaussian and reaction-time responses to four decimals and leaves a Beta response
+unrounded, for the reason `?build_spec` gives.
 
 The app leaves the heavier analyses to the installed packages. Crossed mixed-effects power runs
 in R, through `lme4` as the reference backend, and in Python, through `statsmodels`.

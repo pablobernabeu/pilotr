@@ -28,10 +28,11 @@ significant results. Beyond power, it reports the design-analysis quantities of
 [Gelman and Carlin (2014)](https://doi.org/10.1177/1745691614551642), namely the Type S (sign)
 error and the Type M (magnitude, or exaggeration) ratio.
 
-> To keep the vignette build quick, the mixed-effects examples below use small `n_sims`, and their
-> results were precomputed with exactly the code shown and included in the package.
-> `tools/vignette-caches.R` in the source repository regenerates them, and a test there fails if
-> the seeds, the simulated data or the code shown change and the results are not regenerated. For
+> To keep the vignette build quick, the mixed-effects analyses below whose results are shown use
+> small `n_sims`, and their results were precomputed with exactly the code shown and included in
+> the package. The other mixed-effects analyses are not run. `tools/vignette-caches.R` in the
+> source repository regenerates the precomputed results, and a test there fails if the seeds, the
+> simulated data or the code shown for them change and the results are not regenerated. For
 > planning a study, we recommend `n_sims >= 200`, with more replicates for stable Type S and Type M
 > estimates.
 
@@ -228,11 +229,11 @@ effects of a GLMM without overdispersion. With few subjects or items, however, i
 often than its nominal level ([Li and Redden, 2015](https://doi.org/10.1186/s12874-015-0026-x)),
 so the power of a small accuracy or count design is somewhat overstated.
 
-Ordinal and Beta outcomes have no frequentist model here yet, so their power is that of the
-linear model's test and their Type S compares signs alone. A bounded response compresses
-differences near the ends of its range, so an interaction can change sign between the two
-scales, and the result gives no Type S for it. `generate_design_analysis()` writes a Bayesian
-design analysis for them, on the logit scale of their coefficients.
+Ordinal and Beta outcomes have no frequentist model on the logit scale here yet, so their power
+is that of the linear model's test and their Type S compares signs alone. A bounded response
+compresses differences near the ends of its range, so an interaction can change sign between the
+two scales, and the result gives no Type S for it. `generate_design_analysis()` writes a
+Bayesian design analysis for them, on the logit scale of their coefficients.
 
 Python's `power_mixed` fits the model the specification implies, from ports of `model_formula()`
 and `model_data()`. It fits every random effect as an independent variance component, so it
@@ -451,10 +452,11 @@ what a subject and an item each cost, is the design to plan for.
 Every power and precision analysis in pilotr takes a `workers` argument that spreads the
 Monte Carlo replicates across local cores. Each replicate takes its own seed from
 `replicate_seeds()`, so the results are identical to a serial run for any number of workers.
-Because the mixed-model fits dominate the running time, the speed-up is close to linear in the
-number of cores. In a sweep, the worker pool is created once and reused across all sample sizes.
-The analyses also take a cluster made with `parallel::makeCluster()` as `cl`, which
-`sweep_spec()` passes to every point of an effect-size sweep in the same way.
+In the analyses that fit mixed models, the fits dominate the running time, so the speed-up is
+close to linear in the number of cores. In a sweep, the worker pool is created once and reused
+across all sample sizes. `power_design()`, `power_mixed()` and `precision_design()` also take a
+cluster made with `parallel::makeCluster()` as `cl`, which `sweep_spec()` passes to every point of
+an effect-size sweep in the same way.
 
 ```{r, eval = FALSE}
 power_curve_mixed(

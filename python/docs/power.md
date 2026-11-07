@@ -156,7 +156,8 @@ subjects, and raising `n_sims` narrows it.
 
 `target_n` does not extrapolate. For a curve that never reaches the target within the sizes
 swept, it raises an error that reports the range the sweep covered. Had the sweep above stopped
-at 128 subjects, where power was still short of 0.80, `target_n` would have raised that error.
+at 128 subjects, where the simulated power was still short of 0.80, `target_n` would have raised
+that error.
 
 `solve_curve` is the general form. It takes any curve with a decision rate against a swept
 value, so an effect-size sweep or a sweep over items is solved the same way, with
@@ -205,12 +206,13 @@ covering the interval and the region of practical equivalence.
 
 ## Mixed-effects power
 
-`power_mixed` needs `statsmodels` and `pandas`. It fits a mixed model with `statsmodels`, and the
-model comes from the specification, as in the R package. `model_formula` writes it in lme4's
-notation, character for character as the R package's `model_formula()` does, and `model_data`
-builds the columns it reads. Every coefficient is a fixed effect, an interaction `"a:b"` entering
-as its product column `a_b`. Every random intercept and slope the specification declares is a
-variance component, including those of an extra grouping factor such as a site.
+`power_mixed` needs `statsmodels`, `pandas` and `scipy`, so install the `mixed` extra. It fits a
+mixed model with `statsmodels`, and the model comes from the specification, as in the R package.
+`model_formula` writes it in lme4's notation, character for character as the R package's
+`model_formula()` does, and `model_data` builds the columns it reads. Every coefficient is a fixed
+effect, an interaction `"a:b"` entering as its product column `a_b`. Every random intercept and
+slope the specification declares is a variance component, including those of an extra grouping
+factor such as a site.
 
 The response is analysed as `log(y)` for the `lognormal` family and as `log(y - shift)` for
 `shifted_lognormal`, whose coefficients are on the log scale, as in the R package. Every other
@@ -337,12 +339,12 @@ and so ignores the uncertainty in the variance components. With few subjects or 
 rejects more readily than a test with Satterthwaite's degrees of freedom
 ([Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), which is the test the R package's
 `power_mixed()` applies. In small designs, the power here therefore tends to be higher than R's on
-the same data. In the example above, 6 of the 12 replicates are significant, against 4 in R. With
-8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected the null
-hypothesis in 0.070 of 300 replicates (Monte Carlo standard error 0.015). On the same data, the R
-package's Satterthwaite test of the same model rejected in 0.057 (Monte Carlo standard error
-0.013), as the repository's `tools/calibration/wald_null_rate.py` measures. Data generation is
-identical across the two languages, so these differences lie in the model and the test alone.
+the same data. In the priming design above, 6 of the 12 replicates are significant, against 4 in
+R. With 8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected
+the null hypothesis in 0.070 of 300 replicates (Monte Carlo standard error 0.015). On the same
+data, the R package's Satterthwaite test of the same model rejected in 0.057 (Monte Carlo standard
+error 0.013), as the repository's `tools/calibration/wald_null_rate.py` measures. Data generation
+is identical across the two languages, so these differences lie in the model and the test alone.
 
 `power_mixed` runs its own simulation loop over the portable specification and does not depend
 on another power package. The packages [simr](https://doi.org/10.1111/2041-210x.12504) (Green
@@ -379,9 +381,9 @@ of their coefficients.
 Every analysis on this page takes a `workers` argument that spreads the Monte Carlo
 replicates across local processes with `concurrent.futures`. Each replicate takes its own
 seed from `replicate_seeds()`, so the results are identical to a serial run for any number of
-workers. Because the model fits dominate the running time, the speed-up is close to linear in
-the number of processes. `power_curve` starts one process pool and reuses it across the whole
-sweep.
+workers. In `power_mixed`, the mixed-model fits dominate the running time, so the speed-up is
+close to linear in the number of processes. `power_curve` starts one process pool and reuses it
+across the whole sweep.
 
 ```python
 from pilotr import power, power_curve, power_mixed
