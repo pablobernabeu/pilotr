@@ -36,10 +36,10 @@
 #' too often when the clusters are few (Li and Redden, 2015). The `fitter` column names the
 #' fitter.
 #'
-#' pilotr has no frequentist model for an `ordinal` or `beta` response yet. Such a response is
-#' fitted by the linear model on its own scale, where a region of practical equivalence set on
-#' the logit scale of the coefficients means nothing. The function warns, and withholds the
-#' decision probabilities with their Monte Carlo standard errors and bounds (`NA`).
+#' pilotr has no frequentist model on the logit scale for an `ordinal` or `beta` response yet.
+#' Such a response is fitted by the linear model on its own scale, where a region of practical
+#' equivalence set on the logit scale of the coefficients means nothing. The function warns, and
+#' withholds the decision probabilities with their Monte Carlo standard errors and bounds (`NA`).
 #' `mean_ci_width` stays, as the width of an interval on the response scale.
 #' [generate_design_analysis()] applies an interval-and-ROPE rule on the link scale, in a
 #' Bayesian model.

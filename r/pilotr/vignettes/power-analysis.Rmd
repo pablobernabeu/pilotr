@@ -28,16 +28,17 @@ significant results. Beyond power, it reports the design-analysis quantities of
 [Gelman and Carlin (2014)](https://doi.org/10.1177/1745691614551642), namely the Type S (sign)
 error and the Type M (magnitude, or exaggeration) ratio.
 
-> The mixed-effects examples below use small `n_sims`, and their results were precomputed with
-> exactly the code shown and shipped with the package, so that the vignette builds quickly.
-> `tools/vignette-caches.R` in the source repository regenerates them, and a test there fails if
-> the seeds, the simulated data or the code shown change and the results are not regenerated. For
-> real planning, we recommend `n_sims >= 200`, with more replicates for stable Type S and Type M
+> To keep the vignette build quick, the mixed-effects analyses below whose results are shown use
+> small `n_sims`, and their results were precomputed with exactly the code shown and included in
+> the package. The other mixed-effects analyses are not run. `tools/vignette-caches.R` in the
+> source repository regenerates the precomputed results, and a test there fails if the seeds, the
+> simulated data or the code shown for them change and the results are not regenerated. For
+> planning a study, we recommend `n_sims >= 200`, with more replicates for stable Type S and Type M
 > estimates.
 
 ## Two-group Gaussian
 
-The classic case has a closed-form analytic power, which the simulation matches.
+This design has a closed-form power, which the simulation matches.
 
 ```{r}
 spec <- build_spec(list(
@@ -52,8 +53,8 @@ unlist(pw[c("power", "type_s", "type_m", "true_effect", "mean_estimate")])
 
 At roughly 50% power, the Type M ratio is well above 1. Conditional on significance, the
 estimated effect is exaggerated, even though the average estimate over all replicates is
-unbiased. This reflects the statistical-significance filter, which is precisely what design
-analysis is meant to expose.
+unbiased. This reflects the statistical-significance filter that design analysis is meant to
+expose.
 
 ## Directional predictions
 
@@ -79,10 +80,9 @@ prediction. In the direction of the true effect, a one-sided power at α is the 
 
 ## Crossed mixed-effects designs
 
-A feature that distinguishes pilotr from a marginal simulator is power estimation for crossed
-by-subject and by-item designs. The R interface derives the analysis model from the
-specification, fits it with `lme4`/`lmerTest` and tests each fixed effect with Satterthwaite
-degrees of freedom.
+pilotr estimates power for crossed by-subject and by-item designs. The R interface derives the
+analysis model from the specification, fits it with `lme4`/`lmerTest` and tests each fixed effect
+with Satterthwaite degrees of freedom.
 
 ```{r priming-spec}
 spec_c <- build_spec(list(
@@ -95,16 +95,16 @@ spec_c <- build_spec(list(
   family = "shifted_lognormal", resp_name = "RT", sigma = 0.3, shift = 200))
 ```
 
-The priming design above is fully crossed, so each of the 24 participants sees all 18 items in
-both conditions, 864 trials in all. A counterbalanced study, in which each participant sees
-each item in one condition only, has half the observations and lower power. Plan such a study
-by adding `counterbalance = TRUE` to the `build_spec()` call above. The factor `condition` then
-sets `counterbalance`, a field of specification version 0.4 that rotates the conditions over
-participants and items as a Latin square does (see
+The priming design above is fully crossed, so each of the 24 subjects sees all 18 items in both
+conditions, 864 trials in all. A counterbalanced study, in which each subject sees each item in
+one condition only, has half the observations and lower power. Plan such a study by adding
+`counterbalance = TRUE` to the `build_spec()` call above. The factor `condition` then sets
+`counterbalance`, a field of specification version 0.4 that rotates the conditions over subjects
+and items as a Latin square does (see
 [counterbalanced lists](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#counterbalanced-lists)).
-The two-list encoding among the
+For releases that read no version above 0.3, the two-list encoding among the
 [worked encodings](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#worked-encodings)
-of the specification writes the same design for releases that read no version above 0.3.
+of the specification expresses the same design.
 
 The model fitted to each replicate is the one the specification implies, here the maximal model
 for the design, with by-subject and by-item intercepts and slopes for the condition.
@@ -141,26 +141,26 @@ remaining counts describe the fits without entering `power`. `n_converged` count
 returned an estimate with neither a warning nor a singular fit, `r pm$n_converged` here, and
 `n_singular` those whose variance estimates sat on a boundary, `r pm$n_singular` here. Singular
 and warning fits are kept in `power`, since their fixed-effect estimates remain interpretable
-and discarding them would bias the result. A large `n_singular` says that the model is richer
-than the design can support at this sample size, which is common in small crossed designs and
-worth reporting beside the power.
+and discarding them would bias the result. A large `n_singular` indicates that the model is
+richer than the design can support at this sample size. Such a count is common in small crossed
+designs and worth reporting beside the power.
 
-`power_mixed()` carries its own simulation loop over the portable specification, with no other
-power package underneath it. It covers territory pioneered by
-[simr](https://doi.org/10.1111/2041-210x.12504) (Green and MacLeod, 2016) and
-[mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and Draschkow, 2021). pilotr
-differs in being driven by the cross-language specification, in reporting Type S and Type M
-errors alongside power and in built-in parallelisation.
+`power_mixed()` runs its own simulation loop over the portable specification and does not depend
+on another power package. The packages [simr](https://doi.org/10.1111/2041-210x.12504) (Green
+and MacLeod, 2016) and [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and
+Draschkow, 2021) pioneered simulation-based power analysis for mixed-effects models. pilotr
+differs from them in using the cross-language specification, in reporting Type S and Type M
+alongside power and in built-in parallelisation.
 
 ## A preregistered simplification rule
 
-The power above is that of an analysis that reports the maximal model whatever its fit. Many
-analysis plans preregister a rule instead: fit the maximal model, and when the fit is singular,
-drop the correlations between the random effects, then the slopes
-([Barr et al., 2013](https://doi.org/10.1016/j.jml.2012.11.001);
+The power above is that of an analysis that keeps the maximal model in every replicate, including
+singular fits and fits with a warning. Many analysis plans preregister a rule instead: fit the
+maximal model, and when the fit is singular, drop the correlations between the random effects,
+then the slopes ([Barr et al., 2013](https://doi.org/10.1016/j.jml.2012.11.001);
 [Matuschek et al., 2017](https://doi.org/10.1016/j.jml.2017.01.001)). Each replicate is then
 analysed with a model that depends on its data, so the rule has a power and a Type I error rate
-of its own. `model_formula()` builds the two simpler models, `"zcp"`, the zero-correlation model,
+of its own. `model_formula()` builds the two simpler models: `"zcp"`, the zero-correlation model,
 and `"intercepts"`, with random intercepts alone.
 
 ```{r}
@@ -181,10 +181,10 @@ pm_rule <- power_mixed(spec_c, formula = c("maximal", "zcp", "intercepts"),
 pm_rule$rung_shares
 ```
 
-A rule that can end on random intercepts alone ignores, whenever it gets there, how much the
-effect varies over subjects and items, and a test that ignores that variation rejects a true null
-hypothesis too often (Barr et al., 2013). Run the null condition through the same ladder to see
-how often. `design_conditions()` puts it first.
+When the rule ends on random intercepts alone, the model ignores how much the effect varies over
+subjects and items, and a test that ignores that variation rejects a true null hypothesis too
+often (Barr et al., 2013). To see how often, run the null condition through the same ladder.
+`design_conditions()` puts the null condition first.
 
 ```{r, eval = FALSE}
 sweep_spec(spec_c, "fixed$coefficients", design_conditions(effect = 0.06),
@@ -196,13 +196,16 @@ each condition, and analyses each of them with the maximal model, with the rule 
 intercepts alone. With the effect, the maximal model was singular in 152 of the 200 replicates.
 The rule kept the maximal fit in the other 48, and of the 152 it kept the zero-correlation fit in
 23 and the intercepts-only fit in 129. It raised power from 0.69 to 0.735, each with a Monte
-Carlo standard error of about 0.03. Random intercepts alone gave 0.835, but not all of that gain
-is real. Relative to the spread of its estimates, the intercepts-only model reported standard
-errors about 15% smaller than the maximal model did, in both conditions. In the null condition,
-the three analyses rejected in 2, 3 and 6 of the 200 replicates, where a test at its nominal
-level would reject in 10. The slopes of this design are small beside its residual variation,
-which leaves the intercepts-only model little to ignore. Where the effect varies more over
-subjects or items, it ignores more, and the null condition shows what that costs.
+Carlo standard error of about 0.03. Random intercepts alone gave 0.835, but part of that gain
+came from standard errors that were too small. Relative to the spread of its estimates, the
+intercepts-only model reported standard errors about 15% smaller than the maximal model did, in
+both conditions.
+
+In the null condition, the three analyses rejected in 2, 3 and 6 of the 200 replicates, where a
+test at its nominal level would reject in 10. The slopes of this design are small beside its
+residual variation, which leaves the intercepts-only model little to ignore. Where the effect
+varies more over subjects or items, the intercepts-only model ignores more, and the null
+condition shows what that costs.
 
 ## Which model each family gets
 
@@ -226,18 +229,20 @@ effects of a GLMM without overdispersion. With few subjects or items, however, i
 often than its nominal level ([Li and Redden, 2015](https://doi.org/10.1186/s12874-015-0026-x)),
 so the power of a small accuracy or count design is somewhat overstated.
 
-Ordinal and Beta outcomes have no frequentist model here yet, so their power is that of the
-linear model's test and their Type S compares signs alone. A bounded response compresses
-differences near the ends of its range, so an interaction can change sign between the two
-scales, and its Type S is withheld. `generate_design_analysis()` writes a Bayesian design
-analysis for them, on the logit scale of their coefficients. Python's `power_mixed` fits the model
-the specification implies, from ports of `model_formula()` and `model_data()`, with every random
-effect as an independent variance component, so it leaves out the correlations that `lme4`
-estimates here. It refuses a design without random effects, as its own guide describes.
+Ordinal and Beta outcomes have no frequentist model on the logit scale here yet, so their power
+is that of the linear model's test and their Type S compares signs alone. A bounded response
+compresses differences near the ends of its range, so an interaction can change sign between the
+two scales, and the result gives no Type S for it. `generate_design_analysis()` writes a
+Bayesian design analysis for them, on the logit scale of their coefficients.
+
+Python's `power_mixed` fits the model the specification implies, from ports of `model_formula()`
+and `model_data()`. It fits every random effect as an independent variance component, so it
+leaves out the correlations that `lme4` estimates here. It raises an error for a design without
+random effects, as its own guide describes.
 
 ## A power curve
 
-The following sweep over the number of subjects reports power at each size.
+`power_curve_mixed()` sweeps the number of subjects and reports power at each size.
 
 ```{r power-curve, eval = FALSE}
 curve <- power_curve_mixed(
@@ -264,34 +269,34 @@ The curve has a row for each sample size, with the power, Type S, Type M and fit
 the 95% Wilson interval of each power estimate, and the fit counts read as they do above, with
 `n_returned` the denominator of power.
 
-Each sample size draws its own replicates. Point *j* of a sweep over *J* sizes takes
-`replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers, as
-`target_n()` assumes below when it fits them. `seeds = "shared"` gives every point the
+Each point of the curve draws its own replicates. Point *j* of a sweep over *J* sizes takes
+`replicate_seeds(seed, J)[j]` as its seed, so no two points share their random numbers.
+`target_n()` assumes this when it fits the curve below. `seeds = "shared"` gives every point the
 specification's own seed instead.
 
 ## The sample size the curve implies
 
-The curve is a means to an end. What the analysis is run for is the sample size at which
-power reaches the target, and that is the number a preregistration quotes. Reading it off the
-table or the plot judges points whose Monte Carlo intervals overlap, and yields a bare figure
-with no interval attached to it. `target_n()` fits the curve and inverts the fit, so the
-crossing is estimated, and arrives with the uncertainty a simulated curve carries.
+The purpose of a power curve is to find the sample size at which power reaches the target, and
+that size is the number a preregistration quotes. Reading it off the table or the plot means
+judging points whose Monte Carlo intervals overlap, and it gives a figure without an interval.
+`target_n()` fits the curve and inverts the fit. It estimates the crossing together with the
+uncertainty that a simulated curve carries.
 
 ```{r}
 solved <- target_n(curve, target = 0.8)
 unlist(solved[c("n", "n_lo", "n_hi")])
 ```
 
-Fifty replicates per point is few, and the interval says so. The fit is a binomial regression
-of power on the square root of the sample size, weighted by the replicates behind each point,
-and the interval is the delta-method interval that `MASS::dose.p()` computes for a fitted
-`glm`. Nothing is extrapolated: a curve that never reaches the target within the sizes swept is
-refused, and the refusal reports the range the sweep did cover.
+Fifty replicates per point is few, and the interval is wide accordingly. The fit is a binomial
+regression of power on the square root of the sample size, weighted by the replicates behind each
+point, and the interval is the delta-method interval that `MASS::dose.p()` computes for a fitted
+`glm`. `target_n()` does not extrapolate. For a curve that never reaches the target within the
+sizes swept, it stops with an error that reports the range the sweep covered.
 
 For a curve swept over something other than sample size, `solve_curve()` is the general form,
 with `transform = "identity"` where the axis is an effect size.
 
-Plotting the curve and the solved size together shows what the solve has done.
+Plotting the curve and the solved size together shows what `target_n()` has done.
 
 ```{r, fig.width = 6, fig.height = 3.6, dev.args = list(bg = "transparent")}
 # The transparent device canvas is what lets the page colour through. A ggplot
@@ -326,18 +331,17 @@ ggplot(curve, aes(n_subject, power)) +
         panel.grid       = element_line(colour = "grey80"))
 ```
 
-The shaded horizontal band along the curve is the Monte Carlo interval, the 95% Wilson interval
-of each power estimate over its `n_returned` replicates. Unlike a band of 1.96 standard errors
-either side, it stays between 0 and 1 and keeps a width where power reaches either. The vertical
-band is the solved sample size and its own interval, which is what the dashed target line
-invites the reader to guess at.
+The shaded horizontal band along the curve is the Monte Carlo interval of each power estimate,
+the 95% Wilson interval over its `n_returned` replicates. Unlike a band of 1.96 standard errors
+either side, it stays between 0 and 1 and does not shrink to a point when power is 0 or 1. The
+dashed vertical line marks the solved sample size, and the vertical band marks its interval.
 
-The solved size counts the participants whose data are analysed. Simulated data are complete,
-with no attrition or exclusions. A study that expects to lose a proportion *p* of its
-participants therefore recruits *N* / (1 − *p*), which is 67 for 60 analysed at 10% attrition.
-Losses unrelated to the outcome cost power without biasing the estimates, and recruiting the
-extra participants largely restores that power. Missingness that depends on the outcomes that
-would have been observed, which pilotr does not simulate, can bias the estimates as well
+The solved size counts the subjects whose data are analysed. Simulated data are complete, with no
+attrition or exclusions. A study that expects to lose a proportion *p* of its subjects therefore
+recruits *N* / (1 − *p*), which is 67 for 60 analysed at 10% attrition. Losses unrelated to the
+outcome cost power without biasing the estimates, and recruiting the extra subjects largely
+restores that power. Missingness that depends on the outcomes that would have been observed,
+which pilotr does not simulate, can bias the estimates as well
 ([Rubin, 1976](https://doi.org/10.1093/biomet/63.3.581)).
 
 ## A sample-size justification
@@ -362,10 +366,10 @@ power_report(pm, solved = solved, spec_file = spec_file,
                "its shift, the smallest effect of theoretical interest.")))
 ```
 
-The rates in the report are those of `pm`, the 20 replicates at 24 subjects above, which keep the
-vignette quick. A justification to submit pairs the solved size with a run at that size and with
-enough replicates for planning. It adds the same analysis with the effect set to zero as
-`null_result`, whose rejection rate shows whether the test holds its level in this design.
+The rates in the report are those of `pm`, the 20 replicates at 24 subjects above. A
+justification to submit pairs the solved size with a run at that size and with enough replicates
+for planning. It adds the same analysis with the effect set to zero as `null_result`, whose
+rejection rate shows whether the test holds its level in this design.
 
 ```{r, eval = FALSE}
 at_n <- spec_c
@@ -381,7 +385,7 @@ cat(report, file = "justification.md")
 ```
 
 Each rate's Monte Carlo standard error and Wilson interval are computed in the report from its
-counts, and the Python twin's `power_report()` writes the same text from the same counts.
+counts, and Python's `power_report()` writes the same text, byte for byte, from the same counts.
 
 ## Subjects and items
 
@@ -398,11 +402,11 @@ subj_floor <- subj_slope_sd / sqrt(min(recipe_subjects))
 ```
 
 The curve above adds subjects and keeps `r n_item` items, and in a crossed design the number of
-items limits what more subjects can buy. When the effect of the condition varies from item to
-item, as the by-item slope in the specification says it does, part of the standard error of the
-effect comes from the items sampled. That part shrinks only as items are added. As subjects are
-added, the standard error therefore falls towards a floor set by the number of items. Power
-at a fixed number of items levels off below 1
+items limits the gain from more subjects. When the effect of the condition varies from item to
+item, as it does here through the by-item slope in the specification, part of the standard error
+of the effect comes from the items sampled. That part shrinks only as items are added. As
+subjects are added, the standard error therefore falls towards a floor set by the number of items.
+Power at a fixed number of items levels off below 1
 ([Westfall, Kenny and Judd, 2014](https://doi.org/10.1037/xge0000014);
 [Judd, Westfall and Kenny, 2017](https://doi.org/10.1146/annurev-psych-122414-033702)). In the
 priming design, the floor is the by-item slope standard deviation over the square root of the
@@ -447,35 +451,34 @@ what a subject and an item each cost, is the design to plan for.
 
 Every power and precision analysis in pilotr takes a `workers` argument that spreads the
 Monte Carlo replicates across local cores. Each replicate takes its own seed from
-`replicate_seeds()`, so the results are identical to a serial run whatever the worker
-count, and parallelisation costs nothing in reproducibility. The mixed-model fits dominate
-the running time, which makes the speed-up close to linear in the number of cores. In a
-sweep the worker pool is created once and reused across all sample sizes. The analyses also
-take a cluster made with `parallel::makeCluster()` as `cl`, which `sweep_spec()` passes to
-every point of an effect-size sweep in the same way.
+`replicate_seeds()`, so the results are identical to a serial run for any number of workers.
+In the analyses that fit mixed models, the fits dominate the running time, so the speed-up is
+close to linear in the number of cores. In a sweep, the worker pool is created once and reused
+across all sample sizes. `power_design()`, `power_mixed()` and `precision_design()` also take a
+cluster made with `parallel::makeCluster()` as `cl`, which `sweep_spec()` passes to every point of
+an effect-size sweep in the same way.
 
 ```{r, eval = FALSE}
 power_curve_mixed(
   spec_c, subject_ns = seq(20, 60, 10), n_sims = 500, workers = 8)
 ```
 
-This design answers a serial bottleneck familiar from `simr::powerCurve()`, which this
-package's maintainer previously worked around by splitting the sample-size grid across
-separate jobs by hand and recombining the results afterwards
-([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
-In pilotr the same gain takes one argument.
+`simr::powerCurve()` runs serially, and pilotr's maintainer previously worked around that by
+splitting the sample-size grid across separate jobs by hand and recombining the results
+afterwards ([Bernabeu, 2021](https://pablobernabeu.github.io/2021/parallelizing-simr-powercurve/)).
+In pilotr, the `workers` argument gives the same speed-up.
 
 ## A bridge to the Bayesian workflow
 
 For a confirmatory Bayesian fit, `brms_bridge()` returns a ready-to-run `brms` model. It
-provides the family, the fixed and random-effects formula, and a weakly-informative prior set,
-all derived from the same specification, so that the planning model and the confirmatory model
-remain consistent. The formula reads the contrast columns that `model_data()` adds, so the model
-runs on `model_data(spec_c, simulate_design(spec_c))` or on collected data passed through
-`model_data()`. Its priors are scaled to the response and to each of those columns, here on the
-log scale on which the coefficients of a shifted lognormal act. Printing the result shows the model
-as code to copy into a script; assigning it instead gives the same parts as `formula`, `family`
-and `priors`, silently, for a caller assembling its own.
+derives the family, the fixed and random-effects formula, and a weakly-informative prior set
+from the same specification as the planning model. The formula reads the contrast columns that
+`model_data()` adds, so the model runs on `model_data(spec_c, simulate_design(spec_c))` or on
+collected data passed through `model_data()`. Its priors are scaled to the response and to each
+of those columns, here on the log scale on which the coefficients of a shifted lognormal act.
+Printing the result shows the model as code to copy into a script. Assigned to a name, the result
+prints nothing, and its elements `formula`, `family` and `priors` hold the same parts for a caller
+that assembles its own model.
 
 ```{r}
 brms_bridge(spec_c)

@@ -24,26 +24,26 @@ library(pilotr)
 ## One specification, three interfaces
 
 pilotr is built around a portable design specification that fully describes a data-generating
-process and is consumed identically by three interfaces, namely a no-code web application,
-this R package and a Python package. The specification is the unit of reproducibility. It is
-a complete, executable description rather than a screenshot of a graphical interface or a
-language-specific script. You can place it under version control, attach it to a
-preregistration, share it with a collaborator and run it unchanged in R or Python to obtain
-identical data. The data agree to the last bit wherever R and Python share a maths library, as
-on Linux, outside a rare Beta case under R 4.6.0 or later, which the
-[cross-language vignette](cross-language.html) describes. Elsewhere, a value that passes through
-`exp()`, `log()` or `pow()` can differ in its last bits, which the same vignette quantifies.
+process. Three interfaces read it identically, namely a no-code web application, this R package
+and a Python package. The specification, an executable description of the design, is the unit
+of reproducibility. You can place it under version control, attach it to a preregistration,
+share it with a collaborator and run it unchanged in R or Python to obtain identical data. The
+data agree to the last bit wherever R and Python share a maths library, as on Linux, except in
+a rare Beta case under R 4.6.0 or later that the [cross-language vignette](cross-language.html)
+describes. Elsewhere, a value that passes through `exp()`, `log()` or `pow()` can differ in its
+last bits, which the same vignette quantifies.
 
-This vignette walks through the core loop of describe, simulate, inspect and export. The
-other vignettes, listed at the end, each go deeper into one part of the workflow.
+This vignette covers the core workflow of describing, simulating, inspecting and exporting a
+design. Each of the other vignettes, listed at the end, covers one part of the workflow in more
+detail.
 
 ## Describe a design
 
 The specification is a small list serialised to JSON. You can write it by hand, point and
 click in the web application or build it from a flat set of inputs with `build_spec()`. The
-example below is a crossed psycholinguistic design. Subjects respond to items in a related or
-unrelated condition, with reaction time as the outcome, crossed by-subject and by-item random
-intercepts and slopes, and a small priming effect on the log scale.
+example below is a crossed psycholinguistic design in which subjects respond to items in a
+related or unrelated condition, with reaction time as the outcome. It has a small priming effect
+on the log scale and crossed by-subject and by-item random intercepts and slopes.
 
 ```{r}
 spec <- build_spec(list(
@@ -58,16 +58,15 @@ spec <- build_spec(list(
 ))
 ```
 
-The portable artefact is plain JSON. This is exactly what the web application downloads and
-what the Python package reads.
+The JSON form of the specification is what the web application downloads and what the Python
+package reads.
 
 ```{r}
 cat(spec_json(spec))
 ```
 
-You can read a specification back from a file (or string) with `load_spec()`, so a design
-authored anywhere runs everywhere. The full specification format, including every field and the
-cross-language RNG draw order, is documented in
+You can read a specification back from a file or a string with `load_spec()`. The specification
+format, including every field and the cross-language RNG draw order, is documented in
 [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md).
 
 ## Simulate
@@ -86,26 +85,23 @@ The design is crossed, so every subject sees every item in both conditions
 
 ## Reproducible by construction
 
-pilotr ships a shared random-number generator, so the same specification and seed produce the
-same data every time. This holds in the current R session and in a fresh one on the same
+pilotr provides a shared random-number generator, so the same specification and seed produce
+the same data every time. This holds in the current R session and in a fresh one on the same
 machine. In Python, and on another machine, it holds to the last bit wherever the maths library
-is the same, as on Linux, outside the rare Beta case under R 4.6.0 or later mentioned above.
-Elsewhere, values that pass through `exp()`, `log()` or `pow()` can differ in their last bits.
+is the same, except in the rare Beta case under R 4.6.0 or later.
 
 ```{r}
 identical(simulate_design(spec), simulate_design(spec))
 ```
 
-Changing the seed changes the data, and leaving the specification unchanged leaves the data
-unchanged. The [cross-language vignette](cross-language.html) describes how this holds across
-R and Python.
+Changing the seed changes the data. The [cross-language vignette](cross-language.html)
+describes how reproducibility holds across R and Python.
 
 ## Export a self-contained script
 
-`generate_r_script()` emits a stand-alone R script that embeds the specification and
-reproduces the design with no external files. This is convenient for an appendix or a
-preregistration. The specification travels as the JSON shown above, which `load_spec()` reads
-back to exactly the same numbers on any build of R.
+`generate_r_script()` emits a stand-alone R script suited to an appendix or a preregistration.
+The script reproduces the design with no external files and embeds the specification as the
+JSON shown above, which `load_spec()` reads back to exactly the same numbers on any build of R.
 
 ```{r}
 cat(generate_r_script(spec))
@@ -113,14 +109,10 @@ cat(generate_r_script(spec))
 
 ## Where to go next
 
-The remaining guides pick up where this one leaves off, taking the same specification through
-each response family, through power and precision analysis and out to the other interfaces
-that read it.
-
 - [Response families](response-families.html), covering Gaussian, reaction-time, accuracy,
   count, ordinal and proportion outcomes.
-- [Worked examples](worked-examples.html), which simulates each specification that ships with
-  the package.
+- [Worked examples](worked-examples.html), which simulates each specification bundled with the
+  package.
 - [Power and design analysis](power-analysis.html), covering simulation-based power with Type
   S and Type M errors, for two-group and crossed mixed-effects designs.
 - [Precision / ROPE design analysis](precision-rope.html), which plans by precision against a

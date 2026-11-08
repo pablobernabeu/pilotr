@@ -37,7 +37,7 @@
     "a guarantee.",
     "The anchor pins the Gaussian cases, and on observed agreement, not by construction. Every",
     "normal comes from AS 241, whose tail branch calls log() for about 15% of draws, and on",
-    "Windows about 1.5e-5 of normal draws differ between R and Python, by 1 to 3 ulp. The",
+    "Windows about 1.4e-5 of normal draws differ between R and Python, by 1 to 3 ulp. The",
     "anchored cases are small enough to have met no such draw on Linux or Windows. A case of",
     "50,000 draws or more is listed here even when it is Gaussian, and compare.py refuses to",
     "anchor a case of 50,000 rows or more, since each row draws at least one normal."

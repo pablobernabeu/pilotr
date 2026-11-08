@@ -1,8 +1,8 @@
 # Response families
 
 The same linear predictor can be mapped through any of eight response families. The family and
-its parameters live in the spec's `response` block, and the response column is named by
-`response["name"]`.
+its parameters are set in the specification's `response` block, and the response column is named
+by `response["name"]`.
 
 | Outcome | `family` | Link | Key parameters |
 |---|---|---|---|
@@ -18,23 +18,24 @@ its parameters live in the spec's `response` block, and the response column is n
 The fixed `effect` is always expressed on the scale of the linear predictor, the link scale.
 That is the identity scale for the Gaussian and ex-Gaussian families, the log scale for
 lognormal reaction times, reading times and counts, and the logit scale for accuracy, ordinal
-and Beta outcomes.
+and proportion outcomes.
 
-The ex-Gaussian is a normal plus an exponential, mean-centred by subtracting the
-exponential's own mean so that the linear predictor stays the mean of the response. That is
-brms's `exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted
-to it agree on what the intercept means. A shifted lognormal is not a substitute, because
-`power_mixed` logs the response back and leaves a symmetric residual on the analysis scale. A
-specification using the ex-Gaussian has to declare a `spec_version` of `"0.3"` or later, since a
-0.2 implementation would read it differently.
+The ex-Gaussian is a normal plus an exponential, mean-centred by subtracting the mean of the
+exponential so that the linear predictor remains the mean of the response. That is brms's
+`exgaussian(mu, sigma, beta)` parameterisation, so a specification and the model fitted to it
+agree on what the intercept means. A shifted lognormal is not a substitute, because
+`model_data` logs the response back and leaves a symmetric residual on the analysis scale. A
+specification that uses the ex-Gaussian must declare a `spec_version` of `"0.3"` or later, since
+a 0.2 implementation would read it differently.
 
-Every Beta response lies strictly inside (0, 1), as a Beta regression requires. Near a ceiling or a
-floor, a draw can round to exactly 1 or 0 in double precision, and it then becomes the nearest
-double inside the interval. A Beta specification that sets `round` needs at least 1, and a value
-rounded onto 0 or 1 becomes the nearest value inside the interval at that many decimals: 0.001 or
-0.999 at three. A linear predictor beyond about 36.7, or below about −745, leaves a shape parameter
-of zero, and a lognormal response whose `exp(eta + sigma * z)` overflows has no value to return.
-`simulate` refuses both with a `ValueError`, in the R twin's words.
+Every simulated Beta response lies strictly inside (0, 1), as a Beta regression requires. Near a
+ceiling or a floor, a draw can round to exactly 1 or 0 in double precision, and it then becomes
+the nearest double inside the interval. When a Beta specification sets `round`, the setting must
+be at least 1. A response rounded onto 0 or 1 then becomes the nearest value inside the interval
+at that many decimals, 0.001 or 0.999 at three. A linear predictor beyond about 36.7, or below
+about −745, leaves a shape parameter of zero, and a lognormal response whose
+`exp(eta + sigma * z)` overflows has no value to return. `simulate` raises a `ValueError` in both
+cases, with the same message as the R package.
 
 ## What the families look like
 
@@ -43,9 +44,9 @@ import sys; sys.path.insert(0, "docs")
 from _exec import table, show, BLUE, RED, GREEN
 ```
 
-A large two-group draw makes each family's shape clear: Gaussian is symmetric, the shifted
-lognormal has the right skew of reaction times, the plain lognormal is the same right-skewed
-shape without the shift and suits per-word reading times, and the Beta is bounded in (0, 1).
+A large two-group draw shows the shape of each family. The Gaussian is symmetric. The shifted
+lognormal has the right skew of reaction times, and the plain lognormal, which suits per-word
+reading times, has the same shape without the shift. The Beta is bounded in (0, 1).
 
 ```python exec="true" source="material-block" html="true" session="fam"
 import matplotlib.pyplot as plt
@@ -84,8 +85,8 @@ print(show(fig))
 
 ## Discrete and bounded outcomes
 
-The same machinery covers binary, count and proportion outcomes. The fixed effect moves the two
-group means apart on each family's own scale:
+Binary, count and proportion outcomes are simulated in the same way. The fixed effect moves the
+two group means apart on each family's own scale:
 
 ```python exec="true" source="material-block" session="fam"
 from statistics import mean
@@ -142,5 +143,5 @@ print(table(rows))
 ```
 
 Six of the eight families, all but `bernoulli` and `exgaussian`, appear in a ready-to-run
-[worked example](examples.md), and the full format, including the thresholds and the Beta
-precision `phi`, is on the [Specification](specification.md) page.
+[worked example](examples.md). The [Specification](specification.md) page defines the format,
+including the thresholds and the Beta precision `phi`.

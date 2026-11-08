@@ -73,10 +73,10 @@ Department of Education at the University of Oxford. His work spans cognitive ps
 neuroscience, linguistics, education and research methods, with hands-on experience of
 behavioural experiments, EEG, corpus analysis, computational modelling and statistics. He
 develops open, reproducible research software in R and Python, and is a Fellow of the Software
-Sustainability Institute. His [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his
-other work. pilotr and its [Python twin](https://pablobernabeu.github.io/pilotr/python/) are part
-of that work, keeping a design specification reproducible and its simulated data identical
-across both languages.
+Sustainability Institute. pilotr and its
+[Python twin](https://pablobernabeu.github.io/pilotr/python/) share one design specification, and
+a simulation from it is reproducible across both languages. His
+[ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 
 ## Licence
 
@@ -89,9 +89,9 @@ CRAN assigned the package the DOI
 <https://doi.org/10.32614/CRAN.package.pilotr> on publication.
 It names the R package across all its versions, so the version in the citation identifies the
 release used. Releases of the repository, which carry the Python package as well, are tagged on
-GitHub and archived on Zenodo, where the concept DOI
+GitHub and archived on Zenodo. The Zenodo concept DOI
 <https://doi.org/10.5281/zenodo.21266313> resolves to the latest
-archived release and each release has a DOI of its own. The [changelog](../news/index.html)
+archived release, and each release has a DOI of its own. The [changelog](../news/index.html)
 records what changed in each release.
 
 ## Contributing and support

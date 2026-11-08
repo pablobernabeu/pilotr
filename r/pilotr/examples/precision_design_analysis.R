@@ -24,7 +24,11 @@ cat("=== Recovery of fixed effects (auto-derived model; N =", nrow(fit@frame), "
 cat(sprintf("  %-16s %9s %9s\n", "term", "specified", "recovered"))
 for (nm in names(truth)) cat(sprintf("  %-16s %9.3f %9.3f\n", nm, truth[nm], fe[nm]))
 vc <- as.data.frame(VarCorr(fit))
-gs <- function(v) vc$sdcor[vc$grp == "subject" & vc$var1 == v & is.na(vc$var2)]
+# With `||`, lme4 gives each uncorrelated term a group of its own, named subject, subject.1,
+# subject.2 and so on, and the pattern below matches each of them.
+gs <- function(v) {
+  vc$sdcor[grepl("^subject([.][0-9]+)?$", vc$grp) & vc$var1 == v & is.na(vc$var2)]
+}
 cat(sprintf("  [random] by-subject SD SyntaxPC %.3f (spec 0.06), CoherencePC %.3f (spec 0.04); residual %.3f (spec 0.25)\n",
             gs("SyntaxPC"), gs("CoherencePC"), vc$sdcor[vc$grp == "Residual"]))
 

@@ -45,16 +45,17 @@
 #' Redden, 2015). The power of a `bernoulli` or `poisson` design with few subjects or items is
 #' therefore somewhat overstated.
 #'
-#' pilotr has no frequentist model for an `ordinal` or `beta` response yet. Such a response is
-#' fitted by the linear model on its own scale, while the specification's coefficients are on the
-#' logit scale. The function therefore warns, and withholds the mean estimate and Type M (`NA`),
-#' since both would compare the two scales. Type S compares signs alone, and the link keeps the
-#' sign of a main effect unless an interaction reverses that effect between the levels of another
-#' factor. It does not keep the sign of an interaction. A bounded response compresses differences
-#' near the ends of its range, so an interaction that is positive on the logit scale can be
-#' negative on the response scale. Type S is therefore withheld for an interaction as well. Power
-#' is the rate at which the linear model's test rejects. [generate_design_analysis()] writes a
-#' Bayesian design analysis on the link scale, with the model [brms_bridge()] derives.
+#' pilotr has no frequentist model on the logit scale for an `ordinal` or `beta` response yet.
+#' Such a response is fitted by the linear model on its own scale, while the specification's
+#' coefficients are on the logit scale. The function therefore warns, and withholds the mean
+#' estimate and Type M (`NA`), since both would compare the two scales. Type S compares signs
+#' alone, and the link keeps the sign of a main effect unless an interaction reverses that effect
+#' between the levels of another factor. It does not keep the sign of an interaction. A bounded
+#' response compresses differences near the ends of its range, so an interaction that is positive
+#' on the logit scale can be negative on the response scale. Type S is therefore withheld for an
+#' interaction as well. Power is the rate at which the linear model's test rejects.
+#' [generate_design_analysis()] writes a Bayesian design analysis on the link scale, with the
+#' model [brms_bridge()] derives.
 #'
 #' A `formula` given here is fitted as written, by `lmerTest::lmer()`, or by `stats::lm()` when
 #' it has no random terms, whatever the family, since only its author knows the scale of its

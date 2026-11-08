@@ -16,46 +16,47 @@
 
 ## Why pilotr
 
-Most planning tools ask for one effect size and return one power figure. A study has more in it
-than that. It has groups and conditions, crossed by-subject and by-item variation, and outcomes
-that are rarely Gaussian, such as reaction times, accuracy, counts and Likert ratings. pilotr
-lets you describe that whole design and then generates the data the design would produce.
-Before collecting anything, you can see how often the planned analysis would detect the effect
-and, when an estimate does reach significance, how far it would be exaggerated (a Type M error)
-or take the wrong sign (a Type S error). It turns a design on paper into evidence about whether
-the design is worth running. For accuracy and counts, the R package fits logistic and Poisson
-mixed models, so Type M is measured on the logit or log scale on which the effect is written.
-Likert ratings and proportions are analysed through a Bayesian design analysis, on the logit
-scale of their model.
+Most planning tools ask for one effect size and return one power figure. A study also has groups
+and conditions, crossed by-subject and by-item variation, and outcomes that are rarely Gaussian,
+such as reaction times, accuracy, counts and Likert ratings. pilotr lets you describe such a
+design and then generates the data the design would produce. Before collecting anything, you can
+see how often the planned analysis would detect the effect and, when an estimate does reach
+significance, how far it would be exaggerated (a Type M error) or take the wrong sign (a Type S
+error). For accuracy and counts, the R package fits logistic and Poisson mixed models, so Type M
+is measured on the logit or log scale on which the effect is written. Likert ratings and
+proportions are fitted by a linear model on the response scale, so `power_mixed()` withholds
+Type M and `precision_design()` withholds the ROPE decisions. For an analysis on the logit scale
+of their model, `generate_design_analysis()` writes a script that runs a Bayesian design analysis
+in brms.
 
 ## How it works
 
 A design is written once, as a small portable specification. That one specification drives three
-interchangeable front-ends which produce identical data, namely a no-code web app, an R package
-and a Python package. Together they close the loop from design to simulation to analysis, and on
-to simulation-based power and design analysis.
+interchangeable interfaces which produce identical data, namely a no-code web app, an R package
+and a Python package. Together they support each step from design through simulation and
+analysis to simulation-based power and design analysis.
 
 pilotr succeeds the *Experimental-data-simulation* Shiny app (Bernabeu & Lynott, 2024), archived
 on Zenodo (doi:10.5281/zenodo.10615953). The prototype drew marginal distributions only
-(`rnorm`/`rbinom`, with no effects, correlations or random structure), whereas pilotr is a
-generative toolkit built around effect sizes, random structure and realistic response families.
+(`rnorm`/`rbinom`), with no effects, correlations or random structure. pilotr is a generative
+toolkit built around effect sizes, random structure and realistic response families.
 
 ## Documentation
 
 Everything is published from one site, <https://pablobernabeu.github.io/pilotr/>, whose landing
-page points at the three parts. The R package's reference and articles live at
+page links to the three parts. The R package's reference and articles are at
 <https://pablobernabeu.github.io/pilotr/r/>, including a guide to
 [the no-code app](https://pablobernabeu.github.io/pilotr/r/articles/the-no-code-app.html).
 The Python package's guides and API reference are at
 <https://pablobernabeu.github.io/pilotr/python/>. The no-code app itself can be tried in the
-browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/app/>. The
-portable JSON spec and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
+browser, with nothing to install, at <https://pablobernabeu.github.io/pilotr/app/>. The portable
+JSON specification and the RNG contract are documented in [`spec/SPEC.md`](spec/SPEC.md).
 
 ## Installation
 
 The Python package is on [PyPI](https://pypi.org/project/pilotr/) and the R package is on
 [CRAN](https://CRAN.R-project.org/package=pilotr). The first command below installs the Python
-core engine, which is pure Python and has no dependencies. The second adds scipy, for
+generative core, which is pure Python and has no dependencies. The second adds scipy, for
 simulation-based power, and the third adds scipy, statsmodels and pandas, for crossed
 mixed-effects power. The double quotes keep zsh, the default shell on macOS, from reading the
 brackets as a filename pattern.
@@ -80,20 +81,18 @@ want those parts:
 install.packages(c("shiny", "ggplot2", "lme4", "lmerTest"))
 ```
 
-The development version of the R package installs from this repository, where it sits in the
-`r/pilotr` subdirectory:
+The development version of the R package installs from the `r/pilotr` subdirectory of this
+repository:
 
 ```r
 # install.packages("remotes")
 remotes::install_github("pablobernabeu/pilotr", subdir = "r/pilotr")
 ```
 
-Neither package is needed to try the no-code app, which runs entirely in the browser.
-
 ## How pilotr compares to existing tools
 
-The table below places pilotr beside the packages researchers most often reach for when planning
-a study.
+The table below places pilotr beside the packages researchers most often use when planning a
+study.
 
 | Capability | faux | simstudy | simr / Superpower | pilotr |
 |---|:--:|:--:|:--:|:--:|
@@ -103,22 +102,22 @@ a study.
 | Simulation-based power + Type S/M | ✗ | ✗ | ✓ (power only) | ✓ |
 | No-code GUI | ✗ | ✗ | ANOVA only | ✓ |
 | Python implementation | ✗ | ✗ | ✗ | ✓ |
-| R = Python data from one spec | — | — | — | ✓ |
+| R = Python data from one specification | — | — | — | ✓ |
 
 No single existing tool spans these capabilities, and the Python-implementation row is empty
-apart from pilotr. SDV learns from real data, pyDOE3 builds design matrices, Faker produces
-placeholder values and the statsmodels power module covers analytic classical tests only.
+apart from pilotr. Of the Python tools, SDV learns from real data, pyDOE3 builds design matrices,
+Faker produces placeholder values and the statsmodels power module covers analytic classical
+tests only.
 
-The last row deserves its exact scope. On Linux, where R and Python share a maths library, every
-shipped example and every case of the parity harness in [`tools/parity/`](tools/parity)
+The claim in the last row needs qualifying. On Linux, where R and Python share a maths library,
+every bundled example and every case of the parity harness in [`tools/parity/`](tools/parity)
 reproduces bit for bit, rounded or not. CI holds every case to the last bit except the unrounded
 dumps of `crossed_mixed_rt`, `reading_time_continuous` and `stress_exgaussian`, which
 [`tools/parity/tolerance.json`](tools/parity/tolerance.json) allows to differ by up to 8 units in
-the last place, on Linux as on any other platform. IEEE-754 fixes the rounding of
-arithmetic but not of `exp()`, `log()` and `pow()`, and on Windows the two languages take those
-from different libraries. There, a value that passes through one of them can differ in its last
-bits. [Cross-language reproducibility](#cross-language-reproducibility) below gives the measured
-rates.
+the last place, on Linux as on any other platform. On Windows, a value that passes through
+`exp()`, `log()` or `pow()` can differ in its last bits.
+[Cross-language reproducibility](#cross-language-reproducibility) below explains why and gives
+the measured rates.
 
 ## Repository layout
 
@@ -142,9 +141,9 @@ pilotr/  (repo root)
 
 ## One model, three interfaces
 
-The same design spec drives a no-code web app, an R package and a Python package. The app is a
-thin client. Every control writes into the portable JSON spec, which can be downloaded and run
-unchanged in either package to obtain identical data.
+Of the three interfaces, the no-code app is a thin client. Every control writes into the
+portable JSON specification, which can be downloaded and run unchanged in either package to
+obtain identical data.
 
 ```r
 # launch the no-code app locally (installed package)
@@ -161,7 +160,7 @@ sharing that process. The architecture is therefore split according to how the t
 
 | Path | How | Concurrency | Use for |
 |---|---|---|---|
-| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (installed with `install.packages("pilotr")` or `pip install pilotr`) | unbounded, each user on their own machine and cores | real work, especially heavy power runs parallelised across cores |
+| Installable (primary) | `pilotr::run_app()` in R, or `import pilotr` for Python scripting (installed with `install.packages("pilotr")` or `pip install pilotr`) | unbounded, each user on their own machine and cores | study planning, especially heavy power runs parallelised across cores |
 | Serverless demo | `app-lite/` exported with shinylive to a static site on GitHub Pages | unbounded, each browser computes via WebAssembly | a low-cost link for design, simulation and Gaussian power |
 | Shared hosted instance | shinyapps.io or ShinyProxy | low and costly | best avoided as the main channel, since it blocks and the prototype's free tier allowed 25 hours per month |
 
@@ -169,10 +168,10 @@ In the installable app, each power analysis and power curve runs in one R proces
 session that asked for it waits for the result. With `future` and `promises` installed,
 `run_app()` runs it in a background process, which leaves the app's own R process free for
 other sessions, such as a second browser tab. Heavy runs belong in `power_design()` or
-`power_mixed()` called from the console, whose `workers` argument spreads the replicates over
-local cores. The serverless build is single-user-per-browser and runs synchronously. Both are
-driven by the same spec, so a user can design in the browser demo and then run heavy power
-locally from the downloaded spec.
+`power_mixed()` called from the console. The `workers` argument of both functions spreads the
+replicates over local cores. The serverless build is single-user-per-browser and runs
+synchronously. The installable and serverless paths use the same specification, so a user can
+design in the browser demo and then run heavy power locally from the downloaded specification.
 
 ```bash
 # build the serverless static site (downloads webR assets on first run)
@@ -186,9 +185,9 @@ Rscript app-lite/build_shinylive.R   # -> build/shinylive-demo/
 
 Simulation-based power and precision analyses are embarrassingly parallel, so they scale well on
 a cluster. Within one machine, every power and precision analysis takes a `workers` argument
-that spreads the replicates over local worker processes, with results identical to a serial run,
-while the SLURM array below covers multi-node sweeps. The [`hpc/`](hpc/) directory holds a SLURM
-array job ([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
+that spreads the replicates over local worker processes, with results identical to a serial run.
+For multi-node sweeps, the [`hpc/`](hpc/) directory holds a SLURM array job
+([`precision_array.slurm`](hpc/precision_array.slurm) and its runner
 [`precision_array.R`](hpc/precision_array.R)) that runs one task per sample size. Each task calls
 `precision_design()` at its size, with the replicates spread across the task's cores, so its
 output has the columns and fit counts of `precision_curve()`.
@@ -212,9 +211,10 @@ pilotr is installed from the clone so that the package and the job's runner come
 commit. Then, from `hpc/`, `sbatch precision_array.slurm` runs the sweep, and
 `sbatch --export=ALL,N_SIMS=4 --array=0 precision_array.slurm` is a quick smoke test. SLURM
 writes each task's log to `hpc/`. Each task writes one `precision_N<n>.csv` to
-`$PROJECT_DIR/results`, and bound together the files form the curve that `precision_curve()`
-returns over the same grid, at a resolution far beyond a laptop. `solve_curve()` then gives the
-sample size at which a focal effect reaches a determinate decision with the target probability:
+`$PROJECT_DIR/results`. Bound together, the files form the curve that `precision_curve()`
+returns over the same grid, at a far finer resolution than a laptop allows. `solve_curve()` then
+gives the sample size at which a focal effect reaches a determinate decision with the target
+probability:
 
 ```r
 library(pilotr)
@@ -226,20 +226,20 @@ solve_curve(curve, target = 0.9, effect = "SyntaxPC")
 
 Each task takes the seed that `sweep_spec()` gives its point of the grid. The points of the curve
 are therefore independent, as `solve_curve()` assumes, and a local `precision_curve()` over the
-same grid simulates the same data. That exactness covers the simulated data alone. The cluster
-reproduces them exactly when both machines round `exp()`, `log()` and `pow()` alike, as two Linux
-machines with the same C library do. Between Windows and Linux, values that pass through those
-functions can differ in their last bits, as
-[Cross-language reproducibility](#cross-language-reproducibility) below sets out. The model fits
-also depend on the lme4 release, whose optimiser defaults have changed over time, and on the
-platform's numerical libraries. Each row of a task's output therefore records the versions of
-pilotr and lme4 that produced it.
+same grid simulates the same data. The cluster reproduces them exactly when both machines round
+`exp()`, `log()` and `pow()` alike, as two Linux machines with the same C library do. Between
+Windows and Linux, values that pass through those functions can differ in their last bits, as
+[Cross-language reproducibility](#cross-language-reproducibility) below sets out. Exact
+reproduction covers the simulated data alone. The model fits also depend on the lme4 release,
+whose optimiser defaults have changed over time, and on the platform's numerical libraries. Each
+row of a task's output therefore records the versions of pilotr and lme4 that produced it.
 
 ## Cross-language reproducibility
 
 Native random-number generators differ across ecosystems. R uses Mersenne-Twister with
-inversion, whereas NumPy uses PCG64, so a naive port never matches. `pilotr` instead ships a
-shared generator implemented identically in both languages.
+inversion, whereas NumPy uses PCG64, so a naive port never matches. `pilotr` therefore uses a
+shared generator implemented identically in both languages. The generator is auditable and free
+of external dependencies.
 
 Uniform deviates come from L'Ecuyer's (1988) combined linear congruential generator, whose
 intermediate products stay below 2^53 and so remain exact in IEEE-754 doubles (R) and Python
@@ -248,26 +248,31 @@ behind R's `qnorm()`. Everything else (Cholesky factors for correlated random ef
 inverse-CDF draws for the Poisson, Bernoulli and ordinal families) derives from those two in a
 documented draw order (see [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md)).
 The same specification and seed therefore yield identical data in R and Python wherever the two
-share a maths library, as on Linux, where CI checks every case to the last bit apart from the
-three unrounded dumps named above, which it allows 8 units in the last place.
+share a maths library, as on Linux, except in a rare Beta case under R 4.6.0 or later described
+below. On Linux, CI checks every case to the last bit apart from the three unrounded dumps named
+above, which it allows 8 units in the last place.
 
-IEEE-754 leaves the rounding of `exp()`, `log()` and `pow()` to that library, and on Windows R
-and Python do not share one. There, a value that passes through those functions can differ in its
-last bits, and every family has such a path. AS 241 calls `log()` in its tails, and about 1.4e-5
-of normal draws differed, by 1 to 3 units in the last place, so even Gaussian data can differ.
-Responses of the lognormal families and the ex-Gaussian differed by 1 unit, and an unrounded
-Beta response by up to 35. A discrete outcome can in principle move by a whole category, though
-none did in 50,000 rows of each family. Rounding to four decimals removed every continuous
-difference measured, but it guarantees nothing, since a last-bit difference can straddle a
-rounding boundary. One Beta case can differ on Linux too, under R 4.6.0 or later. From that
-version, R's `^` computes a cube or a fourth power by multiplication, where Python calls `pow()`,
-as R did before. A Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in
-its last bits. The boost for a Gamma shape of exactly 1/2 is a square, which both languages
-compute by multiplication. Within one language, the data are identical on one platform, and
-across operating systems on the same terms as across languages.
+IEEE-754 fixes the rounding of arithmetic but leaves the rounding of `exp()`, `log()` and `pow()`
+to the maths library, and, on Windows, R and Python do not share one. There, a value that passes
+through those functions can differ in its last bits, and every family has such a path. AS 241
+calls `log()` in its tails, and about 1.4e-5 of normal draws differed, by 1 to 3 units in the
+last place, so even Gaussian data can differ. Responses of the lognormal families and the
+ex-Gaussian differed by 1 unit, and an unrounded Beta response by up to 35. A discrete outcome
+can in principle move by a whole category, though none did in 50,000 rows of each family.
+Rounding to four decimals removed every continuous difference measured, but it guarantees
+nothing, since a last-bit difference can straddle a rounding boundary.
+
+One Beta case can differ on Linux too, under R 4.6.0 or later. From that version, R's `^`
+computes a cube or a fourth power by multiplication, where Python calls `pow()`, as R did before.
+A Beta response whose Gamma shape is exactly 1/3 or 1/4 can therefore differ in its last bits.
+The boost for a Gamma shape of exactly 1/2 is a square, which both languages compute by
+multiplication.
+
+Within one language, the data are identical on one platform, and across operating systems on the
+same terms as across languages.
 [`spec/SPEC.md`](https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md#scope-of-the-guarantee)
 sets out the scope, and [`tools/parity/tolerance.json`](tools/parity/tolerance.json) records the
-harness's allowances. The generator is auditable and free of external dependencies.
+harness's allowances.
 
 ## Quick start
 
@@ -275,9 +280,10 @@ Every command below runs from the repository root.
 
 ### Simulate a design, in either language
 
-The two demo scripts are the shortest way in. Each simulates the bundled designs and runs
-classical simulation-based power with the Type S and Type M errors, and the parity check then
-confirms that the two languages produce identical data.
+The two demo scripts are the shortest introduction to pilotr. Each simulates six of the eight
+bundled designs and runs classical simulation-based power, with the Type S and Type M errors, on
+the two-group Gaussian design. The parity check then confirms that the two languages produce
+identical data.
 
 ```bash
 python python/examples/run_demo.py         # Python
@@ -294,13 +300,14 @@ python python/examples/families_demo.py
 
 ### Power and design analysis
 
-Three R scripts cover this ground. The first runs crossed mixed-effects power through `lme4`
-and `lmerTest`. The second validates the generative model by fitting a maximal `lmer` model and
-checking that it recovers the specified parameters. The third covers continuous predictors,
-interactions and continuous random slopes, together with a precision-based ROPE design analysis,
-an N-sweep, the solve that turns such a curve into a sample size with a confidence interval on
-it (`solve_curve()`, or `target_n()` for a power curve), and a brms bridge (documented in
-[`docs/mixed_models_and_design_analysis.md`](docs/mixed_models_and_design_analysis.md)).
+Three R scripts demonstrate power and design analysis. The first runs crossed mixed-effects
+power through `lme4` and `lmerTest`. The second validates the generative model by fitting a
+maximal `lmer` model and checking that it recovers the specified parameters. The third covers
+continuous predictors, interactions and continuous random slopes. It also runs a precision-based
+ROPE design analysis and an N-sweep, solves the resulting curve for a sample size with a
+confidence interval on it (`solve_curve()`, or `target_n()` for a power curve) and runs a brms
+bridge. All of these are documented in
+[`docs/mixed_models_and_design_analysis.md`](docs/mixed_models_and_design_analysis.md).
 
 ```bash
 Rscript r/pilotr/examples/run_power_mixed.R
@@ -308,15 +315,15 @@ Rscript r/pilotr/examples/validate_recovery.R
 Rscript r/pilotr/examples/precision_design_analysis.R
 ```
 
-Python runs mixed-effects power through statsmodels. Its `power_mixed` fits the model the
-specification implies, which ports of the R package's `model_formula()` and `model_data()` build.
-Every coefficient is a fixed effect, and every declared random intercept and slope, an extra
-grouping factor's included, is an independent variance component, with the response logged for
-the two lognormal families. It tests every coefficient, or the effects that `focal` names. It
-leaves out the correlations between random effects, which the R package's `power_mixed()`
-estimates, and warns when a specification declares them. A design without random effects is
-refused, where R fits it with `lm()` or `glm()`. The note closing the Quick start explains where
-the two estimators diverge.
+Python runs mixed-effects power through statsmodels. Its `power_mixed` builds the model the
+specification implies with ports of the R package's `model_formula()` and `model_data()`, and
+fits it. Every coefficient is a fixed effect. Every declared random intercept and slope,
+including those of an extra grouping factor, is an independent variance component, and the
+response is logged for the two lognormal families. It tests every coefficient, or the effects
+that `focal` names. It leaves out the correlations between random effects, which the R package's
+`power_mixed()` estimates, and warns when a specification declares them. For a design without
+random effects, it raises an error, where R fits the design with `lm()` or `glm()`. The note
+closing the Quick start explains where the two estimators diverge.
 
 ```bash
 python python/examples/power_mixed_demo.py
@@ -344,15 +351,15 @@ Rscript r/pilotr/examples/equivalence_simstudy.R
 python -m pytest python/tests -q
 ```
 
-> A note on R and Python coverage. Data generation is bit-identical across languages wherever
-> they share a maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later (see
-> [Cross-language reproducibility](#cross-language-reproducibility) above), and both
-> ecosystems run crossed mixed-effects power from the same spec. The mixed-model analyses,
-> however, differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies,
-> correlations included, and tests with Satterthwaite's approximation. Python (`statsmodels`
-> MixedLM, REML) fits the same model with independent variance components, reaching the optimum
-> that `lme4` reaches for the same components, and tests with a Wald z. With few subjects or items, a Wald z rejects
-> more readily than Satterthwaite's test
+> Data generation is bit-identical across languages wherever they share a maths library, as on
+> Linux, outside a rare Beta case under R 4.6.0 or later (see
+> [Cross-language reproducibility](#cross-language-reproducibility) above). Both ecosystems run
+> crossed mixed-effects power from the same specification. The mixed-model analyses, however,
+> differ. R (`lme4`/`lmerTest`, REML) fits the model the specification implies, correlations
+> included, and tests with Satterthwaite's approximation. Python (`statsmodels` MixedLM, REML)
+> fits the same model with independent variance components, reaching the optimum that `lme4`
+> reaches for the same components, and tests with a Wald z. With few subjects or
+> items, a Wald z rejects more readily than Satterthwaite's test
 > ([Luke, 2017](https://doi.org/10.3758/s13428-016-0809-y)), so in small designs Python's power
 > tends to exceed R's on the same data. On the 12 × 8 design of the Python power guide, 6 of 12
 > replicates are significant in Python and 4 in R. With 8 subjects, 6 items, random intercepts
@@ -372,8 +379,8 @@ R package across its versions:
 > specification* [R package]. Comprehensive R Archive Network (CRAN).
 > <https://doi.org/10.32614/CRAN.package.pilotr>
 
-The Python package's reference gives the concept DOI of the Zenodo archive, which holds every
-GitHub release of both packages, since PyPI assigns no DOI:
+PyPI assigns no DOI, so the Python package's reference gives the concept DOI of the Zenodo
+archive, which holds every GitHub release of both packages:
 
 > Bernabeu, P. (2026). *pilotr: Simulate experimental and behavioural data from a portable design
 > specification* [Python package]. <https://doi.org/10.5281/zenodo.21266313>
@@ -383,7 +390,7 @@ The R and Python packages are released separately, so their version numbers can 
 documentation site gives it with that package's version and a BibTeX entry, for
 [the R package](https://pablobernabeu.github.io/pilotr/r/articles/about.html) and for
 [the Python package](https://pablobernabeu.github.io/pilotr/python/about/). GitHub builds a
-ready-made citation from [`CITATION.cff`](CITATION.cff) through its *Cite this repository*
+ready-made citation from [`CITATION.cff`](CITATION.cff) through its 'Cite this repository'
 button. That file describes both packages, so it gives the Zenodo DOI, which favours neither,
 and lists each package's identifiers.
 
