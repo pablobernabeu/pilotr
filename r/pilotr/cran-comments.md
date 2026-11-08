@@ -18,23 +18,27 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 41537328086 on 2026-11-02, at commit cde86bd on the release
-branch. The refresh-vignette-caches workflow regenerated the three files of
-cached mixed-model results in vignettes/, so that they record 0.4.0, committed
-them as cde86bd and then started the run. The package sources of this
-submission are those of cde86bd. Only this file, which `.Rbuildignore` keeps
-out of the tarball, has changed since. Each leg built the tarball with
+GitHub Actions, run 42427181969 on 2026-11-07, for commit d6541f0 on the
+release branch. Pull request #24 started the run, so it checked out
+0fe482d, the merge of d6541f0 into main at 0221556. That merge differs from
+d6541f0 only in .github/workflows/publish.yml, outside the package. The three
+files of cached mixed-model results in vignettes/ are the ones that the
+refresh-vignette-caches workflow regenerated and committed as cde86bd, so that
+they record 0.4.0. None of the commits since cde86bd changed them, the chunks
+that produced them or the functions those chunks call. The package sources of
+this submission are those of d6541f0. Only this file, which `.Rbuildignore`
+keeps out of the tarball, has changed since. Each leg built the tarball with
 `--no-manual` and `--compact-vignettes=gs+qpdf` and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-11-01 r90825)
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-11-06 r90845)
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
 * windows-latest (Windows Server 2022 x64, build 26100), R 4.6.2
-* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-11-01
-  r90825)
-* macos-latest (macOS Tahoe 26.6.2, aarch64-apple-darwin23), R 4.6.2
+* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-11-06
+  r90845)
+* macos-latest (macOS Tahoe 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with no failures or warnings. 34 tests skip
 everywhere because they read repository files that R CMD check cannot reach,
@@ -43,8 +47,9 @@ sources, and one because pkgdown is not installed. Under R 4.5.3, one more
 skips because it checks how R 4.6.0 and later compute integer powers.
 
 The same run installed the Suggests floors that DESCRIPTION declares (ggplot2
-3.4.0 and testthat 3.1.5) on R oldrel-3 under ubuntu-latest, and the check
-passed there without the vignettes.
+3.4.0 and testthat 3.1.5) on R oldrel-3 under ubuntu-latest. There the check,
+run without the vignettes, ended with no errors or warnings, and its two notes
+concern packages that the floors job does not install.
 
 ## Notes
 
