@@ -74,7 +74,9 @@ jobs:
         run: python tools/check_versions.py
 
   pytest:
-    runs-on: ubuntu-latest
+    # setup-python has no Python 3.9 for Ubuntu 26.04, which ubuntu-latest became in November
+    # 2026, so the 3.9 cell runs on Ubuntu 24.04 and the others stay on ubuntu-latest.
+    runs-on: ${{ matrix.python-version == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -179,7 +181,8 @@ jobs:
   # to what actually works, not that the job is too strict.
   minimum-versions:
     name: Declared minimum dependencies
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04, because setup-python has no Python 3.9 for Ubuntu 26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
