@@ -1,13 +1,13 @@
-"""Monte Carlo uncertainty for the rates the power functions report, mirroring mcse.R.
+"""Monte Carlo uncertainty for the rates the power functions report.
 
 Every power and decision probability is a proportion over a finite number of replicates, so it
 carries its own uncertainty, and a bare number invites the reader to treat it as exact. At 60
 replicates, a rate near 0.5 has a Monte Carlo standard error of 0.065, so a reported power of
 0.80 is compatible with anything from roughly 0.70 to 0.90.
 
-Each function performs the operations of its counterpart in the R package's mcse.R in the same
-order, so that for the same counts both return the same doubles. Sums are therefore written out
-as loops, as they are in R.
+Each function performs the operations of its counterpart in the R package in the same order,
+so that for the same counts both return the same doubles. Sums are therefore written out as
+loops, as they are in R.
 ``statistics`` works in exact fractions, and from Python 3.12 ``sum()`` adds floats with
 compensated summation, so either would round differently from the plain double folds of R.
 """

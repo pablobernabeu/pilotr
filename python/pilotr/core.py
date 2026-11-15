@@ -1,6 +1,6 @@
 """Portable numerical core for pilotr.
 
-Everything here is implemented to be bit-identical with the R port. The
+Everything here is implemented to be bit-identical with the R package. The
 components are a shared L'Ecuyer (1988) combined LCG for uniforms, Wichura's
 AS 241 inverse-normal, a Cholesky factorisation written out in full, inverse-CDF
 transforms for the response families and a port of R's round(). The routines
@@ -338,14 +338,14 @@ def ordinal_inv(eta: float, thresholds: list[float], u: float) -> int:
 def gamma_mt(rng, shape: float) -> float:
     """Marsaglia-Tsang Gamma(shape, scale=1) draw from the shared RNG (normals and uniforms in a
     rejection loop). The floating-point operations are identical in R and Python, so the
-    accept/reject decisions also agree, which preserves parity across the two languages.
+    decisions to accept or reject also agree, which preserves parity across the two languages.
 
     The cube is written as two multiplications rather than ``** 3``. Python's ``**`` calls the
     library pow(), whereas R's ``^`` computes a square, and from R 4.6.0 a cube, by repeated
     multiplication. Measured over 200,000 draws in this generator's range, the two disagree on
     a third of inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both
     languages, and they also decide the rejection step, so aligning them keeps the
-    accept/reject sequence (and hence the number of draws consumed) identical.
+    sequence of acceptances and rejections (and hence the number of draws consumed) identical.
 
     The boost ``u ** (1 / shape)`` calls the library pow(), as R's ``^`` does, except for an
     exponent of exactly 2. R computes that square as ``u * u``, and on Linux ``u ** 2.0`` differed
@@ -563,7 +563,7 @@ def beta_round(y: float, digits) -> float:
     bounds are the nearest values inside the interval at that many decimals, ``lo = 1 / 10^d``
     and ``hi = 1 - lo``: `fround` itself returns `lo` up to 22 places and `hi` up to 15.
     ``10^d`` is built by multiplication, exact up to 22 places and free of either language's
-    ``pow()``. Beyond 22 places `lo` falls back to 2^-1074, and from 17 places, where ``1 - lo``
+    ``pow()``. Beyond 22 places, `lo` falls back to 2^-1074, and from 17 places, where ``1 - lo``
     rounds to 1, `hi` falls back to 1 - 2^-53, the bounds of an unrounded response. See
     'Rounding' in spec/SPEC.md.
 

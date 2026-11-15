@@ -1,4 +1,4 @@
-"""A sample-size justification, written in Markdown from a power result, mirroring power_report.R.
+"""A sample-size justification, written in Markdown from a power result.
 
 The documentation calls the value `target_n` returns the number a preregistration quotes. The
 justification that goes with it names the analysis and its test, each effect size and where it came

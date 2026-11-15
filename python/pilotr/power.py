@@ -226,7 +226,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
         comes with a Wilson interval, since its standard error is zero whenever no sign is wrong.
         Type M comes with its standard error, the standard deviation of the exaggeration ratios
         over the square root of their number. Each is computed as in the R package's
-        ``power_design()``, so the same counts give the same doubles.
+        ``power_design()``, operation for operation, so the same counts give the same doubles.
 
     Raises
     ------

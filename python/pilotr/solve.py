@@ -29,7 +29,7 @@ fitted glm: the solved point on the fitted scale is ``(link(target) - intercept)
 its standard error follows from the gradient of that expression in the two coefficients.
 
 Fieller's exact interval for a ratio (Fieller, 1954) is the obvious alternative, and it was
-tried. It does not separate from the delta method on this evidence. Over the same 36 checks both
+tried. It does not separate from the delta method on this evidence. Over the same 36 checks, both
 covered the analytic answer 31 times, at mean widths of 10.34 subjects for Fieller's and 10.18 for
 the delta method, and Fieller's was bounded every time. The run at seed base 77000 above puts
 both at 36. These curves determine the slope well enough that the two intervals nearly coincide,

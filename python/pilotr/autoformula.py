@@ -1,9 +1,9 @@
 """The analysis model a design specification implies: its modelling data and its formula.
 
-A port of the R package's autoformula.R. `model_data` adds to a simulated data set the columns
-the model reads, and `model_formula` writes the model as the R package writes it, term for term,
-in lme4's notation. `power_mixed` fits the model the two describe, so it analyses every
-coefficient and every declared random effect.
+`model_data` adds to a simulated data set the columns the model reads, and `model_formula`
+writes the model as the R package writes it, term for term, in lme4's notation. `power_mixed`
+fits the model the two describe, so it analyses every coefficient and every declared random
+effect.
 
 Interactions ``"a:b"`` become product columns named ``"a_b"``. Categorical factors become their
 numeric contrast columns. The response is logged for the lognormal families, whose coefficients

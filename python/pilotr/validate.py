@@ -1,4 +1,4 @@
-"""Specification validation and version negotiation, mirroring pilotr/R/validate.R.
+"""Specification validation and version negotiation, as in the R package.
 
 `validate_spec` applies the rules of spec/design.schema.json, written out here rather than read
 from the file, and the cross-field rules the schema cannot express. `load_spec` and `simulate`
