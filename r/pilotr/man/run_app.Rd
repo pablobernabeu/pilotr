@@ -7,8 +7,7 @@
 run_app(..., async = NULL)
 }
 \arguments{
-\item{...}{passed to \code{\link[shiny:runApp]{shiny::runApp()}} (e.g. \code{port},
-\code{launch.browser}).}
+\item{...}{Further arguments passed to \code{\link[shiny:runApp]{shiny::runApp()}}, such as \code{port} and \code{launch.browser}.}
 
 \item{async}{If TRUE (the default when 'future' and 'promises' are installed), the app runs
 each power analysis and power curve in a background R process. That leaves the app's own R
@@ -19,7 +18,7 @@ app runs. Either way, the plan in force before the call is in force again once t
 With FALSE, power runs in the app's own R process and no plan is set.}
 }
 \value{
-No return value; called for its side effect of launching the Shiny application,
+No return value. It is called for its side effect of launching the Shiny application,
 which blocks the R session until the app is closed.
 }
 \description{

@@ -11,9 +11,9 @@
 #' Build the modelling data frame from a simulated data set and its specification
 #'
 #' Add the analysis response column `.y` (`log(y)` for `lognormal`, `log(y - shift)` for
-#' `shifted_lognormal` and the response itself otherwise), the
-#' numeric contrast columns implied by the categorical factors, and any interaction product
-#' columns (an `a:b` coefficient becomes a column `a_b`).
+#' `shifted_lognormal` and the response itself otherwise), the numeric contrast columns implied by
+#' the categorical factors and any interaction product columns (an `a:b` coefficient becomes a
+#' column `a_b`).
 #'
 #' @param spec A design specification (path or list). A path is read with [load_spec()], which
 #'   validates it.
@@ -82,7 +82,7 @@ model_data <- function(spec, d) {
 #' [precision_design()] take these names as the rungs of such a rule.
 #'
 #' A specification with neither a fixed coefficient nor a random effect implies no model, and is
-#' refused in the words the 'Python' twin uses.
+#' refused with the same message as in the 'Python' package.
 #'
 #' @param spec A design specification (path or list). A path is read with [load_spec()], which
 #'   validates it.

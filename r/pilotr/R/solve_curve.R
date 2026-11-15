@@ -180,8 +180,8 @@
 #'
 #' Take the curve a sweep has already produced, fit the decision rate against the swept value,
 #' and solve for the value at which the rate meets a target. The solved value comes with a
-#' confidence interval, because a point read off a simulated curve without one repeats the
-#' overconfidence that design analysis exists to expose.
+#' confidence interval, because a value read off a simulated curve without one hides the uncertainty
+#' of the simulation.
 #'
 #' @details
 #' The input is the data frame [power_curve_mixed()], [precision_curve()] or [sweep_spec()]
@@ -203,14 +203,14 @@
 #'
 #' The interval is the delta-method interval of `MASS::dose.p()`, computed on the scale named by
 #' `transform` and mapped back, so it is symmetric on that scale and asymmetric on the natural one.
-#' That asymmetry is the honest shape: at the top of a power curve a given change in rate costs far
-#' more sample size than the same change lower down. In the checks against [stats::power.t.test()]
+#' That asymmetry is correct: at the top of a power curve, a given change in rate costs far more
+#' sample size than the same change lower down. In the checks against [stats::power.t.test()]
 #' above, Fieller's interval for a ratio (Fieller, 1954), tried as the alternative, covered the
 #' analytic answer as often, at nearly the same width, so the interval `MASS::dose.p()` reports is
 #' kept. Where the two-parameter model does not describe the curve, the interval is widened by the
 #' heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
 #' (Finney, 1971), reported as `dispersion`. It is floored at 1, so a well-fitting curve is left
-#' alone and a badly-fitting one cannot report a narrower interval than its own residuals justify.
+#' alone and a badly fitting one cannot report a narrower interval than its own residuals justify.
 #'
 #' The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
 #' square root of the sample size. Sweep something else,
@@ -264,8 +264,8 @@
 #' covered 94.0%.
 #'
 #' @param curve A curve, as returned by [power_curve_mixed()], [precision_curve()] or
-#'   [sweep_spec()]: one row per swept value, with the swept value, a decision rate, and the
-#'   number of replicates behind it.
+#'   [sweep_spec()]: one row per swept value, with the swept value, a decision rate and the number
+#'   of replicates behind it.
 #' @param target The decision rate to solve for, strictly between 0 and 1.
 #' @param x Name of the column holding the swept value. `NULL`, the default, takes the leading
 #'   column, which holds a grid index when the sweep was over lists.
@@ -284,11 +284,11 @@
 #'   bounds), `level`, `target`, `se` (the delta-method standard error on the fitted scale, the
 #'   scale on which the interval is symmetric), `dispersion` (the heterogeneity factor applied,
 #'   1 where the model fits), `x` and `y` (the columns used), `transform`, `intercept` and `slope`
-#'   (the fitted coefficients), `n_points` (the number of curve points the fit used), and `x_min`
-#'   and `x_max` (the swept range). A bound is allowed to fall outside that range. When one does,
-#'   the sweep was too narrow to pin the value down and should be widened. A `dispersion` well
-#'   above 1 says the curve is not the shape the model assumes, so the solve deserves a wider grid
-#'   or more replicates before it deserves any trust.
+#'   (the fitted coefficients), `n_points` (the number of curve points the fit used) and `x_min` and
+#'   `x_max` (the swept range). A bound is allowed to fall outside that range. When one does, the
+#'   sweep was too narrow to pin the value down and should be widened. A `dispersion` well above 1
+#'   says the curve is not the shape the model assumes, so the solve needs a wider grid or more
+#'   replicates before it can be trusted.
 #' @references Fieller, E. C. (1954). Some problems in interval estimation. \emph{Journal of the
 #'   Royal Statistical Society: Series B}, 16(2), 175-185.
 #'   \doi{10.1111/j.2517-6161.1954.tb00159.x}

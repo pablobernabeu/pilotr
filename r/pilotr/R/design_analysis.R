@@ -449,10 +449,10 @@
 #' Generate a Bayesian design-analysis script from a specification
 #'
 #' Emit a runnable R script that simulates from a design specification, fits the confirmatory
-#' Bayesian model that [brms_bridge()] derives for it, and decides about each focal effect on a
-#' Savage-Dickey Bayes factor together with a highest-density interval tested against a region
-#' of practical equivalence. The script is returned as a character string and nothing is fitted
-#' here, so the function needs neither `brms` nor Stan installed.
+#' Bayesian model that [brms_bridge()] derives for it and decides about each focal effect on a
+#' Savage-Dickey Bayes factor together with a highest-density interval tested against a region of
+#' practical equivalence. The script is returned as a character string and nothing is fitted here,
+#' so the function needs neither `brms` nor Stan installed.
 #'
 #' @details
 #' The function emits a script for the user to run, for two reasons that both come down to
@@ -472,7 +472,7 @@
 #' equivalence asks instead whether the effect is large enough to matter (Kruschke, 2018).
 #' Requiring the two to agree makes `"supported"` and `"null"` harder to reach than either
 #' criterion alone would, and it leaves the third answer of `"inconclusive"` available when they
-#' disagree, which is the answer a small pilot most often deserves.
+#' disagree, which is the answer most small pilots warrant.
 #'
 #' Because the Savage-Dickey ratio is read off the prior as well as the posterior, the emitted
 #' `brm()` call sets `sample_prior = "yes"`, and the Bayes factor it produces is a statement
@@ -487,13 +487,13 @@
 #' The convergence gate is checked before any verdict is formed. R-hat is the rank-normalised
 #' version of Vehtari et al. (2021), for which a limit near 1.01 is appropriate where the older
 #' one was 1.1, and divergent transitions are counted as a share of post-warmup draws so that the
-#' threshold means the same thing whatever the run length. When either limit is exceeded the
-#' emitted script reports `NA` for every verdict and prints why, since a conclusion from a fit
-#' that has not converged carries the authority of a number without the sampling behind it.
+#' threshold means the same thing whatever the run length. When either limit is exceeded, the
+#' emitted script reports `NA` for every verdict and prints why, since a fit that has not converged
+#' cannot support a conclusion.
 #'
 #' A verdict is a function of the whole rule, the whole gate and the specification, so the record
 #' of each replicate carries all of them: `bf_threshold`, `rope`, `ci_mass`, `max_rhat_limit`,
-#' `max_divergent_limit`, an MD5 fingerprint of the canonical specification JSON, and the pilotr
+#' `max_divergent_limit`, an MD5 fingerprint of the canonical specification JSON and the pilotr
 #' version that produced the data. A results directory collects whatever was written into it, and
 #' the emitted aggregator globs it, so without those columns two array runs under different
 #' regions of practical equivalence would combine into one table with nothing to tell them apart.
@@ -531,11 +531,11 @@
 #' @param file Optional path. When given, the script is also written there, byte for byte
 #'   with LF line endings and a single trailing newline on every platform, and returned
 #'   invisibly.
-#' @return A length-one character string holding the emitted script, invisibly when `file` is
-#'   given. For `array = "slurm"` the string holds three banner-separated parts, an R analysis
-#'   script, a bash array wrapper, and an R aggregator; the wrapper is not submittable as
-#'   emitted, since its `--account` and `PROJECT_DIR` placeholders must be filled in first, and
-#'   its partitions checked against the cluster's.
+#' @return A length-one character string holding the emitted script, invisibly when `file` is given.
+#'   For `array = "slurm"`, the string holds three banner-separated parts: an R analysis script, a
+#'   bash array wrapper and an R aggregator. The wrapper cannot be submitted as emitted, since its
+#'   `--account` and `PROJECT_DIR` placeholders must be filled in first and its partitions checked
+#'   against the cluster's.
 #' @references Kass, R. E. and Raftery, A. E. (1995). Bayes factors. \emph{Journal of the
 #'   American Statistical Association}, 90(430), 773-795. \doi{10.1080/01621459.1995.10476572}
 #'

@@ -11,7 +11,7 @@ Description: Generative simulation of experimental and behavioural data sets fro
     Supports user-specified fixed effect sizes, crossed by-subject and by-item random
     intercepts and slopes, predictors measured with error, realistic response families
     (Gaussian, lognormal, shifted lognormal, ex-Gaussian, Bernoulli, Poisson, ordinal and
-    Beta), and simulation-based power and precision-based design analysis, including the
+    Beta) and simulation-based power and precision-based design analysis, including the
     Type S and Type M errors of Gelman and Carlin (2014)
     <doi:10.1177/1745691614551642> and a region of practical equivalence. A shared
     cross-language random-number generator means that, given the same specification and

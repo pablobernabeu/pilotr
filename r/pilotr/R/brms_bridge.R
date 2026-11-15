@@ -96,7 +96,7 @@
   list(b = s * sd_y / sd_x, sd = sd_y)
 }
 
-#' Derive a brms formula, family, and priors from a design spec
+#' Derive a brms formula, family and priors from a design spec
 #'
 #' @details
 #' The formula names the analysis columns of the design: each factor's numeric contrast columns
@@ -150,7 +150,7 @@
 #' precision. The process that generated them has no point mass at the boundary, so a
 #' zero-one-inflated model would misstate it.
 #'
-#' @param spec a design spec (path or list).
+#' @param spec A design specification (path or list).
 #' @param prior_scale The standard deviation of the normal prior on a standardised main effect
 #'   for the continuous families, that is on the coefficient multiplied by its column's standard
 #'   deviation and divided by the response's. For `bernoulli`, `poisson`, `ordinal` and `beta`,

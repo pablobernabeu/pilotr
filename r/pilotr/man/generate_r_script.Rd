@@ -32,7 +32,7 @@ backend, which the installation line does not name. Any other design is sent to
 \code{\link[=power_mixed]{power_mixed()}}, and only then does the installation line name \code{lme4} and \code{lmerTest}, which it
 needs.
 
-Since the point of the script is bit-for-bit reproduction, the embedded specification has to
+Since the script is meant to reproduce the data bit for bit, the embedded specification has to
 preserve every coefficient exactly. The JSON text sits in a raw string that \code{\link[=load_spec]{load_spec()}}
 reads with 'jsonlite', which parses numbers with the C library's \code{strtod()}. That rounds
 correctly, so each number reaches the script as the double it was on every build of R, and

@@ -49,20 +49,20 @@ returning a negative variance.
 
 \code{tune = "all"} holds the intercept and multiplies every coefficient and every random-effect
 standard deviation, and the residual standard deviation where there is one, by a common factor.
-For the families with a free residual that leaves every ratio between components unchanged, so
+For the families with a free residual, that leaves every ratio between components unchanged, so
 it rescales the outcome without altering the design's character. It is also the only option for
 the families whose residual is fixed by the link.
 
 For those, the residual cannot be rescaled at all, so the structural part alone has to close the
 gap and the target has to exceed the link's own contribution. A \code{bernoulli} or \code{ordinal} design
-carries a latent residual of \code{pi^2 / 3}, about 3.29, so calibrating one to a total variance of 1
-is not merely difficult but impossible, and the error says so rather than returning something
-plausible. For \code{poisson} and \code{beta} the residual moves with the linear predictor, so the factor
-is solved numerically; that costs one extra simulation rather than one per candidate, because
-scaling the coefficients and the random-effect standard deviations by \code{k} moves each row's
-linear predictor from \code{eta} to exactly \code{b0 + k * (eta - b0)}, where \code{b0} is the intercept. The
-search starts at \code{k = 0}, where every row sits at the intercept, so a target at or below the
-residual variance that the intercept alone implies is refused.
+carries a latent residual of \code{pi^2 / 3}, about 3.29, so it cannot be calibrated to a total
+variance of 1, and the error says so rather than returning something plausible. For \code{poisson} and
+\code{beta}, the residual moves with the linear predictor, so the factor is solved numerically. That
+costs one extra simulation rather than one per candidate, because scaling the coefficients and
+the random-effect standard deviations by \code{k} moves each row's linear predictor from \code{eta} to
+exactly \code{b0 + k * (eta - b0)}, where \code{b0} is the intercept. The search starts at \code{k = 0}, where
+every row sits at the intercept, so a target at or below the residual variance that the intercept
+alone implies is refused.
 
 The intercept is held because it is a location. It adds nothing to the fixed or random
 components, so scaling it changes none of them and only moves the outcome. For \code{poisson} and

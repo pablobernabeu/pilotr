@@ -19,10 +19,9 @@
 #'
 #' @details
 #' The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
-#' from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and
-#' for comparability across replicates; in small samples it is somewhat narrower than a
-#' Satterthwaite t interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic
-#' at small sample sizes.
+#' from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and for
+#' comparability across replicates. In small samples, it is somewhat narrower than a Satterthwaite t
+#' interval, so `p_meaningful` and `mean_ci_width` are slightly optimistic at small sample sizes.
 #'
 #' The fitter follows the response family, as in [power_mixed()]. Since no p-value is needed, a
 #' `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian` response is fitted by
@@ -36,7 +35,7 @@
 #' too often when the clusters are few (Li and Redden, 2015). The `fitter` column names the
 #' fitter.
 #'
-#' pilotr has no frequentist model on the logit scale for an `ordinal` or `beta` response yet.
+#' pilotr has no frequentist model on the logit scale for an `ordinal` or `beta` response.
 #' Such a response is fitted by the linear model on its own scale, where a region of practical
 #' equivalence set on the logit scale of the coefficients means nothing. The function warns, and
 #' withholds the decision probabilities with their Monte Carlo standard errors and bounds (`NA`).
@@ -62,7 +61,7 @@
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name `a_b`.
 #'   A list of coefficient sets, which [power_mixed()] tests jointly, is refused, since a set has no
 #'   single estimate to build an interval around.
-#' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
+#' @param formula Optional `lme4` formula. If `NULL`, it is derived from the specification by
 #'   [model_formula()], and the response family chooses the fitter. A formula given here is
 #'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
 #'   simplification rule: a character vector of [model_formula()] structures, such as
@@ -71,10 +70,10 @@
 #' @param fallback When a replicate moves on to the next rung of a ladder: `"singular"`, the
 #'   default, after a fit that is boundary-singular or failed, and `"warning"` also after a fit with
 #'   a warning or an optimiser convergence message. It has no effect on a single formula.
-#' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL`
-#'   it is derived via [model_data()], which adds the analysis response `.y`, on the log scale
-#'   for the lognormal families, and builds the contrast and interaction columns, so focal names
-#'   follow the auto-formula (interactions written as `a_b`).
+#' @param prep Optional function mapping a simulated data set to the modelling data. If `NULL`, it
+#'   is derived by [model_data()], which adds the analysis response `.y`, on the log scale for the
+#'   lognormal families, and builds the contrast and interaction columns, so focal names follow the
+#'   auto-formula (interactions written as `a_b`).
 #' @param rope The region of practical equivalence, as a half-width or as an interval. A single
 #'   non-negative number `r` is the region from `-r` to `r`, so that an effect with
 #'   `abs(beta) < r` is treated as practically equivalent to zero. A pair `c(lower, upper)` with
@@ -108,10 +107,10 @@
 #'   The decision proportions are taken over `n_returned`, the replicates that
 #'   produced an estimate. The remaining counts separate the fit outcomes, because a
 #'   fit can return a usable estimate while still being boundary-singular or
-#'   carrying a convergence warning: `n_converged` counts replicates with neither,
-#'   `n_singular` those where `lme4::isSingular()` was true, and `n_warning` those
-#'   with a warning or optimiser convergence message other than lme4's singular-fit
-#'   notice, which `n_singular` already counts. Singular and warning fits are
+#'   carrying a convergence warning: `n_converged` counts replicates with neither, `n_singular`
+#'   those where `lme4::isSingular()` was true and `n_warning` those with a warning or optimiser
+#'   convergence message other than lme4's singular-fit notice, which `n_singular` already counts.
+#'   Singular and warning fits are
 #'   retained, since their fixed-effect estimates remain interpretable and
 #'   discarding them would bias the result. A large `n_singular` means the model
 #'   being fitted is richer than the design can support at that sample size, which
@@ -281,15 +280,14 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #' Precision and ROPE curve over sample size
 #'
 #' Sweep the number of subjects and report the ROPE decision probabilities at each size. Pass the
-#' result to [solve_curve()] for the minimum analysable \emph{N} at which a focal effect reaches a
+#' result to [solve_curve()] for the minimum analysable N at which a focal effect reaches a
 #' determinate decision with a target probability, such as 0.90, together with an interval on it.
 #' Calls [precision_design()] and so requires the `lme4` package.
 #'
 #' @details
-#' A thin wrapper around [sweep_spec()] over `units$subject$n`, kept because a sample-size curve is
-#' the sweep users want most often. For any other axis, call [sweep_spec()] directly; effect size is
-#' the axis a design analysis most often needs next, and [design_conditions()] builds the
-#' coefficient overrides for it.
+#' It calls [sweep_spec()] over `units$subject$n`. For any other axis, call [sweep_spec()] directly.
+#' Effect size is the axis a design analysis most often needs next, and [design_conditions()] builds
+#' the coefficient overrides for it.
 #'
 #' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
 #' so the points of the curve are independent, as [solve_curve()] assumes when it fits them.
@@ -306,32 +304,30 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #' @param focal The focal effects, as in [precision_design()]. `NULL` uses every coefficient in the
 #'   specification.
 #' @param subject_ns A numeric vector of subject counts to evaluate.
-#' @param formula Optional `lme4` formula; if `NULL` it is derived via
-#'   [model_formula()], and the response family chooses the fitter, as in [precision_design()]. A
-#'   ladder of models, as in [precision_design()], simulates a simplification rule at every sample
-#'   size.
-#' @param prep Optional data-preparation function; if `NULL` it is derived via
-#'   [model_data()].
+#' @param formula Optional `lme4` formula. If `NULL`, it is derived by [model_formula()], and the
+#'   response family chooses the fitter, as in [precision_design()]. A ladder of models, as in
+#'   [precision_design()], simulates a simplification rule at every sample size.
+#' @param prep Optional data-preparation function. If `NULL`, it is derived by [model_data()].
 #' @param rope The region of practical equivalence, as in [precision_design()]: a non-negative
 #'   half-width `r` for the region from `-r` to `r`, or a pair `c(lower, upper)` with
 #'   `lower < upper`. Keep the effects worth detecting clearly outside the region, because the
 #'   probability of a determinate meaningful decision about an effect inside it cannot rise above
-#'   0.5 however large the sample, so the curve would fall with \emph{N} rather than rise.
+#'   0.5 however large the sample, so the curve would fall with N rather than rise.
 #' @param n_sims Number of Monte Carlo replicates per sample size. `p_meaningful` and
 #'   `p_equivalent` are proportions over the replicates that produced an estimate, so each is
 #'   reported with its Monte Carlo standard error and Wilson interval. The default of 60 gives a
 #'   standard error of 0.065 at a rate of 0.5, which is too coarse to support a claim about a
-#'   design; raise it to at least 200 for planning.
+#'   design. Raise it to at least 200 for planning.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each sample size. The default of 1 runs serially, and any worker count returns results
 #'   identical to a serial run. One pool of that many processes serves the whole sweep.
 #' @param seeds How the sample sizes are seeded: `"independent"`, the default, or `"shared"`, as
 #'   in [sweep_spec()]'s `.seeds`.
 #' @param fallback The rule of a ladder, `"singular"` or `"warning"`, as in [precision_design()].
-#' @return A data frame with one row per focal effect and sample size, adding an `n_subject`
-#'   column to the columns returned by [precision_design()], including the Monte Carlo standard
-#'   errors, the Wilson interval bounds, and the `n_returned`, `n_converged`, `n_singular` and
-#'   `n_warning` fit counts, and for a ladder the share of each rung at each sample size.
+#' @return A data frame with one row per focal effect and sample size. It has the columns returned
+#'   by [precision_design()], including the Monte Carlo standard errors, the Wilson interval bounds
+#'   and the `n_returned`, `n_converged`, `n_singular` and `n_warning` fit counts, and an
+#'   `n_subject` column. For a ladder, it also has the share of each rung at each sample size.
 #' @seealso [solve_curve()] to solve the returned curve for a target decision probability,
 #'   [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
 #' @examples

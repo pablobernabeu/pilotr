@@ -32,7 +32,7 @@
 #' follows, with its true value, the justification given for that value and its power. Last comes
 #' the power when the null hypothesis is true. The simulation is then accounted for as Morris, White
 #' and Crowther (2019) recommend for simulation studies: the replicates simulated and those that
-#' returned an estimate, the fits that were singular or carried a warning, and the Monte Carlo
+#' returned an estimate, the fits that were singular or carried a warning and the Monte Carlo
 #' standard error of every rate. The report ends with what a reader needs to reproduce the run:
 #' the software and its versions, the specification's seed and an MD5 checksum of the
 #' specification file's bytes. The versions are those loaded when the report is written, so write
@@ -41,9 +41,8 @@
 #' Each rate's Monte Carlo standard error and 95% Wilson interval are computed in the report from
 #' the number of significant replicates and the number of replicates behind the rate, with the
 #' functions that compute them in the results. Type S has its Wilson interval from the number of
-#' wrong signs among the significant replicates. The Python twin's `power_report()` writes the
-#' same text, byte for byte, from the same counts, which `tools/parity/report_cross.py` in the
-#' source repository checks.
+#' wrong signs among the significant replicates. The 'Python' package's `power_report()` writes the
+#' same text, byte for byte, from the same counts.
 #'
 #' The rates are those of the design `x` simulated. A sample size solved from a curve need not be
 #' that design's, so a justification usually pairs the solved size with a run of [power_mixed()]
@@ -62,7 +61,7 @@
 #' probability of practical equivalence, with the interval wholly inside it. `rope` states the
 #' region, since the result does not record it.
 #' A [target_n()] result solved over `p_meaningful` gives the desired probability of a meaningful
-#' decision. This section exists in R alone, as [precision_design()] does.
+#' decision. Only the R package has this section, as only it has [precision_design()].
 #'
 #' @param x For `power_report()`, the result of [power_mixed()], [power_design()] or
 #'   [precision_design()] at one design. A curve goes to [target_n()], and its result to `solved`.

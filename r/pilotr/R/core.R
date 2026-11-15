@@ -13,13 +13,13 @@
 #' Python implementations, so that a given specification and seed produce identical data in
 #' either language wherever the two share a maths library, except in a rare Beta case under
 #' R 4.6.0 or later. The uniforms are exact everywhere.
-#' The draw-order contract, and where a value can differ in its last bits, are documented in the
+#' The order of the draws, and where a value can differ in its last bits, are documented in the
 #' specification at <https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md>.
 #'
 #' @param seed A single number used to seed the generator (coerced to a non-negative integer).
-#' @return A list of three functions: `uniform()` returns one standard-uniform draw,
-#'   `normal()` returns one standard-normal draw, and `normals(k)` returns a length-`k`
-#'   numeric vector of standard-normal draws.
+#' @return A list of three functions: `uniform()` returns one standard-uniform draw, `normal()`
+#'   returns one standard-normal draw and `normals(k)` returns a length-`k` numeric vector of
+#'   standard-normal draws.
 #' @references L'Ecuyer, P. (1988). Efficient and portable combined random number generators.
 #'   \emph{Communications of the ACM}, 31(6), 742-751. \doi{10.1145/62959.62969}
 #' @examples

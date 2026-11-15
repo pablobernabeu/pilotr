@@ -36,7 +36,7 @@ random intercept for each grouping factor and drops every slope. \code{\link[=po
 \code{\link[=precision_design]{precision_design()}} take these names as the rungs of such a rule.
 
 A specification with neither a fixed coefficient nor a random effect implies no model, and is
-refused in the words the 'Python' twin uses.
+refused with the same message as in the 'Python' package.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

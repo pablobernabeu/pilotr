@@ -15,13 +15,13 @@ the family's parameters: \code{sigma} for the four continuous families, \code{sh
 \code{"shifted_lognormal"}, \code{beta} for \code{"exgaussian"}, \code{phi} for \code{"beta"} and, for \code{"ordinal"},
 \code{thresholds} as a single comma-separated string such as \code{"-2, -0.6, 0.6, 2"}, as the
 no-code app supplies it. Within-design random effects use \code{subj_int_sd},
-\code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd}, and
+\code{subj_slope_sd}, \code{subj_corr}, \code{item_int_sd}, \code{item_slope_sd} and
 \code{item_corr}. \code{counterbalance = TRUE} counterbalances the factor of a
 within design with items, and is ignored in any other design.}
 }
 \value{
 A design specification as a nested list, ready for
-\code{\link[=simulate_design]{simulate_design()}}, \code{\link[=spec_json]{spec_json()}}, or the
+\code{\link[=simulate_design]{simulate_design()}}, \code{\link[=spec_json]{spec_json()}} or the
 power and precision functions.
 }
 \description{
@@ -29,8 +29,7 @@ Assemble a portable design specification (a plain list, serialisable with
 \code{\link[=spec_json]{spec_json()}}) from the flat set of inputs collected by the no-code
 application: sample sizes, the two-level factor and its levels, the fixed
 intercept and effect, the random-effect standard deviations for
-within-subject and crossed designs, and the response family with its
-parameters.
+within-subject and crossed designs and the response family with its parameters.
 }
 \details{
 A response of the Gaussian, lognormal, shifted lognormal or ex-Gaussian family is rounded to

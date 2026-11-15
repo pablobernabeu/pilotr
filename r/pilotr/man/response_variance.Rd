@@ -10,12 +10,12 @@ response_variance(spec)
 \item{spec}{A design specification (path or list).}
 }
 \value{
-A named list of variance components: \code{fixed}, one entry per grouping factor,
-\code{residual}, and \code{total} (their sum).
+A named list of variance components: \code{fixed}, one entry per grouping factor, \code{residual}
+and \code{total} (their sum).
 }
 \description{
 Decompose the variance of a design's linear predictor into the part contributed by the fixed
-effects, the part contributed by each grouping factor's random effects, and the residual
+effects, the part contributed by each grouping factor's random effects and the residual
 variance added by the response family. Useful for putting a region of practical equivalence or
 a smallest effect size of interest on a known scale, and for seeing which term dominates a
 design before committing to it.
@@ -29,15 +29,14 @@ or about whether the predictors are independent.
 Each grouping factor's component is the average over rows of \verb{x' Sigma x}, where \code{Sigma} is the
 covariance the specification asks for and \code{x} collects that row's values of the intercept and
 each random-slope column. This is exact for the realised design: it averages over the
-random-effect distribution analytically, which matters because drawing from it and
-estimating a variance from the drawn effects of, say, 30 subjects carries a sampling error of
-around a quarter of the component itself, far too much to calibrate a region of practical
-equivalence against.
+random-effect distribution analytically. Drawing from that distribution and estimating a variance
+from the drawn effects of, say, 30 subjects would carry a sampling error of about a quarter of
+the component itself, far too much to calibrate a region of practical equivalence against.
 
 The cost is one simulation for the fixed part plus one per distinct random-slope column, which
 for a typical design is a handful.
 
-Every component is on the scale the linear predictor lives on, which is what makes them
+Every component is on the scale of the linear predictor, which is what makes them
 comparable. For \code{lognormal} and \code{shifted_lognormal} that is the log of the response, which is
 also the scale the auto-derived analysis model works on. For \code{bernoulli}, \code{poisson}, \code{ordinal}
 and \code{beta} it is the latent scale behind the link, so the residual is the distribution-specific
