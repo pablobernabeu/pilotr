@@ -178,7 +178,7 @@ column called \code{z_freq} for an interaction and settles where to
 split a name with several underscores. A recognised product column is reported and re-keyed to
 \code{a:b}, and it contributes no factor or predictor of its own.
 
-Grouping factors named \code{subject} and \code{item} are used as they stand. Otherwise the one with the
+Grouping factors named \code{subject} and \code{item} are used as they stand. Otherwise, the one with the
 most levels becomes \code{subject}, the largest remaining factor that is crossed with it becomes
 \code{item}, and every other grouping factor becomes an extra \code{random} entry with the \code{over} and
 \code{n} fields that pilotr's additional grouping factors take, \code{over} being decided by which unit
@@ -220,7 +220,7 @@ it. The warning then asks for the term to be renamed in the pilot's data and the
 Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 would not observe, through the \code{prep} argument of \code{\link[=power_mixed]{power_mixed()}} and \code{\link[=precision_design]{precision_design()}}.
 That function receives each simulated data set and returns the modelling data, so it ends by
-calling \code{\link[=model_data]{model_data()}}. With \code{workers > 1} it runs in worker processes that have not attached
+calling \code{\link[=model_data]{model_data()}}. With \code{workers > 1}, it runs in worker processes that have not attached
 pilotr and cannot see the caller's variables, so it has to call \code{pilotr::model_data()} and
 carry the specification with it. A function made by another function carries it once that
 function has forced its argument, as in this rotation over two lists for the
@@ -297,6 +297,6 @@ imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 3
 }
 \seealso{
 \code{\link[=simulate_design]{simulate_design()}} to simulate from the recovered specification,
-\code{\link[=power_mixed]{power_mixed()}} to run the power analysis it was read off the fit for, and
+\code{\link[=power_mixed]{power_mixed()}} to run the power analysis it was read off the fit for and
 \code{\link[=model_formula]{model_formula()}} for the analysis model a specification implies.
 }

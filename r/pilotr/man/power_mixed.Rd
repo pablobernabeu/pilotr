@@ -70,7 +70,7 @@ An object of class \code{pilotr_power}, a list whose per-run elements are \code{
 \code{alpha}, \code{fitter}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning},
 and whose per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse},
 \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s},
-\code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect each of
+\code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect, each of
 those has length one, so \code{result$power} is a single number. \code{fitter} names the fitter and
 its test, such as \code{"lme4::glmer (binomial), Wald z"}, with the direction of a one-sided test
 added, as in \code{"lme4::glmer (binomial), Wald z, one-sided (greater)"}. Under a one-sided

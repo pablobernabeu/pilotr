@@ -97,5 +97,5 @@ if (requireNamespace("lme4", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=solve_curve]{solve_curve()}} to solve the returned curve for a target decision probability,
-\code{\link[=sweep_spec]{sweep_spec()}} for any other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
+\code{\link[=sweep_spec]{sweep_spec()}} for any other axis and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

@@ -329,7 +329,7 @@ precision_design <- function(spec, focal = NULL, formula = NULL, prep = NULL, ro
 #'   and the `n_returned`, `n_converged`, `n_singular` and `n_warning` fit counts, and an
 #'   `n_subject` column. For a ladder, it also has the share of each rung at each sample size.
 #' @seealso [solve_curve()] to solve the returned curve for a target decision probability,
-#'   [sweep_spec()] for any other axis, and [design_conditions()] for effect-size grids.
+#'   [sweep_spec()] for any other axis and [design_conditions()] for effect-size grids.
 #' @examples
 #' \donttest{
 #' if (requireNamespace("lme4", quietly = TRUE)) {

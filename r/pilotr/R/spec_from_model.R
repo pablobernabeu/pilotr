@@ -488,7 +488,7 @@
 #' split a name with several underscores. A recognised product column is reported and re-keyed to
 #' `a:b`, and it contributes no factor or predictor of its own.
 #'
-#' Grouping factors named `subject` and `item` are used as they stand. Otherwise the one with the
+#' Grouping factors named `subject` and `item` are used as they stand. Otherwise, the one with the
 #' most levels becomes `subject`, the largest remaining factor that is crossed with it becomes
 #' `item`, and every other grouping factor becomes an extra `random` entry with the `over` and
 #' `n` fields that pilotr's additional grouping factors take, `over` being decided by which unit
@@ -530,7 +530,7 @@
 #' Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 #' would not observe, through the `prep` argument of [power_mixed()] and [precision_design()].
 #' That function receives each simulated data set and returns the modelling data, so it ends by
-#' calling [model_data()]. With `workers > 1` it runs in worker processes that have not attached
+#' calling [model_data()]. With `workers > 1`, it runs in worker processes that have not attached
 #' pilotr and cannot see the caller's variables, so it has to call `pilotr::model_data()` and
 #' carry the specification with it. A function made by another function carries it once that
 #' function has forced its argument, as in this rotation over two lists for the
@@ -628,7 +628,7 @@
 #'   imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.
 #'   \doi{10.1177/1745691614528519}
 #' @seealso [simulate_design()] to simulate from the recovered specification,
-#'   [power_mixed()] to run the power analysis it was read off the fit for, and
+#'   [power_mixed()] to run the power analysis it was read off the fit for and
 #'   [model_formula()] for the analysis model a specification implies.
 #' @examples
 #' \donttest{

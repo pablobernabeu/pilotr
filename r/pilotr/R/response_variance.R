@@ -153,9 +153,9 @@
 #' for a typical design is a handful.
 #'
 #' Every component is on the scale of the linear predictor, which is what makes them
-#' comparable. For `lognormal` and `shifted_lognormal` that is the log of the response, which is
+#' comparable. For `lognormal` and `shifted_lognormal`, that is the log of the response, which is
 #' also the scale the auto-derived analysis model works on. For `bernoulli`, `poisson`, `ordinal`
-#' and `beta` it is the latent scale behind the link, so the residual is the distribution-specific
+#' and `beta`, it is the latent scale behind the link, so the residual is the distribution-specific
 #' variance used to compute the intraclass correlation and R-squared of a generalised mixed model
 #' (Nakagawa, Johnson and Schielzeth, 2017).
 #'

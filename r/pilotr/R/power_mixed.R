@@ -160,7 +160,7 @@
 #'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
 #'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s`,
-#'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect each of
+#'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect, each of
 #'   those has length one, so `result$power` is a single number. `fitter` names the fitter and
 #'   its test, such as `"lme4::glmer (binomial), Wald z"`, with the direction of a one-sided test
 #'   added, as in `"lme4::glmer (binomial), Wald z, one-sided (greater)"`. Under a one-sided
@@ -550,7 +550,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' }
 #' }
 #' @seealso [target_n()] to solve the returned curve for a sample size, [sweep_spec()] for any
-#'   other axis, and [design_conditions()] for effect-size grids.
+#'   other axis and [design_conditions()] for effect-size grids.
 #' @export
 power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha = 0.05,
                               workers = 1, seeds = c("independent", "shared"),

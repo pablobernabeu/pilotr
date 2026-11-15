@@ -126,5 +126,5 @@ Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 }
 \seealso{
 \code{\link[=target_n]{target_n()}} to solve the returned curve for a sample size, \code{\link[=sweep_spec]{sweep_spec()}} for any
-other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
+other axis and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

@@ -53,7 +53,7 @@ says the curve is not the shape the model assumes, so the solve needs a wider gr
 replicates before it can be trusted.
 }
 \description{
-Take the curve a sweep has already produced, fit the decision rate against the swept value,
+Take the curve a sweep has already produced, fit the decision rate against the swept value
 and solve for the value at which the rate meets a target. The solved value comes with a
 confidence interval, because a value read off a simulated curve without one hides the uncertainty
 of the simulation.
