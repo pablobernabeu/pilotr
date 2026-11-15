@@ -293,6 +293,12 @@ jobs:
             cat(p, as.character(utils::packageVersion(p)), "\n")
           }
 
+      # The tests of the workers argument start worker processes, which load the installed
+      # pilotr, so the package is installed as well as loaded. That also checks that it
+      # installs on R 4.0.
+      - name: Install pilotr
+        run: R CMD INSTALL r/pilotr
+
       - name: Tests
         shell: Rscript {0}
         run: |
