@@ -18,19 +18,20 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 43719872039 on 2026-11-15, for commit 959ddae on the
-release branch. Pull request #24 started the run, so it checked out 5ca81bd,
-the merge of 959ddae into main at 7caed0f. The branch already contains
-7caed0f, so that merge has the files of 959ddae. The three files of cached
-mixed-model results in vignettes/ are the ones that the refresh-vignette-caches
-workflow regenerated and committed as cde86bd, so that they record 0.4.0. None
-of the commits since cde86bd changed them, the chunks that produced them or the
-functions those chunks call. The package sources of this submission are those
-of 959ddae. In the package directory, only this file, which `.Rbuildignore`
-keeps out of the tarball, has changed since. Each leg built the tarball with
-`--no-manual` and `--compact-vignettes=gs+qpdf` and ran
-`R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
-which r-lib/actions turns off. Each leg ended with 'Status: OK':
+GitHub Actions, run 43735355671 on 2026-11-15, for commit efb385d on the
+release branch. Pull request #24 started the run, so it checked out 23c1824,
+the merge of efb385d into main at 70807e7. That merge has the files of
+efb385d, since main's only change that the branch lacks gives
+.github/workflows/site.yml the content it already has on the branch. The three
+files of cached mixed-model results in vignettes/ are the ones that the
+refresh-vignette-caches workflow regenerated and committed as cde86bd, so that
+they record 0.4.0. None of the commits since cde86bd changed them, the chunks
+that produced them or the functions those chunks call. The package sources of
+this submission are those of efb385d. In the package directory, only this
+file, which `.Rbuildignore` keeps out of the tarball, has changed since. Each
+leg built the tarball with `--no-manual` and `--compact-vignettes=gs+qpdf` and
+ran `R CMD check --as-cran --no-manual` on it, without the CRAN incoming
+checks, which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-14 r90890)
