@@ -2,7 +2,7 @@
 
 Everything here is implemented to be bit-identical with the R port. The
 components are a shared L'Ecuyer (1988) combined LCG for uniforms, Wichura's
-AS 241 inverse-normal, a hand-rolled Cholesky factorisation, inverse-CDF
+AS 241 inverse-normal, a Cholesky factorisation written out in full, inverse-CDF
 transforms for the response families and a port of R's round(). The routines
 avoid NumPy randomness, so the random stream remains aligned across the two
 languages.
@@ -27,7 +27,7 @@ class RNG:
     The combined linear congruential generator of L'Ecuyer (1988), implemented identically
     in R and Python so that a given seed yields the same stream in both. All intermediate
     products stay below `2**53`, so the arithmetic is exact in IEEE-754 doubles. The
-    draw-order contract is documented in the specification at
+    order of the draws is documented in the specification at
     https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md.
 
     Parameters
@@ -76,7 +76,7 @@ def replicate_seeds(base, n: int) -> list[int]:
     streams in this generator. Seeding is affine in the seed, setting ``s1`` to
     ``1 + (seed mod 2147483562)`` and ``s2`` from ``s1``, and each component recurrence is linear,
     so the ``k``-th draws of consecutive seeds differ by very nearly the same amount mod 1. For the
-    first draw that step is -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755,
+    first draw, that step is -0.0091: seeds 1000 to 1005 begin with 0.7027, 0.6937, 0.6846, 0.6755,
     0.6665 and 0.6574. Draws in arithmetic progression mod 1 with step ``d`` correlate
     ``1 - 6|d|(1 - |d|)``, so over 2,000 replicates the first draw of replicate ``i`` correlated
     0.95 with the first draw of ``i + 1``. A longer warm-up changes ``d`` and leaves the progression
@@ -86,9 +86,9 @@ def replicate_seeds(base, n: int) -> list[int]:
     adding a Weyl increment and applying a Lehmer step left the first draws correlated at -0.27.
     Any affine rule for the seeds keeps the draws in progression, as Matsumoto et al. (2007)
     describe for the initialisation of other linear generators. Drawing the seeds from the shared
-    generator does work, since successive outputs of the combined generator are what it exists to
-    make look independent. Duplicates are skipped, so no two replicates are handed the same seed
-    and silently produce identical data, and the skipping is deterministic, so this matches the R
+    generator does work, since the combined generator is designed so that its successive outputs
+    behave as independent draws. Duplicates are skipped, so no two replicates are handed the same
+    seed and silently produce identical data. The skipping is deterministic, so this matches the R
     implementation exactly.
 
     Parameters
@@ -219,7 +219,7 @@ def _stop_not_pd(label, cols, i: int, d: float):
 
 
 def cholesky(cov: list[list[float]], label=None, cols=None) -> list[list[float]]:
-    """Lower Cholesky factor L with L Lᵀ = cov (Cholesky–Banachiewicz).
+    """Lower Cholesky factor L with L Lᵀ = cov (Cholesky-Banachiewicz).
 
     A negative pivot means the covariance implied by the specified standard deviations and
     correlations is not positive definite, so no random-effect distribution has those moments.
@@ -261,9 +261,8 @@ def inv_logit(x: float) -> float:
     """Logistic (inverse-logit) link, `1 / (1 + exp(-x))`.
 
     The two branches keep the exponent negative on either side of zero, so a large `|x|`
-    underflows towards 0 or 1 where a single expression would overflow `math.exp`. The R twin,
-    `.inv_logit`, branches at the same value, so both languages evaluate the same expression
-    for a given `x`.
+    underflows towards 0 or 1 where a single expression would overflow `math.exp`. The R package
+    branches at the same value, so both languages evaluate the same expression for a given `x`.
 
     Parameters
     ----------
@@ -308,8 +307,8 @@ def poisson_inv(lam: float, u: float) -> int:
     """Inverse-CDF Poisson draw from a uniform u.
 
     Each term is ``p_k = (p_{k-1} * lam) / k``, multiplied before it is divided, as in the R
-    twin. spec/SPEC.md fixes that bracketing, because the other one, ``p * (lam / k)``, lands on a
-    different double for most terms, and a uniform falling between the two cumulative sums would
+    package. spec/SPEC.md fixes that bracketing, because the other one, ``p * (lam / k)``, lands on
+    a different double for most terms, and a uniform falling between the two cumulative sums would
     then draw a different count. Within the cap, the cumulative sum reaches
     every uniform the generator draws long before the iteration cap, so the check after the loop
     only keeps an out-of-range ``u`` from being returned as a count.
@@ -343,7 +342,7 @@ def gamma_mt(rng, shape: float) -> float:
 
     The cube is written as two multiplications rather than ``** 3``. Python's ``**`` calls the
     library pow(), whereas R's ``^`` computes a square, and from R 4.6.0 a cube, by repeated
-    multiplication; measured over 200,000 draws in this generator's range the two disagree on
+    multiplication. Measured over 200,000 draws in this generator's range, the two disagree on
     a third of inputs, by up to 6 ulp. Two explicit multiplies are exactly rounded in both
     languages, and they also decide the rejection step, so aligning them keeps the
     accept/reject sequence (and hence the number of draws consumed) identical.
@@ -354,7 +353,7 @@ def gamma_mt(rng, shape: float) -> float:
     here too. From R 4.6.0, R also computes a cube or a fourth power by repeated multiplication,
     where earlier versions call pow(). This function calls pow() for those exponents, as R before
     4.6.0 does, so under R 4.6.0 or later, a shape of exactly 1/3 or 1/4 can draw a different
-    variate here than in the R twin. spec/SPEC.md sets the case out under Scope of the guarantee.
+    variate here than in the R package. spec/SPEC.md sets the case out under Scope of the guarantee.
     """
     if shape < 1.0:
         g = gamma_mt(rng, shape + 1.0)
@@ -416,7 +415,7 @@ def lognormal_exp(w: float, family: str, eta: float) -> float:
     """``exp(w)`` for the two lognormal families, where ``w = eta + sigma * z``.
 
     ``exp()`` overflows beyond about 709.78, where ``math.exp`` raises a bare OverflowError and R's
-    ``exp()`` returns Inf. Both twins refuse the value instead, with the same message. The test
+    ``exp()`` returns Inf. Both packages refuse the value instead, with the same message. The test
     is on the value, as in R, so an infinite eta, for which ``math.exp`` returns inf without
     raising, is refused too. The refusal names eta, since ``exp(eta)``
     itself can be finite in a row whose normal draw carries ``w`` past the limit.
@@ -440,7 +439,7 @@ def beta_response(rng, eta: float, phi: float) -> float:
     of about 36.74 and underflows to 0 below about -745.1, and a tiny `phi` can take either product
     to zero by itself. `gamma_mt` would then divide by zero. When both shapes are tiny, both
     variates can also underflow to zero and leave 0 / 0. Both cases are refused before the division,
-    in the R twin's words.
+    with the R package's message.
 
     Otherwise, the ratio rounds to exactly 1 whenever `y` is below about 2^-54 of `x`, as happens
     at realistic means near a ceiling, and it is exactly 0 when `x` underflows. brms's ``Beta()``
@@ -505,7 +504,7 @@ def fround(x: float, digits) -> float:
     `x` when the distances are computed in double precision, with ``d = digits``. A tie goes to
     the candidate whose last digit is even. CPython's ``round()`` rounds the exact binary value
     of `x` instead, so near a decimal tie the two can take different candidates. For instance,
-    ``round(1.05, 1)`` is 1 in R and 1.1 in CPython. See "Rounding" in spec/SPEC.md.
+    ``round(1.05, 1)`` is 1 in R and 1.1 in CPython. See 'Rounding' in spec/SPEC.md.
 
     Parameters
     ----------
@@ -566,7 +565,7 @@ def beta_round(y: float, digits) -> float:
     ``10^d`` is built by multiplication, exact up to 22 places and free of either language's
     ``pow()``. Beyond 22 places `lo` falls back to 2^-1074, and from 17 places, where ``1 - lo``
     rounds to 1, `hi` falls back to 1 - 2^-53, the bounds of an unrounded response. See
-    "Rounding" in spec/SPEC.md.
+    'Rounding' in spec/SPEC.md.
 
     Parameters
     ----------
