@@ -66,7 +66,7 @@ the measurements in full.
 
 On one platform, the same specification and seed always give the same data.
 
-```python exec="true" source="material-block" session="xl"
+```python exec="true" source="block" session="xl"
 from pilotr import simulate
 
 spec = {
@@ -89,7 +89,7 @@ and a run on Linux can therefore differ in their last bits even within Python.
 Changing the seed changes the draws, while the structure and the ground-truth parameters stay
 fixed.
 
-```python exec="true" source="material-block" session="xl"
+```python exec="true" source="block" session="xl"
 spec2 = dict(spec, seed=spec["seed"] + 1)
 print(simulate(spec).column("score") == simulate(spec2).column("score"))
 ```
@@ -138,7 +138,7 @@ import sys; sys.path.insert(0, "docs")
 from _exec import table, show
 ```
 
-```python exec="true" source="material-block" session="xl"
+```python exec="true" source="block" session="xl"
 from pilotr import simulate, load_spec, pilotr_example
 
 data = simulate(load_spec(pilotr_example("crossed_mixed_rt")))

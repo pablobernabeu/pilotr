@@ -48,7 +48,7 @@ A large two-group draw shows the shape of each family. The Gaussian is symmetric
 lognormal has the right skew of reaction times, and the plain lognormal, which suits per-word
 reading times, has the same shape without the shift. The Beta is bounded in (0, 1).
 
-```python exec="true" source="material-block" html="true" session="fam"
+```python exec="true" source="block" html="true" session="fam"
 import matplotlib.pyplot as plt
 from pilotr import simulate
 
@@ -88,7 +88,7 @@ print(show(fig))
 Binary, count and proportion outcomes are simulated in the same way. The fixed effect moves the
 two group means apart on each family's own scale:
 
-```python exec="true" source="material-block" session="fam"
+```python exec="true" source="block" session="fam"
 from statistics import mean
 from pilotr import simulate
 
@@ -122,7 +122,7 @@ print(table(rows))
 An ordinal (Likert) design sets the category thresholds directly. The effect shifts mass across
 the categories, as the category proportions by group show.
 
-```python exec="true" source="material-block" session="fam"
+```python exec="true" source="block" session="fam"
 spec = {
     "name": "likert", "seed": 1, "units": {"subject": {"n": 4000}},
     "factors": [{"name": "group", "levels": ["control", "treatment"],

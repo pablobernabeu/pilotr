@@ -45,7 +45,7 @@ import sys; sys.path.insert(0, "docs")
 from _exec import table, show, BLUE, RED, GREEN
 ```
 
-```python exec="true" source="material-block" session="quick"
+```python exec="true" source="block" session="quick"
 from pilotr import simulate
 
 spec = {
@@ -76,7 +76,7 @@ To run a specification authored elsewhere, for example one downloaded from the n
 it with `load_spec` and simulate. The code below loads one of the worked examples bundled with
 pilotr, using `pilotr_example` to find it inside the installed package:
 
-```python exec="true" source="material-block" session="quick"
+```python exec="true" source="block" session="quick"
 from pilotr import load_spec, pilotr_example, simulate
 
 data = simulate(load_spec(pilotr_example("poisson_counts_between")))

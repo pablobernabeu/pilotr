@@ -16,7 +16,7 @@ import sys; sys.path.insert(0, "docs")
 from _exec import table, show, BLUE
 ```
 
-```python exec="true" source="material-block" session="pow"
+```python exec="true" source="block" session="pow"
 from pilotr import power
 
 spec = {
@@ -46,7 +46,7 @@ Type M rest on the significant replicates alone, so they settle more slowly than
 `type_s_lo` and `type_s_hi` bound a Wilson interval for Type S, whose plain standard error would
 be zero whenever no sign is wrong, and `type_m_mcse` is the standard error of Type M.
 
-```python exec="true" source="material-block" session="pow"
+```python exec="true" source="block" session="pow"
 print(table([{k: res[k] for k in (
     "power_mcse", "power_lo", "power_hi", "type_s_lo", "type_s_hi", "type_m_mcse"
 )}]))
@@ -74,7 +74,7 @@ and `alternative="less"` whether it is negative. The values are spelt as in the 
 the default is `"two.sided"` and scipy's spelling `"two-sided"` raises an error. Here the second
 group is predicted to score higher than the first.
 
-```python exec="true" source="material-block" session="pow"
+```python exec="true" source="block" session="pow"
 one_sided = power(spec, n_sims=500, alternative="greater")
 print(table([{k: one_sided[k] for k in ("alternative", "power", "type_s", "type_m")}]))
 ```
@@ -93,7 +93,7 @@ Wald z, and its `backend` names the direction.
 
 `power_curve` sweeps the number of subjects and reports power at each size.
 
-```python exec="true" source="material-block" html="true" session="pow"
+```python exec="true" source="block" html="true" session="pow"
 import matplotlib.pyplot as plt
 from pilotr import power_curve, target_n
 
@@ -141,7 +141,7 @@ whose Monte Carlo intervals overlap, and it gives a figure without an interval. 
 the curve and inverts the fit. It estimates the crossing together with the uncertainty that a
 simulated curve carries.
 
-```python exec="true" source="material-block" session="pow"
+```python exec="true" source="block" session="pow"
 solved = target_n(curve, target=0.8)
 # n, n_lo and n_hi round up to whole subjects; lo and hi are the bounds before rounding.
 print(table([{"target": solved["target"], "n": solved["n"],
@@ -184,7 +184,7 @@ The example pairs the solved size with a run at that size, and adds the same des
 effect as `null_result`, whose rejection rate shows whether the test holds its level. The
 justification is illustrative.
 
-```python exec="true" source="material-block" result="markdown" session="pow"
+```python exec="true" source="block" result="markdown" session="pow"
 from pilotr import power_report
 
 # The design at the solved size, and the same design with no effect.
@@ -237,7 +237,7 @@ The design below has one within-subject factor and crossed by-subject and by-ite
 intercepts and slopes. It also declares a correlation between each unit's intercept and slope,
 which the independent components leave out, so the call warns about the correlations.
 
-```python exec="true" source="material-block" session="pow"
+```python exec="true" source="block" session="pow"
 from pilotr import model_formula, power_mixed
 
 spec_mixed = {
