@@ -166,6 +166,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `power`, `power_curve` and `power_mixed` validate the specification once
   before their replicates, where each replicate validated it again.
+- The package metadata lists Python 3.15 among the supported versions, which CI
+  now tests.
 
 ### Deprecated
 
