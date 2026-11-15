@@ -44,7 +44,7 @@ jobs:
       R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
 
@@ -66,6 +66,25 @@ jobs:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
 
+      # Every leg above runs in a UTF-8 locale. In a Latin-9 locale
+      # (en_US.iso885915), which CRAN's r-devel-linux-x86_64-debian-clang
+      # flavour has used, a string not marked as UTF-8 is read as Latin-9, and
+      # no UTF-8 leg can show what that does. The Linux R-devel leg therefore
+      # runs the tests once more in that locale, with NOT_CRAN unset, as CRAN
+      # runs them. The first line of the R code stops the step if the locale
+      # did not take.
+      - name: Tests in a Latin-9 locale
+        if: runner.os == 'Linux' && matrix.config.r == 'devel'
+        shell: bash
+        run: |
+          sudo localedef -i en_US -f ISO-8859-15 en_US.iso885915
+          cat > "$RUNNER_TEMP/latin9.R" <<'EOF'
+          stopifnot(identical(l10n_info()$codeset, "ISO-8859-15"))
+          pkgload::load_all("r/pilotr", quiet = TRUE)
+          invisible(testthat::test_dir("r/pilotr/tests/testthat", stop_on_failure = TRUE))
+          EOF
+          env -u NOT_CRAN LANG=en_US.iso885915 LC_ALL=en_US.iso885915 Rscript "$RUNNER_TEMP/latin9.R"
+
   # The version floors in Suggests are a promise to anyone resolving against an older stack, and
   # nothing tested them: every cell above uses use-public-rspm, which resolves to the latest
   # release. The twin of the Python minimum-versions job in python-tests.yml. A failure here means
@@ -82,7 +101,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       _R_CHECK_FORCE_SUGGESTS_: false
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
@@ -134,21 +153,24 @@ jobs:
 
   # roxygen2 generates NAMESPACE from the @export tags, and a stale one drops exports without
   # anything noticing: testthat runs inside the package namespace, where an unexported function is
-  # still reachable, so the suite cannot tell a dropped export from a kept one. Regenerating and
-  # diffing is the only check that can. It sits outside the matrix above because one platform
-  # answers the question, and a matrix cell going red would read as a platform problem rather than
-  # as a file that needs regenerating.
+  # still reachable, so the suite cannot tell a dropped export from a kept one. roxygen2 also
+  # generates the help pages in man/ from the roxygen comments, and CRAN builds the manual from the
+  # committed files, so a comment edited without devtools::document() never reaches a user.
+  # Regenerating both and diffing is the only check that sees either. It sits outside the matrix
+  # above because one platform answers the question, and a matrix cell going red would read as a
+  # platform problem rather than as files that need regenerating.
   #
-  # NAMESPACE only, deliberately. Rd formatting shifts between roxygen2 releases, so gating man/
-  # would redden this job for reasons unconnected to the change under test. site.yml regenerates Rd
-  # for the docs build with roclets = "rd" and leaves NAMESPACE to this job.
+  # Rd formatting changes between roxygen2 releases, so roxygen2 is pinned below, and the job fails
+  # if DESCRIPTION records another version. A roxygen2 release therefore cannot turn this job red
+  # with no change to the sources. The help is regenerated in a UTF-8 locale, as on a developer's
+  # machine.
   namespace:
-    name: Committed NAMESPACE is current
+    name: Committed NAMESPACE and man/ are current
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
@@ -163,8 +185,8 @@ jobs:
           working-directory: r/pilotr
           extra-packages: cran::roxygen2@8.0.0
 
-      # Two roxygen2 versions can disagree about NAMESPACE, and the diff below would then be a
-      # version difference wearing the clothes of stale source. Say which of the two it is.
+      # Two roxygen2 versions can disagree about NAMESPACE and man/, and the diff below would then
+      # show a version difference, not a stale file. Say which of the two it is.
       - name: Confirm the installed roxygen2 is the one DESCRIPTION was written with
         shell: Rscript {0}
         run: |
@@ -182,7 +204,7 @@ jobs:
             cat("r/pilotr/DESCRIPTION records", field, "=", recorded, "\n")
             if (!identical(installed, recorded)) {
               stop("Installed roxygen2 ", installed, " is not the ", recorded, " that ",
-                   "r/pilotr/DESCRIPTION was written with, so a NAMESPACE difference here would ",
+                   "r/pilotr/DESCRIPTION was written with, so a difference in NAMESPACE or man/ here would ",
                    "say nothing about whether the file and the tags agree. Bring the pin in ",
                    ".github/workflows/R-CMD-check.yaml and the version in DESCRIPTION back into ",
                    "line.", call. = FALSE)
@@ -204,21 +226,77 @@ jobs:
           }
           cat("Header present:", first, "\n")
 
-      - name: Regenerate NAMESPACE from the roxygen comments
+      - name: Regenerate NAMESPACE and man/ from the roxygen comments
         shell: Rscript {0}
-        run: roxygen2::roxygenise("r/pilotr", roclets = "namespace")
+        env:
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+        run: roxygen2::roxygenise("r/pilotr", roclets = c("namespace", "rd"))
 
-      - name: Fail if the committed NAMESPACE no longer matches the tags
+      # The diff and any new Rd file are printed to the log, so that the change can be read from
+      # the run without downloading anything.
+      - name: Fail if the committed NAMESPACE or man/ no longer matches the roxygen comments
         run: |
-          if git diff --exit-code -- r/pilotr/NAMESPACE; then
-            echo 'r/pilotr/NAMESPACE is current.'
+          changes=$(git status --porcelain --untracked-files=all -- r/pilotr/NAMESPACE r/pilotr/man)
+          if [ -z "$changes" ]; then
+            echo 'r/pilotr/NAMESPACE and r/pilotr/man are current.'
           else
-            echo '::error file=r/pilotr/NAMESPACE::Stale NAMESPACE. Run devtools::document("r/pilotr") and commit r/pilotr/NAMESPACE.'
+            echo "$changes"
+            git --no-pager diff -- r/pilotr/NAMESPACE r/pilotr/man
+            git ls-files --others --exclude-standard -- r/pilotr/man | while read -r f; do
+              echo "New file $f:"
+              cat "$f"
+            done
+            echo '::error::Stale NAMESPACE or man/. Run devtools::document("r/pilotr") and commit r/pilotr/NAMESPACE and r/pilotr/man.'
             echo ''
-            echo 'r/pilotr/NAMESPACE disagrees with the @export tags in r/pilotr/R/.'
-            echo 'In the diff above, - lines stand in the committed file with no tag producing them,'
-            echo 'and + lines are produced by the tags but missing from the committed file.'
+            echo 'r/pilotr/NAMESPACE or r/pilotr/man disagrees with the roxygen comments in r/pilotr/R/.'
+            echo 'In the diff above, - lines stand in the committed files with no comment producing them,'
+            echo 'and + lines are produced by the comments but missing from the committed files.'
             echo 'Run devtools::document("r/pilotr"), as .github/CONTRIBUTING.md sets out, then commit'
-            echo 'the regenerated r/pilotr/NAMESPACE.'
+            echo 'the regenerated r/pilotr/NAMESPACE and r/pilotr/man.'
             exit 1
           fi
+
+  # DESCRIPTION declares `R (>= 4.0.0)`, because the rounding rule of the specification is the
+  # algorithm of R 4.0.0's round() (R/simulate.R), and the matrix above reaches down to oldrel-1
+  # and the minimum-versions job to oldrel-3 (R 4.3). This job runs the test suite on R 4.0
+  # itself. It is not a second `--as-cran` check: it tests that the code runs on the oldest R the
+  # package supports, not that the package passes CRAN's checks there. Only the strong dependency
+  # (jsonlite) and the test tools are installed, since Suggests are not part of that promise, and
+  # the tests that need a suggested package skip themselves.
+  #
+  # Current releases of testthat and of much of its dependency tree need R 4.1 or later, so the
+  # packages come from Posit Package Manager's snapshot of CRAN on 3 June 2024, when they still
+  # supported R 4.0. They are built from source with the C17 standard, since older C code can
+  # fail to compile under C23, the default of the compiler on ubuntu-latest.
+  r-minimum:
+    name: R (declared minimum, 4.0)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
+        with:
+          r-version: '4.0'
+
+      - name: Install jsonlite, testthat and pkgload from the snapshot of 3 June 2024
+        shell: Rscript {0}
+        run: |
+          cat(R.version.string, "\n")
+          dir.create("~/.R", showWarnings = FALSE)
+          writeLines("CC = gcc -std=gnu17", "~/.R/Makevars")
+          options(repos = c(CRAN = "https://packagemanager.posit.co/cran/2024-06-03"))
+          install.packages(c("jsonlite", "testthat", "pkgload"), Ncpus = 4L)
+          for (p in c("jsonlite", "testthat", "pkgload")) {
+            cat(p, as.character(utils::packageVersion(p)), "\n")
+          }
+
+      - name: Tests
+        shell: Rscript {0}
+        run: |
+          cat(R.version.string, "\n")
+          pkgload::load_all("r/pilotr", quiet = TRUE)
+          res <- testthat::test_dir("r/pilotr/tests/testthat", stop_on_failure = TRUE)
+          invisible(res)

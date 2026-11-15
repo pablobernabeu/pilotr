@@ -47,7 +47,7 @@ devtools::build_readme("r/pilotr")  # regenerate README.md after editing README.
 Install the roxygen2 release that `Config/roxygen2/version` in
 `r/pilotr/DESCRIPTION` records, which is the one CI pins. A newer release
 rewrites that field when `devtools::document()` runs, and the CI job that checks
-`NAMESPACE` then fails.
+`NAMESPACE` and `man/` then fails.
 
 `devtools::check()` also runs a spelling test, as CI does, and stops at any word
 found neither in the British English dictionary nor in `r/pilotr/inst/WORDLIST`.
@@ -130,7 +130,7 @@ code runs during the build, and the build rewrites `docs/pilotr.bib` whenever
 the entry it holds is out of date. Run these commands from the repository root:
 
 ```bash
-pip install mkdocs-material "mkdocstrings[python]" markdown-exec matplotlib scipy statsmodels pandas
+pip install mkdocs-material "mkdocstrings[python]" "markdown-exec>=1.12.3" matplotlib scipy statsmodels pandas
 cd python
 mkdocs build --strict
 ```
