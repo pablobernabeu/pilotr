@@ -18,27 +18,27 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 43735355671 on 2026-11-15, for commit efb385d on the
-release branch. Pull request #24 started the run, so it checked out 23c1824,
-the merge of efb385d into main at 70807e7. That merge has the files of
-efb385d, since main's only change that the branch lacks gives
+GitHub Actions, run 44941997487 on 2026-11-21, for commit f6a02b4 on the
+release branch. Pull request #24 started the run, so it checked out 2c48276,
+the merge of f6a02b4 into main at 70807e7. That merge has the files of
+f6a02b4, since main's only change that the branch lacks gives
 .github/workflows/site.yml the content it already has on the branch. The three
 files of cached mixed-model results in vignettes/ are the ones that the
 refresh-vignette-caches workflow regenerated and committed as cde86bd, so that
 they record 0.4.0. None of the commits since cde86bd changed them, the chunks
 that produced them or the functions those chunks call. The package sources of
-this submission are those of efb385d. In the package directory, only this
+this submission are those of f6a02b4. In the package directory, only this
 file, which `.Rbuildignore` keeps out of the tarball, has changed since. Each
 leg built the tarball with `--no-manual` and `--compact-vignettes=gs+qpdf` and
 ran `R CMD check --as-cran --no-manual` on it, without the CRAN incoming
 checks, which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-14 r90890)
+* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-20 r90953)
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3
 * windows-latest (Windows Server 2022 x64, build 26100), R 4.6.2
-* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-11-14
-  r90890 ucrt)
+* windows-latest (Windows Server 2022 x64, build 26100), R-devel (2026-11-17
+  r90926 ucrt)
 * macos-latest (macOS Tahoe 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with no failures or warnings. 34 tests skip
