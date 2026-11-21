@@ -18,16 +18,16 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 44941997487 on 2026-11-21, for commit f6a02b4 on the
-release branch. Pull request #24 started the run, so it checked out 2c48276,
-the merge of f6a02b4 into main at 70807e7. That merge has the files of
-f6a02b4, since main's only change that the branch lacks gives
+GitHub Actions, run 44949710378 on 2026-11-21, for commit 9739e7c on the
+release branch. Pull request #24 started the run, so it checked out c6179b9,
+the merge of 9739e7c into main at 70807e7. That merge has the files of
+9739e7c, since main's only change that the branch lacks gives
 .github/workflows/site.yml the content it already has on the branch. The three
 files of cached mixed-model results in vignettes/ are the ones that the
 refresh-vignette-caches workflow regenerated and committed as cde86bd, so that
 they record 0.4.0. None of the commits since cde86bd changed them, the chunks
 that produced them or the functions those chunks call. The package sources of
-this submission are those of f6a02b4. In the package directory, only this
+this submission are those of 9739e7c. In the package directory, only this
 file, which `.Rbuildignore` keeps out of the tarball, has changed since. Each
 leg built the tarball with `--no-manual` and `--compact-vignettes=gs+qpdf` and
 ran `R CMD check --as-cran --no-manual` on it, without the CRAN incoming
@@ -42,7 +42,7 @@ checks, which r-lib/actions turns off. Each leg ended with 'Status: OK':
 * macos-latest (macOS Tahoe 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with no failures or warnings. 34 tests skip
-everywhere because they read repository files that R CMD check cannot reach,
+in every leg because they read repository files that R CMD check cannot reach,
 such as the shared specification schema, the browser app and the vignette
 sources, and one because pkgdown is not installed. Under R 4.5.3, one more
 skips because it checks how R 4.6.0 and later compute integer powers.
