@@ -2,12 +2,11 @@
 #
 # Choosing plausible random-effect standard deviations with nothing to read them from is the
 # steepest step in setting up a simulation-based power analysis, and the one that most often
-# stops a user before they reach the analysis itself. The tutorials on the method all say so,
-# and all reach for the same remedy, which is to take the variance components from a pilot fit
-# or from a published model (Green and MacLeod, 2016; Kumle et al., 2021; DeBruine and Barr,
-# 2021). This file does that mechanically, mapping the estimates of a fitted lmer onto the
-# fields of a pilotr specification, which can then be scaled up to the sample size being
-# planned.
+# stops a user before they reach the analysis itself. The tutorials on the method reach for the
+# same remedy, which is to take the variance components from a pilot fit or from a published
+# model (Green and MacLeod, 2016; Kumle et al., 2021; DeBruine and Barr, 2021). This file does
+# that mechanically, mapping the estimates of a fitted lmer onto the fields of a pilotr
+# specification, which can then be scaled up to the sample size being planned.
 #
 # The fixed effects are mapped too. A pilot's point estimates are a poor basis for planning,
 # since they are noisy and, when a pilot is followed up because it looked promising, biased
@@ -612,7 +611,7 @@
 #'   simulation. \emph{Advances in Methods and Practices in Psychological Science}, 4(1).
 #'   \doi{10.1177/2515245920965119}
 #'
-#'   Green, P. and MacLeod, C. J. (2016). SIMR: an R package for power analysis of generalized
+#'   Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of generalized
 #'   linear mixed models by simulation. \emph{Methods in Ecology and Evolution}, 7(4), 493-498.
 #'   \doi{10.1111/2041-210X.12504}
 #'
@@ -620,9 +619,9 @@
 #'   factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
 #'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 #'
-#'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
-#'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods},
-#'   53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'   Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+#'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+#'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
 #'   Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 #'   imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.

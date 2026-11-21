@@ -175,10 +175,12 @@ as the swept value unless `x` names the swept column. When the curve holds sever
 A preregistration, a registered report or a grant application has to justify the sample size it
 asks for, and the solved size is only part of that justification.
 [Lakens (2022, Table 4)](https://doi.org/10.1525/collabra.33267) also asks for the primary
-analysis with its alpha and sidedness, the desired power, each effect size with the reason it was
-chosen, and the power when the null hypothesis is true. A simulation adds items of its own: the
-number of replicates, the fits that were singular or carried a warning and the Monte Carlo error
-of every rate ([Morris, White and Crowther, 2019](https://doi.org/10.1002/sim.8086)).
+analysis with its alpha and sidedness, the desired power and each effect size with the reason it
+was chosen. For a true null hypothesis, Table 4 asks for the power of a test for the absence of an
+effect, such as an equivalence test. pilotr reports the counterpart for the planned test, its
+Type I error rate. A simulation adds items of its own: the number of replicates, the fits that
+were singular or carried a warning and the Monte Carlo error of every rate
+([Morris, White and Crowther, 2019](https://doi.org/10.1002/sim.8086)).
 `power_report` writes all of them in Markdown from a power result and the `target_n` result.
 The example pairs the solved size with a run at that size, and adds the same design with no
 effect as `null_result`, whose rejection rate shows whether the test holds its level. The
@@ -348,10 +350,10 @@ is identical across the two languages, so these differences lie in the model and
 
 `power_mixed` runs its own simulation loop over the portable specification and does not depend
 on another power package. The packages [simr](https://doi.org/10.1111/2041-210x.12504) (Green
-and MacLeod, 2016) and [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Vo and
-Draschkow, 2021) pioneered simulation-based power analysis for mixed-effects models. pilotr
-differs from them in using the cross-language specification, in reporting Type S and Type M
-alongside power and in built-in parallelisation.
+and MacLeod, 2016) and [mixedpower](https://doi.org/10.3758/s13428-021-01546-0) (Kumle, Võ and
+Draschkow, 2021) offer simulation-based power analysis for mixed-effects models. pilotr differs
+from them in using the cross-language specification and in reporting Type S and Type M alongside
+power.
 
 ## Which model each family gets
 

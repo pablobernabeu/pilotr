@@ -95,8 +95,9 @@ def model_formula(spec, structure="maximal"):
     intercept and the random slopes the specification declares.
 
     The three structures are the usual steps of a rule that simplifies a model when its fit is
-    singular or fails to converge (Barr et al., 2013, doi:10.1016/j.jml.2012.11.001; Matuschek et
-    al., 2017, doi:10.1016/j.jml.2017.01.001). ``"maximal"`` has every random slope the
+    singular or fails to converge (Matuschek et al., 2017, doi:10.1016/j.jml.2017.01.001). Barr et
+    al. (2013, doi:10.1016/j.jml.2012.11.001) recommend the maximal structure and suggest dropping
+    its correlations when it fails to converge. ``"maximal"`` has every random slope the
     specification declares, correlated with the intercept where the specification correlates them,
     and uncorrelated (``||``) where it does not. ``"zcp"``, the zero-correlation-parameter model,
     keeps those slopes and writes ``||`` for every grouping factor with a slope. A grouping factor

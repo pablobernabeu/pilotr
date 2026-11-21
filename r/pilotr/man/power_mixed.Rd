@@ -114,10 +114,10 @@ packages.
 }
 \details{
 \code{power_mixed()} runs pilotr's own simulation loop over the portable design specification. \code{simr}
-(Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021) offered such
-simulations first, and pilotr is indebted to them. It differs from them in three ways: the
-portable cross-language specification drives it, the \code{workers} argument runs its replicates in
-parallel and it reports the Type S and Type M design-analysis errors beside power.
+(Green and MacLeod, 2016) and \code{mixedpower} (Kumle, \enc{Võ}{Vo} and Draschkow, 2021) offered
+such simulations first, and pilotr is indebted to them. It differs from them in two ways: the
+portable cross-language specification drives it and it reports the Type S and Type M
+design-analysis errors beside power.
 
 The analysis model comes from the specification rather than from this function: the formula
 comes from \code{\link[=model_formula]{model_formula()}} and the data from \code{\link[=model_data]{model_data()}}, so the analysis matches the
@@ -159,8 +159,9 @@ true values still come from the specification and are on its scale, which need n
 model's. A named numeric \code{focal} gives the true values on the model's scale.
 
 An analysis plan may instead preregister a simplification rule: fit the maximal model, and when
-the fit is singular or fails to converge, drop the correlations, then the slopes (Barr et al.,
-2013; Matuschek et al., 2017). \code{formula} given as a ladder of models simulates such a rule. Each
+the fit is singular or fails to converge, drop the correlations, then the slopes (Matuschek et
+al., 2017). Barr et al. (2013) recommend the maximal model and suggest dropping its correlations
+when it fails to converge. \code{formula} given as a ladder of models simulates such a rule. Each
 replicate fits the rungs in turn and keeps the first fit that \code{fallback} accepts, or the last
 rung's fit when it accepts none. \code{c("maximal", "zcp", "intercepts")} names structures that
 \code{\link[=model_formula]{model_formula()}} builds, which are fitted as the default model is, with the fitter the family
@@ -244,7 +245,7 @@ Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of
 generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
 7(4), 493-498. \doi{10.1111/2041-210x.12504}
 
-Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 

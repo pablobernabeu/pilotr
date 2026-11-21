@@ -679,10 +679,10 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     ``list(interaction = c("A1_B", "A2_B"))``.
 
     This is pilotr's own simulation loop over the portable design specification. simr (Green and
-    MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Vo and Draschkow, 2021,
+    MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Võ and Draschkow, 2021,
     doi:10.3758/s13428-021-01546-0) offered such simulations first, and pilotr is indebted to them.
-    It differs from them in three ways: the portable cross-language specification drives it, it
-    reports Type S and Type M errors and `workers` (default 1, serial) runs its replicates in
+    It differs from them in two ways: the portable cross-language specification drives it and it
+    reports Type S and Type M errors. `workers` (default 1, serial) runs its replicates in
     parallel. Any worker count returns results identical to a serial run.
 
     Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if Powell's does

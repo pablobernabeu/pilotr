@@ -61,8 +61,10 @@ def power_report(x, solved=None, spec_file=None, justification=None, null_result
     doi:10.1525/collabra.33267) for reporting an a-priori power analysis. The primary analysis
     comes first, with its model, test, alpha and sidedness, then the desired power and the sample
     size solved for it, with its interval. Each focal effect follows, with its true value, the
-    justification given for that value and its power. Last comes the power when the null
-    hypothesis is true. The simulation is then accounted for as Morris, White and Crowther (2019,
+    justification given for that value and its power. Last comes the Type I error rate of the
+    test, its rejection rate when every focal effect is zero. For a true null hypothesis, Table 4
+    asks instead for the power of a test for the absence of an effect, such as an equivalence
+    test. The simulation is then accounted for as Morris, White and Crowther (2019,
     doi:10.1002/sim.8086) recommend for simulation studies: the replicates simulated and those
     that returned an estimate, the fits that were singular or carried a warning and the Monte
     Carlo standard error of every rate. The report ends with what a reader needs to reproduce the

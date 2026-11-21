@@ -459,6 +459,13 @@
   R process for other sessions while the session that started a run waits for
   it, where they said that the app does not block and uses all local cores.
 
+* Citations were checked against their published records. The help pages and
+  the power vignette spell the authors Võ and Bürkner as published, no longer
+  count built-in parallelisation among the ways pilotr differs from simr and
+  mixedpower, credit the simplification ladder to Matuschek et al. (2017) and no
+  longer say that Lakens (2022, Table 4) asks for the power when the null
+  hypothesis is true.
+
 # pilotr 0.3.1
 
 ## Fixes
@@ -789,12 +796,12 @@ below, and `tools/parity/tolerance.json` records which cases carry an allowance 
 
 Barr, D. J., Levy, R., Scheepers, C., & Tily, H. J. (2013). Random effects structure for
 confirmatory hypothesis testing: Keep it maximal. *Journal of Memory and Language, 68*(3), 255-278.
-<doi:10.1016/j.jml.2012.11.001>
+<https://doi.org/10.1016/j.jml.2012.11.001>
 
 Nakagawa, S., Johnson, P. C. D. and Schielzeth, H. (2017). The coefficient of determination R2 and
 intra-class correlation coefficient from generalized linear mixed-effects models revisited and
 expanded. *Journal of the Royal Society Interface, 14*(134), 20170213.
-<doi:10.1098/rsif.2017.0213>
+<https://doi.org/10.1098/rsif.2017.0213>
 
 # pilotr 0.2.1
 

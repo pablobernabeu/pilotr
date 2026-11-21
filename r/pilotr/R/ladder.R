@@ -4,7 +4,8 @@
 # model the specification implies. Singular and warned fits are kept, for the reason lmer_fits.R
 # gives, and that is what a researcher who reports the maximal model does. Many analysis plans
 # instead name a rule: fit the maximal model, and when the fit is singular or fails to converge,
-# drop the correlations, then the slopes (Barr et al., 2013; Matuschek et al., 2017). The rule
+# drop the correlations, then the slopes (Matuschek et al., 2017). Barr et al. (2013) recommend
+# the maximal model and suggest dropping its correlations when it fails to converge. The rule
 # changes both power and the Type I error rate, since the model a replicate is analysed with then
 # depends on that replicate's data. The power vignette sweeps its priming design from 8 to 56
 # subjects, and the maximal model was singular in at least half of the replicates at every sample

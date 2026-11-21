@@ -58,9 +58,9 @@ calls \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}. Requi
 }
 \details{
 Like \code{\link[=power_mixed]{power_mixed()}}, this runs pilotr's own simulation loop over the portable design
-specification. It differs from \code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and
-Draschkow, 2021) in the same three ways: the specification drives it, it reports Type S and Type
-M errors and it runs in parallel. With \code{workers > 1}, one worker pool is created once and reused
+specification. It differs from \code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle,
+\enc{Võ}{Vo} and Draschkow, 2021) in the same two ways: the specification drives it and it
+reports Type S and Type M errors. With \code{workers > 1}, one worker pool is created once and reused
 across all sample sizes.
 
 Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
@@ -116,7 +116,7 @@ Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than on
 factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
 68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 
-Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 

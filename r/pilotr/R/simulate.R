@@ -387,9 +387,9 @@ simulate_design <- function(spec, validate = TRUE) {
   # coefficients use, so a slope keyed on an interaction ("a:b") multiplies its component
   # columns. A direct cv[[key]] lookup returned NULL for such a key, and the slope was drawn
   # and then silently multiplied by zero: the deviate was consumed from the stream but never
-  # reached the data. Since model_formula() and brms_bridge() both emit that slope, the user
-  # fitted a richer model than the process that generated the data, which inflates power in
-  # the direction Barr et al. (2013) warn about.
+  # reached the data. model_formula() and brms_bridge() both emit that slope, but the simulated
+  # data lacked the variance the specification declares for it, so the power computed from them
+  # was overstated, the anticonservative direction against which Barr et al. (2013) warn.
   for (r_i in seq_len(n)) {
     r <- rows[[r_i]]; cv <- r$cvals
     eta <- intercept

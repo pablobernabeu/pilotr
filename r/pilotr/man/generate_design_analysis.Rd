@@ -134,7 +134,7 @@ Kruschke, J. K. (2018). Rejecting or accepting parameter values in Bayesian esti
 \emph{Advances in Methods and Practices in Psychological Science}, 1(2), 270-280.
 \doi{10.1177/2515245918771304}
 
-Vehtari, A., Gelman, A., Simpson, D., Carpenter, B. and Burkner, P.-C. (2021).
+Vehtari, A., Gelman, A., Simpson, D., Carpenter, B. and \enc{Bürkner}{Burkner}, P.-C. (2021).
 Rank-normalization, folding, and localization: An improved R-hat for assessing convergence
 of MCMC. \emph{Bayesian Analysis}, 16(2), 667-718. \doi{10.1214/20-BA1221}
 

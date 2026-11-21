@@ -244,6 +244,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The install commands in the README and Get started carry no trailing comments
   and so paste into zsh, where pip read the comments of the 0.3.0 commands as
   requirements and stopped with 'Invalid requirement'.
+- Citations were checked against their published records. The docstrings and
+  the power guide spell the author Võ as published, no longer count built-in
+  parallelisation among the ways pilotr differs from simr and mixedpower, credit
+  the simplification ladder to Matuschek et al. (2017) and no longer say that
+  Lakens (2022, Table 4) asks for the power when the null hypothesis is true.
 
 ## [0.3.0] - 2026-08-27
 
