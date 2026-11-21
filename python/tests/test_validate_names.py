@@ -183,9 +183,9 @@ def test_an_empty_array_for_a_unit_is_read_as_an_empty_object():
 
 
 def test_a_blank_name_is_refused_where_it_used_to_reach_the_data():
-    # Ported from 7693ab2 on claude/meridian-packages-apps-review-g2a74i. An emptied name built a
-    # spec that validated and then produced a column with no name at all, where the R twin
-    # stopped inside its simulator with "replacement has length zero".
+    # A regression test. An emptied name built a spec that validated and then produced a column
+    # with no name at all, where the R twin stopped inside its simulator with "replacement has
+    # length zero".
     s = between()
     for blank in ("", "  "):
         s["factors"][0]["name"] = blank

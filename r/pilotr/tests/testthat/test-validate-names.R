@@ -149,9 +149,9 @@ test_that("an empty units object is an object whose unit columns are checked", {
 })
 
 test_that("a blank name is refused where it used to fail inside the simulator", {
-  # Ported from 7693ab2 on claude/meridian-packages-apps-review-g2a74i. An emptied name built a
-  # spec that validated and then stopped in simulate_design() with base R's "replacement has
-  # length zero", where the twin wrote a column with no name at all.
+  # A regression test. An emptied name built a spec that validated and then stopped in
+  # simulate_design() with base R's "replacement has length zero", where the twin wrote a
+  # column with no name at all.
   s <- names_between()
   for (blank in c("", "  ")) {
     s$factors[[1]]$name <- blank
