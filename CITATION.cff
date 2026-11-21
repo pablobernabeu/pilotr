@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use pilotr, please cite it as below."
 title: "pilotr: Simulate experimental and behavioural data from a portable design specification"
-abstract: "Generative simulation of experimental and behavioural data from a portable JSON design specification shared by a no-code app, an R package and a Python package, with simulation-based power and precision/ROPE design analysis and a shared cross-language random-number generator that makes the simulated data bit-identical across implementations wherever they share a maths library."
+abstract: "Generative simulation of experimental and behavioural data from a portable JSON design specification shared by a no-code app, an R package and a Python package, with simulation-based power and precision/ROPE design analysis and a shared cross-language random-number generator that makes the simulated data bit-identical across implementations wherever they share a maths library, except in a rare Beta case under R 4.6.0 or later."
 type: software
 authors:
   - family-names: Bernabeu
@@ -13,7 +13,7 @@ authors:
 # either, with the date it first became public (on CRAN or PyPI). tools/check_versions.py
 # fails CI when the version is not the newer of the two package versions.
 # First public on CRAN, 2026-09-20 (R package, while PyPI stays at 0.3.0).
-version: "0.3.1"
+version: "0.4.0"
 date-released: "2026-09-20"
 # This file describes the repository, which holds both packages, so its DOI is Zenodo's
 # concept DOI, which archives every GitHub release of both and favours neither. Each

@@ -20,8 +20,8 @@
 # The plain standard error collapses to zero at p = 0 and p = 1, which reads as certainty
 # precisely where there is least of it: nought significant results out of 60 is not evidence that
 # power is exactly zero. The Wilson interval stays inside [0, 1] and keeps a sensible width at the
-# boundaries, and it is the interval recommended over the Wald form for exactly this reason
-# (Brown, Cai and DasGupta, 2001).
+# boundaries, and Brown, Cai and DasGupta (2001) recommend it in place of the Wald interval, whose
+# coverage they show to be erratic.
 .wilson <- function(p, n, z = .Z95) {
   if (n <= 0) return(c(NA_real_, NA_real_))
   denom <- 1 + z * z / n

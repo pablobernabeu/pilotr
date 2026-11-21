@@ -28,6 +28,13 @@ r/pilotr/vignettes/*_files/
 r/pilotr/doc/
 r/pilotr/Meta/
 r/pilotr/docs/
+# What a CRAN release leaves behind: the file devtools::submit_cran() writes, a
+# reverse-dependency check's revdep/, the tarball devtools::build() writes beside the
+# package and the directory R CMD check writes where it runs
+r/pilotr/CRAN-SUBMISSION
+r/pilotr/revdep/
+/r/pilotr_*.tar.gz
+*.Rcheck/
 
 # The site workflow's working directories at the repository root. app-stage/
 # holds the app's sources staged for shinylive::export(), and site/ is the

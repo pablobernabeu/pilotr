@@ -17,8 +17,8 @@ solve_curve(
 }
 \arguments{
 \item{curve}{A curve, as returned by \code{\link[=power_curve_mixed]{power_curve_mixed()}}, \code{\link[=precision_curve]{precision_curve()}} or
-\code{\link[=sweep_spec]{sweep_spec()}}: one row per swept value, with the swept value, a decision rate, and the
-number of replicates behind it.}
+\code{\link[=sweep_spec]{sweep_spec()}}: one row per swept value, with the swept value, a decision rate and the number
+of replicates behind it.}
 
 \item{target}{The decision rate to solve for, strictly between 0 and 1.}
 
@@ -46,17 +46,17 @@ A list with elements \code{value} (the solved swept value), \code{lo} and \code{
 bounds), \code{level}, \code{target}, \code{se} (the delta-method standard error on the fitted scale, the
 scale on which the interval is symmetric), \code{dispersion} (the heterogeneity factor applied,
 1 where the model fits), \code{x} and \code{y} (the columns used), \code{transform}, \code{intercept} and \code{slope}
-(the fitted coefficients), \code{n_points} (the number of curve points the fit used), and \code{x_min}
-and \code{x_max} (the swept range). A bound is allowed to fall outside that range. When one does,
-the sweep was too narrow to pin the value down and should be widened. A \code{dispersion} well
-above 1 says the curve is not the shape the model assumes, so the solve deserves a wider grid
-or more replicates before it deserves any trust.
+(the fitted coefficients), \code{n_points} (the number of curve points the fit used) and \code{x_min} and
+\code{x_max} (the swept range). A bound is allowed to fall outside that range. When one does, the
+sweep was too narrow to pin the value down and should be widened. A \code{dispersion} well above 1
+says the curve is not the shape the model assumes, so the solve needs a wider grid or more
+replicates before it can be trusted.
 }
 \description{
-Take the curve a sweep has already produced, fit the decision rate against the swept value,
+Take the curve a sweep has already produced, fit the decision rate against the swept value
 and solve for the value at which the rate meets a target. The solved value comes with a
-confidence interval, because a point read off a simulated curve without one repeats the
-overconfidence that design analysis exists to expose.
+confidence interval, because a value read off a simulated curve without one hides the uncertainty
+of the simulation.
 }
 \details{
 The input is the data frame \code{\link[=power_curve_mixed]{power_curve_mixed()}}, \code{\link[=precision_curve]{precision_curve()}} or \code{\link[=sweep_spec]{sweep_spec()}}
@@ -78,14 +78,14 @@ not separate the two links, and the probit is chosen for its shape.
 
 The interval is the delta-method interval of \code{MASS::dose.p()}, computed on the scale named by
 \code{transform} and mapped back, so it is symmetric on that scale and asymmetric on the natural one.
-That asymmetry is the honest shape: at the top of a power curve a given change in rate costs far
-more sample size than the same change lower down. In the checks against \code{\link[stats:power.t.test]{stats::power.t.test()}}
+That asymmetry is correct: at the top of a power curve, a given change in rate costs far more
+sample size than the same change lower down. In the checks against \code{\link[stats:power.t.test]{stats::power.t.test()}}
 above, Fieller's interval for a ratio (Fieller, 1954), tried as the alternative, covered the
 analytic answer as often, at nearly the same width, so the interval \code{MASS::dose.p()} reports is
 kept. Where the two-parameter model does not describe the curve, the interval is widened by the
 heterogeneity factor of probit analysis, Pearson's chi-square over its degrees of freedom
 (Finney, 1971), reported as \code{dispersion}. It is floored at 1, so a well-fitting curve is left
-alone and a badly-fitting one cannot report a narrower interval than its own residuals justify.
+alone and a badly fitting one cannot report a narrower interval than its own residuals justify.
 
 The default \code{transform} of \code{"sqrt"} suits a sample-size axis, where a rate rises with the
 square root of the sample size. Sweep something else,

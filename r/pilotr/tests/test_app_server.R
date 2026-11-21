@@ -18,8 +18,9 @@ plus_minus <- intToUtf8(0xB1)
 
 # The designs whose not-supported text both apps route, built with the app's own build_spec().
 # They are crossed reaction times and crossed accuracy with one within factor, a Likert and a
-# proportion design between subjects, and a Gaussian design crossed with items that has no within
-# factor.
+# proportion design between subjects, a Gaussian design crossed with items that has no within
+# factor, a Gaussian design within subjects without items and a lognormal design between subjects
+# that declares no random effect.
 route_designs <- function(build_spec) {
   rt <- build_spec(list(name = "rt", seed = 1, design_kind = "within", include_items = TRUE,
                         n_subject = 12, n_item = 8, factor_name = "cond", lev1 = "a",
@@ -37,8 +38,14 @@ route_designs <- function(build_spec) {
   crossed <- between("gaussian", sigma = 1)
   crossed$units$item <- list(n = 20L)
   crossed$random <- list(subject = list(intercept_sd = 1), item = list(intercept_sd = 0.3))
+  subjects <- build_spec(list(name = "subjects", seed = 1, design_kind = "within",
+                              include_items = FALSE, n_subject = 12, factor_name = "cond",
+                              lev1 = "a", lev2 = "b", intercept = 0, effect = 0.5,
+                              subj_int_sd = 0.5, subj_slope_sd = 0, family = "gaussian",
+                              resp_name = "", sigma = 1))
   list(rt = rt, acc = acc, likert = between("ordinal", thresholds = "-1, 0, 1"),
-       prop = between("beta", phi = 8), crossed = crossed)
+       prop = between("beta", phi = 8), crossed = crossed, subjects = subjects,
+       fixed = between("lognormal", sigma = 0.5))
 }
 
 # The power at each point of an app's curve, worked out from the size and seed the curve gives
@@ -97,10 +104,11 @@ analytic_default <- 2 * stats::power.t.test(delta = 5, sd = 10, power = 0.8)$n
 
 # The not-supported text sends each design to the analysis that fits it. power_mixed() in R fits
 # every family but ordinal and Beta, which go to the Bayesian design analysis. Python's
-# power_mixed() takes one within factor crossed with items and fits a linear model on the
-# response's own scale. Its lines are offered only for such a design, in a family whose
-# coefficients are on that scale (gaussian, ex-Gaussian) or on the log scale it analyses. `out`
-# holds each design's text, `opening` the sentence each text starts from.
+# power_mixed(), from pilotr 0.4.0, fits any design that declares a random effect and refuses one
+# that declares none, and it fits a linear model on the response's own scale. Its lines are
+# offered only for a design with a random effect, in a family whose coefficients are on that scale
+# (gaussian, ex-Gaussian) or on the log scale it analyses. `out` holds each design's text,
+# `opening` the sentence each text starts from.
 check_routes <- function(out, opening, app) {
   check(all(vapply(out, grepl, logical(1), pattern = opening, fixed = TRUE)),
         sprintf("%s: every routed design opens with the app's own scope", app))
@@ -114,8 +122,14 @@ check_routes <- function(out, opening, app) {
             !grepl("power_mixed(", out[[nm]], fixed = TRUE),
           sprintf("%s: a '%s' design is sent to the Bayesian design analysis", app, nm))
   check(grepl("power_mixed(spec", out$crossed, fixed = TRUE) &&
-          !grepl("Python", out$crossed, fixed = TRUE),
-        sprintf("%s: a design with no within factor is sent to R's power_mixed() alone", app))
+          grepl("Python", out$crossed, fixed = TRUE),
+        sprintf("%s: a crossed design with no within factor is sent to both packages", app))
+  check(grepl("power_mixed(spec", out$subjects, fixed = TRUE) &&
+          grepl("Python", out$subjects, fixed = TRUE),
+        sprintf("%s: a design within subjects without items is sent to both packages", app))
+  check(grepl("power_mixed(spec", out$fixed, fixed = TRUE) &&
+          !grepl("Python", out$fixed, fixed = TRUE),
+        sprintf("%s: a design without random effects is sent to R's power_mixed() alone", app))
 }
 
 testServer(app = app_dir, {

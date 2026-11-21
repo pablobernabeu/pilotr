@@ -15,20 +15,20 @@ already-parsed list (for example from \code{\link[=build_spec]{build_spec()}} or
 The default \code{TRUE} catches the errors that would otherwise pass silently, such as a
 mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 Validation costs a few milliseconds, so the replicate loops behind the power and precision
-functions validate once and then pass \code{FALSE}; there is rarely a reason to set it
-directly. Any other value validates leniently, as in \code{\link[=load_spec]{load_spec()}}.}
+functions validate once and then pass \code{FALSE}. There is rarely a reason to set it directly. Any
+other value validates leniently, as in \code{\link[=load_spec]{load_spec()}}.}
 }
 \value{
-A data frame with one row per observation, containing a \code{subject} column, an
-optional \code{item} column, any grouping, factor, and continuous-predictor columns, and the
-response column named by the specification. A design with a counterbalanced factor also has
-a \code{list} column after \code{item}, holding the list each subject follows, counted from 1.
+A data frame with one row per observation, containing a \code{subject} column, an optional
+\code{item} column, any grouping, factor and continuous-predictor columns and the response column
+named by the specification. A design with a counterbalanced factor also has a \code{list} column
+after \code{item}, holding the list each subject follows, counted from 1.
 }
 \description{
 Generate an analysis-ready data set from a portable design specification: a linear
-predictor built from fixed effect sizes (categorical contrasts, continuous predictors,
-and their interactions) plus crossed by-subject and by-item random intercepts and slopes,
-mapped through the chosen response family.
+predictor built from fixed effect sizes (categorical contrasts, continuous predictors and their
+interactions) plus crossed by-subject and by-item random intercepts and slopes, mapped through
+the chosen response family.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

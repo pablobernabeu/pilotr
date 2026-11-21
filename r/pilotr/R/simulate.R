@@ -164,9 +164,9 @@ load_spec <- function(path, validate = TRUE) {
 #' Simulate a data set from a design specification
 #'
 #' Generate an analysis-ready data set from a portable design specification: a linear
-#' predictor built from fixed effect sizes (categorical contrasts, continuous predictors,
-#' and their interactions) plus crossed by-subject and by-item random intercepts and slopes,
-#' mapped through the chosen response family.
+#' predictor built from fixed effect sizes (categorical contrasts, continuous predictors and their
+#' interactions) plus crossed by-subject and by-item random intercepts and slopes, mapped through
+#' the chosen response family.
 #'
 #' @param spec A design specification, given either as a path to a JSON file or as an
 #'   already-parsed list (for example from [build_spec()] or
@@ -175,12 +175,12 @@ load_spec <- function(path, validate = TRUE) {
 #'   The default `TRUE` catches the errors that would otherwise pass silently, such as a
 #'   mistyped coefficient key, which resolves to no column and so sets that effect to zero.
 #'   Validation costs a few milliseconds, so the replicate loops behind the power and precision
-#'   functions validate once and then pass `FALSE`; there is rarely a reason to set it
-#'   directly. Any other value validates leniently, as in [load_spec()].
-#' @return A data frame with one row per observation, containing a `subject` column, an
-#'   optional `item` column, any grouping, factor, and continuous-predictor columns, and the
-#'   response column named by the specification. A design with a counterbalanced factor also has
-#'   a `list` column after `item`, holding the list each subject follows, counted from 1.
+#'   functions validate once and then pass `FALSE`. There is rarely a reason to set it directly. Any
+#'   other value validates leniently, as in [load_spec()].
+#' @return A data frame with one row per observation, containing a `subject` column, an optional
+#'   `item` column, any grouping, factor and continuous-predictor columns and the response column
+#'   named by the specification. A design with a counterbalanced factor also has a `list` column
+#'   after `item`, holding the list each subject follows, counted from 1.
 #' @examples
 #' spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",
 #'   factor_name = "group", lev1 = "control", lev2 = "treatment", n_subject = 40,
@@ -387,9 +387,9 @@ simulate_design <- function(spec, validate = TRUE) {
   # coefficients use, so a slope keyed on an interaction ("a:b") multiplies its component
   # columns. A direct cv[[key]] lookup returned NULL for such a key, and the slope was drawn
   # and then silently multiplied by zero: the deviate was consumed from the stream but never
-  # reached the data. Since model_formula() and brms_bridge() both emit that slope, the user
-  # fitted a richer model than the process that generated the data, which inflates power in
-  # the direction Barr et al. (2013) warn about.
+  # reached the data. model_formula() and brms_bridge() both emit that slope, but the simulated
+  # data lacked the variance the specification declares for it, so the power computed from them
+  # was overstated, the anticonservative direction against which Barr et al. (2013) warn.
   for (r_i in seq_len(n)) {
     r <- rows[[r_i]]; cv <- r$cvals
     eta <- intercept

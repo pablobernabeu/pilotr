@@ -26,17 +26,17 @@ effects follow the model's column naming, so a specification key \code{a:b} is t
 A list of coefficient sets, which \code{\link[=power_mixed]{power_mixed()}} tests jointly, is refused, since a set has no
 single estimate to build an interval around.}
 
-\item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
+\item{formula}{Optional \code{lme4} formula. If \code{NULL}, it is derived from the specification by
 \code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
 fitted as a linear model whatever the family (see Details). A ladder of models simulates a
 simplification rule: a character vector of \code{\link[=model_formula]{model_formula()}} structures, such as
 \code{c("maximal", "zcp", "intercepts")}, fitted as the derived model is, or a list of formulas,
 fitted as written, as in \code{\link[=power_mixed]{power_mixed()}}.}
 
-\item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL}
-it is derived via \code{\link[=model_data]{model_data()}}, which adds the analysis response \code{.y}, on the log scale
-for the lognormal families, and builds the contrast and interaction columns, so focal names
-follow the auto-formula (interactions written as \code{a_b}).}
+\item{prep}{Optional function mapping a simulated data set to the modelling data. If \code{NULL}, it
+is derived by \code{\link[=model_data]{model_data()}}, which adds the analysis response \code{.y}, on the log scale for the
+lognormal families, and builds the contrast and interaction columns, so focal names follow the
+auto-formula (interactions written as \code{a_b}).}
 
 \item{rope}{The region of practical equivalence, as a half-width or as an interval. A single
 non-negative number \code{r} is the region from \code{-r} to \code{r}, so that an effect with
@@ -80,10 +80,10 @@ scale, the decision columns are \code{NA} (see Details).
 The decision proportions are taken over \code{n_returned}, the replicates that
 produced an estimate. The remaining counts separate the fit outcomes, because a
 fit can return a usable estimate while still being boundary-singular or
-carrying a convergence warning: \code{n_converged} counts replicates with neither,
-\code{n_singular} those where \code{lme4::isSingular()} was true, and \code{n_warning} those
-with a warning or optimiser convergence message other than lme4's singular-fit
-notice, which \code{n_singular} already counts. Singular and warning fits are
+carrying a convergence warning: \code{n_converged} counts replicates with neither, \code{n_singular}
+those where \code{lme4::isSingular()} was true and \code{n_warning} those with a warning or optimiser
+convergence message other than lme4's singular-fit notice, which \code{n_singular} already counts.
+Singular and warning fits are
 retained, since their fixed-effect estimates remain interpretable and
 discarding them would bias the result. A large \code{n_singular} means the model
 being fitted is richer than the design can support at that sample size, which
@@ -103,10 +103,9 @@ along with the expected interval width. Requires the \code{lme4} package.
 }
 \details{
 The interval is a Wald approximation: the estimate plus or minus 1.96 standard errors
-from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and
-for comparability across replicates; in small samples it is somewhat narrower than a
-Satterthwaite t interval, so \code{p_meaningful} and \code{mean_ci_width} are slightly optimistic
-at small sample sizes.
+from the model's variance-covariance matrix. This fixed-z interval is chosen for speed and for
+comparability across replicates. In small samples, it is somewhat narrower than a Satterthwaite t
+interval, so \code{p_meaningful} and \code{mean_ci_width} are slightly optimistic at small sample sizes.
 
 The fitter follows the response family, as in \code{\link[=power_mixed]{power_mixed()}}. Since no p-value is needed, a
 \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} or \code{exgaussian} response is fitted by
@@ -120,10 +119,10 @@ subjects or items, it is likewise narrower than it should be, since the test it 
 too often when the clusters are few (Li and Redden, 2015). The \code{fitter} column names the
 fitter.
 
-pilotr has no frequentist model for an \code{ordinal} or \code{beta} response yet. Such a response is
-fitted by the linear model on its own scale, where a region of practical equivalence set on
-the logit scale of the coefficients means nothing. The function warns, and withholds the
-decision probabilities with their Monte Carlo standard errors and bounds (\code{NA}).
+pilotr has no frequentist model on the logit scale for an \code{ordinal} or \code{beta} response.
+Such a response is fitted by the linear model on its own scale, where a region of practical
+equivalence set on the logit scale of the coefficients means nothing. The function warns, and
+withholds the decision probabilities with their Monte Carlo standard errors and bounds (\code{NA}).
 \code{mean_ci_width} stays, as the width of an interval on the response scale.
 \code{\link[=generate_design_analysis]{generate_design_analysis()}} applies an interval-and-ROPE rule on the link scale, in a
 Bayesian model.

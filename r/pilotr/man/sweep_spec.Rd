@@ -42,11 +42,11 @@ grid index when the values are lists. \code{\link[=solve_curve]{solve_curve()}} 
 so a sweep over single values goes straight into a solve.
 }
 \description{
-Vary a single field of a specification across a set of values, run an analysis at each, and bind
+Vary a single field of a specification across a set of values, run an analysis at each and bind
 the results into one data frame. Sample size is the axis users sweep most often, and
-\code{\link[=power_curve_mixed]{power_curve_mixed()}} and \code{\link[=precision_curve]{precision_curve()}} are wrappers around this for it, but any field can
-be swept, including an effect size, a random-effect standard deviation, a residual standard
-deviation, or the number of items per subject.
+\code{\link[=power_curve_mixed]{power_curve_mixed()}} and \code{\link[=precision_curve]{precision_curve()}} call this function over it, but any field can be
+swept, including an effect size, a random-effect standard deviation, a residual standard
+deviation or the number of items per subject.
 }
 \details{
 The specification is validated once, before the sweep, so a mistake in it is reported before any
@@ -75,12 +75,11 @@ their noise, so the curve looks smoother than its Monte Carlo error allows and a
 fitted to it is too narrow. Over 1,000 emulated curves for each
 of twelve settings on a tight grid of sample sizes, the nominal 95\% interval of \code{\link[=solve_curve]{solve_curve()}}
 covered the true size in 87.8\% of solves with shared seeds and in 96.5\% with independent ones.
-On an effect-size axis, where the design and so every draw stay the same from point to point,
-the figures were 70.3\% and 95.7\%. \code{tools/calibration/solve_curve_coverage.R} in the source
-repository produces them.
+On an effect-size axis, where the design and so every draw stay the same from point to point, the
+figures were 70.3\% and 95.7\%.
 
 The result of \code{fn} is coerced to a data frame: a \code{pilotr_power} object becomes one row per focal
-effect, a data frame is used as it stands, and a plain list becomes a single row. The swept value
+effect, a data frame is used as it stands and a plain list becomes a single row. The swept value
 is added as a leading column named by \code{.name}. A list has no single value to record, so a sweep
 over lists, the conditions \code{\link[=design_conditions]{design_conditions()}} builds included, records the grid index there.
 \code{\link[=solve_curve]{solve_curve()}} then needs \code{x} to name the column that holds the effect. To vary a single

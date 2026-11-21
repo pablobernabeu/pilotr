@@ -2,12 +2,12 @@
 % Please edit documentation in R/brms_bridge.R
 \name{brms_bridge}
 \alias{brms_bridge}
-\title{Derive a brms formula, family, and priors from a design spec}
+\title{Derive a brms formula, family and priors from a design spec}
 \usage{
 brms_bridge(spec, prior_scale = 0.5, interaction_scale = NULL)
 }
 \arguments{
-\item{spec}{a design spec (path or list).}
+\item{spec}{A design specification (path or list).}
 
 \item{prior_scale}{The standard deviation of the normal prior on a standardised main effect
 for the continuous families, that is on the coefficient multiplied by its column's standard
@@ -25,7 +25,7 @@ object is returned visibly, and \code{\link[=print.pilotr_bridge]{print.pilotr_b
 bare call shows the model while an assignment stays silent.
 }
 \description{
-Derive a brms formula, family, and priors from a design spec
+Derive a brms formula, family and priors from a design spec
 }
 \details{
 The formula names the analysis columns of the design: each factor's numeric contrast columns

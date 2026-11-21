@@ -28,16 +28,16 @@ effects follow the model's column naming, so a specification key \code{a:b} is t
 \code{a_b}. A named list of character vectors names sets of coefficients, each tested jointly, as
 in \code{list(interaction = c("A1_B", "A2_B"))} (see Details).}
 
-\item{formula}{Optional \code{lme4} formula; if \code{NULL} it is derived from the specification via
-\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is
-fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+\item{formula}{Optional \code{lme4} formula. If \code{NULL}, it is derived from the specification by
+\code{\link[=model_formula]{model_formula()}}, and the response family chooses the fitter. A formula given here is fitted
+as a linear model whatever the family (see Details). A ladder of models simulates a
 simplification rule: a character vector of \code{\link[=model_formula]{model_formula()}} structures, such as
 \code{c("maximal", "zcp", "intercepts")}, fitted as the derived model is, or a list of formulas,
 fitted as written. A rung takes its name from the ladder, or else from its structure or its
 position.}
 
-\item{prep}{Optional function mapping a simulated data set to the modelling data; if \code{NULL} it
-is derived via \code{\link[=model_data]{model_data()}}.}
+\item{prep}{Optional function mapping a simulated data set to the modelling data. If \code{NULL}, it
+is derived by \code{\link[=model_data]{model_data()}}.}
 
 \item{n_sims}{Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 standard error of about \code{sqrt(p * (1 - p) / n_sims)}, and \code{type_s} and
@@ -70,7 +70,7 @@ An object of class \code{pilotr_power}, a list whose per-run elements are \code{
 \code{alpha}, \code{fitter}, \code{n_attempted}, \code{n_returned}, \code{n_converged}, \code{n_singular} and \code{n_warning},
 and whose per-effect elements are vectors named by focal effect: \code{power}, \code{power_mcse},
 \code{power_lo}, \code{power_hi}, \code{n_significant}, \code{true_effect}, \code{mean_estimate}, \code{type_s},
-\code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect each of
+\code{type_s_lo}, \code{type_s_hi}, \code{type_m} and \code{type_m_mcse}. With a single focal effect, each of
 those has length one, so \code{result$power} is a single number. \code{fitter} names the fitter and
 its test, such as \code{"lme4::glmer (binomial), Wald z"}, with the direction of a one-sided test
 added, as in \code{"lme4::glmer (binomial), Wald z, one-sided (greater)"}. Under a one-sided
@@ -85,17 +85,18 @@ A list \code{focal} adds a per-run element \code{sets}, the sets as given, and n
 elements by set. Each set's \code{true_effect}, \code{mean_estimate} and Type S and Type M quantities
 are then \code{NA}, and \code{fitter} names the joint test.
 
-\code{power} is the proportion of significant results among the replicates that returned an
-estimate for that effect, not among \code{n_sims}. The counts report the fit outcomes separately,
-because a fit can return a usable estimate while still being boundary-singular or carrying a
-convergence warning: \code{n_returned} counts replicates that yielded a fit, \code{n_converged} those
-that did so with neither a warning nor a singular fit, \code{n_singular} those where
-\code{lme4::isSingular()} was true, and \code{n_warning} those with a warning or optimiser convergence
-message other than lme4's singular-fit notice, which \code{n_singular} already counts. Singular and warning fits are retained in \code{power}, since their fixed-effect estimates
-remain interpretable and discarding them would bias the result: singularity is not independent
-of the variance estimates that produce it. A large \code{n_singular} means the model being fitted is
-richer than the design can support at that sample size, which is common in crossed designs
-(Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
+\code{power} is the proportion of significant results among the replicates that returned an estimate
+for that effect, not among \code{n_sims}. The counts report the fit outcomes separately, because a
+fit can return a usable estimate while still being boundary-singular or carrying a convergence
+warning. \code{n_returned} counts replicates that yielded a fit, \code{n_converged} those that did so
+with neither a warning nor a singular fit, \code{n_singular} those where \code{lme4::isSingular()} was
+true and \code{n_warning} those with a warning or optimiser convergence message other than lme4's
+singular-fit notice, which \code{n_singular} already counts. Singular and warning fits are retained
+in \code{power}, since their fixed-effect estimates remain interpretable and discarding them would
+bias the result: singularity is not independent of the variance estimates that produce it. A
+large \code{n_singular} means the model being fitted is richer than the design can support at that
+sample size, which is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017),
+and is worth reporting alongside the power.
 
 A ladder adds two per-run elements: \code{rung_shares}, the share of the replicates analysed at
 each rung, named by rung and summing to 1, and \code{fallback}, the rule applied. A replicate in
@@ -112,18 +113,16 @@ Type S and Type M errors of Gelman and Carlin (2014). Requires the \code{lme4} a
 packages.
 }
 \details{
-\code{power_mixed()} is not a wrapper around an existing power package: it runs pilotr's own
-simulation loop over the portable design specification. It covers territory pioneered by
-\code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021), to
-which it is indebted. pilotr differs in being driven by the portable cross-language
-specification, in reporting the Type S and Type M design-analysis errors alongside
-power, and in parallelising its replicates through the \code{workers} argument.
+\code{power_mixed()} runs pilotr's own simulation loop over the portable design specification. \code{simr}
+(Green and MacLeod, 2016) and \code{mixedpower} (Kumle, \enc{Võ}{Vo} and Draschkow, 2021) offered
+such simulations first, and pilotr is indebted to them. It differs from them in two ways: the
+portable cross-language specification drives it and it reports the Type S and Type M
+design-analysis errors beside power.
 
 The analysis model comes from the specification rather than from this function: the formula
 comes from \code{\link[=model_formula]{model_formula()}} and the data from \code{\link[=model_data]{model_data()}}, so the analysis matches the
-process that generated the data. Both can be given directly, which is what to do when a
-deliberately different analysis model is the point, as when checking how a misspecified model
-behaves.
+process that generated the data. Both can be given directly, to fit a deliberately different
+analysis model, as when checking how a misspecified model behaves.
 
 The fitter follows the response family, so that the estimates are on the scale of the
 specification's coefficients. A \code{gaussian}, \code{lognormal}, \code{shifted_lognormal} or \code{exgaussian}
@@ -141,16 +140,17 @@ freedom as observations, close to a z test, rejected more often than its nominal
 Redden, 2015). The power of a \code{bernoulli} or \code{poisson} design with few subjects or items is
 therefore somewhat overstated.
 
-pilotr has no frequentist model for an \code{ordinal} or \code{beta} response yet. Such a response is
-fitted by the linear model on its own scale, while the specification's coefficients are on the
-logit scale. The function therefore warns, and withholds the mean estimate and Type M (\code{NA}),
-since both would compare the two scales. Type S compares signs alone, and the link keeps the
-sign of a main effect unless an interaction reverses that effect between the levels of another
-factor. It does not keep the sign of an interaction. A bounded response compresses differences
-near the ends of its range, so an interaction that is positive on the logit scale can be
-negative on the response scale. Type S is therefore withheld for an interaction as well. Power
-is the rate at which the linear model's test rejects. \code{\link[=generate_design_analysis]{generate_design_analysis()}} writes a
-Bayesian design analysis on the link scale, with the model \code{\link[=brms_bridge]{brms_bridge()}} derives.
+pilotr has no frequentist model on the logit scale for an \code{ordinal} or \code{beta} response.
+Such a response is fitted by the linear model on its own scale, while the specification's
+coefficients are on the logit scale. The function therefore warns, and withholds the mean
+estimate and Type M (\code{NA}), since both would compare the two scales. Type S compares signs
+alone, and the link keeps the sign of a main effect unless an interaction reverses that effect
+between the levels of another factor. It does not keep the sign of an interaction. A bounded
+response compresses differences near the ends of its range, so an interaction that is positive
+on the logit scale can be negative on the response scale. Type S is therefore withheld for an
+interaction as well. Power is the rate at which the linear model's test rejects.
+\code{\link[=generate_design_analysis]{generate_design_analysis()}} writes a Bayesian design analysis on the link scale, with the
+model \code{\link[=brms_bridge]{brms_bridge()}} derives.
 
 A \code{formula} given here is fitted as written, by \code{lmerTest::lmer()}, or by \code{stats::lm()} when
 it has no random terms, whatever the family, since only its author knows the scale of its
@@ -159,22 +159,23 @@ true values still come from the specification and are on its scale, which need n
 model's. A named numeric \code{focal} gives the true values on the model's scale.
 
 An analysis plan may instead preregister a simplification rule: fit the maximal model, and when
-the fit is singular or fails to converge, drop the correlations, then the slopes (Barr et al.,
-2013; Matuschek et al., 2017). \code{formula} given as a ladder of models simulates such a rule. Each
+the fit is singular or fails to converge, drop the correlations, then the slopes (Matuschek et
+al., 2017). Barr et al. (2013) recommend the maximal model and suggest dropping its correlations
+when it fails to converge. \code{formula} given as a ladder of models simulates such a rule. Each
 replicate fits the rungs in turn and keeps the first fit that \code{fallback} accepts, or the last
 rung's fit when it accepts none. \code{c("maximal", "zcp", "intercepts")} names structures that
 \code{\link[=model_formula]{model_formula()}} builds, which are fitted as the default model is, with the fitter the family
 chooses. A list of formulas gives rungs that are fitted as written. Power, Type S and Type M are
-then those of the rule, \code{rung_shares} gives the share of the replicates analysed at each rung,
-and the fit counts describe the fit each replicate kept. A rule that can end on random
-intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
-items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
-al., 2013). Run the null condition of \code{\link[=design_conditions]{design_conditions()}} through the same ladder to see how
-often, as the power vignette does. A single formula is unaffected by \code{fallback}.
+then those of the rule. \code{rung_shares} gives the share of the replicates analysed at each rung,
+and the fit counts describe the fit each replicate kept. A rule that can end on random intercepts
+alone ignores, in the replicates that end there, how much the effect varies over subjects and
+items. A test that ignores that variation rejects a true null hypothesis too often (Barr et al.,
+2013). Run the null condition of \code{\link[=design_conditions]{design_conditions()}} through the same ladder to see how often,
+as the power vignette does. A single formula is unaffected by \code{fallback}.
 
 Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 proportion over a finite number of replicates is an estimate rather than a fact. At the default
-100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
+100 replicates, a power near 0.5 has a standard error of 0.05. Type S and Type M average over
 the significant replicates alone, which may be few. Each carries its own Monte Carlo error.
 Type S has a Wilson interval, since its standard error would be zero whenever no sign is wrong.
 Type M has its standard error, the standard deviation of the exaggeration ratios over the square
@@ -205,7 +206,7 @@ power differs from that of any one of them. A named list as \code{focal}, such a
 \code{list(interaction = c("A1_B", "A2_B"))} for the interaction of a three-level factor with a
 two-level one, plans that test. Each set is tested against the hypothesis that all its
 coefficients are zero. A linear mixed model has Satterthwaite's F from \code{lmerTest::contest()}
-(Kuznetsova et al., 2017), a \code{glmer()} or \code{glm()} fit has the Wald chi-square of the set's
+(Kuznetsova et al., 2017). A \code{glmer()} or \code{glm()} fit has the Wald chi-square of the set's
 estimates and their covariance matrix, and an \code{lm()} fit has the F test that compares the model
 with and without the set. A set of one coefficient therefore gives the p-value of the
 single-coefficient test, with F equal to t squared or a chi-square equal to z squared. Under a
@@ -244,7 +245,7 @@ Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of
 generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
 7(4), 493-498. \doi{10.1111/2041-210x.12504}
 
-Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 

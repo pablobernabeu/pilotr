@@ -16,18 +16,16 @@
 #' packages.
 #'
 #' @details
-#' `power_mixed()` is not a wrapper around an existing power package: it runs pilotr's own
-#' simulation loop over the portable design specification. It covers territory pioneered by
-#' `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021), to
-#' which it is indebted. pilotr differs in being driven by the portable cross-language
-#' specification, in reporting the Type S and Type M design-analysis errors alongside
-#' power, and in parallelising its replicates through the `workers` argument.
+#' `power_mixed()` runs pilotr's own simulation loop over the portable design specification. `simr`
+#' (Green and MacLeod, 2016) and `mixedpower` (Kumle, \enc{Võ}{Vo} and Draschkow, 2021) offered
+#' such simulations first, and pilotr is indebted to them. It differs from them in two ways: the
+#' portable cross-language specification drives it and it reports the Type S and Type M
+#' design-analysis errors beside power.
 #'
 #' The analysis model comes from the specification rather than from this function: the formula
 #' comes from [model_formula()] and the data from [model_data()], so the analysis matches the
-#' process that generated the data. Both can be given directly, which is what to do when a
-#' deliberately different analysis model is the point, as when checking how a misspecified model
-#' behaves.
+#' process that generated the data. Both can be given directly, to fit a deliberately different
+#' analysis model, as when checking how a misspecified model behaves.
 #'
 #' The fitter follows the response family, so that the estimates are on the scale of the
 #' specification's coefficients. A `gaussian`, `lognormal`, `shifted_lognormal` or `exgaussian`
@@ -45,16 +43,17 @@
 #' Redden, 2015). The power of a `bernoulli` or `poisson` design with few subjects or items is
 #' therefore somewhat overstated.
 #'
-#' pilotr has no frequentist model for an `ordinal` or `beta` response yet. Such a response is
-#' fitted by the linear model on its own scale, while the specification's coefficients are on the
-#' logit scale. The function therefore warns, and withholds the mean estimate and Type M (`NA`),
-#' since both would compare the two scales. Type S compares signs alone, and the link keeps the
-#' sign of a main effect unless an interaction reverses that effect between the levels of another
-#' factor. It does not keep the sign of an interaction. A bounded response compresses differences
-#' near the ends of its range, so an interaction that is positive on the logit scale can be
-#' negative on the response scale. Type S is therefore withheld for an interaction as well. Power
-#' is the rate at which the linear model's test rejects. [generate_design_analysis()] writes a
-#' Bayesian design analysis on the link scale, with the model [brms_bridge()] derives.
+#' pilotr has no frequentist model on the logit scale for an `ordinal` or `beta` response.
+#' Such a response is fitted by the linear model on its own scale, while the specification's
+#' coefficients are on the logit scale. The function therefore warns, and withholds the mean
+#' estimate and Type M (`NA`), since both would compare the two scales. Type S compares signs
+#' alone, and the link keeps the sign of a main effect unless an interaction reverses that effect
+#' between the levels of another factor. It does not keep the sign of an interaction. A bounded
+#' response compresses differences near the ends of its range, so an interaction that is positive
+#' on the logit scale can be negative on the response scale. Type S is therefore withheld for an
+#' interaction as well. Power is the rate at which the linear model's test rejects.
+#' [generate_design_analysis()] writes a Bayesian design analysis on the link scale, with the
+#' model [brms_bridge()] derives.
 #'
 #' A `formula` given here is fitted as written, by `lmerTest::lmer()`, or by `stats::lm()` when
 #' it has no random terms, whatever the family, since only its author knows the scale of its
@@ -63,22 +62,23 @@
 #' model's. A named numeric `focal` gives the true values on the model's scale.
 #'
 #' An analysis plan may instead preregister a simplification rule: fit the maximal model, and when
-#' the fit is singular or fails to converge, drop the correlations, then the slopes (Barr et al.,
-#' 2013; Matuschek et al., 2017). `formula` given as a ladder of models simulates such a rule. Each
+#' the fit is singular or fails to converge, drop the correlations, then the slopes (Matuschek et
+#' al., 2017). Barr et al. (2013) recommend the maximal model and suggest dropping its correlations
+#' when it fails to converge. `formula` given as a ladder of models simulates such a rule. Each
 #' replicate fits the rungs in turn and keeps the first fit that `fallback` accepts, or the last
 #' rung's fit when it accepts none. `c("maximal", "zcp", "intercepts")` names structures that
 #' [model_formula()] builds, which are fitted as the default model is, with the fitter the family
 #' chooses. A list of formulas gives rungs that are fitted as written. Power, Type S and Type M are
-#' then those of the rule, `rung_shares` gives the share of the replicates analysed at each rung,
-#' and the fit counts describe the fit each replicate kept. A rule that can end on random
-#' intercepts alone ignores, whenever it gets there, how much the effect varies over subjects and
-#' items, and a test that ignores that variation rejects a true null hypothesis too often (Barr et
-#' al., 2013). Run the null condition of [design_conditions()] through the same ladder to see how
-#' often, as the power vignette does. A single formula is unaffected by `fallback`.
+#' then those of the rule. `rung_shares` gives the share of the replicates analysed at each rung,
+#' and the fit counts describe the fit each replicate kept. A rule that can end on random intercepts
+#' alone ignores, in the replicates that end there, how much the effect varies over subjects and
+#' items. A test that ignores that variation rejects a true null hypothesis too often (Barr et al.,
+#' 2013). Run the null condition of [design_conditions()] through the same ladder to see how often,
+#' as the power vignette does. A single formula is unaffected by `fallback`.
 #'
 #' Every reported rate carries its Monte Carlo standard error and a Wilson interval, because a
 #' proportion over a finite number of replicates is an estimate rather than a fact. At the default
-#' 100 replicates a power near 0.5 has a standard error of 0.05. Type S and Type M average over
+#' 100 replicates, a power near 0.5 has a standard error of 0.05. Type S and Type M average over
 #' the significant replicates alone, which may be few. Each carries its own Monte Carlo error.
 #' Type S has a Wilson interval, since its standard error would be zero whenever no sign is wrong.
 #' Type M has its standard error, the standard deviation of the exaggeration ratios over the square
@@ -109,7 +109,7 @@
 #' `list(interaction = c("A1_B", "A2_B"))` for the interaction of a three-level factor with a
 #' two-level one, plans that test. Each set is tested against the hypothesis that all its
 #' coefficients are zero. A linear mixed model has Satterthwaite's F from `lmerTest::contest()`
-#' (Kuznetsova et al., 2017), a `glmer()` or `glm()` fit has the Wald chi-square of the set's
+#' (Kuznetsova et al., 2017). A `glmer()` or `glm()` fit has the Wald chi-square of the set's
 #' estimates and their covariance matrix, and an `lm()` fit has the F test that compares the model
 #' with and without the set. A set of one coefficient therefore gives the p-value of the
 #' single-coefficient test, with F equal to t squared or a chi-square equal to z squared. Under a
@@ -128,9 +128,9 @@
 #'   effects follow the model's column naming, so a specification key `a:b` is the focal name
 #'   `a_b`. A named list of character vectors names sets of coefficients, each tested jointly, as
 #'   in `list(interaction = c("A1_B", "A2_B"))` (see Details).
-#' @param formula Optional `lme4` formula; if `NULL` it is derived from the specification via
-#'   [model_formula()], and the response family chooses the fitter. A formula given here is
-#'   fitted as a linear model whatever the family (see Details). A ladder of models simulates a
+#' @param formula Optional `lme4` formula. If `NULL`, it is derived from the specification by
+#'   [model_formula()], and the response family chooses the fitter. A formula given here is fitted
+#'   as a linear model whatever the family (see Details). A ladder of models simulates a
 #'   simplification rule: a character vector of [model_formula()] structures, such as
 #'   `c("maximal", "zcp", "intercepts")`, fitted as the derived model is, or a list of formulas,
 #'   fitted as written. A rung takes its name from the ladder, or else from its structure or its
@@ -138,8 +138,8 @@
 #' @param fallback When a replicate moves on to the next rung of a ladder: `"singular"`, the
 #'   default, after a fit that is boundary-singular or failed, and `"warning"` also after a fit with
 #'   a warning or an optimiser convergence message. It has no effect on a single formula.
-#' @param prep Optional function mapping a simulated data set to the modelling data; if `NULL` it
-#'   is derived via [model_data()].
+#' @param prep Optional function mapping a simulated data set to the modelling data. If `NULL`, it
+#'   is derived by [model_data()].
 #' @param n_sims Number of Monte Carlo replicates. A power estimate carries a Monte Carlo
 #'   standard error of about `sqrt(p * (1 - p) / n_sims)`, and `type_s` and
 #'   `type_m` average over the significant replicates alone, so they settle more
@@ -161,7 +161,7 @@
 #'   `alpha`, `fitter`, `n_attempted`, `n_returned`, `n_converged`, `n_singular` and `n_warning`,
 #'   and whose per-effect elements are vectors named by focal effect: `power`, `power_mcse`,
 #'   `power_lo`, `power_hi`, `n_significant`, `true_effect`, `mean_estimate`, `type_s`,
-#'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect each of
+#'   `type_s_lo`, `type_s_hi`, `type_m` and `type_m_mcse`. With a single focal effect, each of
 #'   those has length one, so `result$power` is a single number. `fitter` names the fitter and
 #'   its test, such as `"lme4::glmer (binomial), Wald z"`, with the direction of a one-sided test
 #'   added, as in `"lme4::glmer (binomial), Wald z, one-sided (greater)"`. Under a one-sided
@@ -176,17 +176,18 @@
 #'   elements by set. Each set's `true_effect`, `mean_estimate` and Type S and Type M quantities
 #'   are then `NA`, and `fitter` names the joint test.
 #'
-#'   `power` is the proportion of significant results among the replicates that returned an
-#'   estimate for that effect, not among `n_sims`. The counts report the fit outcomes separately,
-#'   because a fit can return a usable estimate while still being boundary-singular or carrying a
-#'   convergence warning: `n_returned` counts replicates that yielded a fit, `n_converged` those
-#'   that did so with neither a warning nor a singular fit, `n_singular` those where
-#'   `lme4::isSingular()` was true, and `n_warning` those with a warning or optimiser convergence
-#'   message other than lme4's singular-fit notice, which `n_singular` already counts. Singular and warning fits are retained in `power`, since their fixed-effect estimates
-#'   remain interpretable and discarding them would bias the result: singularity is not independent
-#'   of the variance estimates that produce it. A large `n_singular` means the model being fitted is
-#'   richer than the design can support at that sample size, which is common in crossed designs
-#'   (Bates et al., 2015; Matuschek et al., 2017), and is worth reporting alongside the power.
+#'   `power` is the proportion of significant results among the replicates that returned an estimate
+#'   for that effect, not among `n_sims`. The counts report the fit outcomes separately, because a
+#'   fit can return a usable estimate while still being boundary-singular or carrying a convergence
+#'   warning. `n_returned` counts replicates that yielded a fit, `n_converged` those that did so
+#'   with neither a warning nor a singular fit, `n_singular` those where `lme4::isSingular()` was
+#'   true and `n_warning` those with a warning or optimiser convergence message other than lme4's
+#'   singular-fit notice, which `n_singular` already counts. Singular and warning fits are retained
+#'   in `power`, since their fixed-effect estimates remain interpretable and discarding them would
+#'   bias the result: singularity is not independent of the variance estimates that produce it. A
+#'   large `n_singular` means the model being fitted is richer than the design can support at that
+#'   sample size, which is common in crossed designs (Bates et al., 2015; Matuschek et al., 2017),
+#'   and is worth reporting alongside the power.
 #'
 #'   A ladder adds two per-run elements: `rung_shares`, the share of the replicates analysed at
 #'   each rung, named by rung and summing to 1, and `fallback`, the rule applied. A replicate in
@@ -205,7 +206,7 @@
 #'   generalized linear mixed models by simulation. \emph{Methods in Ecology and Evolution},
 #'   7(4), 493-498. \doi{10.1111/2041-210x.12504}
 #'
-#'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+#'   Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 #'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 #'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
@@ -456,16 +457,15 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' Power curve over sample size for a mixed-effects design
 #'
 #' Sweep the number of subjects and compute mixed-effects power at each. Pass the result to
-#' [target_n()] for the sample size at which power crosses a target, with an interval on it. A
-#' thin wrapper around [sweep_spec()] over `units$subject$n`, kept because a sample-size curve is
-#' the sweep users want most often. Requires the `lme4` and `lmerTest` packages.
+#' [target_n()] for the sample size at which power crosses a target, with an interval on it. It
+#' calls [sweep_spec()] over `units$subject$n`. Requires the `lme4` and `lmerTest` packages.
 #'
 #' @details
 #' Like [power_mixed()], this runs pilotr's own simulation loop over the portable design
-#' specification rather than wrapping an existing package, and differs from `simr` (Green and
-#' MacLeod, 2016) and `mixedpower` (Kumle, Vo and Draschkow, 2021) in being driven by that
-#' specification, in reporting Type S and Type M errors, and in built-in parallelisation: with
-#' `workers > 1` a single worker pool is created once and reused across all sample sizes.
+#' specification. It differs from `simr` (Green and MacLeod, 2016) and `mixedpower` (Kumle,
+#' \enc{Võ}{Vo} and Draschkow, 2021) in the same two ways: the specification drives it and it
+#' reports Type S and Type M errors. With `workers > 1`, one worker pool is created once and reused
+#' across all sample sizes.
 #'
 #' Each sample size draws its own replicates, from the seed [sweep_spec()] gives its grid point,
 #' so the points of the curve are independent, as [target_n()] assumes when it fits them.
@@ -480,8 +480,9 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' quotes should come from. Reading the crossing off a plot instead judges points whose Monte
 #' Carlo intervals overlap, and reports the answer without the interval that goes with it.
 #'
-#' In a crossed design, the number of items limits what more subjects can buy. When the effect of
-#' a condition varies from item to item, as a by-item random slope says it does, part of the
+#' In a crossed design, the number of items limits how far adding subjects can raise power. When the
+#' effect of a condition varies from item to item, as a by-item random slope says it does, part of
+#' the
 #' standard error of the effect comes from the items sampled. That part shrinks only as items are
 #' added. As subjects are added, the standard error therefore falls towards a floor set by the
 #' number of items. Power at a fixed number of items levels off below 1 (Westfall, Kenny and Judd,
@@ -499,10 +500,10 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' @param subject_ns A numeric vector of subject counts to evaluate.
 #' @param focal The fixed effects to test, or the named sets of coefficients to test jointly, as
 #'   in [power_mixed()].
-#' @param n_sims Number of Monte Carlo replicates per point. A power estimate carries a Monte
-#'   Carlo standard error of about `sqrt(p * (1 - p) / n_sims)`, reported alongside it as
-#'   `power_mcse`. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
-#'   too coarse to support a claim about a design; raise it to at least 200 for planning.
+#' @param n_sims Number of Monte Carlo replicates per point. A power estimate carries a Monte Carlo
+#'   standard error of about `sqrt(p * (1 - p) / n_sims)`, reported alongside it as `power_mcse`.
+#'   The default of 60 gives a standard error of 0.065 at a power of 0.5, which is too coarse to
+#'   support a claim about a design. Raise it to at least 200 for planning.
 #' @param alpha Significance level of the test, two-sided unless `alternative` says otherwise.
 #' @param workers Number of local worker processes over which to spread the replicates at
 #'   each grid point. The default of 1 runs serially, and any worker count returns results
@@ -528,7 +529,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #'   factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
 #'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 #'
-#'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+#'   Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 #'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 #'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
@@ -550,7 +551,7 @@ print.pilotr_power <- function(x, digits = 3, ...) {
 #' }
 #' }
 #' @seealso [target_n()] to solve the returned curve for a sample size, [sweep_spec()] for any
-#'   other axis, and [design_conditions()] for effect-size grids.
+#'   other axis and [design_conditions()] for effect-size grids.
 #' @export
 power_curve_mixed <- function(spec, subject_ns, focal = NULL, n_sims = 60, alpha = 0.05,
                               workers = 1, seeds = c("independent", "shared"),

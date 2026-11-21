@@ -305,8 +305,8 @@ normals. The unit's contribution to a row's linear predictor is
 Slope keys follow exactly the same rule as fixed coefficients: a contrast column, a continuous
 predictor or an `"a:b"` interaction between them. Such a slope enters the simulated data as well
 as the emitted analysis model. A 0.2 implementation draws an interaction slope and then discards
-it, so the analysis model contains a term the generative process does not, which inflates power in
-the direction Barr et al. (2013) warn about.
+it, so the simulated data lack variance that the specification declares, and the power computed
+from them is overstated, the anticonservative direction against which Barr et al. (2013) warn.
 
 `Σ` must be positive definite. One that is not is an error naming the grouping factor and the
 random-effect column at which the factorisation failed. Clamping the failing pivot at zero and

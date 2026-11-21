@@ -49,22 +49,23 @@ permissions: read-all
 
 jobs:
   # The R half is held to R CMD check on six OS and version cells, and this job holds the Python
-  # half to ruff. The rule set is pinned in python/pyproject.toml rather than given here, so that
-  # a ruff release cannot silently widen or narrow what CI enforces.
+  # half to ruff. The rule set is in python/pyproject.toml. It selects rules by prefix, and each ruff
+  # release can add stable rules under a prefix, so ruff itself is pinned here too, so that a ruff
+  # release cannot widen or narrow what CI enforces. Raise the pin by hand.
   lint:
     name: ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.12'
       - name: Install ruff
-        run: python -m pip install --upgrade pip ruff
-      # python and tools: naming python/ alone would leave tools/parity -- the
-      # harness that decides whether the two halves agree -- linted by nothing at all.
-      # tools/ is covered by the root ruff.toml, which extends the same pinned
-      # settings so both trees are held to one rule set.
+        run: python -m pip install --upgrade pip 'ruff==0.17.5'
+      # python and tools: naming python/ alone would leave tools/parity, the
+      # harness that decides whether the two halves agree, linted by nothing.
+      # The root ruff.toml covers tools/ and extends the same settings, so both
+      # trees are held to one rule set.
       - name: Lint the Python sources
         run: ruff check python tools
       # The version strings set by hand at release (CITATION.cff, the Python copies and the
@@ -83,12 +84,12 @@ jobs:
         # The floor, then the current releases. 3.10 and 3.11 are left out
         # deliberately: the core is pure Python, so the interesting cells are
         # the oldest supported interpreter and the newest.
-        python-version: ['3.9', '3.12', '3.13', '3.14']
+        python-version: ['3.9', '3.12', '3.13', '3.14', '3.15']
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -132,7 +133,7 @@ jobs:
           path = os.environ.get("GITHUB_STEP_SUMMARY")
           if path:
               with open(path, "a") as f:
-                  f.write("## Python test coverage: **%s%%**\n" % pct)
+                  f.write("## Python test coverage: %s%%\n" % pct)
           EOF
 
   # The matrix above installs the package editable from the checkout, where the
@@ -145,14 +146,20 @@ jobs:
     name: Installed wheel
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.12'
       - name: Build the distributions
         run: |
           python -m pip install --upgrade pip build
           python -m build ./python
+      # publish.yml runs the same check before an upload, so a failure shows
+      # here on the pull request rather than on the release day.
+      - name: Check the distributions' metadata with twine
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check --strict python/dist/*
       - name: Install the wheel outside the checkout and load a packaged example
         run: |
           python -m venv "$RUNNER_TEMP/wheel-venv"
@@ -184,8 +191,8 @@ jobs:
     # Ubuntu 24.04, because setup-python has no Python 3.9 for Ubuntu 26.04 (ubuntu-latest).
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.9'
       - name: Install the declared floors, then the package without resolution
@@ -217,9 +224,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.12'
 

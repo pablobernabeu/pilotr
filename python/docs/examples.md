@@ -1,11 +1,11 @@
 # Worked examples
 
-Eight ready-to-run specifications ship with the package, covering six of the eight response
-families and between-subjects, crossed, nested and partially crossed designs. `pilotr_example()`
-lists them and returns the path to each for `load_spec()`, and the same JSON files drive the R
-package and the no-code app. Each is simulated below, showing the design it describes and the
-first rows of the data it produces. The specification format is documented on the
-[Specification](specification.md) page.
+Eight ready-to-run specifications are bundled with the package, covering six of the eight
+response families and between-subjects, crossed, nested and partially crossed designs. The same
+JSON files drive the R package and the no-code app. `pilotr_example()` lists them and returns the
+path to each for `load_spec()`. Each specification is simulated below, showing the design it
+describes, its response family and the first rows of the data it produces. The specification
+format is documented on the [Specification](specification.md) page.
 
 ```python exec="true" session="ex"
 import sys; sys.path.insert(0, "docs")

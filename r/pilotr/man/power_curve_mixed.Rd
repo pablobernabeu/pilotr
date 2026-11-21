@@ -23,10 +23,10 @@ power_curve_mixed(
 \item{focal}{The fixed effects to test, or the named sets of coefficients to test jointly, as
 in \code{\link[=power_mixed]{power_mixed()}}.}
 
-\item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte
-Carlo standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported alongside it as
-\code{power_mcse}. The default of 60 gives a standard error of 0.065 at a power of 0.5, which is
-too coarse to support a claim about a design; raise it to at least 200 for planning.}
+\item{n_sims}{Number of Monte Carlo replicates per point. A power estimate carries a Monte Carlo
+standard error of about \code{sqrt(p * (1 - p) / n_sims)}, reported alongside it as \code{power_mcse}.
+The default of 60 gives a standard error of 0.065 at a power of 0.5, which is too coarse to
+support a claim about a design. Raise it to at least 200 for planning.}
 
 \item{alpha}{Significance level of the test, two-sided unless \code{alternative} says otherwise.}
 
@@ -53,16 +53,15 @@ where the model becomes supportable.
 }
 \description{
 Sweep the number of subjects and compute mixed-effects power at each. Pass the result to
-\code{\link[=target_n]{target_n()}} for the sample size at which power crosses a target, with an interval on it. A
-thin wrapper around \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}, kept because a sample-size curve is
-the sweep users want most often. Requires the \code{lme4} and \code{lmerTest} packages.
+\code{\link[=target_n]{target_n()}} for the sample size at which power crosses a target, with an interval on it. It
+calls \code{\link[=sweep_spec]{sweep_spec()}} over \code{units$subject$n}. Requires the \code{lme4} and \code{lmerTest} packages.
 }
 \details{
 Like \code{\link[=power_mixed]{power_mixed()}}, this runs pilotr's own simulation loop over the portable design
-specification rather than wrapping an existing package, and differs from \code{simr} (Green and
-MacLeod, 2016) and \code{mixedpower} (Kumle, Vo and Draschkow, 2021) in being driven by that
-specification, in reporting Type S and Type M errors, and in built-in parallelisation: with
-\code{workers > 1} a single worker pool is created once and reused across all sample sizes.
+specification. It differs from \code{simr} (Green and MacLeod, 2016) and \code{mixedpower} (Kumle,
+\enc{Võ}{Vo} and Draschkow, 2021) in the same two ways: the specification drives it and it
+reports Type S and Type M errors. With \code{workers > 1}, one worker pool is created once and reused
+across all sample sizes.
 
 Each sample size draws its own replicates, from the seed \code{\link[=sweep_spec]{sweep_spec()}} gives its grid point,
 so the points of the curve are independent, as \code{\link[=target_n]{target_n()}} assumes when it fits them.
@@ -77,8 +76,9 @@ The curve is the input to \code{\link[=target_n]{target_n()}}, which is where th
 quotes should come from. Reading the crossing off a plot instead judges points whose Monte
 Carlo intervals overlap, and reports the answer without the interval that goes with it.
 
-In a crossed design, the number of items limits what more subjects can buy. When the effect of
-a condition varies from item to item, as a by-item random slope says it does, part of the
+In a crossed design, the number of items limits how far adding subjects can raise power. When the
+effect of a condition varies from item to item, as a by-item random slope says it does, part of
+the
 standard error of the effect comes from the items sampled. That part shrinks only as items are
 added. As subjects are added, the standard error therefore falls towards a floor set by the
 number of items. Power at a fixed number of items levels off below 1 (Westfall, Kenny and Judd,
@@ -116,7 +116,7 @@ Judd, C. M., Westfall, J. and Kenny, D. A. (2017). Experiments with more than on
 factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
 68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 
-Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
 linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
 Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 
@@ -126,5 +126,5 @@ Experimental Psychology: General}, 143(5), 2020-2045. \doi{10.1037/xge0000014}
 }
 \seealso{
 \code{\link[=target_n]{target_n()}} to solve the returned curve for a sample size, \code{\link[=sweep_spec]{sweep_spec()}} for any
-other axis, and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
+other axis and \code{\link[=design_conditions]{design_conditions()}} for effect-size grids.
 }

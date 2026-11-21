@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - YYYY-MM-DD
+
 ### Upgrading from 0.3.0
 
 #### Changed results
@@ -164,6 +166,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `power`, `power_curve` and `power_mixed` validate the specification once
   before their replicates, where each replicate validated it again.
+- The package metadata lists Python 3.15 among the supported versions, which CI
+  now tests.
 
 ### Deprecated
 
@@ -240,6 +244,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The install commands in the README and Get started carry no trailing comments
   and so paste into zsh, where pip read the comments of the 0.3.0 commands as
   requirements and stopped with 'Invalid requirement'.
+- Citations were checked against their published records. The docstrings and
+  the power guide spell the author Võ as published, no longer count built-in
+  parallelisation among the ways pilotr differs from simr and mixedpower, credit
+  the simplification ladder to Matuschek et al. (2017) and no longer say that
+  Lakens (2022, Table 4) asks for the power when the null hypothesis is true.
 
 ## [0.3.0] - 2026-08-27
 
@@ -474,7 +483,8 @@ and seed.
 - A documentation site whose guides execute their examples at build time, so the
   tables and figures shown are real `pilotr` output.
 
-[Unreleased]: https://github.com/pablobernabeu/pilotr/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/pilotr/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.3.0
 [0.2.1]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pablobernabeu/pilotr/releases/tag/v0.2.0

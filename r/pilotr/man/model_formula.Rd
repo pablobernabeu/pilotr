@@ -25,7 +25,8 @@ formula terms \code{a_b}.
 }
 \details{
 The three structures are the usual steps of a rule that simplifies a model when its fit is
-singular or fails to converge (Barr et al., 2013; Bates et al., 2015; Matuschek et al., 2017).
+singular or fails to converge (Bates et al., 2015; Matuschek et al., 2017). Barr et al. (2013)
+recommend the maximal structure and suggest dropping its correlations when it fails to converge.
 \code{"maximal"} has every random slope the specification declares, correlated with the intercept
 where the specification correlates them, and uncorrelated (\code{||}) where it does not. \code{"zcp"}, the
 zero-correlation-parameter model, keeps those slopes and estimates no correlation among them,
@@ -36,7 +37,7 @@ random intercept for each grouping factor and drops every slope. \code{\link[=po
 \code{\link[=precision_design]{precision_design()}} take these names as the rungs of such a rule.
 
 A specification with neither a fixed coefficient nor a random effect implies no model, and is
-refused in the words the 'Python' twin uses.
+refused with the same message as in the 'Python' package.
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "within",

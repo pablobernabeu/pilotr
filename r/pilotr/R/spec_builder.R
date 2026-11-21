@@ -41,8 +41,7 @@ default_response_name <- function(family) {
 #' [spec_json()]) from the flat set of inputs collected by the no-code
 #' application: sample sizes, the two-level factor and its levels, the fixed
 #' intercept and effect, the random-effect standard deviations for
-#' within-subject and crossed designs, and the response family with its
-#' parameters.
+#' within-subject and crossed designs and the response family with its parameters.
 #'
 #' @param p A named list of design inputs. Common fields are `name`, `seed`,
 #'   `n_subject`, `design_kind` (`"between"` or `"within"`), `include_items` and `n_item`
@@ -52,7 +51,7 @@ default_response_name <- function(family) {
 #'   `"shifted_lognormal"`, `beta` for `"exgaussian"`, `phi` for `"beta"` and, for `"ordinal"`,
 #'   `thresholds` as a single comma-separated string such as `"-2, -0.6, 0.6, 2"`, as the
 #'   no-code app supplies it. Within-design random effects use `subj_int_sd`,
-#'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd`, and
+#'   `subj_slope_sd`, `subj_corr`, `item_int_sd`, `item_slope_sd` and
 #'   `item_corr`. `counterbalance = TRUE` counterbalances the factor of a
 #'   within design with items, and is ignored in any other design.
 #' @details
@@ -73,7 +72,7 @@ default_response_name <- function(family) {
 #' need a version above 0.3, so the releases of either package that read 0.3 read every other
 #' design built here.
 #' @return A design specification as a nested list, ready for
-#'   [simulate_design()], [spec_json()], or the
+#'   [simulate_design()], [spec_json()] or the
 #'   power and precision functions.
 #' @examples
 #' build_spec(list(name = "demo", seed = 1, design_kind = "between",
@@ -429,7 +428,7 @@ spec_json <- function(spec) {
 #' [power_mixed()], and only then does the installation line name `lme4` and `lmerTest`, which it
 #' needs.
 #'
-#' Since the point of the script is bit-for-bit reproduction, the embedded specification has to
+#' Since the script is meant to reproduce the data bit for bit, the embedded specification has to
 #' preserve every coefficient exactly. The JSON text sits in a raw string that [load_spec()]
 #' reads with 'jsonlite', which parses numbers with the C library's `strtod()`. That rounds
 #' correctly, so each number reaches the script as the double it was on every build of R, and

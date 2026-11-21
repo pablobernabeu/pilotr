@@ -2,8 +2,8 @@
 
 The JSON files under ``pilotr/examples/`` are packaged copies of the
 repository's ``spec/examples/``, shipped inside the wheel so they are reachable
-from an installed copy. They are the same files that drive the R twin and the
-no-code app, so a design authored once runs unchanged across all three.
+from an installed copy. The R package and the no-code app use the same files,
+so a design written once runs unchanged in all three.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ def _available() -> list[str]:
 def pilotr_example(name: str | None = None) -> list[str] | str:
     """List the bundled example specifications, or return the path to one.
 
-    pilotr ships eight ready-to-run design specifications, as JSON. These are the
-    same files that drive the R twin and the no-code app.
+    pilotr ships eight ready-to-run design specifications, as JSON. The R package
+    and the no-code app use the same files.
 
     Parameters
     ----------

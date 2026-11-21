@@ -1,4 +1,4 @@
-"""Specification validation and version negotiation, mirroring pilotr/R/validate.R.
+"""Specification validation and version negotiation, as in the R package.
 
 `validate_spec` applies the rules of spec/design.schema.json, written out here rather than read
 from the file, and the cross-field rules the schema cannot express. `load_spec` and `simulate`
@@ -7,8 +7,8 @@ because several of the ways a specification can be wrong would otherwise produce
 and no error at all:
 
 * A mistyped coefficient key resolves to no column, so that effect would silently be zero. A
-  spec whose focal effect is spelled "cnod" for "cond" would generate exactly the data of a null
-  design.
+  spec whose focal effect is spelled ``"cnod"`` for ``"cond"`` would generate exactly the data of
+  a null design.
 * A response parameter belonging to another family would be silently ignored.
 
 Version negotiation covers a specification opened by an implementation older than it. A
@@ -229,7 +229,7 @@ def validate_spec(spec, strict: bool = True):
     Names are checked together as well as one by one. Two columns with one name, a contrast
     column defined by two factors or named like another column, an interaction whose analysis
     column already exists, a level listed twice, a correlation that pairs a term with itself or
-    gives one pair twice, a factor both between and within a unit, and a ``random.item`` entry in
+    gives one pair twice, a factor both between and within a unit and a ``random.item`` entry in
     a design without items are each refused, since each would otherwise validate and change the
     data in silence. The rules are set out under Names in the specification.
 
@@ -259,7 +259,7 @@ def validate_spec(spec, strict: bool = True):
     ----------
     spec : dict, str or os.PathLike
         A parsed design specification, or the path to a JSON file holding one. A path is read
-        as `load_spec` reads it and then validated, as the R twin's ``validate_spec()`` reads a
+        as `load_spec` reads it and then validated, as the R package's ``validate_spec()`` reads a
         path.
     strict : bool
         Whether an unrecognised field is an error (the default) or a warning. Pass ``False`` to
@@ -282,7 +282,7 @@ def validate_spec(spec, strict: bool = True):
     UserWarning
         For an unrecognised field when ``strict`` is false, and in either mode for a within
         factor whose ``vary_within`` leaves out a unit of the design, which pilotr crosses with
-        every unit anyway. From spec_version 0.4 the latter is an error. Also in either mode for
+        every unit anyway. From spec_version 0.4, the latter is an error. Also in either mode for
         counterbalanced factors whose lists are unequal, because the subjects or the items are
         not a multiple of their number.
     """

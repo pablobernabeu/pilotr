@@ -18,9 +18,9 @@ interaction columns required by the auto-derived model.
 }
 \description{
 Add the analysis response column \code{.y} (\code{log(y)} for \code{lognormal}, \code{log(y - shift)} for
-\code{shifted_lognormal} and the response itself otherwise), the
-numeric contrast columns implied by the categorical factors, and any interaction product
-columns (an \code{a:b} coefficient becomes a column \code{a_b}).
+\code{shifted_lognormal} and the response itself otherwise), the numeric contrast columns implied by
+the categorical factors and any interaction product columns (an \code{a:b} coefficient becomes a
+column \code{a_b}).
 }
 \examples{
 spec <- build_spec(list(name = "d", seed = 1, design_kind = "between",

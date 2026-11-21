@@ -1,7 +1,7 @@
-"""Simulation-based power and design analysis (Type S / Type M).
+"""Simulation-based power and design analysis (Type S and Type M).
 
 For each of the `n_sims` Monte Carlo replicates, we simulate a fresh data set from the
-known ground-truth spec, fit the analysis model, and record the estimate and p-value. In
+known ground-truth spec, fit the analysis model and record the estimate and p-value. In
 addition to classical power (the proportion of significant replicates), we report the
 design-analysis quantities of Gelman and Carlin (2014, doi:10.1177/1745691614551642),
 computed over the significant replicates.
@@ -21,8 +21,7 @@ fits a logistic or Poisson model and tests with a Wald z.
 
 Every analysis takes a `workers` argument that spreads the replicates over local
 processes. The replicate seeds are derived once from the specification's seed, so the
-results are identical to a serial run whatever the worker count. The per-replicate
-functions are module-level so that they pickle under the Windows spawn start method.
+results are identical to a serial run whatever the worker count.
 """
 
 from __future__ import annotations
@@ -155,7 +154,7 @@ def _power_replicate(seed, spec, fname, lev0, lev1, yname, alternative="two.side
 def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
     """Simulation-based power and design analysis for a two-group Gaussian design.
 
-    Repeatedly simulate from the specification, apply a two-sample t-test, and report power
+    Repeatedly simulate from the specification, apply a two-sample t-test and report power
     together with the Type S (sign) and Type M (magnitude) errors of Gelman and Carlin
     (2014, doi:10.1177/1745691614551642), computed over the significant replicates.
 
@@ -206,7 +205,7 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
         serial). The replicate seeds are derived once from the specification's seed, so any worker
         count returns results identical to a serial run.
     alternative : {"two.sided", "greater", "less"}, optional
-        The test's alternative hypothesis (default ``"two.sided"``), spelt as in the R twin.
+        The test's alternative hypothesis (default ``"two.sided"``), spelt as in the R package.
         ``"greater"`` and ``"less"`` give a one-sided test of a directional prediction.
 
     Returns
@@ -226,23 +225,23 @@ def power(spec, n_sims=1000, alpha=0.05, workers=1, alternative="two.sided"):
         Only the significant replicates inform Type S and Type M, and they are often few. Type S
         comes with a Wilson interval, since its standard error is zero whenever no sign is wrong.
         Type M comes with its standard error, the standard deviation of the exaggeration ratios
-        over the square root of their number. Each is computed as in the R twin's
+        over the square root of their number. Each is computed as in the R package's
         ``power_design()``, operation for operation, so the same counts give the same doubles.
 
     Raises
     ------
     NotImplementedError
-        If the design is not Gaussian, does not have exactly one two-level between factor, or
+        If the design is not Gaussian, does not have exactly one two-level between factor or
         has rows that are correlated because of an item unit, a within factor or a grouping
         factor besides ``subject``.
     ValueError
         If the specification is invalid, if `workers` is not a positive whole number, if
-        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, or if a level of the
+        `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"`` or if a level of the
         between factor holds fewer than two subjects.
 
     Notes
     -----
-    Requires `scipy` (imported lazily, in each worker process when parallel); install the
+    Requires `scipy` (imported lazily, in each worker process when parallel). Install the
     `power` or `dev` extra.
     """
     workers = _check_workers(workers)
@@ -625,7 +624,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     """Mixed-effects simulation-based power in Python, for the model the specification implies,
     via statsmodels MixedLM.
 
-    The model comes from the specification, as in the R twin: `model_formula` writes it and
+    The model comes from the specification, as in the R package: `model_formula` writes it and
     `model_data` builds its columns. Every coefficient is a fixed effect, an interaction ``"a:b"``
     entering as its product column ``a_b``. Every grouping factor that the specification gives
     random effects contributes the random intercept and the random slopes it declares, an extra
@@ -635,7 +634,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     together. The response is analysed as ``log(y)`` for the ``lognormal`` family and as
     ``log(y - shift)`` for ``shifted_lognormal``, whose coefficients are on the log scale. Every
     other family is analysed on its own scale. A replicate whose response rounds to 0, or to the
-    shift, has no logarithm and returns no estimate, as in the R twin.
+    shift, has no logarithm and returns no estimate, as in the R package.
 
     Any design that declares a random effect is fitted, and one without random effects is refused,
     since MixedLM then has no variance component to fit. The R package's ``power_mixed()`` fits such
@@ -645,12 +644,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     components leave the correlations out, and one warning per call names the grouping factors
     concerned. The R package's ``power_mixed()`` estimates them, with ``|`` in its formula.
 
-    `focal` chooses the effects to test, as in the R twin. By default it is every coefficient,
+    `focal` chooses the effects to test, as in the R package. By default, it is every coefficient,
     with the true value the specification gives it. A list of names leaves the true values
     unknown, which leaves Type S and Type M undefined, and a dict from names to values gives the
     true values to compare with, which may differ from those simulated. A name is a column of the
     model, so ``"a_b"`` for the interaction ``"a:b"``, or ``"(Intercept)"``. A name that the model
-    lacks draws a warning in the R twin's words, and its results are empty. A coefficient the
+    lacks draws the R package's warning, and its results are empty. A coefficient the
     specification does not list is not in the model, so a null effect is planned with a
     coefficient of 0.
 
@@ -661,9 +660,9 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     coefficient says nothing about exaggeration. For these families, `power_mixed` warns and
     returns `mean_estimate` and `type_m` as `nan` for every effect. `type_s` compares signs alone,
     and the link keeps the sign of a main effect unless an interaction reverses that effect between
-    the levels of another factor. It does not preserve the sign of an interaction,
-    since a bounded response compresses differences near the ends of its range, so the `type_s`
-    of an interaction is `nan` too, as in the R twin. Power is the rate at which the linear
+    the levels of another factor. It does not preserve the sign of an interaction, since a bounded
+    response compresses differences near the ends of its range, so the `type_s` of an interaction
+    is `nan` too, as in the R package. Power is the rate at which the linear
     model's test rejects. The R package's ``power_mixed()`` fits ``bernoulli`` and ``poisson``
     responses with ``lme4::glmer()`` on their link scale, and its ``generate_design_analysis()``
     writes a Bayesian design analysis for any family.
@@ -679,13 +678,12 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     package's ``power_mixed()`` plans it when its ``focal`` names sets of coefficients, as in
     ``list(interaction = c("A1_B", "A2_B"))``.
 
-    This is pilotr's own simulation loop over the portable design specification, not a
-    wrapper around an existing power package. It covers territory pioneered by simr (Green
-    and MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Vo and Draschkow,
-    2021, doi:10.3758/s13428-021-01546-0); pilotr differs in being driven by the portable
-    cross-language spec, in reporting Type S and Type M errors and in built-in
-    parallelisation via `workers` (default 1, serial), which returns results identical to a
-    serial run for any worker count.
+    This is pilotr's own simulation loop over the portable design specification. simr (Green and
+    MacLeod, 2016, doi:10.1111/2041-210x.12504) and mixedpower (Kumle, Võ and Draschkow, 2021,
+    doi:10.3758/s13428-021-01546-0) offered such simulations first, and pilotr is indebted to them.
+    It differs from them in two ways: the portable cross-language specification drives it and it
+    reports Type S and Type M errors. `workers` (default 1, serial) runs its replicates in
+    parallel. Any worker count returns results identical to a serial run.
 
     Each replicate is fitted by REML with Powell's method, and L-BFGS takes over if Powell's does
     not converge. statsmodels' default chain of optimisers stops short of the REML optimum in most
@@ -712,7 +710,6 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     With 8 subjects, 6 items, random intercepts alone and no true effect, the test here rejected
     the null hypothesis in 0.070 of 300 replicates (Monte Carlo standard error 0.015). On the same
     data, the R package's Satterthwaite test of the same model rejected in 0.057 (0.013).
-    tools/calibration/wald_null_rate.py measures both.
 
     A directional prediction calls for a one-sided test, which `alternative` selects for every
     focal effect. ``"greater"`` tests whether the coefficient is positive and ``"less"`` whether
@@ -764,7 +761,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
         in the next release, and reading one raises a FutureWarning that names its place in
         `effects`.
 
-        The fit counts mean what they mean in the R twin. `n_attempted` is `n_sims`, and
+        The fit counts mean what they mean in the R package. `n_attempted` is `n_sims`, and
         `n_returned` counts the replicates that returned a fit. Each effect's `power` is the
         proportion of significant results among the fits that give it a finite estimate and
         p-value, not among `n_sims`. `n_singular` counts fits with a variance component whose
@@ -775,7 +772,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
         is not singular. `n_converged` counts the fits that are neither singular nor warned.
         statsmodels' notice that a fit may be on the boundary counts towards none of them, since
         it comes with every fit that has a variance component below 0.01. Singular fits and fits
-        with a warning stay in `power`, as in the R twin. `power_mcse`, `power_lo` and `power_hi`
+        with a warning stay in `power`, as in the R package. `power_mcse`, `power_lo` and `power_hi`
         are taken over the same fits. `type_s` and `type_m` are `nan` when no replicate reached
         significance and when the true effect is zero or unknown. `mean_estimate` and `type_m` are
         also `nan` for a ``bernoulli``, ``poisson``, ``ordinal`` or ``beta`` response, whose true
@@ -788,7 +785,7 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     ValueError
         If the specification is invalid, if `workers` is not a positive whole number, if
         `alternative` is not ``"two.sided"``, ``"greater"`` or ``"less"``, if `focal` is none of
-        its forms or names an effect twice, or if there is no effect to test, as for a
+        its forms or names an effect twice or if there is no effect to test, as for a
         specification without coefficients and no `focal`.
     NotImplementedError
         If the specification declares no random effect.
@@ -801,10 +798,10 @@ def power_mixed(spec, n_sims=50, alpha=0.05, workers=1, alternative="two.sided",
     UserWarning
         Once per call, for a ``bernoulli``, ``poisson``, ``ordinal`` or ``beta`` response,
         saying that the linear model is fitted on the response's own scale and that the mean
-        estimate and Type M are withheld. The R twin raises the same words for the families it
-        fits in that way.
+        estimate and Type M are withheld. The R package gives the same warning for the families
+        it fits in that way.
     UserWarning
-        When a focal effect never appeared in a fitted model, in the R twin's words.
+        When a focal effect never appeared in a fitted model, with the R package's wording.
     FutureWarning
         When a deprecated top-level key of the result is read.
 
@@ -902,7 +899,7 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     Sweep the number of subjects and compute `power` at each grid point.
 
     Each grid point draws its own replicates. Point ``j`` of a sweep over ``J`` sizes takes
-    ``replicate_seeds(seed, J)[j]`` as its seed, the rule of the R twin's ``sweep_spec()``. Its
+    ``replicate_seeds(seed, J)[j]`` as its seed, the rule of the R package's ``sweep_spec()``. Its
     replicates take their seeds from that one, so no two points share their random numbers.
     `solve_curve` fits the points as independent binomial counts, and its interval keeps its
     nominal coverage only when they are. The rule is prefix-stable: appending sizes leaves the
@@ -951,11 +948,11 @@ def power_curve(spec, subject_ns, n_sims=1000, alpha=0.05, workers=1, seeds="ind
     ValueError
         If the specification is invalid, if `workers` is not a positive whole number, if `seeds`
         is neither ``"independent"`` nor ``"shared"``, if `alternative` is not ``"two.sided"``,
-        ``"greater"`` or ``"less"``, or if a size in `subject_ns` is not a whole number or is below
+        ``"greater"`` or ``"less"`` or if a size in `subject_ns` is not a whole number or is below
         4, which leaves a level of the between factor with fewer than two subjects (see `power`).
     NotImplementedError
         For a design that `power` refuses: one that is not Gaussian, does not have exactly one
-        two-level between factor, or has rows correlated by an item unit, a within factor or a
+        two-level between factor or has rows correlated by an item unit, a within factor or a
         grouping factor besides ``subject``.
 
     See Also
