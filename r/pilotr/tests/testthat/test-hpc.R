@@ -27,11 +27,21 @@ calls_to <- function(e, name) {
   out
 }
 
+# An absolute path under a cluster's usual storage roots names somebody's directory. A path built
+# on a variable, such as $HOME/pilotr_runs, does not. The pattern is CLUSTER_PATH of test_hpc.py.
+cluster_path <- "(?<![\\w$}])/(?:data|home|gpfs|scratch|work|projects?)/"
+
 test_that("the HPC job names no account, path or layout of the author's cluster", {
   for (name in c("precision_array.slurm", "precision_array.R")) {
     s <- paste(hpc_lines(name), collapse = "\n")
-    for (banned in c("educ-intract", "educ1242", "/data/educ", "pilotr_toolkit", "bootstrap_rlib"))
+    # The scripts the job once needed from outside the repository.
+    for (banned in c("pilotr_toolkit", "bootstrap_rlib"))
       expect_false(grepl(banned, s, fixed = TRUE), info = paste(name, "holds", banned))
+    expect_false(grepl(cluster_path, s, perl = TRUE),
+                 info = paste(name, "holds an absolute cluster path"))
+    accounts <- regmatches(s, gregexpr("--account=\\S+", s))[[1]]
+    expect_true(all(accounts == "--account=EDIT_ME_ACCOUNT"),
+                info = paste(name, "charges", paste(accounts, collapse = ", ")))
   }
 })
 
