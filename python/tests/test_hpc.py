@@ -15,7 +15,11 @@ import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
-BANNED = ("educ-intract", "educ1242", "/data/educ", "pilotr_toolkit", "bootstrap_rlib")
+# Names of the scripts the job once needed from outside the repository.
+BANNED = ("pilotr_toolkit", "bootstrap_rlib")
+# An absolute path under a cluster's usual storage roots names somebody's directory.
+# A path built on a variable, such as $HOME/pilotr_runs, does not.
+CLUSTER_PATH = re.compile(r"(?<![\w$}])/(?:data|home|gpfs|scratch|work|projects?)/")
 
 
 def _hpc_text(name):
@@ -31,6 +35,9 @@ def test_the_hpc_job_names_nothing_of_the_authors_cluster(name):
     text = _hpc_text(name)
     for banned in BANNED:
         assert banned not in text, f"{name} holds {banned}"
+    assert not CLUSTER_PATH.search(text), f"{name} holds an absolute cluster path"
+    accounts = set(re.findall(r"--account=(\S+)", text))
+    assert accounts <= {"EDIT_ME_ACCOUNT"}, f"{name} charges the account(s) {sorted(accounts)}"
 
 
 def test_the_slurm_wrapper_carries_placeholders_and_runs_the_runner_beside_it():

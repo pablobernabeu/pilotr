@@ -201,6 +201,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as not a whole number and a path as not a JSON object. `validate_spec` accepts
   a path, `workers` any whole number and `solve_curve` a NumPy `n` as a
   replicate count.
+- The source distribution includes `tests/fixtures`, which three test modules
+  read, so the test suite runs from it.
 
 ### Documentation
 
