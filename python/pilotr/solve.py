@@ -8,62 +8,55 @@ simulation was. The functions here estimate the crossing instead, and report an 
 with it.
 
 The model is a binomial regression of the rate on the swept value, weighted by the replicate
-count behind each point, with a probit link. The link is not a convenience. A power curve is a
-normal tail probability, and under the normal approximation to a two-group comparison the
-probit of power is exactly linear in the square root of the sample size, so this
+count behind each point, with a probit link. The link follows from the shape of the curve. A
+power curve is a normal tail probability, and under the normal approximation to a two-group
+comparison, the probit of power is exactly linear in the square root of the sample size, so this
 parameterisation estimates two coefficients of a curve the design analysis already implies,
-where a general sigmoid would have to be bent to fit.
+where a general sigmoid would only approximate it.
 
-The choice was checked, by ``tools/calibration/solve_curve_calibration.R``, which produces the
-figures quoted here about the link and the interval and writes them to a file beside itself.
-Against R's ``stats::power.t.test``, over twelve combinations of effect size and target power on
-each of three grid shapes at 400 replicates a point, the probit solved to a mean absolute error of
-2.81%, 2.10% and 2.87%, the logit to 3.13%, 2.12% and 2.32%. Rerun at the seed base 77000, which
-the calibration script takes as its third argument, and the probit leads on every grid but the
-coarse one. Its lead is largest on the grid that reaches a power of 0.995, with a mean error of
-2.02% against 5.09%, and there its intervals covered the analytic answer in all twelve checks,
-where the logit's covered eight. Two draws that disagree this much show that twelve curves cannot
-separate the links at this replicate count. Most of what separates a solved size from the analytic
-one is Monte Carlo noise in the curve, and only a little of it is the link. The probit is kept for
-its shape.
+The choice was checked against R's ``stats::power.t.test``. Over twelve combinations of effect
+size and target power on each of three grid shapes at 400 replicates a point, the probit solved to
+a mean absolute error of 2.81%, 2.10% and 2.87%, the logit to 3.13%, 2.12% and 2.32%. With the
+seed base 77000, the probit leads on every grid but the coarse one. Its lead is largest on the
+grid that reaches a power of 0.995, with a mean error of 2.02% against 5.09%, and there its
+intervals covered the analytic answer in all twelve checks, where the logit's covered eight. Two
+draws that disagree this much show that twelve curves cannot separate the links at this replicate
+count. Most of what separates a solved size from the analytic one is Monte Carlo noise in the
+curve, and only a little of it is the link. The probit is kept for its shape.
 
 The inversion and its interval are the delta method that R's ``MASS::dose.p`` applies to a
 fitted glm: the solved point on the fitted scale is ``(link(target) - intercept) / slope``, and
 its standard error follows from the gradient of that expression in the two coefficients.
 
 Fieller's exact interval for a ratio (Fieller, 1954) is the obvious alternative, and it was
-tried. It does not separate from the delta method on this evidence. Over the same 36 checks both
+tried. It does not separate from the delta method on this evidence. Over the same 36 checks, both
 covered the analytic answer 31 times, at mean widths of 10.34 subjects for Fieller's and 10.18 for
-the delta method, and Fieller's was bounded every time. The rerun at seed base 77000 above puts
+the delta method, and Fieller's was bounded every time. The run at seed base 77000 above puts
 both at 36. These curves determine the slope well enough that the two intervals nearly coincide,
 so nothing here argues for one over the other on coverage. The delta method is kept because it is
-the interval R's ``MASS::dose.p`` reports, which gives the R test suite an independent
-implementation to check against, and because the one condition under which Fieller's would
-differ, a slope too poorly determined for a bounded interval, is the condition the slope refusal
-below already rejects outright. Thirty-six checks over twelve curves cannot measure a coverage
-rate, so ``tools/calibration/solve_curve_coverage.R`` measures the delta method's over 1,000 curves
-a setting, as the documentation of `solve_curve` reports. Anyone reopening the question should
-rerun both before arguing from them.
+the interval R's ``MASS::dose.p`` reports, and because the one condition under which Fieller's
+would differ, a slope too poorly determined for a bounded interval, is the condition the slope
+refusal below already rejects outright. Thirty-six checks over twelve curves cannot measure a
+coverage rate, so the delta method's was measured over 1,000 curves a setting, as the
+documentation of `solve_curve` reports.
 
 One departure from ``dose.p``'s default: where the two-parameter model does not describe the
 curve, the covariance is scaled by Pearson's chi-square over its degrees of freedom, the
 heterogeneity factor of probit analysis (Finney, 1971). The factor is floored at one, so it only
 ever widens the interval. Without it, a curve the model fits badly still reports the narrow
-interval its replicate counts alone imply, which is the overconfidence this function exists to
-remove.
+interval its replicate counts alone imply, which overstates the precision of the solve.
 
-The regression is written out here, with no call to a fitting library, because the R twin has
-to reproduce it and because the package's core carries no numerical dependency. With an
-intercept and one slope the weighted normal equations are a two-by-two solve in closed form,
-small enough to mirror line for line, and the reductions are spelled out as loops for the
-reason core.py gives: neither base R's ``sum`` nor CPython's ``sum`` is a plain double fold,
-and the two depart from it in different ways.
+The regression is written out here, with no call to a fitting library, so that the R package
+computes it in the same way and the package's core carries no numerical dependency. With an
+intercept and one slope, the weighted normal equations are a two-by-two solve in closed form. The
+reductions are written out as loops, since neither base R's ``sum`` nor CPython's ``sum`` is a
+plain double fold, and the two depart from it in different ways.
 
 Extrapolation is the one thing these functions must not do. A curve that does not reach the
 target within the range it swept is refused, and so is a fit that solves outside that range.
 
-Agreement with the R twin is checked by ``tools/parity/solve_cross.py``, at a relative
-tolerance, where the generative core is held bit for bit. The fit calls ``exp`` and the normal
+The solve agrees with the R package's to a relative tolerance, where the generative core agrees
+bit for bit. The fit calls ``exp`` and the normal
 distribution function at every iteration, and IEEE-754 fixes the rounding of neither, so the
 two languages' maths libraries put the last bits in different places even though the arithmetic
 between them is written to be identical.
@@ -305,9 +298,9 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     """Solve a simulated design curve for the value that meets a target.
 
     Take the curve a sweep has already produced, fit the decision rate against the swept
-    value, and solve for the value at which the rate meets a target. The solved value comes
-    with a confidence interval, because a point read off a simulated curve without one
-    repeats the overconfidence that design analysis exists to expose.
+    value and solve for the value at which the rate meets a target. The solved value comes
+    with a confidence interval, because a value read off a simulated curve without one hides
+    the uncertainty of the simulation.
 
     The input is the list of records `power_curve` returns, used as it stands. The swept
     value is taken from the leading column, which is where the curve functions put it, and
@@ -329,14 +322,14 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
 
     The interval is the delta-method interval of R's `MASS::dose.p`, computed on the scale named
     by `transform` and mapped back, so it is symmetric on that scale and asymmetric on the
-    natural one. That asymmetry is the honest shape: at the top of a power curve a given change
+    natural one. That asymmetry is correct: at the top of a power curve, a given change
     in rate costs far more sample size than the same change lower down. In the checks against
     R's `stats::power.t.test` above, Fieller's interval for a ratio (Fieller, 1954), tried as
     the alternative, covered the analytic answer as often, at nearly the same width, so the
     interval R's `MASS::dose.p` reports is kept. Where the two-parameter model does not describe
     the curve, the interval is widened by the heterogeneity factor of probit analysis, Pearson's
     chi-square over its degrees of freedom (Finney, 1971), reported as `dispersion`. It is
-    floored at 1, so a well-fitting curve is left alone and a badly-fitting one cannot report a
+    floored at 1, so a well-fitting curve is left alone and a badly fitting one cannot report a
     narrower interval than its own residuals justify.
 
     The default `transform` of `"sqrt"` suits a sample-size axis, where a rate rises with the
@@ -384,7 +377,7 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
     ----------
     curve : sequence of dict, or data frame
         A curve, as returned by `power_curve`: one record per swept value, holding the swept
-        value, a decision rate, and the number of replicates behind it. A pandas data frame, or
+        value, a decision rate and the number of replicates behind it. A pandas data frame, or
         any table with a ``to_dict("records")`` method, is read as its records.
     target : float
         The decision rate to solve for, strictly between 0 and 1.
@@ -417,18 +410,18 @@ def solve_curve(curve, target, x=None, y=None, n=None, effect=None,
         scale on which the interval is symmetric), `dispersion` (the heterogeneity factor
         applied, 1 where the model fits), `x` and `y` (the columns used), `transform`,
         `intercept` and `slope` (the fitted coefficients), `n_points` (the number of curve
-        points the fit used), and `x_min` and `x_max` (the swept range). A bound is allowed to
+        points the fit used) and `x_min` and `x_max` (the swept range). A bound is allowed to
         fall outside that range. When one does, the sweep was too narrow to pin the value down
         and should be widened. A `dispersion` well above 1 says the curve is not the shape the
-        model assumes, so the solve deserves a wider grid or more replicates before it
-        deserves any trust.
+        model assumes, so the solve needs a wider grid or more replicates before it can be
+        trusted.
 
     Raises
     ------
     ValueError
         If `target` or `level` is not strictly between 0 and 1, if the curve carries fewer
         than three usable points, if its rate does not vary, if its rates do not straddle
-        `target` within the swept range, if the fitted slope cannot be told from zero, or if
+        `target` within the swept range, if the fitted slope cannot be told from zero or if
         the solve lands outside the swept range.
 
     References

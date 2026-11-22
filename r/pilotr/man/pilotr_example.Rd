@@ -18,10 +18,9 @@ to \code{\link[=load_spec]{load_spec()}}.
 }
 \description{
 pilotr ships eight ready-to-run design specifications, as JSON, in the
-package's \verb{examples/} directory. These are the same files that drive the
-Python twin and the no-code app, so a design authored in one place runs
-unchanged in the others. \code{pilotr_example()} lists them, or returns the path to
-one for \code{\link[=load_spec]{load_spec()}}.
+package's \verb{examples/} directory. The 'Python' package and the no-code app use
+the same files, so a design written for one runs unchanged in the others.
+\code{pilotr_example()} lists them, or returns the path to one for \code{\link[=load_spec]{load_spec()}}.
 }
 \examples{
 pilotr_example()                       # the available examples

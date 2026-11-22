@@ -131,7 +131,7 @@
 #' Variance components of the linear predictor
 #'
 #' Decompose the variance of a design's linear predictor into the part contributed by the fixed
-#' effects, the part contributed by each grouping factor's random effects, and the residual
+#' effects, the part contributed by each grouping factor's random effects and the residual
 #' variance added by the response family. Useful for putting a region of practical equivalence or
 #' a smallest effect size of interest on a known scale, and for seeing which term dominates a
 #' design before committing to it.
@@ -145,18 +145,17 @@
 #' Each grouping factor's component is the average over rows of `x' Sigma x`, where `Sigma` is the
 #' covariance the specification asks for and `x` collects that row's values of the intercept and
 #' each random-slope column. This is exact for the realised design: it averages over the
-#' random-effect distribution analytically, which matters because drawing from it and
-#' estimating a variance from the drawn effects of, say, 30 subjects carries a sampling error of
-#' around a quarter of the component itself, far too much to calibrate a region of practical
-#' equivalence against.
+#' random-effect distribution analytically. Drawing from that distribution and estimating a variance
+#' from the drawn effects of, say, 30 subjects would carry a sampling error of about a quarter of
+#' the component itself, far too much to calibrate a region of practical equivalence against.
 #'
 #' The cost is one simulation for the fixed part plus one per distinct random-slope column, which
 #' for a typical design is a handful.
 #'
-#' Every component is on the scale the linear predictor lives on, which is what makes them
-#' comparable. For `lognormal` and `shifted_lognormal` that is the log of the response, which is
+#' Every component is on the scale of the linear predictor, which is what makes them
+#' comparable. For `lognormal` and `shifted_lognormal`, that is the log of the response, which is
 #' also the scale the auto-derived analysis model works on. For `bernoulli`, `poisson`, `ordinal`
-#' and `beta` it is the latent scale behind the link, so the residual is the distribution-specific
+#' and `beta`, it is the latent scale behind the link, so the residual is the distribution-specific
 #' variance used to compute the intraclass correlation and R-squared of a generalised mixed model
 #' (Nakagawa, Johnson and Schielzeth, 2017).
 #'
@@ -192,8 +191,8 @@
 #' 0.5 is d.
 #'
 #' @param spec A design specification (path or list).
-#' @return A named list of variance components: `fixed`, one entry per grouping factor,
-#'   `residual`, and `total` (their sum).
+#' @return A named list of variance components: `fixed`, one entry per grouping factor, `residual`
+#'   and `total` (their sum).
 #' @references
 #' Brysbaert, M. and Stevens, M. (2018). Power analysis and effect size in mixed effects models: A
 #'   tutorial. \emph{Journal of Cognition}, 1(1), 9. \doi{10.5334/joc.10}
@@ -378,20 +377,20 @@ response_variance <- function(spec) {
 #'
 #' `tune = "all"` holds the intercept and multiplies every coefficient and every random-effect
 #' standard deviation, and the residual standard deviation where there is one, by a common factor.
-#' For the families with a free residual that leaves every ratio between components unchanged, so
+#' For the families with a free residual, that leaves every ratio between components unchanged, so
 #' it rescales the outcome without altering the design's character. It is also the only option for
 #' the families whose residual is fixed by the link.
 #'
 #' For those, the residual cannot be rescaled at all, so the structural part alone has to close the
 #' gap and the target has to exceed the link's own contribution. A `bernoulli` or `ordinal` design
-#' carries a latent residual of `pi^2 / 3`, about 3.29, so calibrating one to a total variance of 1
-#' is not merely difficult but impossible, and the error says so rather than returning something
-#' plausible. For `poisson` and `beta` the residual moves with the linear predictor, so the factor
-#' is solved numerically; that costs one extra simulation rather than one per candidate, because
-#' scaling the coefficients and the random-effect standard deviations by `k` moves each row's
-#' linear predictor from `eta` to exactly `b0 + k * (eta - b0)`, where `b0` is the intercept. The
-#' search starts at `k = 0`, where every row sits at the intercept, so a target at or below the
-#' residual variance that the intercept alone implies is refused.
+#' carries a latent residual of `pi^2 / 3`, about 3.29, so it cannot be calibrated to a total
+#' variance of 1, and the error says so rather than returning something plausible. For `poisson` and
+#' `beta`, the residual moves with the linear predictor, so the factor is solved numerically. That
+#' costs one extra simulation rather than one per candidate, because scaling the coefficients and
+#' the random-effect standard deviations by `k` moves each row's linear predictor from `eta` to
+#' exactly `b0 + k * (eta - b0)`, where `b0` is the intercept. The search starts at `k = 0`, where
+#' every row sits at the intercept, so a target at or below the residual variance that the intercept
+#' alone implies is refused.
 #'
 #' The intercept is held because it is a location. It adds nothing to the fixed or random
 #' components, so scaling it changes none of them and only moves the outcome. For `poisson` and

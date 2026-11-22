@@ -2,12 +2,11 @@
 #
 # Choosing plausible random-effect standard deviations with nothing to read them from is the
 # steepest step in setting up a simulation-based power analysis, and the one that most often
-# stops a user before they reach the analysis itself. The tutorials on the method all say so,
-# and all reach for the same remedy, which is to take the variance components from a pilot fit
-# or from a published model (Green and MacLeod, 2016; Kumle et al., 2021; DeBruine and Barr,
-# 2021). This file does that mechanically, mapping the estimates of a fitted lmer onto the
-# fields of a pilotr specification, which can then be scaled up to the sample size being
-# planned.
+# stops a user before they reach the analysis itself. The tutorials on the method reach for the
+# same remedy, which is to take the variance components from a pilot fit or from a published
+# model (Green and MacLeod, 2016; Kumle et al., 2021; DeBruine and Barr, 2021). This file does
+# that mechanically, mapping the estimates of a fitted lmer onto the fields of a pilotr
+# specification, which can then be scaled up to the sample size being planned.
 #
 # The fixed effects are mapped too. A pilot's point estimates are a poor basis for planning,
 # since they are noisy and, when a pilot is followed up because it looked promising, biased
@@ -401,13 +400,12 @@
 #' Requires the `lme4` package.
 #'
 #' @details
-#' Settling on plausible random-effect standard deviations with nothing to read them from is the
-#' step that most often stops a simulation-based power analysis before it starts, and the
-#' tutorials on the method converge on the same remedy, which is to take the variance components
-#' from a pilot fit or from a published model (Green and MacLeod, 2016; Kumle et al., 2021;
-#' DeBruine and Barr, 2021). This function performs that transfer, and the specification it
-#' returns can be enlarged and passed straight to [simulate_design()] or
-#' [power_mixed()].
+#' Choosing plausible random-effect standard deviations with nothing to read them from is the step
+#' that most often stops a simulation-based power analysis before it starts. The tutorials on the
+#' method agree on the answer, which is to take the variance components from a pilot fit or from a
+#' published model (Green and MacLeod, 2016; Kumle et al., 2021; DeBruine and Barr, 2021). This
+#' function takes them from such a fit, and the specification it returns can be enlarged and passed
+#' straight to [simulate_design()] or [power_mixed()].
 #'
 #' The fixed effects are another matter. They are the pilot's point estimates, which a small
 #' pilot measures imprecisely, and a pilot followed up because its effect looked promising has
@@ -444,7 +442,7 @@
 #' Gaussian by default, because that is what a `lmer` fit is. A model of log reaction times
 #' therefore yields an intercept, coefficients and residual standard deviation on the log scale,
 #' which is the right thing for the `lognormal` and `shifted_lognormal` families, whose linear
-#' predictor lives on that scale as well. Ask for one of those with `family`, in the list form
+#' predictor is on that scale as well. Ask for one of those with `family`, in the list form
 #' when the family needs a parameter the fit cannot supply, as in
 #' `family = list(family = "shifted_lognormal", shift = 200)`.
 #'
@@ -457,16 +455,16 @@
 #' predictor in a factorial experiment is a coded factor far more often than it is a covariate.
 #' Any other numeric column becomes a continuous predictor, with `mean` and `sd` taken from the
 #' data, one value per unit for a unit-level variable so that an unbalanced design does not
-#' distort them. This is a heuristic and nothing more, it is reported by a message on every call,
-#' and a genuine two-valued covariate has to be moved from `factors` to `predictors` by hand.
+#' distort them. This is a heuristic, and a message reports it on every call. A genuine two-valued
+#' covariate has to be moved from `factors` to `predictors` by hand.
 #'
-#' A column is placed as `between` a unit when it holds one value within every member of that
-#' unit, and as `vary_within` when it takes several values inside every unit; the same test gives
-#' a continuous predictor its `varies_by`, which becomes `"observation"` when the predictor
-#' varies inside every unit. A model that codes one factor twice, once as a factor for its fixed
-#' effect and once as a numeric contrast for a random slope, gives two separate specification
-#' terms, because the two columns are separate columns in the model frame and nothing in the fit
-#' ties them together.
+#' A column is placed as `between` a unit when it holds one value within every member of that unit,
+#' and as `vary_within` when it takes several values inside every unit. The same test gives a
+#' continuous predictor its `varies_by`, which becomes `"observation"` when the predictor varies
+#' inside every unit. A model that codes one factor twice, once as a factor for its fixed effect and
+#' once as a numeric contrast for a random slope, gives two separate specification terms, because
+#' the two columns are separate columns in the model frame and nothing in the fit ties them
+#' together.
 #'
 #' Two or more factors placed between the same unit become one factor whose levels are their
 #' cells, and a message says so. The first-listed factor varies slowest, and each label joins the
@@ -489,7 +487,7 @@
 #' split a name with several underscores. A recognised product column is reported and re-keyed to
 #' `a:b`, and it contributes no factor or predictor of its own.
 #'
-#' Grouping factors named `subject` and `item` are used as they stand. Otherwise the one with the
+#' Grouping factors named `subject` and `item` are used as they stand. Otherwise, the one with the
 #' most levels becomes `subject`, the largest remaining factor that is crossed with it becomes
 #' `item`, and every other grouping factor becomes an extra `random` entry with the `over` and
 #' `n` fields that pilotr's additional grouping factors take, `over` being decided by which unit
@@ -531,7 +529,7 @@
 #' Alternatively, keep the crossed specification and drop the rows that a counterbalanced study
 #' would not observe, through the `prep` argument of [power_mixed()] and [precision_design()].
 #' That function receives each simulated data set and returns the modelling data, so it ends by
-#' calling [model_data()]. With `workers > 1` it runs in worker processes that have not attached
+#' calling [model_data()]. With `workers > 1`, it runs in worker processes that have not attached
 #' pilotr and cannot see the caller's variables, so it has to call `pilotr::model_data()` and
 #' carry the specification with it. A function made by another function carries it once that
 #' function has forced its argument, as in this rotation over two lists for the
@@ -548,13 +546,11 @@
 #' power_mixed(spec, prep = counterbalance(spec), workers = 4)
 #' ```
 #'
-#' A boundary-singular pilot fit is carried across as it stands, which means a variance estimated
-#' at zero or a correlation estimated at exactly plus or minus one. Those are faithful readings
-#' of the fit, and no kind of defect, but they are also the sign that the random-effect
-#' structure was richer than the pilot could support, and a power analysis resting on them will
-#' inherit that
-#' (Bates et al., 2015). Widening the design, or simplifying the structure before refitting, is
-#' the remedy.
+#' A boundary-singular pilot fit is carried across as it stands, with a variance estimated at zero
+#' or a correlation estimated at exactly plus or minus one. Those values read the fit faithfully.
+#' They also show that the random-effect structure was richer than the pilot could support, and a
+#' power analysis built on them inherits that (Bates et al., 2015). To avoid it, enlarge the pilot
+#' design, or simplify the structure before refitting.
 #'
 #' @param fit A fitted linear mixed model, of class `lmerMod` (from `lme4::lmer()`) or
 #'   `lmerModLmerTest` (from `lmerTest::lmer()`). Anything else is refused with a message saying
@@ -562,8 +558,8 @@
 #' @param name A label for the returned specification. Defaults to `"from_model"`.
 #' @param seed The master seed of the returned specification. Defaults to 1.
 #' @param n_subject Number of subjects for the returned specification. Defaults to the number of
-#'   levels the fit actually had, and is normally raised above it, since scaling a pilot design
-#'   up is the point of reading a specification off a pilot fit.
+#'   levels the fit had, and is normally raised above it, since a specification is read off a pilot
+#'   fit to plan a larger study.
 #' @param n_item Number of items, treated the same way as `n_subject`. An error when the model
 #'   has no second crossed grouping factor to act as items, because there is then no item unit to
 #'   resize.
@@ -600,8 +596,8 @@
 #'   specification unit each of the fit's grouping factors became, and `column_kinds`, a named
 #'   character vector giving each model-frame column the classification `"factor"` or
 #'   `"predictor"`. A third, `effects`, is a list recording where the coefficients came from. Its
-#'   `method` is the value of `effects`, its `level` the `safeguard_level` applied, or `NA` with
-#'   `"estimate"`, and its `sesoi` the keys of the coefficients set from `sesoi`. All three are
+#'   `method` is the value of `effects`, its `level` the `safeguard_level` applied (`NA` with
+#'   `"estimate"`) and its `sesoi` the keys of the coefficients set from `sesoi`. All three are
 #'   attributes rather than fields so that the specification itself stays within the portable
 #'   schema.
 #' @references Albers, C. and Lakens, D. (2018). When power analyses based on pilot data are
@@ -615,7 +611,7 @@
 #'   simulation. \emph{Advances in Methods and Practices in Psychological Science}, 4(1).
 #'   \doi{10.1177/2515245920965119}
 #'
-#'   Green, P. and MacLeod, C. J. (2016). SIMR: an R package for power analysis of generalized
+#'   Green, P. and MacLeod, C. J. (2016). SIMR: An R package for power analysis of generalized
 #'   linear mixed models by simulation. \emph{Methods in Ecology and Evolution}, 7(4), 493-498.
 #'   \doi{10.1111/2041-210X.12504}
 #'
@@ -623,15 +619,15 @@
 #'   factor: Designs, analytic models, and statistical power. \emph{Annual Review of Psychology},
 #'   68, 601-625. \doi{10.1146/annurev-psych-122414-033702}
 #'
-#'   Kumle, L., Vo, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized) linear
-#'   mixed models: An open introduction and tutorial in R. \emph{Behavior Research Methods},
-#'   53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
+#'   Kumle, L., \enc{Võ}{Vo}, M. L.-H. and Draschkow, D. (2021). Estimating power in (generalized)
+#'   linear mixed models: An open introduction and tutorial in R. \emph{Behavior Research
+#'   Methods}, 53(6), 2528-2543. \doi{10.3758/s13428-021-01546-0}
 #'
 #'   Perugini, M., Gallucci, M. and Costantini, G. (2014). Safeguard power as a protection against
 #'   imprecise power estimates. \emph{Perspectives on Psychological Science}, 9(3), 319-332.
 #'   \doi{10.1177/1745691614528519}
 #' @seealso [simulate_design()] to simulate from the recovered specification,
-#'   [power_mixed()] to run the power analysis it was read off the fit for, and
+#'   [power_mixed()] to run the power analysis it was read off the fit for and
 #'   [model_formula()] for the analysis model a specification implies.
 #' @examples
 #' \donttest{

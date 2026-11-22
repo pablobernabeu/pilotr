@@ -3,11 +3,11 @@
 The model is a linear predictor with user-specified fixed effect sizes, covering categorical
 contrasts and continuous predictors as well as their interactions. To this it adds crossed
 by-subject and by-item random intercepts and slopes (on contrasts or continuous predictors), and
-passes the result through a link and a response family. The RNG draw order follows spec/SPEC.md,
-namely per-subject item subsets (partial crossing only) -> continuous predictors -> subject random
-effects -> item random effects -> extra grouping-factor random effects -> per-row response
-draws (one deviate per row for most families, two for the ex-Gaussian, a normal then a uniform,
-and a variable number for the beta family's rejection sampler). A predictor whose reliability is
+passes the result through a link and a response family. The RNG draw order follows spec/SPEC.md:
+per-subject item subsets (partial crossing only), then continuous predictors, subject random
+effects, item random effects, extra grouping-factor random effects and per-row response draws (one
+deviate per row for most families, two for the ex-Gaussian (a normal then a uniform) and a variable
+number for the beta family's rejection sampler). A predictor whose reliability is
 below 1 draws one further normal per value. Specs without partial crossing or a `predictors` block
 keep the original stream.
 """
@@ -22,8 +22,8 @@ from .validate import validate_spec, _normalise, _repeated_key_message
 class Dataset:
     """A simulated data set: named columns and a list of row dicts.
 
-    Returned by `simulate`. Lightweight and dependency-free; build a pandas `DataFrame`
-    from `dataset.rows` when you need one.
+    Returned by `simulate`. It needs no other package. Build a pandas `DataFrame` from
+    `dataset.rows` when you need one.
 
     Attributes
     ----------
@@ -52,7 +52,7 @@ class Dataset:
         """Write the data set to `path` as CSV: a header row then one row per observation.
 
         The file is UTF-8 whatever the locale, with LF line endings on every platform. A field
-        holding a comma, a double quote or a newline is quoted, so a label such as "low, fast"
+        holding a comma, a double quote or a newline is quoted, so a label such as ``"low, fast"``
         stays one field. A float is written with ``repr``, which reads back as the same double.
 
         Parameters
@@ -167,12 +167,12 @@ def load_spec(path, validate=True):
     ignored. Validation also refuses a specification declaring a ``spec_version`` newer than this
     implementation understands, and never reads such a file in part.
 
-    The file is read as R's jsonlite reads it, so that one file means one design in both twins:
-    as UTF-8 with or without a byte-order mark, whatever the locale; with a one-element array
-    read as its value where the schema has a single value, and ``[]`` read as an empty
-    ``coefficients``, ``slopes`` or ``correlations`` object, both as ``jsonlite::write_json()``
-    writes them by default. A file that repeats a key within one object is refused whatever
-    `validate` says. See "Reading a specification" in spec/SPEC.md.
+    The file is read as R's jsonlite reads it, so that one file means one design in both
+    packages. It is read as UTF-8, with or without a byte-order mark, whatever the locale. A
+    one-element array is read as its value where the schema has a single value, and ``[]`` as an
+    empty ``coefficients``, ``slopes`` or ``correlations`` object, both as
+    ``jsonlite::write_json()`` writes them by default. A file that repeats a key within one object
+    is refused whatever `validate` says. See 'Reading a specification' in spec/SPEC.md.
 
     Parameters
     ----------
@@ -182,7 +182,7 @@ def load_spec(path, validate=True):
         Whether to validate the specification after reading it. ``True`` (the default) applies
         `validate_spec` strictly, and ``False`` skips validation. Any other value validates
         leniently, with ``strict=False``, so that an unknown field draws a warning, not an error.
-        ``None``, ``0`` and ``"lenient"`` all do so, as in the R twin.
+        ``None``, ``0`` and ``"lenient"`` all do so, as in the R package.
 
     Returns
     -------
@@ -296,7 +296,7 @@ def simulate(spec, validate=True) -> Dataset:
     intercepts and slopes, then map it through the chosen response family.
 
     The draws come from the shared generator seeded with ``spec["seed"]``, so a specification
-    always gives the same data on one platform, and the data the R twin gives within the limits
+    always gives the same data on one platform, and the data the R package gives, within the limits
     spec/SPEC.md sets out under Scope of the guarantee. The generator takes the seed's absolute
     value, so a seed and its negation give the same data.
 
@@ -317,7 +317,7 @@ def simulate(spec, validate=True) -> Dataset:
     -------
     Dataset
         A table with one row per observation: a `subject` column, an optional `item` column,
-        any grouping, factor, and continuous-predictor columns, and the response column named
+        any grouping, factor and continuous-predictor columns and the response column named
         by ``spec["response"]["name"]``. A design with a counterbalanced factor also has a
         `list` column after `item`, holding the list each subject follows, counted from 1.
 

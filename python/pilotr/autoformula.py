@@ -1,15 +1,14 @@
 """The analysis model a design specification implies: its modelling data and its formula.
 
-A port of the R twin's autoformula.R. `model_data` adds to a simulated data set the columns the
-model reads, and `model_formula` writes the model as the R twin writes it, term for term, in lme4's
-notation. `power_mixed` fits the model the two describe, so it analyses every coefficient and every
-declared random effect.
+`model_data` adds to a simulated data set the columns the model reads, and `model_formula`
+writes the model as the R package writes it, term for term, in lme4's notation. `power_mixed`
+fits the model the two describe, so it analyses every coefficient and every declared random
+effect.
 
 Interactions ``"a:b"`` become product columns named ``"a_b"``. Categorical factors become their
 numeric contrast columns. The response is logged for the lognormal families, whose coefficients
-are on the log scale. tools/parity/formula_cross.py checks every shipped example and parity case
-against the R twin: the formula strings must be identical, and so must the contrast and product
-columns, bit for bit.
+are on the log scale. The formula strings are identical to the R package's, and so are the
+contrast and product columns, bit for bit.
 """
 
 from __future__ import annotations
@@ -89,15 +88,16 @@ def _model_terms(spec, structure="maximal"):
 
 
 def model_formula(spec, structure="maximal"):
-    """The lme4 formula a specification implies, as the R twin's ``model_formula()`` writes it.
+    """The lme4 formula a specification implies, as the R package's ``model_formula()`` writes it.
 
     The formula's response is ``.y``, the column `model_data` adds. Each coefficient is a fixed
     term, an interaction ``"a:b"`` as its product column ``a_b``. Each grouping factor has a random
     intercept and the random slopes the specification declares.
 
     The three structures are the usual steps of a rule that simplifies a model when its fit is
-    singular or fails to converge (Barr et al., 2013, doi:10.1016/j.jml.2012.11.001; Matuschek et
-    al., 2017, doi:10.1016/j.jml.2017.01.001). ``"maximal"`` has every random slope the
+    singular or fails to converge (Matuschek et al., 2017, doi:10.1016/j.jml.2017.01.001). Barr et
+    al. (2013, doi:10.1016/j.jml.2012.11.001) recommend the maximal structure and suggest dropping
+    its correlations when it fails to converge. ``"maximal"`` has every random slope the
     specification declares, correlated with the intercept where the specification correlates them,
     and uncorrelated (``||``) where it does not. ``"zcp"``, the zero-correlation-parameter model,
     keeps those slopes and writes ``||`` for every grouping factor with a slope. A grouping factor
@@ -106,9 +106,8 @@ def model_formula(spec, structure="maximal"):
     ``power_mixed()`` takes these names as the rungs of such a rule, which this package does not
     simulate.
 
-    The string is the R twin's, character for character, which tools/parity/formula_cross.py
-    checks on every shipped example and parity case. ``power_mixed`` fits the ``"maximal"`` model,
-    with each random effect as an independent variance component.
+    The string is the R package's, character for character. ``power_mixed`` fits the
+    ``"maximal"`` model, with each random effect as an independent variance component.
 
     Parameters
     ----------
@@ -127,8 +126,8 @@ def model_formula(spec, structure="maximal"):
     ------
     ValueError
         If `structure` is not one of the three names, or if the specification has neither a
-        coefficient nor a random effect, so that the formula would have no terms. The R twin
-        refuses such a specification in the same words.
+        coefficient nor a random effect, so that the formula would have no terms. The R package
+        refuses such a specification with the same message.
     """
     if structure not in _STRUCTURES:
         raise ValueError("structure must be 'maximal', 'zcp' or 'intercepts'")
@@ -152,7 +151,7 @@ def _log(x):
 
 
 def model_data(spec, dataset):
-    """The modelling data for a simulated data set, as the R twin's ``model_data()`` builds it.
+    """The modelling data for a simulated data set, as the R package's ``model_data()`` builds it.
 
     Three kinds of column are added to the data, in this order. ``.y`` is the analysis response:
     ``log(y)`` for the ``lognormal`` family, ``log(y - shift)`` for ``shifted_lognormal`` and the
@@ -163,8 +162,8 @@ def model_data(spec, dataset):
     ``"a:b"``, the product of its parts taken from left to right.
 
     A column that already exists is replaced where it stands, and a new one goes at the end, as in
-    the R twin. The contrast and product columns equal the R twin's bit for bit, given the same
-    data. ``.y`` passes through the C library's ``log()``, which can differ in the last place
+    the R package. The contrast and product columns equal the R package's bit for bit, given the
+    same data. ``.y`` passes through the C library's ``log()``, which can differ in the last place
     between R and Python on Windows.
 
     Parameters

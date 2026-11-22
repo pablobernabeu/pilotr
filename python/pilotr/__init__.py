@@ -8,7 +8,7 @@ from .solve import solve_curve, target_n
 from .report import power_report
 from .examples import pilotr_example
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = ["RNG", "as241", "inv_logit", "replicate_seeds", "simulate", "load_spec", "Dataset",
            "validate_spec", "SPEC_VERSION", "model_data", "model_formula", "power", "power_curve",
            "power_mixed", "solve_curve", "target_n", "power_report", "pilotr_example"]

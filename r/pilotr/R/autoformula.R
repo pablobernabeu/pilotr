@@ -11,9 +11,9 @@
 #' Build the modelling data frame from a simulated data set and its specification
 #'
 #' Add the analysis response column `.y` (`log(y)` for `lognormal`, `log(y - shift)` for
-#' `shifted_lognormal` and the response itself otherwise), the
-#' numeric contrast columns implied by the categorical factors, and any interaction product
-#' columns (an `a:b` coefficient becomes a column `a_b`).
+#' `shifted_lognormal` and the response itself otherwise), the numeric contrast columns implied by
+#' the categorical factors and any interaction product columns (an `a:b` coefficient becomes a
+#' column `a_b`).
 #'
 #' @param spec A design specification (path or list). A path is read with [load_spec()], which
 #'   validates it.
@@ -71,7 +71,8 @@ model_data <- function(spec, d) {
 #'
 #' @details
 #' The three structures are the usual steps of a rule that simplifies a model when its fit is
-#' singular or fails to converge (Barr et al., 2013; Bates et al., 2015; Matuschek et al., 2017).
+#' singular or fails to converge (Bates et al., 2015; Matuschek et al., 2017). Barr et al. (2013)
+#' recommend the maximal structure and suggest dropping its correlations when it fails to converge.
 #' `"maximal"` has every random slope the specification declares, correlated with the intercept
 #' where the specification correlates them, and uncorrelated (`||`) where it does not. `"zcp"`, the
 #' zero-correlation-parameter model, keeps those slopes and estimates no correlation among them,
@@ -82,7 +83,7 @@ model_data <- function(spec, d) {
 #' [precision_design()] take these names as the rungs of such a rule.
 #'
 #' A specification with neither a fixed coefficient nor a random effect implies no model, and is
-#' refused in the words the 'Python' twin uses.
+#' refused with the same message as in the 'Python' package.
 #'
 #' @param spec A design specification (path or list). A path is read with [load_spec()], which
 #'   validates it.

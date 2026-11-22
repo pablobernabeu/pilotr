@@ -31,9 +31,9 @@ detectable in the output, which is why they are refused here.
 Names are checked together as well as one by one. Two columns with one name, a contrast
 column defined by two factors or named like another column, an interaction whose analysis
 column already exists, a level listed twice, a correlation that pairs a term with itself or
-gives one pair twice, a factor both between and within a unit, and a \code{random.item} entry in a
-design without items are each refused, since each would otherwise validate and change the data
-in silence. The rules are set out under Names in the specification. A within factor whose
+gives one pair twice, a factor both between and within a unit and a \code{random.item} entry in a
+design without items are each refused, since each would otherwise validate and change the data in
+silence. The rules are set out under Names in the specification. A within factor whose
 \code{vary_within} leaves out a unit of the design draws a warning in either mode, since pilotr
 crosses it with every unit anyway, and a specification declaring version 0.4 is refused for it.
 
@@ -62,10 +62,10 @@ declaring a version newer than this implementation is refused outright. A specif
 no \code{spec_version} is treated as 0.2, which is what every specification written before the
 field existed is.
 
-Every field is read by its exact name, as the 'Python' twin reads it, and a list that repeats
-a name within one object is refused, as \code{\link[=load_spec]{load_spec()}} refuses a file that does. A seed must
-be a whole number within plus or minus 2^53 - 1, the range in which both twins read a JSON
-integer exactly.
+Every field is read by its exact name, as the 'Python' package reads it, and a list that repeats
+a name within one object is refused, as \code{\link[=load_spec]{load_spec()}} refuses a file that does. A seed must be a
+whole number within plus or minus 2^53 - 1, the range in which both packages read a JSON integer
+exactly.
 }
 \examples{
 spec <- build_spec(list(name = "demo", seed = 1, design_kind = "between",

@@ -2,29 +2,30 @@
 
 <p class="mrd-tagline">Simulate experimental and behavioural data from a portable JSON design specification.</p>
 
-This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name,
-carrying its generative core. The two share the design specification and the random-number
-generator, so the same specification and seed produce identical data in either language wherever
-the two share a maths library, as on Linux, outside a rare Beta case under R 4.6.0 or later,
-which [Cross-language reproducibility](cross-language.md) describes. Elsewhere, a value that
-passes through `exp()`, `log()` or `pow()` can differ in its last bits, as the same page sets
-out.
-Simulation, validation, the analysis model a specification implies, simulation-based power, the
-sample-size report and the curve solvers are here. Precision/ROPE design analysis, power curves
-for mixed-effects designs, calibration and sweeps, the `lme4` reference backend for
-mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers that build
-specifications, and the app launcher are in the R package alone.
+This is the twin of [the R package](https://pablobernabeu.github.io/pilotr/r/) of the same name
+and contains its generative core. Both packages use the same design specification and
+random-number generator, so the same specification and seed produce identical data in either
+language wherever the two share a maths library, as on Linux, except in a rare Beta case under
+R 4.6.0 or later that [Cross-language reproducibility](cross-language.md) describes. Elsewhere,
+a value that passes through `exp()`, `log()` or `pow()` can differ in its last bits, as the same
+page sets out.
+
+This package provides simulation, validation, the analysis model a specification implies,
+simulation-based power, the sample-size report and the curve solvers. Precision/ROPE design
+analysis, power curves for mixed-effects designs, calibration and sweeps, the `lme4` reference
+backend for mixed-effects power, the `brms` bridge, the analysis-script emitters, the helpers
+that build specifications, and the app launcher are in the R package alone.
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Try the no-code app](https://pablobernabeu.github.io/pilotr/app/){ .md-button }
 
 A design specification names the units, the factors and their contrasts, the fixed effect
-sizes, any random effects and a response family. From that one file pilotr draws a data set and
+sizes, any random effects and a response family. From that one file, pilotr draws a data set and
 estimates power by simulation, and the R package also estimates precision and emits the analysis
-code the design implies.
-The same file drives the R package, the browser-based no-code app and this Python package, so a
-design built by pointing and clicking can be run unchanged in a script, and a design written in
-a script can be handed to a collaborator who has installed nothing.
+code the design implies. The same file drives the R package, the browser-based no-code app and
+this Python package. A design built by pointing and clicking can therefore be run unchanged in a
+script, and a design written in a script can be handed to a collaborator who has installed
+nothing.
 
 The generative core is pure Python and dependency-free. `scipy`, `statsmodels` and `pandas` are
 optional extras, needed only by the power tools and `model_data`. The
@@ -43,9 +44,10 @@ that the two languages agree.
 - [Power and design analysis](power.md): `power`, `power_curve` and `power_mixed`, with
   `solve_curve` and `target_n` for the sample size a curve implies, and `power_report` for the
   sample-size justification.
-- [Cross-language reproducibility](cross-language.md): how the same spec gives identical data
-  in R and Python, and where the last bits can differ.
-- [Specification format](specification.md): the JSON spec and the cross-language RNG contract.
+- [Cross-language reproducibility](cross-language.md): how the same specification gives
+  identical data in R and Python, and where the last bits can differ.
+- [Specification format](specification.md): the JSON specification and the cross-language RNG
+  contract.
 - [API reference](api.md): every public function and class.
 
 If pilotr contributes to published work, please [cite it](about.md#citing-pilotr). Its citation

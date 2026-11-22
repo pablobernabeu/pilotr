@@ -10,15 +10,16 @@ make_rng(seed)
 \item{seed}{A single number used to seed the generator (coerced to a non-negative integer).}
 }
 \value{
-A list of three functions: \code{uniform()} returns one standard-uniform draw,
-\code{normal()} returns one standard-normal draw, and \code{normals(k)} returns a length-\code{k}
-numeric vector of standard-normal draws.
+A list of three functions: \code{uniform()} returns one standard-uniform draw, \code{normal()}
+returns one standard-normal draw and \code{normals(k)} returns a length-\code{k} numeric vector of
+standard-normal draws.
 }
 \description{
 Build the combined linear congruential generator (L'Ecuyer 1988) used by both the R and
 Python implementations, so that a given specification and seed produce identical data in
-either language wherever the two share a maths library. The uniforms are exact everywhere.
-The draw-order contract, and where a value can differ in its last bits, are documented in the
+either language wherever the two share a maths library, except in a rare Beta case under
+R 4.6.0 or later. The uniforms are exact everywhere.
+The order of the draws, and where a value can differ in its last bits, are documented in the
 specification at \url{https://github.com/pablobernabeu/pilotr/blob/main/spec/SPEC.md}.
 }
 \examples{

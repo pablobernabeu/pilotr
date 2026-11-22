@@ -1,4 +1,4 @@
-"""A sample-size justification, written in Markdown from a power result, mirroring power_report.R.
+"""A sample-size justification, written in Markdown from a power result.
 
 The documentation calls the value `target_n` returns the number a preregistration quotes. The
 justification that goes with it names the analysis and its test, each effect size and where it came
@@ -9,14 +9,13 @@ simulation adds its Monte Carlo error and fit counts, and a reader needs what re
 It works in two steps. `_power_report_record` reads a result, a solved curve and a specification
 file into a record of counts and strings, and `_render` writes the record as Markdown. Every rate
 is computed in the renderer from two counts, the significant replicates and the replicates behind
-them, with `_rate_with_error` and `_type_s_interval` from `pilotr.mcse`. The R twin renders a
+them, with `_rate_with_error` and `_type_s_interval` from `pilotr.mcse`. The R package renders a
 record with the same operations and the same format strings, so one record gives the same bytes in
-both languages, and ``tools/parity/report_cross.py`` checks this over the records in
-``report_cases.json``. Numbers go through the % operator here and ``sprintf()`` there. Both round
+both languages. Numbers go through the % operator here and ``sprintf()`` in R. Both round
 a double correctly to the digits asked for, an exact tie going to the even digit, so they write
 the same text for the same double.
 
-The R twin also reports a ``precision_design()`` result, on the interval and the region of
+The R package also reports a ``precision_design()`` result, on the interval and the region of
 practical equivalence, which has no Python counterpart.
 """
 
@@ -62,10 +61,12 @@ def power_report(x, solved=None, spec_file=None, justification=None, null_result
     doi:10.1525/collabra.33267) for reporting an a-priori power analysis. The primary analysis
     comes first, with its model, test, alpha and sidedness, then the desired power and the sample
     size solved for it, with its interval. Each focal effect follows, with its true value, the
-    justification given for that value and its power. Last comes the power when the null
-    hypothesis is true. The simulation is then accounted for as Morris, White and Crowther (2019,
+    justification given for that value and its power. Last comes the Type I error rate of the
+    test, its rejection rate when every focal effect is zero. For a true null hypothesis, Table 4
+    asks instead for the power of a test for the absence of an effect, such as an equivalence
+    test. The simulation is then accounted for as Morris, White and Crowther (2019,
     doi:10.1002/sim.8086) recommend for simulation studies: the replicates simulated and those
-    that returned an estimate, the fits that were singular or carried a warning, and the Monte
+    that returned an estimate, the fits that were singular or carried a warning and the Monte
     Carlo standard error of every rate. The report ends with what a reader needs to reproduce the
     run: the software and its versions, the specification's seed and an MD5 checksum of the
     specification file's bytes. The versions are those loaded when the report is written, so
@@ -74,9 +75,8 @@ def power_report(x, solved=None, spec_file=None, justification=None, null_result
     Each rate's Monte Carlo standard error and 95% Wilson interval are computed in the report from
     the number of significant replicates and the number of replicates behind the rate, with the
     functions that compute them in the results. Type S has its Wilson interval from the number of
-    wrong signs among the significant replicates. The R twin's ``power_report()`` writes the same
-    text, byte for byte, from the same counts, which ``tools/parity/report_cross.py`` in the
-    source repository checks.
+    wrong signs among the significant replicates. The R package's ``power_report()`` writes the
+    same text, byte for byte, from the same counts.
 
     The rates are those of the design `x` simulated. A sample size solved from a curve need not be
     that design's, so a justification usually pairs the solved size with a run of `power_mixed`
@@ -88,7 +88,7 @@ def power_report(x, solved=None, spec_file=None, justification=None, null_result
     rejection rate is the Type I error rate of the test, which for a Wald z with few subjects or
     items can exceed alpha.
 
-    The R twin also reports a ``precision_design()`` result, on the interval and the region of
+    The R package also reports a ``precision_design()`` result, on the interval and the region of
     practical equivalence, which has no Python counterpart.
 
     Parameters
@@ -120,7 +120,7 @@ def power_report(x, solved=None, spec_file=None, justification=None, null_result
     ValueError
         If `x` or `null_result` is not a result at one design, if `solved` is not the result of
         `target_n` or `solve_curve`, if `justification` is neither a string nor a dict of strings
-        naming focal effects, if `null_result` has a focal effect that is not zero, or if
+        naming focal effects, if `null_result` has a focal effect that is not zero or if
         `spec_file` names no file.
 
     Examples

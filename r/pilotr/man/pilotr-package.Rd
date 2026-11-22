@@ -7,24 +7,23 @@
 \title{pilotr: Simulate Experimental and Behavioural Data from a Portable Design Specification}
 \description{
 Generative simulation of experimental and behavioural data sets from a
-portable JSON design specification shared with the Python package of the
-same name. Fixed effect sizes are user-specified, by-subject and by-item
-random intercepts and slopes are crossed, and the response families cover
+portable JSON design specification shared with the Python package of the same
+name. The user specifies the fixed effect sizes and the crossed by-subject
+and by-item random intercepts and slopes. The response families cover
 Gaussian, lognormal, shifted lognormal, ex-Gaussian, Bernoulli, Poisson,
-ordinal and Beta outcomes. Power and precision-based design analysis run
-from the same specification.
+ordinal and Beta outcomes. Power and precision-based design analysis run from
+the same specification.
 }
 \details{
 A pilotr workflow begins with a design specification, a plain list recording
 the study you plan to run: its groups and conditions, sample sizes, fixed
-effect sizes, random-effect standard deviations, and the response family.
-Assemble one from a flat list of design inputs with
-\code{\link[=build_spec]{build_spec()}}, or read one back from a JSON file with
-\code{\link[=load_spec]{load_spec()}}. The package ships eight ready-to-run specifications, and
-\code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
-\code{\link[=default_response_name]{default_response_name()}} gives the response column that a
-family uses by default, and \code{\link[=spec_json]{spec_json()}} serialises a specification
-back to JSON for the Python twin or the no-code app to read.
+effect sizes, random-effect standard deviations and the response family.
+Assemble one from a flat list of design inputs with \code{\link[=build_spec]{build_spec()}}, or read
+one back from a JSON file with \code{\link[=load_spec]{load_spec()}}. The package ships eight
+ready-to-run specifications, and \code{\link[=pilotr_example]{pilotr_example()}} returns their paths.
+\code{\link[=default_response_name]{default_response_name()}} gives the response column that a family uses by
+default, and \code{\link[=spec_json]{spec_json()}} serialises a specification back to JSON for the
+Python package or the no-code app to read.
 
 \code{\link[=simulate_design]{simulate_design()}} turns a specification into an analysis-ready
 data frame with one row per observation. A specification carries its own
@@ -49,14 +48,12 @@ of Gelman and Carlin (2014). \code{\link[=power_mixed]{power_mixed()}} does the 
 mixed-effects design, and \code{\link[=power_curve_mixed]{power_curve_mixed()}} sweeps
 sample size. \code{\link[=target_n]{target_n()}} solves that curve for the sample size at which
 a design becomes adequately powered, with an interval on it.
-\code{\link[=precision_design]{precision_design()}} and its curve counterpart
-\code{\link[=precision_curve]{precision_curve()}} report the width of the interval a design
-buys and the decision probabilities against a region of practical
-equivalence.
+\code{\link[=precision_design]{precision_design()}} and its curve counterpart \code{\link[=precision_curve]{precision_curve()}} report the
+width of the interval a design gives and the decision probabilities against a
+region of practical equivalence.
 
-Two functions round the package off. \code{\link[=generate_r_script]{generate_r_script()}}
-writes a self-contained script that reproduces a simulation, and
-\code{\link[=run_app]{run_app()}} launches the bundled no-code app.
+\code{\link[=generate_r_script]{generate_r_script()}} writes a self-contained script that reproduces a
+simulation, and \code{\link[=run_app]{run_app()}} launches the bundled no-code app.
 
 For a worked introduction, see
 \code{vignette("getting-started", package = "pilotr")}.

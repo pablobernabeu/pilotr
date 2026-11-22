@@ -16,8 +16,7 @@
 #' For a heavy run, download the specification and call [power_design()] or [power_mixed()] from
 #' the console, where `workers` spreads the replicates over your local cores.
 #'
-#' @param ... passed to [shiny::runApp()] (e.g. `port`,
-#'   `launch.browser`).
+#' @param ... Further arguments passed to [shiny::runApp()], such as `port` and `launch.browser`.
 #' @param async If TRUE (the default when 'future' and 'promises' are installed), the app runs
 #'   each power analysis and power curve in a background R process. That leaves the app's own R
 #'   process free for other sessions, such as a second browser tab, while the session that
@@ -25,7 +24,7 @@
 #'   sequential plan, the default, `run_app()` sets a multisession plan of two workers while the
 #'   app runs. Either way, the plan in force before the call is in force again once the app stops.
 #'   With FALSE, power runs in the app's own R process and no plan is set.
-#' @return No return value; called for its side effect of launching the Shiny application,
+#' @return No return value. It is called for its side effect of launching the Shiny application,
 #'   which blocks the R session until the app is closed.
 #' @examples
 #' \dontrun{
