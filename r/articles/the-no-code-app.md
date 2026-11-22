@@ -1,0 +1,111 @@
+# The no-code app
+
+pilotr includes a point-and-click application over the same design
+specification that the R and Python packages read. Every control in the
+app writes into the portable JSON specification.
+
+## Two ways to run it
+
+One way is to run it on your own machine. The app needs the shiny and
+ggplot2 packages, which pilotr suggests but does not install, so install
+them first and then launch the app locally:
+
+``` r
+
+install.packages(c("shiny", "ggplot2"))
+pilotr::run_app()
+```
+
+Each user runs their own R process, so a power run never holds up anyone
+else. Within the app, each power analysis or power curve runs in one R
+process, and the app waits for its result. With the future and promises
+packages installed,
+[`run_app()`](https://pablobernabeu.github.io/pilotr/r/reference/run_app.md)
+runs it in a background process, leaving the app free for other
+sessions, such as a second browser tab. For a heavy run, download the
+specification and call
+[`power_design()`](https://pablobernabeu.github.io/pilotr/r/reference/power_design.md)
+or
+[`power_mixed()`](https://pablobernabeu.github.io/pilotr/r/reference/power_mixed.md)
+from the console. Their `workers` argument spreads the replicates over
+your local cores.
+
+The installed app caps the simulations of a power analysis, and of each
+point of a power curve, at 5,000. To change the cap, set the
+`PILOTR_MAX_SIMS` environment variable before calling
+[`run_app()`](https://pablobernabeu.github.io/pilotr/r/reference/run_app.md),
+for example with `Sys.setenv(PILOTR_MAX_SIMS = 20000)`.
+
+The other way needs nothing installed. A serverless build runs entirely
+in the browser through WebAssembly, and nothing is uploaded. Try it at
+the [no-code app](https://pablobernabeu.github.io/pilotr/app/). It
+covers the lighter tasks: building a design, simulating, inspecting the
+data, estimating two-group Gaussian power with the sample size its curve
+solves to, and exporting.
+
+## What the app does
+
+Describe the design in the left panel: the sample sizes, the factor and
+its two levels, the fixed intercept and effect, a response family, and
+for crossed designs the random-effect standard deviations. Changing the
+response family resets the intercept and effect to sensible values for
+that family’s scale. A within design crossed with items can use
+counterbalanced lists, which show each subject each item in one
+condition and rotate the conditions over subjects and items. A
+specification that uses counterbalanced lists declares version 0.4. The
+advanced ‘paste a JSON spec’ box accepts designs beyond the
+point-and-click controls, such as continuous predictors, interactions
+and nesting.
+
+Then read the tabs. Both apps open on ‘Guide’, which describes the
+controls, the response families and the analyses. Three of the other
+tabs have shorter names in the browser build, given here in brackets
+after the installed app’s. ‘Design spec (JSON)’ (‘Design spec’) holds
+the exact JSON specification, and ‘Data’ the simulated data set.
+‘Summary & plot’ gives group summaries and a plot.
+
+‘Power & design analysis’ (‘Power’) runs a power analysis for a
+two-group Gaussian design with one row per subject, and for any other
+design it explains how to run one in the installed package. For a
+two-group Gaussian design, it reports simulation-based power with the
+Type S and Type M errors. It also gives a power curve over sample size
+and the sample size at which that curve reaches 0.80, with a confidence
+interval on it. The curve adds sample sizes until it brackets a power of
+0.80. For a design without random effects or continuous predictors, the
+tab also gives the sample size
+[`power.t.test()`](https://rdrr.io/r/stats/power.t.test.html) computes,
+as a check.
+
+‘Reproducible R script’ (‘R script’) emits a self-contained R script
+that reproduces the data and ends by suggesting the analysis that fits
+the design. In the installed app, ‘Verify’ runs that script in a clean R
+session and checks that its data are identical, bit for bit, to the data
+the current specification produces. The comparison is with the
+specification in force when you select ‘Verify’, so it does not depend
+on when you last selected ‘Simulate’. ‘Verify’ needs the callr package.
+
+‘Data’, ‘Summary & plot’ and the data download show the last simulation,
+and the ‘Data’ tab and the name of the downloaded file give the seed it
+used. The specification, power and script tabs and the specification
+download follow the controls as they stand. When the controls change the
+design after a simulation, a note above the tabs says so until you
+select ‘Simulate’ again.
+
+## One specification, three interfaces
+
+From the app, you can download the specification (`.json`) or the data
+(`.csv`). The specification runs unchanged in R with
+[`simulate_design()`](https://pablobernabeu.github.io/pilotr/r/reference/simulate_design.md)
+or in Python with `pilotr.simulate()` for the same data, identical to
+the last bit wherever R and Python share a maths library, except in a
+rare Beta case under R 4.6.0 or later (see the [cross-language
+article](https://pablobernabeu.github.io/pilotr/r/articles/cross-language.md)).
+The app rounds Gaussian and reaction-time responses to four decimals and
+leaves a Beta response unrounded, for the reason
+[`?build_spec`](https://pablobernabeu.github.io/pilotr/r/reference/build_spec.md)
+gives.
+
+The app leaves the heavier analyses to the installed packages. Crossed
+mixed-effects power runs in R, through `lme4` as the reference backend,
+and in Python, through `statsmodels`. Precision/ROPE design analysis
+runs in R.
